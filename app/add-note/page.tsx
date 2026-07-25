@@ -4,11 +4,11 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
 export default function AddLectureNote() {
-  const [subjects, setSubjects] = useState([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
   const [loadError, setLoadError] = useState('');
   const [subjectId, setSubjectId] = useState('');
   const [title, setTitle] = useState('');
-  const [file, setFile] = useState(null);
+  const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState('');
   const [uploading, setUploading] = useState(false);
 
@@ -24,7 +24,7 @@ export default function AddLectureNote() {
     loadSubjects();
   }, []);
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e: any) {
     e.preventDefault();
 
     if (!file) {
@@ -79,7 +79,7 @@ export default function AddLectureNote() {
           {loadError && <p style={{ color: 'red' }}>خطأ بجلب المواد: {loadError}</p>}
           <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)} required style={{ width: '100%', padding: 8 }}>
             <option value="">اختر المادة</option>
-            {subjects.map((s) => (
+            {subjects.map((s: any) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </select>
@@ -92,7 +92,7 @@ export default function AddLectureNote() {
 
         <div style={{ marginBottom: 12 }}>
           <label>ملف PDF:</label><br />
-          <input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files[0])} required />
+          <input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)} required />
         </div>
 
         <button type="submit" disabled={uploading} style={{ padding: '8px 16px' }}>

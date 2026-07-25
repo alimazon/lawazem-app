@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
 export default function Home() {
-  const [subjects, setSubjects] = useState([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -43,8 +43,8 @@ export default function Home() {
         style={{ width: '100%', maxWidth: 400, padding: 8, marginBottom: 24 }}
       />
 
-      {subjects.map((s) => {
-        const filteredNotes = s.lecture_notes.filter((note) =>
+      {subjects.map((s: any) => {
+        const filteredNotes = s.lecture_notes.filter((note: any) =>
           note.title.toLowerCase().includes(searchTerm.toLowerCase())
         );
 
@@ -57,14 +57,14 @@ export default function Home() {
               <p style={{ color: '#888' }}>لا توجد ملازم مطابقة.</p>
             ) : (
               <ul>
-                {filteredNotes.map((note) => (
+                {filteredNotes.map((note: any) => (
                   <li key={note.id} style={{ marginBottom: 12 }}>
                     <a href={note.file_path} target="_blank" rel="noopener noreferrer">
                       {note.title}
                     </a>
                     {note.exam_questions.length > 0 && (
                       <ul>
-                        {note.exam_questions.map((q) => (
+                        {note.exam_questions.map((q: any) => (
                           <li key={q.id} style={{ color: '#aaa', fontSize: 14 }}>
                             {q.question_text} {q.exam_term && `(${q.exam_term})`}
                           </li>
@@ -81,7 +81,7 @@ export default function Home() {
               <p style={{ color: '#888' }}>لا توجد ملاحظات معتمدة بعد.</p>
             ) : (
               <ul>
-                {s.professor_focus_notes.map((n) => (
+                {s.professor_focus_notes.map((n: any) => (
                   <li key={n.id}><strong>{n.professor_name}:</strong> {n.notes_text}</li>
                 ))}
               </ul>

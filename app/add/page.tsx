@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
 export default function AddProfessorNote() {
-  const [subjects, setSubjects] = useState([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
   const [loadError, setLoadError] = useState('');
   const [subjectId, setSubjectId] = useState('');
   const [professorName, setProfessorName] = useState('');
@@ -23,7 +23,7 @@ export default function AddProfessorNote() {
     loadSubjects();
   }, []);
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e: any) {
     e.preventDefault();
     const { error } = await supabase.from('professor_focus_notes').insert({
       subject_id: subjectId,
@@ -51,7 +51,7 @@ export default function AddProfessorNote() {
           {loadError && <p style={{ color: 'red' }}>خطأ بجلب المواد: {loadError}</p>}
           <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)} required style={{ width: '100%', padding: 8 }}>
             <option value="">اختر المادة</option>
-            {subjects.map((s) => (
+            {subjects.map((s: any) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </select>
