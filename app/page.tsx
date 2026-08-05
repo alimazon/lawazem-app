@@ -24,24 +24,26 @@ export default function Home() {
 
   if (error) {
     return (
-      <main style={{ padding: 24, direction: 'rtl', fontFamily: 'sans-serif' }}>
-        <h1>خطأ في الاتصال بقاعدة البيانات</h1>
-        <p>{error}</p>
+      <main className="mx-auto max-w-3xl px-6 py-10">
+        <h1 className="text-2xl font-extrabold">خطأ في الاتصال بقاعدة البيانات</h1>
+        <p className="mt-2 text-ink/70">{error}</p>
       </main>
     );
   }
 
   return (
-    <main style={{ padding: 24, direction: 'rtl', fontFamily: 'sans-serif' }}>
-      <h1>اختبار الاتصال — منصة الملازم</h1>
+    <main className="mx-auto max-w-3xl px-6 py-10">
+      <p className="font-mono text-xs uppercase tracking-widest text-teal">كلية طب جامعة العميد</p>
+      <h1 className="mt-1 text-3xl font-black">الملازم والمصادر</h1>
 
-      <input
-        type="text"
-        placeholder="ابحث باسم الملزمة..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        style={{ width: '100%', maxWidth: 400, padding: 8, marginBottom: 24 }}
-      />
+      <div className="relative mt-6 mb-10">
+        <svg className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input type="text" placeholder="ابحث باسم الملزمة..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full rounded-lg border border-line bg-white px-4 py-3 pr-11 placeholder:text-ink/40 focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+      </div>
+
+      {subjects.length === 0 && <p className="text-ink/60">لا توجد مواد بعد.</p>}
 
       {subjects.map((s: any) => {
         const filteredNotes = s.lecture_notes.filter((note: any) =>
@@ -49,24 +51,30 @@ export default function Home() {
         );
 
         return (
-          <div key={s.id} style={{ marginBottom: 32 }}>
-            <h2>{s.name} — {s.stage}</h2>
+          <section key={s.id} className="mb-8 rounded-xl border border-line bg-white/70 p-6 shadow-sm transition-shadow hover:shadow-md">
+            <div className="mb-4 flex items-baseline justify-between border-b border-line pb-3">
+              <h2 className="text-xl font-extrabold">{s.name}</h2>
+              <span className="font-mono text-xs text-ink/50">{s.stage}</span>
+            </div>
 
-            <h3 style={{ fontSize: 16 }}>الملازم</h3>
+            <h3 className="mb-2 text-sm font-bold text-teal">الملازم</h3>
             {filteredNotes.length === 0 ? (
-              <p style={{ color: '#888' }}>لا توجد ملازم مطابقة.</p>
+              <p className="mb-6 text-sm text-ink/50">لا توجد ملازم مطابقة.</p>
             ) : (
-              <ul>
+              <ul className="mb-6 space-y-3">
                 {filteredNotes.map((note: any) => (
-                  <li key={note.id} style={{ marginBottom: 12 }}>
-                    <a href={note.file_path} target="_blank" rel="noopener noreferrer">
+                  <li key={note.id}>
+                    <a href={note.file_path} target="_blank" rel="noopener noreferrer" className="font-medium underline decoration-teal/40 underline-offset-4 hover:text-teal">
                       {note.title}
                     </a>
                     {note.exam_questions.length > 0 && (
-                      <ul>
+                      <ul className="mt-2 space-y-1 border-r-2 border-line pr-4">
                         {note.exam_questions.map((q: any) => (
-                          <li key={q.id} style={{ color: '#aaa', fontSize: 14 }}>
-                            {q.question_text} {q.exam_term && `(${q.exam_term})`}
+                          <li key={q.id} className="text-sm text-ink/60">
+                            {q.question_text}
+                            {q.exam_term && (
+                              <span className="mr-2 rounded bg-ink/5 px-1.5 py-0.5 font-mono text-xs text-ink/50">{q.exam_term}</span>
+                            )}
                           </li>
                         ))}
                       </ul>
@@ -76,17 +84,21 @@ export default function Home() {
               </ul>
             )}
 
-            <h3 style={{ fontSize: 16 }}>ملاحظات تركيز الدكاترة</h3>
+            <h3 className="mb-2 text-sm font-bold text-teal">ملاحظات تركيز الدكاترة</h3>
             {s.professor_focus_notes.length === 0 ? (
-              <p style={{ color: '#888' }}>لا توجد ملاحظات معتمدة بعد.</p>
+              <p className="text-sm text-ink/50">لا توجد ملاحظات معتمدة بعد.</p>
             ) : (
-              <ul>
+              <ul className="space-y-2">
                 {s.professor_focus_notes.map((n: any) => (
-                  <li key={n.id}><strong>{n.professor_name}:</strong> {n.notes_text}</li>
+                  <li key={n.id} className="relative rounded-md bg-amber/15 py-2 pl-3 pr-5">
+                    <span className="absolute right-0 top-0 h-full w-1.5 rounded-r-md bg-amber" />
+                    <strong>{n.professor_name}</strong>
+                    <span className="text-ink/80"> — {n.notes_text}</span>
+                  </li>
                 ))}
               </ul>
             )}
-          </div>
+          </section>
         );
       })}
     </main>

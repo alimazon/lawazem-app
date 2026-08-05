@@ -41,15 +41,18 @@ export default function AddProfessorNote() {
     }
   }
 
-  return (
-    <main style={{ padding: 24, direction: 'rtl', fontFamily: 'sans-serif', maxWidth: 500 }}>
-      <h1>أضف ملاحظة عن أسلوب دكتور</h1>
+  const isError = status.includes('خطأ');
 
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: 12 }}>
-          <label>المادة:</label><br />
-          {loadError && <p style={{ color: 'red' }}>خطأ بجلب المواد: {loadError}</p>}
-          <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)} required style={{ width: '100%', padding: 8 }}>
+  return (
+    <main className="mx-auto max-w-xl px-6 py-10">
+      <p className="font-mono text-xs uppercase tracking-widest text-teal">مساهمة جديدة</p>
+      <h1 className="mt-1 text-3xl font-black">أضف ملاحظة عن أسلوب دكتور</h1>
+
+      <form onSubmit={handleSubmit} className="mt-6 space-y-5 rounded-xl border border-line bg-white/70 p-8 shadow-sm">
+        <div>
+          <label className="mb-1.5 block text-sm font-bold text-ink/70">المادة</label>
+          {loadError && <p className="mb-2 text-sm text-red-600">خطأ بجلب المواد: {loadError}</p>}
+          <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)} required className="w-full rounded-lg border border-line bg-white px-4 py-2.5 focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20">
             <option value="">اختر المادة</option>
             {subjects.map((s: any) => (
               <option key={s.id} value={s.id}>{s.name}</option>
@@ -57,20 +60,26 @@ export default function AddProfessorNote() {
           </select>
         </div>
 
-        <div style={{ marginBottom: 12 }}>
-          <label>اسم الدكتور:</label><br />
-          <input type="text" value={professorName} onChange={(e) => setProfessorName(e.target.value)} required style={{ width: '100%', padding: 8 }} />
+        <div>
+          <label className="mb-1.5 block text-sm font-bold text-ink/70">اسم الدكتور</label>
+          <input type="text" value={professorName} onChange={(e) => setProfessorName(e.target.value)} required className="w-full rounded-lg border border-line bg-white px-4 py-2.5 focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
         </div>
 
-        <div style={{ marginBottom: 12 }}>
-          <label>الملاحظات:</label><br />
-          <textarea value={notesText} onChange={(e) => setNotesText(e.target.value)} required rows={5} style={{ width: '100%', padding: 8 }} />
+        <div>
+          <label className="mb-1.5 block text-sm font-bold text-ink/70">الملاحظات</label>
+          <textarea value={notesText} onChange={(e) => setNotesText(e.target.value)} required rows={5} className="w-full rounded-lg border border-line bg-white px-4 py-2.5 focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
         </div>
 
-        <button type="submit" style={{ padding: '8px 16px' }}>إرسال</button>
+        <button type="submit" className="w-full rounded-lg bg-teal px-6 py-3 font-bold text-white transition-colors hover:bg-teal/90">
+          إرسال
+        </button>
+
+        {status && (
+          <p className={`rounded-lg px-4 py-3 text-sm ${isError ? 'bg-red-50 text-red-700' : 'bg-amber/15 text-ink'}`}>
+            {status}
+          </p>
+        )}
       </form>
-
-      {status && <p style={{ marginTop: 16 }}>{status}</p>}
     </main>
   );
 }
