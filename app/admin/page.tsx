@@ -15,6 +15,12 @@ export default function AdminPage() {
   const [editName, setEditName] = useState('');
   const [editStage, setEditStage] = useState('');
 
+  const [channels, setChannels] = useState<any[]>([]);
+  const [newChannelName, setNewChannelName] = useState('');
+  const [newChannelSubject, setNewChannelSubject] = useState('');
+  const [newChannelDesc, setNewChannelDesc] = useState('');
+  const [newChannelLink, setNewChannelLink] = useState('');
+
   async function loadPending(pw: string) {
     setLoading(true);
     setLoginError('');
@@ -34,6 +40,7 @@ export default function AdminPage() {
     setData(json);
     setAuthenticated(true);
     await loadSubjects(pw);
+    await loadChannels(pw);
     setLoading(false);
   }
 
@@ -46,6 +53,18 @@ export default function AdminPage() {
     if (res.ok) {
       const json = await res.json();
       setSubjects(json.subjects || []);
+    }
+  }
+
+  async function loadChannels(pw: string) {
+    const res = await fetch('/api/admin/channels', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw, action: 'list' }),
+    });
+    if (res.ok) {
+      const json = await res.json();
+      setChannels(json.channels || []);
     }
   }
 
@@ -106,6 +125,43 @@ export default function AdminPage() {
     }
   }
 
+  async function handleAddChannel(e: any) {
+    e.preventDefault();
+    const res = await fetch('/api/admin/channels', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        password,
+        action: 'add',
+        name: newChannelName,
+        subject_id: newChannelSubject,
+        description: newChannelDesc,
+        telegram_link: newChannelLink,
+      }),
+    });
+    if (res.ok) {
+      setNewChannelName('');
+      setNewChannelSubject('');
+      setNewChannelDesc('');
+      setNewChannelLink('');
+      loadChannels(password);
+    }
+  }
+
+  async function deleteChannel(id: string) {
+    const confirmed = window.confirm('حذف القناة نهائي. متأكد؟');
+    if (!confirmed) return;
+
+    const res = await fetch('/api/admin/channels', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password, action: 'delete', id }),
+    });
+    if (res.ok) {
+      loadChannels(password);
+    }
+  }
+
   if (!authenticated) {
     return (
       <main className="mx-auto max-w-sm px-6 py-20">
@@ -124,13 +180,13 @@ export default function AdminPage() {
   const totalPending = data.lectureNotes.length + data.examQuestions.length + data.professorNotes.length;
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-10">
+    <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <h1 className="text-3xl font-black">لوحة التحكم</h1>
 
       <section className="mt-8">
         <h2 className="mb-3 text-lg font-extrabold text-teal">إدارة المواد</h2>
 
-        <form onSubmit={handleAddSubject} className="mb-4 flex gap-2 rounded-lg border border-line bg-white/70 p-4">
+        <form onSubmit={handleAddSubject} className="mb-4 flex flex-wrap gap-2 rounded-lg border border-line bg-white/70 p-4">
           <input type="text" value={newSubjectName} onChange={(e) => setNewSubjectName(e.target.value)} placeholder="اسم المادة" required className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
           <input type="text" value={newSubjectStage} onChange={(e) => setNewSubjectStage(e.target.value)} placeholder="المرحلة (اختياري)" className="w-40 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
           <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">إضافة</button>
@@ -140,7 +196,7 @@ export default function AdminPage() {
           {subjects.map((s: any) => (
             <div key={s.id} className="flex items-center justify-between rounded-lg border border-line bg-white/70 p-3">
               {editingId === s.id ? (
-                <div className="flex flex-1 items-center gap-2">
+                <div className="flex flex-1 flex-wrap items-center gap-2">
                   <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="flex-1 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
                   <input type="text" value={editStage} onChange={(e) => setEditStage(e.target.value)} className="w-32 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
                   <button onClick={() => saveEdit(s.id)} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-bold text-white hover:bg-teal/90">حفظ</button>
@@ -158,6 +214,39 @@ export default function AdminPage() {
                   </div>
                 </>
               )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="mb-3 text-lg font-extrabold text-teal">إدارة القنوات</h2>
+
+        <form onSubmit={handleAddChannel} className="mb-4 space-y-2 rounded-lg border border-line bg-white/70 p-4">
+          <div className="flex flex-wrap gap-2">
+            <input type="text" value={newChannelName} onChange={(e) => setNewChannelName(e.target.value)} placeholder="اسم القناة" required className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+            <select value={newChannelSubject} onChange={(e) => setNewChannelSubject(e.target.value)} required className="w-44 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20">
+              <option value="">اختر المادة</option>
+              {subjects.map((s: any) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+          <input type="text" value={newChannelDesc} onChange={(e) => setNewChannelDesc(e.target.value)} placeholder="وصف قصير (اختياري)" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+          <input type="text" value={newChannelLink} onChange={(e) => setNewChannelLink(e.target.value)} placeholder="رابط تليجرام (مثل https://t.me/channelname)" required className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+          <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">إضافة قناة</button>
+        </form>
+
+        <div className="space-y-2">
+          {channels.map((c: any) => (
+            <div key={c.id} className="flex items-center justify-between rounded-lg border border-line bg-white/70 p-3">
+              <div>
+                <span className="font-bold">{c.name}</span>
+                <span className="mr-2 text-sm text-ink/50">{c.subjects?.name}</span>
+                {c.description && <p className="text-sm text-ink/60">{c.description}</p>}
+                <a href={c.telegram_link} target="_blank" rel="noopener noreferrer" className="text-sm text-teal underline">{c.telegram_link}</a>
+              </div>
+              <button onClick={() => deleteChannel(c.id)} className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">حذف</button>
             </div>
           ))}
         </div>

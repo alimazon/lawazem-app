@@ -44,11 +44,11 @@ export default function AddProfessorNote() {
   const isError = status.includes('خطأ');
 
   return (
-    <main className="mx-auto max-w-xl px-6 py-10">
+    <main className="mx-auto max-w-xl px-4 py-8 sm:px-6 sm:py-10">
       <p className="font-mono text-xs uppercase tracking-widest text-teal">مساهمة جديدة</p>
       <h1 className="mt-1 text-3xl font-black">أضف ملاحظة عن أسلوب دكتور</h1>
 
-      <form onSubmit={handleSubmit} className="mt-6 space-y-5 rounded-xl border border-line bg-white/70 p-8 shadow-sm">
+      <form onSubmit={handleSubmit} className="mt-6 space-y-5 rounded-xl border border-line bg-white/70 p-6 shadow-sm sm:p-8">
         <div>
           <label className="mb-1.5 block text-sm font-bold text-ink/70">المادة</label>
           {loadError && <p className="mb-2 text-sm text-red-600">خطأ بجلب المواد: {loadError}</p>}
