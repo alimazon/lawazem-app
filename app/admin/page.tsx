@@ -7,7 +7,6 @@ export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<any>({ lectureNotes: [], examQuestions: [], professorNotes: [] });
   const [subjects, setSubjects] = useState<any[]>([]);
   const [newSubjectName, setNewSubjectName] = useState('');
   const [newSubjectStage, setNewSubjectStage] = useState('');
@@ -20,14 +19,32 @@ export default function AdminPage() {
   const [newChannelSubject, setNewChannelSubject] = useState('');
   const [newChannelDesc, setNewChannelDesc] = useState('');
   const [newChannelLink, setNewChannelLink] = useState('');
+  const [newChannelPassword, setNewChannelPassword] = useState('');
+  const [editingChannelId, setEditingChannelId] = useState<string | null>(null);
+  const [editChannelName, setEditChannelName] = useState('');
+  const [editChannelSubject, setEditChannelSubject] = useState('');
+  const [editChannelDesc, setEditChannelDesc] = useState('');
+  const [editChannelLink, setEditChannelLink] = useState('');
+  const [editChannelPassword, setEditChannelPassword] = useState('');
 
-  async function loadPending(pw: string) {
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [newAssignmentSubject, setNewAssignmentSubject] = useState('');
+  const [newAssignmentTitle, setNewAssignmentTitle] = useState('');
+  const [newAssignmentDesc, setNewAssignmentDesc] = useState('');
+  const [newAssignmentDue, setNewAssignmentDue] = useState('');
+  const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
+  const [editAssignmentSubject, setEditAssignmentSubject] = useState('');
+  const [editAssignmentTitle, setEditAssignmentTitle] = useState('');
+  const [editAssignmentDesc, setEditAssignmentDesc] = useState('');
+  const [editAssignmentDue, setEditAssignmentDue] = useState('');
+
+  async function handleLogin(pw: string) {
     setLoading(true);
     setLoginError('');
-    const res = await fetch('/api/admin/pending', {
+    const res = await fetch('/api/admin/subjects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: pw }),
+      body: JSON.stringify({ password: pw, action: 'list' }),
     });
 
     if (!res.ok) {
@@ -37,10 +54,10 @@ export default function AdminPage() {
     }
 
     const json = await res.json();
-    setData(json);
+    setSubjects(json.subjects || []);
     setAuthenticated(true);
-    await loadSubjects(pw);
     await loadChannels(pw);
+    await loadAssignments(pw);
     setLoading(false);
   }
 
@@ -68,14 +85,15 @@ export default function AdminPage() {
     }
   }
 
-  async function handleAction(table: string, id: string, action: string) {
-    const res = await fetch('/api/admin/update', {
+  async function loadAssignments(pw: string) {
+    const res = await fetch('/api/admin/assignments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password, table, id, action }),
+      body: JSON.stringify({ password: pw, action: 'list' }),
     });
     if (res.ok) {
-      loadPending(password);
+      const json = await res.json();
+      setAssignments(json.assignments || []);
     }
   }
 
@@ -137,6 +155,7 @@ export default function AdminPage() {
         subject_id: newChannelSubject,
         description: newChannelDesc,
         telegram_link: newChannelLink,
+        channel_password: newChannelPassword,
       }),
     });
     if (res.ok) {
@@ -144,6 +163,37 @@ export default function AdminPage() {
       setNewChannelSubject('');
       setNewChannelDesc('');
       setNewChannelLink('');
+      setNewChannelPassword('');
+      loadChannels(password);
+    }
+  }
+
+  function startEditChannel(c: any) {
+    setEditingChannelId(c.id);
+    setEditChannelName(c.name);
+    setEditChannelSubject(c.subject_id);
+    setEditChannelDesc(c.description || '');
+    setEditChannelLink(c.telegram_link);
+    setEditChannelPassword(c.channel_password || '');
+  }
+
+  async function saveEditChannel(id: string) {
+    const res = await fetch('/api/admin/channels', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        password,
+        action: 'edit',
+        id,
+        name: editChannelName,
+        subject_id: editChannelSubject,
+        description: editChannelDesc,
+        telegram_link: editChannelLink,
+        channel_password: editChannelPassword,
+      }),
+    });
+    if (res.ok) {
+      setEditingChannelId(null);
       loadChannels(password);
     }
   }
@@ -162,11 +212,76 @@ export default function AdminPage() {
     }
   }
 
+  async function handleAddAssignment(e: any) {
+    e.preventDefault();
+    const res = await fetch('/api/admin/assignments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        password,
+        action: 'add',
+        subject_id: newAssignmentSubject,
+        title: newAssignmentTitle,
+        description: newAssignmentDesc,
+        due_date: newAssignmentDue,
+      }),
+    });
+    if (res.ok) {
+      setNewAssignmentSubject('');
+      setNewAssignmentTitle('');
+      setNewAssignmentDesc('');
+      setNewAssignmentDue('');
+      loadAssignments(password);
+    }
+  }
+
+  function startEditAssignment(a: any) {
+    setEditingAssignmentId(a.id);
+    setEditAssignmentSubject(a.subject_id);
+    setEditAssignmentTitle(a.title);
+    setEditAssignmentDesc(a.description || '');
+    setEditAssignmentDue(a.due_date || '');
+  }
+
+  async function saveEditAssignment(id: string) {
+    const res = await fetch('/api/admin/assignments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        password,
+        action: 'edit',
+        id,
+        subject_id: editAssignmentSubject,
+        title: editAssignmentTitle,
+        description: editAssignmentDesc,
+        due_date: editAssignmentDue,
+      }),
+    });
+    if (res.ok) {
+      setEditingAssignmentId(null);
+      loadAssignments(password);
+    }
+  }
+
+  async function deleteAssignment(id: string) {
+    const confirmed = window.confirm('حذف الواجب نهائي. متأكد؟');
+    if (!confirmed) return;
+
+    const res = await fetch('/api/admin/assignments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password, action: 'delete', id }),
+    });
+    if (res.ok) {
+      loadAssignments(password);
+    }
+  }
+
   if (!authenticated) {
     return (
       <main className="mx-auto max-w-sm px-6 py-20">
         <h1 className="text-2xl font-black">دخول المشرف</h1>
-        <form onSubmit={(e) => { e.preventDefault(); loadPending(password); }} className="mt-6 space-y-4">
+        <form onSubmit={(e) => { e.preventDefault(); handleLogin(password); }} className="mt-6 space-y-4">
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="كلمة المرور" className="w-full rounded-lg border border-line bg-white px-4 py-2.5 focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
           {loginError && <p className="text-sm text-red-600">{loginError}</p>}
           <button type="submit" disabled={loading} className="w-full rounded-lg bg-teal px-6 py-3 font-bold text-white hover:bg-teal/90">
@@ -176,8 +291,6 @@ export default function AdminPage() {
       </main>
     );
   }
-
-  const totalPending = data.lectureNotes.length + data.examQuestions.length + data.professorNotes.length;
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
@@ -234,91 +347,106 @@ export default function AdminPage() {
           </div>
           <input type="text" value={newChannelDesc} onChange={(e) => setNewChannelDesc(e.target.value)} placeholder="وصف قصير (اختياري)" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
           <input type="text" value={newChannelLink} onChange={(e) => setNewChannelLink(e.target.value)} placeholder="رابط تليجرام (مثل https://t.me/channelname)" required className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+          <input type="text" value={newChannelPassword} onChange={(e) => setNewChannelPassword(e.target.value)} placeholder="كلمة مرور القناة (تعطيها لصاحب القناة يدويًا)" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
           <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">إضافة قناة</button>
         </form>
 
         <div className="space-y-2">
           {channels.map((c: any) => (
-            <div key={c.id} className="flex items-center justify-between rounded-lg border border-line bg-white/70 p-3">
-              <div>
-                <span className="font-bold">{c.name}</span>
-                <span className="mr-2 text-sm text-ink/50">{c.subjects?.name}</span>
-                {c.description && <p className="text-sm text-ink/60">{c.description}</p>}
-                <a href={c.telegram_link} target="_blank" rel="noopener noreferrer" className="text-sm text-teal underline">{c.telegram_link}</a>
-              </div>
-              <button onClick={() => deleteChannel(c.id)} className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">حذف</button>
+            <div key={c.id} className="rounded-lg border border-line bg-white/70 p-3">
+              {editingChannelId === c.id ? (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    <input type="text" value={editChannelName} onChange={(e) => setEditChannelName(e.target.value)} className="flex-1 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
+                    <select value={editChannelSubject} onChange={(e) => setEditChannelSubject(e.target.value)} className="w-44 rounded-lg border border-line bg-white px-3 py-1.5 text-sm">
+                      {subjects.map((s: any) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <input type="text" value={editChannelDesc} onChange={(e) => setEditChannelDesc(e.target.value)} className="w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
+                  <input type="text" value={editChannelLink} onChange={(e) => setEditChannelLink(e.target.value)} className="w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
+                  <input type="text" value={editChannelPassword} onChange={(e) => setEditChannelPassword(e.target.value)} placeholder="كلمة مرور القناة" className="w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
+                  <div className="flex gap-2">
+                    <button onClick={() => saveEditChannel(c.id)} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-bold text-white hover:bg-teal/90">حفظ</button>
+                    <button onClick={() => setEditingChannelId(null)} className="rounded-lg border border-line px-3 py-1.5 text-sm">إلغاء</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-bold">{c.name}</span>
+                    <span className="mr-2 text-sm text-ink/50">{c.subjects?.name}</span>
+                    {c.description && <p className="text-sm text-ink/60">{c.description}</p>}
+                    <a href={c.telegram_link} target="_blank" rel="noopener noreferrer" className="text-sm text-teal underline">{c.telegram_link}</a>
+                    <p className="text-sm text-ink/50">كلمة مرور القناة: {c.channel_password || 'غير محددة'}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => startEditChannel(c)} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-ink/5">تعديل</button>
+                    <button onClick={() => deleteChannel(c.id)} className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">حذف</button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
       </section>
 
       <section className="mt-10">
-        <h2 className="text-lg font-extrabold text-teal">مراجعة المحتوى</h2>
-        <p className="mt-1 text-sm text-ink/60">{totalPending} عنصر بانتظار المراجعة</p>
+        <h2 className="mb-3 text-lg font-extrabold text-teal">إدارة الواجبات</h2>
 
-        {totalPending === 0 && <p className="mt-4 text-ink/50">لا يوجد شي بانتظار المراجعة حاليًا 🎉</p>}
+        <form onSubmit={handleAddAssignment} className="mb-4 space-y-2 rounded-lg border border-line bg-white/70 p-4">
+          <div className="flex flex-wrap gap-2">
+            <select value={newAssignmentSubject} onChange={(e) => setNewAssignmentSubject(e.target.value)} required className="w-44 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20">
+              <option value="">اختر المادة</option>
+              {subjects.map((s: any) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+            <input type="text" value={newAssignmentTitle} onChange={(e) => setNewAssignmentTitle(e.target.value)} placeholder="عنوان الواجب" required className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+            <input type="date" value={newAssignmentDue} onChange={(e) => setNewAssignmentDue(e.target.value)} className="w-40 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+          </div>
+          <input type="text" value={newAssignmentDesc} onChange={(e) => setNewAssignmentDesc(e.target.value)} placeholder="تفاصيل إضافية (اختياري)" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+          <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">إضافة واجب</button>
+        </form>
 
-        {data.lectureNotes.length > 0 && (
-          <div className="mt-6">
-            <h3 className="mb-3 font-bold">الملازم</h3>
-            <div className="space-y-3">
-              {data.lectureNotes.map((item: any) => (
-                <div key={item.id} className="flex items-center justify-between rounded-lg border border-line bg-white/70 p-4">
-                  <div>
-                    <p className="font-bold">{item.title}</p>
-                    <p className="text-sm text-ink/50">{item.subjects?.name}</p>
-                    <a href={item.file_path} target="_blank" rel="noopener noreferrer" className="text-sm text-teal underline">عرض الملف</a>
+        <div className="space-y-2">
+          {assignments.map((a: any) => (
+            <div key={a.id} className="rounded-lg border border-line bg-white/70 p-3">
+              {editingAssignmentId === a.id ? (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    <select value={editAssignmentSubject} onChange={(e) => setEditAssignmentSubject(e.target.value)} className="w-44 rounded-lg border border-line bg-white px-3 py-1.5 text-sm">
+                      {subjects.map((s: any) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                    <input type="text" value={editAssignmentTitle} onChange={(e) => setEditAssignmentTitle(e.target.value)} className="flex-1 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
+                    <input type="date" value={editAssignmentDue} onChange={(e) => setEditAssignmentDue(e.target.value)} className="w-40 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
                   </div>
+                  <input type="text" value={editAssignmentDesc} onChange={(e) => setEditAssignmentDesc(e.target.value)} className="w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
                   <div className="flex gap-2">
-                    <button onClick={() => handleAction('lecture_notes', item.id, 'approve')} className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">قبول</button>
-                    <button onClick={() => handleAction('lecture_notes', item.id, 'reject')} className="rounded-lg border border-red-300 px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50">رفض</button>
+                    <button onClick={() => saveEditAssignment(a.id)} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-bold text-white hover:bg-teal/90">حفظ</button>
+                    <button onClick={() => setEditingAssignmentId(null)} className="rounded-lg border border-line px-3 py-1.5 text-sm">إلغاء</button>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {data.examQuestions.length > 0 && (
-          <div className="mt-6">
-            <h3 className="mb-3 font-bold">أسئلة الامتحانات</h3>
-            <div className="space-y-3">
-              {data.examQuestions.map((item: any) => (
-                <div key={item.id} className="flex items-center justify-between rounded-lg border border-line bg-white/70 p-4">
+              ) : (
+                <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-bold">{item.question_text}</p>
-                    <p className="text-sm text-ink/50">{item.lecture_notes?.title} {item.exam_term && `— ${item.exam_term}`}</p>
+                    <span className="font-bold">{a.title}</span>
+                    <span className="mr-2 text-sm text-ink/50">{a.subjects?.name}</span>
+                    {a.due_date && <span className="mr-2 text-sm text-amber">تاريخ التسليم: {a.due_date}</span>}
+                    {a.description && <p className="text-sm text-ink/60">{a.description}</p>}
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => handleAction('exam_questions', item.id, 'approve')} className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">قبول</button>
-                    <button onClick={() => handleAction('exam_questions', item.id, 'reject')} className="rounded-lg border border-red-300 px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50">رفض</button>
+                    <button onClick={() => startEditAssignment(a)} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-ink/5">تعديل</button>
+                    <button onClick={() => deleteAssignment(a.id)} className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">حذف</button>
                   </div>
                 </div>
-              ))}
+              )}
             </div>
-          </div>
-        )}
-
-        {data.professorNotes.length > 0 && (
-          <div className="mt-6">
-            <h3 className="mb-3 font-bold">ملاحظات تركيز الدكاترة</h3>
-            <div className="space-y-3">
-              {data.professorNotes.map((item: any) => (
-                <div key={item.id} className="flex items-center justify-between rounded-lg border border-line bg-white/70 p-4">
-                  <div>
-                    <p className="font-bold">{item.professor_name}</p>
-                    <p className="text-sm text-ink/60">{item.notes_text}</p>
-                    <p className="text-sm text-ink/50">{item.subjects?.name}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => handleAction('professor_focus_notes', item.id, 'approve')} className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">قبول</button>
-                    <button onClick={() => handleAction('professor_focus_notes', item.id, 'reject')} className="rounded-lg border border-red-300 px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50">رفض</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+          ))}
+        </div>
       </section>
     </main>
   );

@@ -67,17 +67,16 @@ export default function Home() {
               <ul className="mb-6 space-y-3">
                 {filteredNotes.map((note: any) => (
                   <li key={note.id}>
-                    <a href={note.file_path} target="_blank" rel="noopener noreferrer" className="font-medium underline decoration-teal/40 underline-offset-4 hover:text-teal">
-                      {note.title}
-                    </a>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <a href={note.file_path} target="_blank" rel="noopener noreferrer" className="font-medium underline decoration-teal/40 underline-offset-4 hover:text-teal">{note.title}</a>
+                      <a href={`/study/${note.id}`} className="rounded-full bg-amber/20 px-3 py-1 text-xs font-bold text-ink hover:bg-amber/30">بطاقات مذاكرة</a>
+                    </div>
                     {note.exam_questions.length > 0 && (
                       <ul className="mt-2 space-y-1 border-r-2 border-line pr-4">
                         {note.exam_questions.map((q: any) => (
                           <li key={q.id} className="text-sm text-ink/60">
                             {q.question_text}
-                            {q.exam_term && (
-                              <span className="mr-2 rounded bg-ink/5 px-1.5 py-0.5 font-mono text-xs text-ink/50">{q.exam_term}</span>
-                            )}
+                            {q.exam_term && <span className="mr-2 rounded bg-ink/5 px-1.5 py-0.5 font-mono text-xs text-ink/50">{q.exam_term}</span>}
                           </li>
                         ))}
                       </ul>
