@@ -1,6 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+function generateChannelPassword() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let result = '';
+  for (let i = 0; i < 8; i++) {
+    result += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return result;
+}
 
 export default function AdminPage() {
   const [password, setPassword] = useState('');
@@ -20,12 +29,14 @@ export default function AdminPage() {
   const [newChannelDesc, setNewChannelDesc] = useState('');
   const [newChannelLink, setNewChannelLink] = useState('');
   const [newChannelPassword, setNewChannelPassword] = useState('');
+  const [copiedNewChannelPassword, setCopiedNewChannelPassword] = useState(false);
   const [editingChannelId, setEditingChannelId] = useState<string | null>(null);
   const [editChannelName, setEditChannelName] = useState('');
   const [editChannelSubject, setEditChannelSubject] = useState('');
   const [editChannelDesc, setEditChannelDesc] = useState('');
   const [editChannelLink, setEditChannelLink] = useState('');
   const [editChannelPassword, setEditChannelPassword] = useState('');
+  const [copiedChannelId, setCopiedChannelId] = useState<string | null>(null);
 
   const [assignments, setAssignments] = useState<any[]>([]);
   const [newAssignmentSubject, setNewAssignmentSubject] = useState('');
@@ -37,6 +48,14 @@ export default function AdminPage() {
   const [editAssignmentTitle, setEditAssignmentTitle] = useState('');
   const [editAssignmentDesc, setEditAssignmentDesc] = useState('');
   const [editAssignmentDue, setEditAssignmentDue] = useState('');
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem('admin_password');
+    if (saved) {
+      setPassword(saved);
+      handleLogin(saved);
+    }
+  }, []);
 
   async function handleLogin(pw: string) {
     setLoading(true);
@@ -50,15 +69,23 @@ export default function AdminPage() {
     if (!res.ok) {
       setLoading(false);
       setLoginError('كلمة المرور غير صحيحة');
+      sessionStorage.removeItem('admin_password');
       return;
     }
 
+    sessionStorage.setItem('admin_password', pw);
     const json = await res.json();
     setSubjects(json.subjects || []);
     setAuthenticated(true);
     await loadChannels(pw);
     await loadAssignments(pw);
     setLoading(false);
+  }
+
+  function handleLogout() {
+    sessionStorage.removeItem('admin_password');
+    setPassword('');
+    setAuthenticated(false);
   }
 
   async function loadSubjects(pw: string) {
@@ -294,7 +321,10 @@ export default function AdminPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-      <h1 className="text-3xl font-black">لوحة التحكم</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-black">لوحة التحكم</h1>
+        <button onClick={handleLogout} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-ink/5">تسجيل خروج</button>
+      </div>
 
       <section className="mt-8">
         <h2 className="mb-3 text-lg font-extrabold text-teal">إدارة المواد</h2>
@@ -347,7 +377,15 @@ export default function AdminPage() {
           </div>
           <input type="text" value={newChannelDesc} onChange={(e) => setNewChannelDesc(e.target.value)} placeholder="وصف قصير (اختياري)" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
           <input type="text" value={newChannelLink} onChange={(e) => setNewChannelLink(e.target.value)} placeholder="رابط تليجرام (مثل https://t.me/channelname)" required className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
-          <input type="text" value={newChannelPassword} onChange={(e) => setNewChannelPassword(e.target.value)} placeholder="كلمة مرور القناة (تعطيها لصاحب القناة يدويًا)" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+          <div className="flex flex-wrap gap-2">
+            <input type="text" value={newChannelPassword} onChange={(e) => setNewChannelPassword(e.target.value)} placeholder="كلمة مرور القناة" className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+            <button type="button" onClick={() => setNewChannelPassword(generateChannelPassword())} className="rounded-lg border border-teal px-3 py-2 text-sm font-bold text-teal hover:bg-teal/5">توليد</button>
+            {newChannelPassword && (
+              <button type="button" onClick={() => { navigator.clipboard.writeText(newChannelPassword); setCopiedNewChannelPassword(true); setTimeout(() => setCopiedNewChannelPassword(false), 1500); }} className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-ink/5">
+                {copiedNewChannelPassword ? 'تم النسخ!' : 'نسخ'}
+              </button>
+            )}
+          </div>
           <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">إضافة قناة</button>
         </form>
 
@@ -366,7 +404,10 @@ export default function AdminPage() {
                   </div>
                   <input type="text" value={editChannelDesc} onChange={(e) => setEditChannelDesc(e.target.value)} className="w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
                   <input type="text" value={editChannelLink} onChange={(e) => setEditChannelLink(e.target.value)} className="w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
-                  <input type="text" value={editChannelPassword} onChange={(e) => setEditChannelPassword(e.target.value)} placeholder="كلمة مرور القناة" className="w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
+                  <div className="flex flex-wrap gap-2">
+                    <input type="text" value={editChannelPassword} onChange={(e) => setEditChannelPassword(e.target.value)} placeholder="كلمة مرور القناة" className="flex-1 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
+                    <button type="button" onClick={() => setEditChannelPassword(generateChannelPassword())} className="rounded-lg border border-teal px-3 py-1.5 text-sm font-bold text-teal hover:bg-teal/5">توليد</button>
+                  </div>
                   <div className="flex gap-2">
                     <button onClick={() => saveEditChannel(c.id)} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-bold text-white hover:bg-teal/90">حفظ</button>
                     <button onClick={() => setEditingChannelId(null)} className="rounded-lg border border-line px-3 py-1.5 text-sm">إلغاء</button>
@@ -379,7 +420,18 @@ export default function AdminPage() {
                     <span className="mr-2 text-sm text-ink/50">{c.subjects?.name}</span>
                     {c.description && <p className="text-sm text-ink/60">{c.description}</p>}
                     <a href={c.telegram_link} target="_blank" rel="noopener noreferrer" className="text-sm text-teal underline">{c.telegram_link}</a>
-                    <p className="text-sm text-ink/50">كلمة مرور القناة: {c.channel_password || 'غير محددة'}</p>
+                    <p className="flex flex-wrap items-center gap-2 text-sm text-ink/50">
+                      كلمة مرور القناة: {c.channel_password || 'غير محددة'}
+                      {c.channel_password && (
+                        <button
+                          type="button"
+                          onClick={() => { navigator.clipboard.writeText(c.channel_password); setCopiedChannelId(c.id); setTimeout(() => setCopiedChannelId(null), 1500); }}
+                          className="rounded border border-line px-2 py-0.5 text-xs hover:bg-ink/5"
+                        >
+                          {copiedChannelId === c.id ? 'تم النسخ!' : 'نسخ'}
+                        </button>
+                      )}
+                    </p>
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => startEditChannel(c)} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-ink/5">تعديل</button>

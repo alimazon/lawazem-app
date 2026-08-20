@@ -20,7 +20,7 @@ export async function POST(request: Request) {
   }
 
   if (action === 'login') {
-    return NextResponse.json({ channel: { id: channel.id, name: channel.name, subject_id: channel.subject_id } });
+    return NextResponse.json({ channel: { id: channel.id, name: channel.name, subject_id: channel.subject_id, description: channel.description, telegram_link: channel.telegram_link } });
   }
 
   if (action === 'list') {
@@ -60,6 +60,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
     }
     const { error } = await supabaseAdmin.from('assignments').delete().eq('id', id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true });
+  }
+
+  if (action === 'update_channel') {
+    const { name, description, telegram_link } = body;
+    const { error } = await supabaseAdmin.from('channels').update({ name, description, telegram_link }).eq('id', channel.id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true });
+  }
+
+  if (action === 'change_password') {
+    const { new_password } = body;
+    if (!new_password || new_password.length < 4) {
+      return NextResponse.json({ error: 'كلمة المرور الجديدة قصيرة جدًا' }, { status: 400 });
+    }
+    const { error } = await supabaseAdmin.from('channels').update({ channel_password: new_password }).eq('id', channel.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });
   }

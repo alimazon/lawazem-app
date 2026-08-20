@@ -485,28 +485,28 @@ export async function POST(request: Request) {
   const supabaseAdmin = getSupabaseAdmin();
 
   if (action === 'list') {
-    const { data, error } = await supabaseAdmin.from('channels').select('*, subjects(name)').order('created_at');
+    const { data, error } = await supabaseAdmin.from('assignments').select('*, subjects(name)').order('due_date', { ascending: true });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ channels: data });
+    return NextResponse.json({ assignments: data });
   }
 
   if (action === 'add') {
-    const { name, subject_id, description, telegram_link, channel_password } = body;
-    const { error } = await supabaseAdmin.from('channels').insert({ name, subject_id, description, telegram_link, channel_password: channel_password || null });
+    const { subject_id, title, description, due_date } = body;
+    const { error } = await supabaseAdmin.from('assignments').insert({ subject_id, title, description, due_date: due_date || null });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });
   }
 
   if (action === 'edit') {
-    const { id, name, subject_id, description, telegram_link, channel_password } = body;
-    const { error } = await supabaseAdmin.from('channels').update({ name, subject_id, description, telegram_link, channel_password: channel_password || null }).eq('id', id);
+    const { id, subject_id, title, description, due_date } = body;
+    const { error } = await supabaseAdmin.from('assignments').update({ subject_id, title, description, due_date: due_date || null }).eq('id', id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });
   }
 
   if (action === 'delete') {
     const { id } = body;
-    const { error } = await supabaseAdmin.from('channels').delete().eq('id', id);
+    const { error } = await supabaseAdmin.from('assignments').delete().eq('id', id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });
   }
@@ -634,7 +634,7 @@ export async function POST(request: Request) {
   }
 
   if (action === 'login') {
-    return NextResponse.json({ channel: { id: channel.id, name: channel.name, subject_id: channel.subject_id } });
+    return NextResponse.json({ channel: { id: channel.id, name: channel.name, subject_id: channel.subject_id, description: channel.description, telegram_link: channel.telegram_link } });
   }
 
   if (action === 'list') {
@@ -678,6 +678,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true });
   }
 
+  if (action === 'update_channel') {
+    const { name, description, telegram_link } = body;
+    const { error } = await supabaseAdmin.from('channels').update({ name, description, telegram_link }).eq('id', channel.id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true });
+  }
+
+  if (action === 'change_password') {
+    const { new_password } = body;
+    if (!new_password || new_password.length < 4) {
+      return NextResponse.json({ error: 'كلمة المرور الجديدة قصيرة جدًا' }, { status: 400 });
+    }
+    const { error } = await supabaseAdmin.from('channels').update({ channel_password: new_password }).eq('id', channel.id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true });
+  }
+
   return NextResponse.json({ error: 'إجراء غير معروف' }, { status: 400 });
 }
 ```
@@ -700,6 +717,7 @@ export default function ChannelPortalPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [channelInfo, setChannelInfo] = useState<any>(null);
   const [assignments, setAssignments] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'assignments' | 'settings'>('assignments');
 
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
@@ -708,6 +726,15 @@ export default function ChannelPortalPage() {
   const [editTitle, setEditTitle] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editDue, setEditDue] = useState('');
+
+  const [settingsName, setSettingsName] = useState('');
+  const [settingsDesc, setSettingsDesc] = useState('');
+  const [settingsLink, setSettingsLink] = useState('');
+  const [settingsStatus, setSettingsStatus] = useState('');
+
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [passwordStatus, setPasswordStatus] = useState('');
 
   useEffect(() => {
     async function loadChannels() {
@@ -736,6 +763,9 @@ export default function ChannelPortalPage() {
 
     const json = await res.json();
     setChannelInfo(json.channel);
+    setSettingsName(json.channel.name);
+    setSettingsDesc(json.channel.description || '');
+    setSettingsLink(json.channel.telegram_link || '');
     setAuthenticated(true);
     await loadAssignments();
     setLoading(false);
@@ -801,6 +831,48 @@ export default function ChannelPortalPage() {
     }
   }
 
+  async function handleUpdateChannel(e: any) {
+    e.preventDefault();
+    setSettingsStatus('');
+    const res = await fetch('/api/channel/assignments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'update_channel', channel_id: selectedChannelId, password, name: settingsName, description: settingsDesc, telegram_link: settingsLink }),
+    });
+    if (res.ok) {
+      setSettingsStatus('تم الحفظ بنجاح.');
+    } else {
+      const json = await res.json();
+      setSettingsStatus('صار خطأ: ' + json.error);
+    }
+  }
+
+  async function handleChangePassword(e: any) {
+    e.preventDefault();
+    setPasswordStatus('');
+
+    if (newPassword !== confirmNewPassword) {
+      setPasswordStatus('كلمتا المرور غير متطابقتين.');
+      return;
+    }
+
+    const res = await fetch('/api/channel/assignments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'change_password', channel_id: selectedChannelId, password, new_password: newPassword }),
+    });
+
+    if (res.ok) {
+      setPasswordStatus('تم تغيير كلمة المرور بنجاح. استخدمها بالمرة الجاية.');
+      setPassword(newPassword);
+      setNewPassword('');
+      setConfirmNewPassword('');
+    } else {
+      const json = await res.json();
+      setPasswordStatus('صار خطأ: ' + json.error);
+    }
+  }
+
   if (!authenticated) {
     return (
       <main className="mx-auto max-w-sm px-6 py-20">
@@ -826,51 +898,99 @@ export default function ChannelPortalPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <h1 className="text-3xl font-black">قناة: {channelInfo?.name}</h1>
-      <p className="mt-1 text-sm text-ink/60">أضف واجبات أو مهام أو سيشنات مذاكرة لطلابك، وتظهر تلقائيًا بصفحة الموقع.</p>
 
-      <section className="mt-8">
-        <form onSubmit={handleAdd} className="mb-6 space-y-2 rounded-lg border border-line bg-white/70 p-4">
-          <div className="flex flex-wrap gap-2">
-            <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="العنوان (مثل: حل أسئلة الفصل الثالث)" required className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
-            <input type="date" value={newDue} onChange={(e) => setNewDue(e.target.value)} className="w-40 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
-          </div>
-          <input type="text" value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="تفاصيل إضافية (اختياري)" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
-          <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">إضافة</button>
-        </form>
+      <div className="mt-6 flex gap-2 border-b border-line">
+        <button onClick={() => setActiveTab('assignments')} className={`px-4 py-2 text-sm font-bold ${activeTab === 'assignments' ? 'border-b-2 border-teal text-teal' : 'text-ink/50'}`}>الواجبات</button>
+        <button onClick={() => setActiveTab('settings')} className={`px-4 py-2 text-sm font-bold ${activeTab === 'settings' ? 'border-b-2 border-teal text-teal' : 'text-ink/50'}`}>إعدادات القناة</button>
+      </div>
 
-        <div className="space-y-2">
-          {assignments.length === 0 && <p className="text-ink/50">ما أضفت شي لسا.</p>}
-          {assignments.map((a: any) => (
-            <div key={a.id} className="rounded-lg border border-line bg-white/70 p-3">
-              {editingId === a.id ? (
-                <div className="space-y-2">
-                  <div className="flex flex-wrap gap-2">
-                    <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="flex-1 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
-                    <input type="date" value={editDue} onChange={(e) => setEditDue(e.target.value)} className="w-40 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
-                  </div>
-                  <input type="text" value={editDesc} onChange={(e) => setEditDesc(e.target.value)} className="w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
-                  <div className="flex gap-2">
-                    <button onClick={() => saveEdit(a.id)} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-bold text-white hover:bg-teal/90">حفظ</button>
-                    <button onClick={() => setEditingId(null)} className="rounded-lg border border-line px-3 py-1.5 text-sm">إلغاء</button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="font-bold">{a.title}</span>
-                    {a.due_date && <span className="mr-2 text-sm text-amber">تاريخ التسليم: {a.due_date}</span>}
-                    {a.description && <p className="text-sm text-ink/60">{a.description}</p>}
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => startEdit(a)} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-ink/5">تعديل</button>
-                    <button onClick={() => deleteAssignment(a.id)} className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">حذف</button>
-                  </div>
-                </div>
-              )}
+      {activeTab === 'assignments' && (
+        <section className="mt-6">
+          <p className="mb-4 text-sm text-ink/60">أضف واجبات أو مهام أو مواعيد لطلابك، وتظهر تلقائيًا بصفحة الموقع.</p>
+
+          <form onSubmit={handleAdd} className="mb-6 space-y-2 rounded-lg border border-line bg-white/70 p-4">
+            <div className="flex flex-wrap gap-2">
+              <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="العنوان (مثل: حل أسئلة الفصل الثالث)" required className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+              <input type="date" value={newDue} onChange={(e) => setNewDue(e.target.value)} className="w-40 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
             </div>
-          ))}
-        </div>
-      </section>
+            <input type="text" value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="تفاصيل إضافية (اختياري)" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+            <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">إضافة</button>
+          </form>
+
+          <div className="space-y-2">
+            {assignments.length === 0 && <p className="text-ink/50">ما أضفت شي لسا.</p>}
+            {assignments.map((a: any) => (
+              <div key={a.id} className="rounded-lg border border-line bg-white/70 p-3">
+                {editingId === a.id ? (
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
+                      <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="flex-1 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
+                      <input type="date" value={editDue} onChange={(e) => setEditDue(e.target.value)} className="w-40 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
+                    </div>
+                    <input type="text" value={editDesc} onChange={(e) => setEditDesc(e.target.value)} className="w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
+                    <div className="flex gap-2">
+                      <button onClick={() => saveEdit(a.id)} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-bold text-white hover:bg-teal/90">حفظ</button>
+                      <button onClick={() => setEditingId(null)} className="rounded-lg border border-line px-3 py-1.5 text-sm">إلغاء</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="font-bold">{a.title}</span>
+                      {a.due_date && <span className="mr-2 text-sm text-amber">تاريخ التسليم: {a.due_date}</span>}
+                      {a.description && <p className="text-sm text-ink/60">{a.description}</p>}
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => startEdit(a)} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-ink/5">تعديل</button>
+                      <button onClick={() => deleteAssignment(a.id)} className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">حذف</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {activeTab === 'settings' && (
+        <section className="mt-6 max-w-md space-y-8">
+          <div>
+            <h2 className="mb-3 text-lg font-extrabold">بيانات القناة</h2>
+            <form onSubmit={handleUpdateChannel} className="space-y-3 rounded-lg border border-line bg-white/70 p-4">
+              <div>
+                <label className="mb-1 block text-sm font-bold text-ink/70">اسم القناة</label>
+                <input type="text" value={settingsName} onChange={(e) => setSettingsName(e.target.value)} required className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-bold text-ink/70">الوصف</label>
+                <input type="text" value={settingsDesc} onChange={(e) => setSettingsDesc(e.target.value)} className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-bold text-ink/70">رابط تليجرام</label>
+                <input type="text" value={settingsLink} onChange={(e) => setSettingsLink(e.target.value)} required className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+              </div>
+              <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">حفظ التغييرات</button>
+              {settingsStatus && <p className="text-sm text-ink/70">{settingsStatus}</p>}
+            </form>
+          </div>
+
+          <div>
+            <h2 className="mb-3 text-lg font-extrabold">تغيير كلمة المرور</h2>
+            <form onSubmit={handleChangePassword} className="space-y-3 rounded-lg border border-line bg-white/70 p-4">
+              <div>
+                <label className="mb-1 block text-sm font-bold text-ink/70">كلمة المرور الجديدة</label>
+                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-bold text-ink/70">تأكيد كلمة المرور</label>
+                <input type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} required className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+              </div>
+              <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">تغيير كلمة المرور</button>
+              {passwordStatus && <p className="text-sm text-ink/70">{passwordStatus}</p>}
+            </form>
+          </div>
+          </section>
+      )}
     </main>
   );
 }
@@ -884,18 +1004,41 @@ export default function ChannelPortalPage() {
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
+function getDueInfo(dueDateStr: string) {
+  const due = new Date(dueDateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((due.getTime() - today.getTime()) / 86400000);
+
+  if (diffDays < 0) {
+    return { text: 'انتهى الموعد', className: 'bg-ink/10 text-ink/50' };
+  }
+  if (diffDays <= 3) {
+    return { text: `تسليم: ${dueDateStr} (قريب!)`, className: 'bg-red-100 text-red-700' };
+  }
+  return { text: `تسليم: ${dueDateStr}`, className: 'bg-amber/20 text-ink' };
+}
+
 export default function ChannelsPage() {
   const [subjects, setSubjects] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<any[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
-      const { data, error } = await supabase.from('subjects').select('*, channels(*)');
-      if (error) {
-        setError(error.message);
+      const subjectsRes = await supabase.from('subjects').select('*, channels(id, name, description, telegram_link)');
+      const assignmentsRes = await supabase.from('assignments').select('*');
+
+      if (subjectsRes.error) {
+        setError(subjectsRes.error.message);
+      } else if (assignmentsRes.error) {
+        setError(assignmentsRes.error.message);
       } else {
-        setSubjects((data || []).filter((s: any) => s.channels.length > 0));
+        const allAssignments = assignmentsRes.data || [];
+        setAssignments(allAssignments);
+        setSubjects((subjectsRes.data || []).filter((s: any) => s.channels.length > 0 || allAssignments.some((a: any) => a.subject_id === s.id)));
       }
       setLoading(false);
     }
@@ -926,26 +1069,59 @@ export default function ChannelsPage() {
 
       {subjects.length === 0 && <p className="mt-8 text-ink/60">لا توجد قنوات مضافة بعد.</p>}
 
-      {subjects.map((s: any) => (
-        <section key={s.id} className="mt-8">
-          <h2 className="mb-3 border-b border-line pb-2 text-lg font-extrabold">{s.name}</h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {s.channels.map((c: any) => {
-              const linkClass = "mt-3 inline-block rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90";
-              return (
-                <div key={c.id} className="rounded-xl border border-line bg-white/70 p-4 shadow-sm transition-shadow hover:shadow-md">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-teal/10 font-bold text-teal">{c.name.slice(0, 2)}</div>
-                    <span className="font-bold">{c.name}</span>
-                  </div>
-                  {c.description && <p className="mt-2 text-sm text-ink/60">{c.description}</p>}
-                  <a href={c.telegram_link} target="_blank" rel="noopener noreferrer" className={linkClass}>فتح القناة</a>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      ))}
+      {subjects.map((s: any) => {
+        const subjectAssignments = assignments
+          .filter((a: any) => a.subject_id === s.id)
+          .sort((a: any, b: any) => {
+            if (!a.due_date) return 1;
+            if (!b.due_date) return -1;
+            return a.due_date.localeCompare(b.due_date);
+          });
+
+        return (
+          <section key={s.id} className="mt-8">
+            <h2 className="mb-3 border-b border-line pb-2 text-lg font-extrabold">{s.name}</h2>
+
+            {s.channels.length > 0 && (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {s.channels.map((c: any) => {
+                  const linkClass = "mt-3 inline-block rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90";
+                  return (
+                    <div key={c.id} className="rounded-xl border border-line bg-white/70 p-4 shadow-sm transition-shadow hover:shadow-md">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-teal/10 font-bold text-teal">{c.name.slice(0, 2)}</div>
+                        <span className="font-bold">{c.name}</span>
+                      </div>
+                      {c.description && <p className="mt-2 text-sm text-ink/60">{c.description}</p>}
+                      <a href={c.telegram_link} target="_blank" rel="noopener noreferrer" className={linkClass}>فتح القناة</a>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {subjectAssignments.length > 0 && (
+              <div className="mt-4 space-y-2">
+                <h3 className="text-sm font-bold text-teal">الواجبات والمواعيد</h3>
+                {subjectAssignments.map((a: any) => {
+                  const channel = s.channels.find((c: any) => c.id === a.channel_id);
+                  const dueInfo = a.due_date ? getDueInfo(a.due_date) : null;
+                  return (
+                    <div key={a.id} className="rounded-lg border border-line bg-white/70 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-bold">{a.title}</span>
+                        {dueInfo && <span className={`rounded-full px-3 py-1 text-xs font-bold ${dueInfo.className}`}>{dueInfo.text}</span>}
+                      </div>
+                      {a.description && <p className="mt-1 text-sm text-ink/60">{a.description}</p>}
+                      <p className="mt-1 text-xs text-ink/40">{channel ? `من قناة: ${channel.name}` : 'من الإدارة'}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        );
+      })}
     </main>
   );
 }
