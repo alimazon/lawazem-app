@@ -23,6 +23,19 @@ export default function AdminPage() {
   const [editName, setEditName] = useState('');
   const [editStage, setEditStage] = useState('');
 
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [newMaterialSubject, setNewMaterialSubject] = useState('');
+  const [newMaterialTitle, setNewMaterialTitle] = useState('');
+  const [newMaterialProfessor, setNewMaterialProfessor] = useState('');
+  const [newMaterialLectureNum, setNewMaterialLectureNum] = useState('');
+  const [newMaterialLink, setNewMaterialLink] = useState('');
+  const [editingMaterialId, setEditingMaterialId] = useState<string | null>(null);
+  const [editMaterialSubject, setEditMaterialSubject] = useState('');
+  const [editMaterialTitle, setEditMaterialTitle] = useState('');
+  const [editMaterialProfessor, setEditMaterialProfessor] = useState('');
+  const [editMaterialLectureNum, setEditMaterialLectureNum] = useState('');
+  const [editMaterialLink, setEditMaterialLink] = useState('');
+
   const [channels, setChannels] = useState<any[]>([]);
   const [newChannelName, setNewChannelName] = useState('');
   const [newChannelSubject, setNewChannelSubject] = useState('');
@@ -77,6 +90,7 @@ export default function AdminPage() {
     const json = await res.json();
     setSubjects(json.subjects || []);
     setAuthenticated(true);
+    await loadMaterials(pw);
     await loadChannels(pw);
     await loadAssignments(pw);
     setLoading(false);
@@ -97,6 +111,18 @@ export default function AdminPage() {
     if (res.ok) {
       const json = await res.json();
       setSubjects(json.subjects || []);
+    }
+  }
+
+  async function loadMaterials(pw: string) {
+    const res = await fetch('/api/admin/lecture-notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw, action: 'list' }),
+    });
+    if (res.ok) {
+      const json = await res.json();
+      setMaterials(json.materials || []);
     }
   }
 
@@ -167,6 +193,75 @@ export default function AdminPage() {
     });
     if (res.ok) {
       loadSubjects(password);
+    }
+  }
+
+  async function handleAddMaterial(e: any) {
+    e.preventDefault();
+    const res = await fetch('/api/admin/lecture-notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        password,
+        action: 'add',
+        subject_id: newMaterialSubject,
+        title: newMaterialTitle,
+        professor_name: newMaterialProfessor,
+        lecture_number: newMaterialLectureNum ? Number(newMaterialLectureNum) : null,
+        file_path: newMaterialLink,
+      }),
+    });
+    if (res.ok) {
+      setNewMaterialSubject('');
+      setNewMaterialTitle('');
+      setNewMaterialProfessor('');
+      setNewMaterialLectureNum('');
+      setNewMaterialLink('');
+      loadMaterials(password);
+    }
+  }
+
+  function startEditMaterial(m: any) {
+    setEditingMaterialId(m.id);
+    setEditMaterialSubject(m.subject_id);
+    setEditMaterialTitle(m.title);
+    setEditMaterialProfessor(m.professor_name || '');
+    setEditMaterialLectureNum(m.lecture_number ? String(m.lecture_number) : '');
+    setEditMaterialLink(m.file_path);
+  }
+
+  async function saveEditMaterial(id: string) {
+    const res = await fetch('/api/admin/lecture-notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        password,
+        action: 'edit',
+        id,
+        subject_id: editMaterialSubject,
+        title: editMaterialTitle,
+        professor_name: editMaterialProfessor,
+        lecture_number: editMaterialLectureNum ? Number(editMaterialLectureNum) : null,
+        file_path: editMaterialLink,
+      }),
+    });
+    if (res.ok) {
+      setEditingMaterialId(null);
+      loadMaterials(password);
+    }
+  }
+
+  async function deleteMaterial(id: string) {
+    const confirmed = window.confirm('حذف الملزمة نهائي. متأكد؟');
+    if (!confirmed) return;
+
+    const res = await fetch('/api/admin/lecture-notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password, action: 'delete', id }),
+    });
+    if (res.ok) {
+      loadMaterials(password);
     }
   }
 
@@ -356,6 +451,72 @@ export default function AdminPage() {
                     <button onClick={() => deleteSubject(s.id)} className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">حذف</button>
                   </div>
                 </>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="mb-3 text-lg font-extrabold text-teal">ملازم الدكاترة</h2>
+
+        <form onSubmit={handleAddMaterial} className="mb-4 space-y-2 rounded-lg border border-line bg-white/70 p-4">
+          <div className="flex flex-wrap gap-2">
+            <select value={newMaterialSubject} onChange={(e) => setNewMaterialSubject(e.target.value)} required className="w-44 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20">
+              <option value="">اختر المادة</option>
+              {subjects.map((s: any) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+            <input type="text" value={newMaterialTitle} onChange={(e) => setNewMaterialTitle(e.target.value)} placeholder="اسم الملزمة/المحاضرة" required className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <input type="text" value={newMaterialProfessor} onChange={(e) => setNewMaterialProfessor(e.target.value)} placeholder="اسم الدكتور (اختياري)" className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+            <input type="number" value={newMaterialLectureNum} onChange={(e) => setNewMaterialLectureNum(e.target.value)} placeholder="رقم المحاضرة" className="w-32 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+          </div>
+          <input type="text" value={newMaterialLink} onChange={(e) => setNewMaterialLink(e.target.value)} placeholder="رابط الملف (من Supabase Storage)" required className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+          <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">إضافة ملزمة</button>
+        </form>
+
+        <div className="space-y-2">
+          {materials.map((m: any) => (
+            <div key={m.id} className="rounded-lg border border-line bg-white/70 p-3">
+              {editingMaterialId === m.id ? (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    <select value={editMaterialSubject} onChange={(e) => setEditMaterialSubject(e.target.value)} className="w-44 rounded-lg border border-line bg-white px-3 py-1.5 text-sm">
+                      {subjects.map((s: any) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                    <input type="text" value={editMaterialTitle} onChange={(e) => setEditMaterialTitle(e.target.value)} className="flex-1 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <input type="text" value={editMaterialProfessor} onChange={(e) => setEditMaterialProfessor(e.target.value)} className="flex-1 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
+                    <input type="number" value={editMaterialLectureNum} onChange={(e) => setEditMaterialLectureNum(e.target.value)} className="w-32 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
+                  </div>
+                  <input type="text" value={editMaterialLink} onChange={(e) => setEditMaterialLink(e.target.value)} className="w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
+                  <div className="flex gap-2">
+                    <button onClick={() => saveEditMaterial(m.id)} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-bold text-white hover:bg-teal/90">حفظ</button>
+                    <button onClick={() => setEditingMaterialId(null)} className="rounded-lg border border-line px-3 py-1.5 text-sm">إلغاء</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-bold">{m.title}</span>
+                    <span className="mr-2 text-sm text-ink/50">{m.subjects?.name}</span>
+                    <p className="text-sm text-ink/60">
+                      {m.professor_name && `د. ${m.professor_name}`}
+                      {m.professor_name && m.lecture_number ? ' • ' : ''}
+                      {m.lecture_number && `محاضرة ${m.lecture_number}`}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => startEditMaterial(m)} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-ink/5">تعديل</button>
+                    <button onClick={() => deleteMaterial(m.id)} className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">حذف</button>
+                  </div>
+                </div>
               )}
             </div>
           ))}

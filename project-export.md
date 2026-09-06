@@ -15,7 +15,16 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ```
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+function generateChannelPassword() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let result = '';
+  for (let i = 0; i < 8; i++) {
+    result += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return result;
+}
 
 export default function AdminPage() {
   const [password, setPassword] = useState('');
@@ -29,18 +38,33 @@ export default function AdminPage() {
   const [editName, setEditName] = useState('');
   const [editStage, setEditStage] = useState('');
 
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [newMaterialSubject, setNewMaterialSubject] = useState('');
+  const [newMaterialTitle, setNewMaterialTitle] = useState('');
+  const [newMaterialProfessor, setNewMaterialProfessor] = useState('');
+  const [newMaterialLectureNum, setNewMaterialLectureNum] = useState('');
+  const [newMaterialLink, setNewMaterialLink] = useState('');
+  const [editingMaterialId, setEditingMaterialId] = useState<string | null>(null);
+  const [editMaterialSubject, setEditMaterialSubject] = useState('');
+  const [editMaterialTitle, setEditMaterialTitle] = useState('');
+  const [editMaterialProfessor, setEditMaterialProfessor] = useState('');
+  const [editMaterialLectureNum, setEditMaterialLectureNum] = useState('');
+  const [editMaterialLink, setEditMaterialLink] = useState('');
+
   const [channels, setChannels] = useState<any[]>([]);
   const [newChannelName, setNewChannelName] = useState('');
   const [newChannelSubject, setNewChannelSubject] = useState('');
   const [newChannelDesc, setNewChannelDesc] = useState('');
   const [newChannelLink, setNewChannelLink] = useState('');
   const [newChannelPassword, setNewChannelPassword] = useState('');
+  const [copiedNewChannelPassword, setCopiedNewChannelPassword] = useState(false);
   const [editingChannelId, setEditingChannelId] = useState<string | null>(null);
   const [editChannelName, setEditChannelName] = useState('');
   const [editChannelSubject, setEditChannelSubject] = useState('');
   const [editChannelDesc, setEditChannelDesc] = useState('');
   const [editChannelLink, setEditChannelLink] = useState('');
   const [editChannelPassword, setEditChannelPassword] = useState('');
+  const [copiedChannelId, setCopiedChannelId] = useState<string | null>(null);
 
   const [assignments, setAssignments] = useState<any[]>([]);
   const [newAssignmentSubject, setNewAssignmentSubject] = useState('');
@@ -52,6 +76,14 @@ export default function AdminPage() {
   const [editAssignmentTitle, setEditAssignmentTitle] = useState('');
   const [editAssignmentDesc, setEditAssignmentDesc] = useState('');
   const [editAssignmentDue, setEditAssignmentDue] = useState('');
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem('admin_password');
+    if (saved) {
+      setPassword(saved);
+      handleLogin(saved);
+    }
+  }, []);
 
   async function handleLogin(pw: string) {
     setLoading(true);
@@ -65,15 +97,24 @@ export default function AdminPage() {
     if (!res.ok) {
       setLoading(false);
       setLoginError('كلمة المرور غير صحيحة');
+      sessionStorage.removeItem('admin_password');
       return;
     }
 
+    sessionStorage.setItem('admin_password', pw);
     const json = await res.json();
     setSubjects(json.subjects || []);
     setAuthenticated(true);
+    await loadMaterials(pw);
     await loadChannels(pw);
     await loadAssignments(pw);
     setLoading(false);
+  }
+
+  function handleLogout() {
+    sessionStorage.removeItem('admin_password');
+    setPassword('');
+    setAuthenticated(false);
   }
 
   async function loadSubjects(pw: string) {
@@ -85,6 +126,18 @@ export default function AdminPage() {
     if (res.ok) {
       const json = await res.json();
       setSubjects(json.subjects || []);
+    }
+  }
+
+  async function loadMaterials(pw: string) {
+    const res = await fetch('/api/admin/lecture-notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw, action: 'list' }),
+    });
+    if (res.ok) {
+      const json = await res.json();
+      setMaterials(json.materials || []);
     }
   }
 
@@ -155,6 +208,75 @@ export default function AdminPage() {
     });
     if (res.ok) {
       loadSubjects(password);
+    }
+  }
+
+  async function handleAddMaterial(e: any) {
+    e.preventDefault();
+    const res = await fetch('/api/admin/lecture-notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        password,
+        action: 'add',
+        subject_id: newMaterialSubject,
+        title: newMaterialTitle,
+        professor_name: newMaterialProfessor,
+        lecture_number: newMaterialLectureNum ? Number(newMaterialLectureNum) : null,
+        file_path: newMaterialLink,
+      }),
+    });
+    if (res.ok) {
+      setNewMaterialSubject('');
+      setNewMaterialTitle('');
+      setNewMaterialProfessor('');
+      setNewMaterialLectureNum('');
+      setNewMaterialLink('');
+      loadMaterials(password);
+    }
+  }
+
+  function startEditMaterial(m: any) {
+    setEditingMaterialId(m.id);
+    setEditMaterialSubject(m.subject_id);
+    setEditMaterialTitle(m.title);
+    setEditMaterialProfessor(m.professor_name || '');
+    setEditMaterialLectureNum(m.lecture_number ? String(m.lecture_number) : '');
+    setEditMaterialLink(m.file_path);
+  }
+
+  async function saveEditMaterial(id: string) {
+    const res = await fetch('/api/admin/lecture-notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        password,
+        action: 'edit',
+        id,
+        subject_id: editMaterialSubject,
+        title: editMaterialTitle,
+        professor_name: editMaterialProfessor,
+        lecture_number: editMaterialLectureNum ? Number(editMaterialLectureNum) : null,
+        file_path: editMaterialLink,
+      }),
+    });
+    if (res.ok) {
+      setEditingMaterialId(null);
+      loadMaterials(password);
+    }
+  }
+
+  async function deleteMaterial(id: string) {
+    const confirmed = window.confirm('حذف الملزمة نهائي. متأكد؟');
+    if (!confirmed) return;
+
+    const res = await fetch('/api/admin/lecture-notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password, action: 'delete', id }),
+    });
+    if (res.ok) {
+      loadMaterials(password);
     }
   }
 
@@ -309,7 +431,10 @@ export default function AdminPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-      <h1 className="text-3xl font-black">لوحة التحكم</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-black">لوحة التحكم</h1>
+        <button onClick={handleLogout} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-ink/5">تسجيل خروج</button>
+      </div>
 
       <section className="mt-8">
         <h2 className="mb-3 text-lg font-extrabold text-teal">إدارة المواد</h2>
@@ -348,6 +473,72 @@ export default function AdminPage() {
       </section>
 
       <section className="mt-10">
+        <h2 className="mb-3 text-lg font-extrabold text-teal">ملازم الدكاترة</h2>
+
+        <form onSubmit={handleAddMaterial} className="mb-4 space-y-2 rounded-lg border border-line bg-white/70 p-4">
+          <div className="flex flex-wrap gap-2">
+            <select value={newMaterialSubject} onChange={(e) => setNewMaterialSubject(e.target.value)} required className="w-44 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20">
+              <option value="">اختر المادة</option>
+              {subjects.map((s: any) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+            <input type="text" value={newMaterialTitle} onChange={(e) => setNewMaterialTitle(e.target.value)} placeholder="اسم الملزمة/المحاضرة" required className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <input type="text" value={newMaterialProfessor} onChange={(e) => setNewMaterialProfessor(e.target.value)} placeholder="اسم الدكتور (اختياري)" className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+            <input type="number" value={newMaterialLectureNum} onChange={(e) => setNewMaterialLectureNum(e.target.value)} placeholder="رقم المحاضرة" className="w-32 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+          </div>
+          <input type="text" value={newMaterialLink} onChange={(e) => setNewMaterialLink(e.target.value)} placeholder="رابط الملف (من Supabase Storage)" required className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+          <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">إضافة ملزمة</button>
+        </form>
+
+        <div className="space-y-2">
+          {materials.map((m: any) => (
+            <div key={m.id} className="rounded-lg border border-line bg-white/70 p-3">
+              {editingMaterialId === m.id ? (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    <select value={editMaterialSubject} onChange={(e) => setEditMaterialSubject(e.target.value)} className="w-44 rounded-lg border border-line bg-white px-3 py-1.5 text-sm">
+                      {subjects.map((s: any) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                    <input type="text" value={editMaterialTitle} onChange={(e) => setEditMaterialTitle(e.target.value)} className="flex-1 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <input type="text" value={editMaterialProfessor} onChange={(e) => setEditMaterialProfessor(e.target.value)} className="flex-1 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
+                    <input type="number" value={editMaterialLectureNum} onChange={(e) => setEditMaterialLectureNum(e.target.value)} className="w-32 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
+                  </div>
+                  <input type="text" value={editMaterialLink} onChange={(e) => setEditMaterialLink(e.target.value)} className="w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
+                  <div className="flex gap-2">
+                    <button onClick={() => saveEditMaterial(m.id)} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-bold text-white hover:bg-teal/90">حفظ</button>
+                    <button onClick={() => setEditingMaterialId(null)} className="rounded-lg border border-line px-3 py-1.5 text-sm">إلغاء</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-bold">{m.title}</span>
+                    <span className="mr-2 text-sm text-ink/50">{m.subjects?.name}</span>
+                    <p className="text-sm text-ink/60">
+                      {m.professor_name && `د. ${m.professor_name}`}
+                      {m.professor_name && m.lecture_number ? ' • ' : ''}
+                      {m.lecture_number && `محاضرة ${m.lecture_number}`}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => startEditMaterial(m)} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-ink/5">تعديل</button>
+                    <button onClick={() => deleteMaterial(m.id)} className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">حذف</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-10">
         <h2 className="mb-3 text-lg font-extrabold text-teal">إدارة القنوات</h2>
 
         <form onSubmit={handleAddChannel} className="mb-4 space-y-2 rounded-lg border border-line bg-white/70 p-4">
@@ -362,7 +553,15 @@ export default function AdminPage() {
           </div>
           <input type="text" value={newChannelDesc} onChange={(e) => setNewChannelDesc(e.target.value)} placeholder="وصف قصير (اختياري)" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
           <input type="text" value={newChannelLink} onChange={(e) => setNewChannelLink(e.target.value)} placeholder="رابط تليجرام (مثل https://t.me/channelname)" required className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
-          <input type="text" value={newChannelPassword} onChange={(e) => setNewChannelPassword(e.target.value)} placeholder="كلمة مرور القناة (تعطيها لصاحب القناة يدويًا)" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+          <div className="flex flex-wrap gap-2">
+            <input type="text" value={newChannelPassword} onChange={(e) => setNewChannelPassword(e.target.value)} placeholder="كلمة مرور القناة" className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+            <button type="button" onClick={() => setNewChannelPassword(generateChannelPassword())} className="rounded-lg border border-teal px-3 py-2 text-sm font-bold text-teal hover:bg-teal/5">توليد</button>
+            {newChannelPassword && (
+              <button type="button" onClick={() => { navigator.clipboard.writeText(newChannelPassword); setCopiedNewChannelPassword(true); setTimeout(() => setCopiedNewChannelPassword(false), 1500); }} className="rounded-lg border border-line px-3 py-2 text-sm hover:bg-ink/5">
+                {copiedNewChannelPassword ? 'تم النسخ!' : 'نسخ'}
+              </button>
+            )}
+          </div>
           <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">إضافة قناة</button>
         </form>
 
@@ -381,7 +580,10 @@ export default function AdminPage() {
                   </div>
                   <input type="text" value={editChannelDesc} onChange={(e) => setEditChannelDesc(e.target.value)} className="w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
                   <input type="text" value={editChannelLink} onChange={(e) => setEditChannelLink(e.target.value)} className="w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
-                  <input type="text" value={editChannelPassword} onChange={(e) => setEditChannelPassword(e.target.value)} placeholder="كلمة مرور القناة" className="w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
+                  <div className="flex flex-wrap gap-2">
+                    <input type="text" value={editChannelPassword} onChange={(e) => setEditChannelPassword(e.target.value)} placeholder="كلمة مرور القناة" className="flex-1 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
+                    <button type="button" onClick={() => setEditChannelPassword(generateChannelPassword())} className="rounded-lg border border-teal px-3 py-1.5 text-sm font-bold text-teal hover:bg-teal/5">توليد</button>
+                  </div>
                   <div className="flex gap-2">
                     <button onClick={() => saveEditChannel(c.id)} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-bold text-white hover:bg-teal/90">حفظ</button>
                     <button onClick={() => setEditingChannelId(null)} className="rounded-lg border border-line px-3 py-1.5 text-sm">إلغاء</button>
@@ -394,7 +596,18 @@ export default function AdminPage() {
                     <span className="mr-2 text-sm text-ink/50">{c.subjects?.name}</span>
                     {c.description && <p className="text-sm text-ink/60">{c.description}</p>}
                     <a href={c.telegram_link} target="_blank" rel="noopener noreferrer" className="text-sm text-teal underline">{c.telegram_link}</a>
-                    <p className="text-sm text-ink/50">كلمة مرور القناة: {c.channel_password || 'غير محددة'}</p>
+                    <p className="flex flex-wrap items-center gap-2 text-sm text-ink/50">
+                      كلمة مرور القناة: {c.channel_password || 'غير محددة'}
+                      {c.channel_password && (
+                        <button
+                          type="button"
+                          onClick={() => { navigator.clipboard.writeText(c.channel_password); setCopiedChannelId(c.id); setTimeout(() => setCopiedChannelId(null), 1500); }}
+                          className="rounded border border-line px-2 py-0.5 text-xs hover:bg-ink/5"
+                        >
+                          {copiedChannelId === c.id ? 'تم النسخ!' : 'نسخ'}
+                        </button>
+                      )}
+                    </p>
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => startEditChannel(c)} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-ink/5">تعديل</button>
@@ -554,6 +767,66 @@ export async function POST(request: Request) {
   if (action === 'delete') {
     const { id } = body;
     const { error } = await supabaseAdmin.from('channels').delete().eq('id', id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true });
+  }
+
+  return NextResponse.json({ error: 'إجراء غير معروف' }, { status: 400 });
+}
+```
+
+## app\api\admin\lecture-notes\route.ts
+
+```
+import { NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '../../../../lib/supabaseAdmin';
+
+export async function POST(request: Request) {
+  const body = await request.json();
+  const { password, action } = body;
+
+  if (password !== process.env.ADMIN_PASSWORD) {
+    return NextResponse.json({ error: 'كلمة المرور غير صحيحة' }, { status: 401 });
+  }
+
+  const supabaseAdmin = getSupabaseAdmin();
+
+  if (action === 'list') {
+    const { data, error } = await supabaseAdmin.from('lecture_notes').select('*, subjects(name)').order('created_at', { ascending: false });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ materials: data });
+  }
+
+  if (action === 'add') {
+    const { subject_id, title, professor_name, lecture_number, file_path } = body;
+    const { error } = await supabaseAdmin.from('lecture_notes').insert({
+      subject_id,
+      title,
+      professor_name: professor_name || null,
+      lecture_number: lecture_number || null,
+      file_path,
+      status: 'approved',
+    });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true });
+  }
+
+  if (action === 'edit') {
+    const { id, subject_id, title, professor_name, lecture_number, file_path } = body;
+    const { error } = await supabaseAdmin.from('lecture_notes').update({
+      subject_id,
+      title,
+      professor_name: professor_name || null,
+      lecture_number: lecture_number || null,
+      file_path,
+    }).eq('id', id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true });
+  }
+
+  if (action === 'delete') {
+    const { id } = body;
+    const { error } = await supabaseAdmin.from('lecture_notes').delete().eq('id', id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });
   }
@@ -737,29 +1010,41 @@ export default function ChannelPortalPage() {
   const [passwordStatus, setPasswordStatus] = useState('');
 
   useEffect(() => {
-    async function loadChannels() {
+    async function init() {
       const { data } = await supabase.from('channels').select('id, name').order('name');
       setChannelsList(data || []);
+
+      const savedId = sessionStorage.getItem('channel_id');
+      const savedPw = sessionStorage.getItem('channel_password');
+      if (savedId && savedPw) {
+        setSelectedChannelId(savedId);
+        setPassword(savedPw);
+        doLogin(savedId, savedPw);
+      }
     }
-    loadChannels();
+    init();
   }, []);
 
-  async function handleLogin(e: any) {
-    e.preventDefault();
+  async function doLogin(channelId: string, pw: string) {
     setLoading(true);
     setLoginError('');
 
     const res = await fetch('/api/channel/assignments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'login', channel_id: selectedChannelId, password }),
+      body: JSON.stringify({ action: 'login', channel_id: channelId, password: pw }),
     });
 
     if (!res.ok) {
       setLoading(false);
       setLoginError('كلمة المرور غير صحيحة');
+      sessionStorage.removeItem('channel_id');
+      sessionStorage.removeItem('channel_password');
       return;
     }
+
+    sessionStorage.setItem('channel_id', channelId);
+    sessionStorage.setItem('channel_password', pw);
 
     const json = await res.json();
     setChannelInfo(json.channel);
@@ -767,15 +1052,28 @@ export default function ChannelPortalPage() {
     setSettingsDesc(json.channel.description || '');
     setSettingsLink(json.channel.telegram_link || '');
     setAuthenticated(true);
-    await loadAssignments();
+    await loadAssignmentsFor(channelId, pw);
     setLoading(false);
   }
 
-  async function loadAssignments() {
+  async function handleLogin(e: any) {
+    e.preventDefault();
+    doLogin(selectedChannelId, password);
+  }
+
+  function handleLogout() {
+    sessionStorage.removeItem('channel_id');
+    sessionStorage.removeItem('channel_password');
+    setAuthenticated(false);
+    setPassword('');
+    setSelectedChannelId('');
+  }
+
+  async function loadAssignmentsFor(channelId: string, pw: string) {
     const res = await fetch('/api/channel/assignments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'list', channel_id: selectedChannelId, password }),
+      body: JSON.stringify({ action: 'list', channel_id: channelId, password: pw }),
     });
     if (res.ok) {
       const json = await res.json();
@@ -794,7 +1092,7 @@ export default function ChannelPortalPage() {
       setNewTitle('');
       setNewDesc('');
       setNewDue('');
-      loadAssignments();
+      loadAssignmentsFor(selectedChannelId, password);
     }
   }
 
@@ -813,7 +1111,7 @@ export default function ChannelPortalPage() {
     });
     if (res.ok) {
       setEditingId(null);
-      loadAssignments();
+      loadAssignmentsFor(selectedChannelId, password);
     }
   }
 
@@ -827,7 +1125,7 @@ export default function ChannelPortalPage() {
       body: JSON.stringify({ action: 'delete', channel_id: selectedChannelId, password, id }),
     });
     if (res.ok) {
-      loadAssignments();
+      loadAssignmentsFor(selectedChannelId, password);
     }
   }
 
@@ -863,7 +1161,8 @@ export default function ChannelPortalPage() {
     });
 
     if (res.ok) {
-      setPasswordStatus('تم تغيير كلمة المرور بنجاح. استخدمها بالمرة الجاية.');
+      setPasswordStatus('تم تغيير كلمة المرور بنجاح.');
+      sessionStorage.setItem('channel_password', newPassword);
       setPassword(newPassword);
       setNewPassword('');
       setConfirmNewPassword('');
@@ -897,7 +1196,10 @@ export default function ChannelPortalPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-      <h1 className="text-3xl font-black">قناة: {channelInfo?.name}</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-black">قناة: {channelInfo?.name}</h1>
+        <button onClick={handleLogout} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-ink/5">تسجيل خروج</button>
+      </div>
 
       <div className="mt-6 flex gap-2 border-b border-line">
         <button onClick={() => setActiveTab('assignments')} className={`px-4 py-2 text-sm font-bold ${activeTab === 'assignments' ? 'border-b-2 border-teal text-teal' : 'text-ink/50'}`}>الواجبات</button>
@@ -989,7 +1291,7 @@ export default function ChannelPortalPage() {
               {passwordStatus && <p className="text-sm text-ink/70">{passwordStatus}</p>}
             </form>
           </div>
-          </section>
+        </section>
       )}
     </main>
   );
@@ -1025,6 +1327,7 @@ export default function ChannelsPage() {
   const [assignments, setAssignments] = useState<any[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     async function loadData() {
@@ -1045,6 +1348,11 @@ export default function ChannelsPage() {
     loadData();
   }, []);
 
+  function scrollToSubject(id: string) {
+    const el = document.getElementById(`subject-${id}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   if (loading) {
     return (
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
@@ -1062,14 +1370,45 @@ export default function ChannelsPage() {
     );
   }
 
+  const term = searchTerm.trim().toLowerCase();
+
+  const visibleSubjects = subjects
+    .map((s: any) => {
+      const subjectMatches = s.name.toLowerCase().includes(term);
+      const filteredChannels = subjectMatches ? s.channels : s.channels.filter((c: any) => c.name.toLowerCase().includes(term));
+      return { ...s, filteredChannels, subjectMatches };
+    })
+    .filter((s: any) => term === '' || s.subjectMatches || s.filteredChannels.length > 0);
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <p className="font-mono text-xs uppercase tracking-widest text-teal">استكشف حسب المادة</p>
       <h1 className="mt-1 text-2xl font-black sm:text-3xl">قنوات الدراسة</h1>
 
-      {subjects.length === 0 && <p className="mt-8 text-ink/60">لا توجد قنوات مضافة بعد.</p>}
+      <div className="relative mt-6 mb-2">
+        <svg className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input type="text" placeholder="ابحث باسم القناة أو المادة..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full rounded-lg border border-line bg-white px-4 py-3 pr-11 placeholder:text-ink/40 focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+      </div>
 
-      {subjects.map((s: any) => {
+      {term === '' && subjects.length > 1 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {subjects.map((s: any) => (
+            <button
+              key={s.id}
+              onClick={() => scrollToSubject(s.id)}
+              className="rounded-full border border-line bg-white px-4 py-1.5 text-sm font-bold text-ink transition-colors hover:border-teal hover:text-teal"
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {visibleSubjects.length === 0 && <p className="mt-8 text-ink/60">لا نتائج مطابقة.</p>}
+
+      {visibleSubjects.map((s: any) => {
         const subjectAssignments = assignments
           .filter((a: any) => a.subject_id === s.id)
           .sort((a: any, b: any) => {
@@ -1079,12 +1418,12 @@ export default function ChannelsPage() {
           });
 
         return (
-          <section key={s.id} className="mt-8">
+          <section key={s.id} id={`subject-${s.id}`} className="mt-8 scroll-mt-4">
             <h2 className="mb-3 border-b border-line pb-2 text-lg font-extrabold">{s.name}</h2>
 
-            {s.channels.length > 0 && (
+            {s.filteredChannels.length > 0 && (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {s.channels.map((c: any) => {
+                {s.filteredChannels.map((c: any) => {
                   const linkClass = "mt-3 inline-block rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90";
                   return (
                     <div key={c.id} className="rounded-xl border border-line bg-white/70 p-4 shadow-sm transition-shadow hover:shadow-md">
@@ -1100,7 +1439,7 @@ export default function ChannelsPage() {
               </div>
             )}
 
-            {subjectAssignments.length > 0 && (
+            {term === '' && subjectAssignments.length > 0 && (
               <div className="mt-4 space-y-2">
                 <h3 className="text-sm font-bold text-teal">الواجبات والمواعيد</h3>
                 {subjectAssignments.map((a: any) => {
@@ -1178,6 +1517,7 @@ export default function RootLayout({
           <nav className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
             <a href="/" className="text-lg font-black text-teal sm:text-xl">الملازم</a>
             <div className="flex gap-4 text-sm sm:gap-5">
+              <a href="/materials" className="transition-colors hover:text-teal">ملازم الدكاترة</a>
               <a href="/channels" className="transition-colors hover:text-teal">قنوات الدراسة</a>
             </div>
           </nav>

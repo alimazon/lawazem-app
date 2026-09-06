@@ -3,6 +3,13 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
+const typeLabels: any = {
+  assignment: 'واجب',
+  lecture_note: 'ملزمة',
+  summary: 'ملخص',
+  task: 'مهمة',
+};
+
 export default function ChannelPortalPage() {
   const [channelsList, setChannelsList] = useState<any[]>([]);
   const [selectedChannelId, setSelectedChannelId] = useState('');
@@ -12,20 +19,24 @@ export default function ChannelPortalPage() {
 
   const [authenticated, setAuthenticated] = useState(false);
   const [channelInfo, setChannelInfo] = useState<any>(null);
-  const [assignments, setAssignments] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'assignments' | 'settings'>('assignments');
+  const [items, setItems] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'content' | 'settings'>('content');
 
+  const [newType, setNewType] = useState('assignment');
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newDue, setNewDue] = useState('');
+  const [newLink, setNewLink] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editType, setEditType] = useState('assignment');
   const [editTitle, setEditTitle] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editDue, setEditDue] = useState('');
+  const [editLink, setEditLink] = useState('');
 
-  const [settingsName, setSettingsName] = useState('');
   const [settingsDesc, setSettingsDesc] = useState('');
-  const [settingsLink, setSettingsLink] = useState('');
+  const [settingsImageUrl, setSettingsImageUrl] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [settingsStatus, setSettingsStatus] = useState('');
 
   const [newPassword, setNewPassword] = useState('');
@@ -52,7 +63,7 @@ export default function ChannelPortalPage() {
     setLoading(true);
     setLoginError('');
 
-    const res = await fetch('/api/channel/assignments', {
+    const res = await fetch('/api/channel/content', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'login', channel_id: channelId, password: pw }),
@@ -71,11 +82,10 @@ export default function ChannelPortalPage() {
 
     const json = await res.json();
     setChannelInfo(json.channel);
-    setSettingsName(json.channel.name);
     setSettingsDesc(json.channel.description || '');
-    setSettingsLink(json.channel.telegram_link || '');
+    setSettingsImageUrl(json.channel.image_url || '');
     setAuthenticated(true);
-    await loadAssignmentsFor(channelId, pw);
+    await loadItemsFor(channelId, pw);
     setLoading(false);
   }
 
@@ -92,106 +102,152 @@ export default function ChannelPortalPage() {
     setSelectedChannelId('');
   }
 
-  async function loadAssignmentsFor(channelId: string, pw: string) {
-    const res = await fetch('/api/channel/assignments', {
+  async function loadItemsFor(channelId: string, pw: string) {
+    const res = await fetch('/api/channel/content', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'list', channel_id: channelId, password: pw }),
     });
     if (res.ok) {
       const json = await res.json();
-      setAssignments(json.assignments || []);
+      setItems(json.items || []);
     }
   }
 
   async function handleAdd(e: any) {
     e.preventDefault();
-    const res = await fetch('/api/channel/assignments', {
+    const res = await fetch('/api/channel/content', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'add', channel_id: selectedChannelId, password, title: newTitle, description: newDesc, due_date: newDue }),
+      body: JSON.stringify({
+        action: 'add',
+        channel_id: selectedChannelId,
+        password,
+        content_type: newType,
+        title: newTitle,
+        description: newDesc,
+        due_date: newDue,
+        file_url: newLink,
+      }),
     });
     if (res.ok) {
       setNewTitle('');
       setNewDesc('');
       setNewDue('');
-      loadAssignmentsFor(selectedChannelId, password);
+      setNewLink('');
+      loadItemsFor(selectedChannelId, password);
     }
   }
 
-  function startEdit(a: any) {
-    setEditingId(a.id);
-    setEditTitle(a.title);
-    setEditDesc(a.description || '');
-    setEditDue(a.due_date || '');
+  function startEdit(item: any) {
+    setEditingId(item.id);
+    setEditType(item.content_type);
+    setEditTitle(item.title);
+    setEditDesc(item.description || '');
+    setEditDue(item.due_date || '');
+    setEditLink(item.file_url || '');
   }
 
   async function saveEdit(id: string) {
-    const res = await fetch('/api/channel/assignments', {
+    const res = await fetch('/api/channel/content', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'edit', channel_id: selectedChannelId, password, id, title: editTitle, description: editDesc, due_date: editDue }),
+      body: JSON.stringify({
+        action: 'edit',
+        channel_id: selectedChannelId,
+        password,
+        id,
+        content_type: editType,
+        title: editTitle,
+        description: editDesc,
+        due_date: editDue,
+        file_url: editLink,
+      }),
     });
     if (res.ok) {
       setEditingId(null);
-      loadAssignmentsFor(selectedChannelId, password);
+      loadItemsFor(selectedChannelId, password);
     }
   }
 
-  async function deleteAssignment(id: string) {
-    const confirmed = window.confirm('حذف الواجب نهائي. متأكد؟');
+  async function deleteItem(id: string) {
+    const confirmed = window.confirm('حذف هذا العنصر نهائي. متأكد؟');
     if (!confirmed) return;
 
-    const res = await fetch('/api/channel/assignments', {
+    const res = await fetch('/api/channel/content', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'delete', channel_id: selectedChannelId, password, id }),
     });
     if (res.ok) {
-      loadAssignmentsFor(selectedChannelId, password);
+      loadItemsFor(selectedChannelId, password);
     }
+  }
+
+  async function handleImageUpload(e: any) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    const fileExt = file.name.split('.').pop();
+    const filePath = `${selectedChannelId}-${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage.from('channel-images').upload(filePath, file, { upsert: true });
+
+    if (uploadError) {
+      setUploadingImage(false);
+      alert('فشل رفع الصورة: ' + uploadError.message);
+      return;
+    }
+
+    const { data } = supabase.storage.from('channel-images').getPublicUrl(filePath);
+    setSettingsImageUrl(data.publicUrl);
+    setUploadingImage(false);
   }
 
   async function handleUpdateChannel(e: any) {
     e.preventDefault();
     setSettingsStatus('');
-    const res = await fetch('/api/channel/assignments', {
+    const res = await fetch('/api/channel/content', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'update_channel', channel_id: selectedChannelId, password, name: settingsName, description: settingsDesc, telegram_link: settingsLink }),
+      body: JSON.stringify({
+        action: 'update_channel',
+        channel_id: selectedChannelId,
+        password,
+        description: settingsDesc,
+        image_url: settingsImageUrl,
+      }),
     });
-    if (res.ok) {
-      setSettingsStatus('تم الحفظ بنجاح.');
-    } else {
-      const json = await res.json();
-      setSettingsStatus('صار خطأ: ' + json.error);
-    }
+    setSettingsStatus(res.ok ? 'تم الحفظ.' : 'صار خطأ، حاول مرة ثانية.');
   }
 
   async function handleChangePassword(e: any) {
     e.preventDefault();
     setPasswordStatus('');
-
     if (newPassword !== confirmNewPassword) {
       setPasswordStatus('كلمتا المرور غير متطابقتين.');
       return;
     }
-
-    const res = await fetch('/api/channel/assignments', {
+    const res = await fetch('/api/channel/content', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'change_password', channel_id: selectedChannelId, password, new_password: newPassword }),
+      body: JSON.stringify({
+        action: 'change_password',
+        channel_id: selectedChannelId,
+        password,
+        new_password: newPassword,
+      }),
     });
-
     if (res.ok) {
-      setPasswordStatus('تم تغيير كلمة المرور بنجاح.');
-      sessionStorage.setItem('channel_password', newPassword);
       setPassword(newPassword);
+      sessionStorage.setItem('channel_password', newPassword);
       setNewPassword('');
       setConfirmNewPassword('');
+      setPasswordStatus('تم تغيير كلمة المرور.');
     } else {
       const json = await res.json();
-      setPasswordStatus('صار خطأ: ' + json.error);
+      setPasswordStatus(json.error || 'صار خطأ.');
     }
   }
 
@@ -221,53 +277,65 @@ export default function ChannelPortalPage() {
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-black">قناة: {channelInfo?.name}</h1>
-        <button onClick={handleLogout} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-ink/5">تسجيل خروج</button>
+        <button onClick={handleLogout} className="rounded-lg border border-line px-4 py-2 text-sm hover:bg-ink/5">تسجيل خروج</button>
       </div>
 
       <div className="mt-6 flex gap-2 border-b border-line">
-        <button onClick={() => setActiveTab('assignments')} className={`px-4 py-2 text-sm font-bold ${activeTab === 'assignments' ? 'border-b-2 border-teal text-teal' : 'text-ink/50'}`}>الواجبات</button>
-        <button onClick={() => setActiveTab('settings')} className={`px-4 py-2 text-sm font-bold ${activeTab === 'settings' ? 'border-b-2 border-teal text-teal' : 'text-ink/50'}`}>إعدادات القناة</button>
+        <button onClick={() => setActiveTab('content')} className={`px-4 py-2 text-sm font-bold ${activeTab === 'content' ? 'border-b-2 border-teal text-teal' : 'text-ink/50'}`}>المحتوى</button>
+        <button onClick={() => setActiveTab('settings')} className={`px-4 py-2 text-sm font-bold ${activeTab === 'settings' ? 'border-b-2 border-teal text-teal' : 'text-ink/50'}`}>الإعدادات</button>
       </div>
 
-      {activeTab === 'assignments' && (
+      {activeTab === 'content' && (
         <section className="mt-6">
-          <p className="mb-4 text-sm text-ink/60">أضف واجبات أو مهام أو مواعيد لطلابك، وتظهر تلقائيًا بصفحة الموقع.</p>
-
           <form onSubmit={handleAdd} className="mb-6 space-y-2 rounded-lg border border-line bg-white/70 p-4">
             <div className="flex flex-wrap gap-2">
-              <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="العنوان (مثل: حل أسئلة الفصل الثالث)" required className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+              <select value={newType} onChange={(e) => setNewType(e.target.value)} className="w-36 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20">
+                {Object.entries(typeLabels).map(([value, label]: any) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+              <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="العنوان" required className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
               <input type="date" value={newDue} onChange={(e) => setNewDue(e.target.value)} className="w-40 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
             </div>
+            <input type="text" value={newLink} onChange={(e) => setNewLink(e.target.value)} placeholder="رابط (اختياري — مثل رابط ملف أو منشور تليجرام)" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
             <input type="text" value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="تفاصيل إضافية (اختياري)" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
             <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">إضافة</button>
           </form>
 
           <div className="space-y-2">
-            {assignments.length === 0 && <p className="text-ink/50">ما أضفت شي لسا.</p>}
-            {assignments.map((a: any) => (
-              <div key={a.id} className="rounded-lg border border-line bg-white/70 p-3">
-                {editingId === a.id ? (
+            {items.length === 0 && <p className="text-ink/50">ما أضفت شي لسا.</p>}
+            {items.map((item: any) => (
+              <div key={item.id} className="rounded-lg border border-line bg-white/70 p-3">
+                {editingId === item.id ? (
                   <div className="space-y-2">
                     <div className="flex flex-wrap gap-2">
+                      <select value={editType} onChange={(e) => setEditType(e.target.value)} className="w-36 rounded-lg border border-line bg-white px-3 py-1.5 text-sm">
+                        {Object.entries(typeLabels).map(([value, label]: any) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
                       <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="flex-1 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
                       <input type="date" value={editDue} onChange={(e) => setEditDue(e.target.value)} className="w-40 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
                     </div>
+                    <input type="text" value={editLink} onChange={(e) => setEditLink(e.target.value)} className="w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
                     <input type="text" value={editDesc} onChange={(e) => setEditDesc(e.target.value)} className="w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
                     <div className="flex gap-2">
-                      <button onClick={() => saveEdit(a.id)} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-bold text-white hover:bg-teal/90">حفظ</button>
+                      <button onClick={() => saveEdit(item.id)} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-bold text-white hover:bg-teal/90">حفظ</button>
                       <button onClick={() => setEditingId(null)} className="rounded-lg border border-line px-3 py-1.5 text-sm">إلغاء</button>
                     </div>
                   </div>
                 ) : (
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="font-bold">{a.title}</span>
-                      {a.due_date && <span className="mr-2 text-sm text-amber">تاريخ التسليم: {a.due_date}</span>}
-                      {a.description && <p className="text-sm text-ink/60">{a.description}</p>}
+                      <span className="ml-2 rounded-full bg-teal/10 px-2 py-0.5 text-xs font-bold text-teal">{typeLabels[item.content_type] || item.content_type}</span>
+                      <span className="font-bold">{item.title}</span>
+                      {item.due_date && <span className="mr-2 text-sm text-amber">تاريخ التسليم: {item.due_date}</span>}
+                      {item.description && <p className="text-sm text-ink/60">{item.description}</p>}
+                      {item.file_url && <a href={item.file_url} target="_blank" rel="noopener noreferrer" className="text-sm text-teal underline">فتح الرابط</a>}
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => startEdit(a)} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-ink/5">تعديل</button>
-                      <button onClick={() => deleteAssignment(a.id)} className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">حذف</button>
+                      <button onClick={() => startEdit(item)} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-ink/5">تعديل</button>
+                      <button onClick={() => deleteItem(item.id)} className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">حذف</button>
                     </div>
                   </div>
                 )}
@@ -281,37 +349,27 @@ export default function ChannelPortalPage() {
         <section className="mt-6 max-w-md space-y-8">
           <div>
             <h2 className="mb-3 text-lg font-extrabold">بيانات القناة</h2>
-            <form onSubmit={handleUpdateChannel} className="space-y-3 rounded-lg border border-line bg-white/70 p-4">
+            <p className="mb-3 text-sm text-ink/50">الاسم والمادة ورابط تليجرام يديرها المشرف. تقدر تعدّل الصورة والوصف بس.</p>
+            <form onSubmit={handleUpdateChannel} className="space-y-3">
               <div>
-                <label className="mb-1 block text-sm font-bold text-ink/70">اسم القناة</label>
-                <input type="text" value={settingsName} onChange={(e) => setSettingsName(e.target.value)} required className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+                <label className="mb-1 block text-sm text-ink/60">صورة القناة</label>
+                {settingsImageUrl && <img src={settingsImageUrl} alt="صورة القناة" className="mb-2 h-20 w-20 rounded-lg object-cover" />}
+                <input type="file" accept="image/*" onChange={handleImageUpload} className="w-full text-sm" />
+                {uploadingImage && <p className="mt-1 text-sm text-ink/50">جاري الرفع...</p>}
               </div>
-              <div>
-                <label className="mb-1 block text-sm font-bold text-ink/70">الوصف</label>
-                <input type="text" value={settingsDesc} onChange={(e) => setSettingsDesc(e.target.value)} className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-bold text-ink/70">رابط تليجرام</label>
-                <input type="text" value={settingsLink} onChange={(e) => setSettingsLink(e.target.value)} required className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
-              </div>
-              <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">حفظ التغييرات</button>
-              {settingsStatus && <p className="text-sm text-ink/70">{settingsStatus}</p>}
+              <textarea value={settingsDesc} onChange={(e) => setSettingsDesc(e.target.value)} placeholder="وصف القناة" rows={3} className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+              <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">حفظ</button>
+              {settingsStatus && <p className="text-sm text-ink/60">{settingsStatus}</p>}
             </form>
           </div>
 
           <div>
             <h2 className="mb-3 text-lg font-extrabold">تغيير كلمة المرور</h2>
-            <form onSubmit={handleChangePassword} className="space-y-3 rounded-lg border border-line bg-white/70 p-4">
-              <div>
-                <label className="mb-1 block text-sm font-bold text-ink/70">كلمة المرور الجديدة</label>
-                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-bold text-ink/70">تأكيد كلمة المرور</label>
-                <input type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} required className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
-              </div>
-              <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">تغيير كلمة المرور</button>
-              {passwordStatus && <p className="text-sm text-ink/70">{passwordStatus}</p>}
+            <form onSubmit={handleChangePassword} className="space-y-3">
+              <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="كلمة المرور الجديدة" required className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+              <input type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} placeholder="تأكيد كلمة المرور الجديدة" required className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+              <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">تغيير</button>
+              {passwordStatus && <p className="text-sm text-ink/60">{passwordStatus}</p>}
             </form>
           </div>
         </section>

@@ -18,6 +18,7 @@ export default function RootLayout({
           <nav className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
             <a href="/" className="text-lg font-black text-teal sm:text-xl">الملازم</a>
             <div className="flex gap-4 text-sm sm:gap-5">
+              <a href="/materials" className="transition-colors hover:text-teal">ملازم الدكاترة</a>
               <a href="/channels" className="transition-colors hover:text-teal">قنوات الدراسة</a>
             </div>
           </nav>
