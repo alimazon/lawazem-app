@@ -56,25 +56,26 @@ export default function HomePage() {
       title: 'الملازم',
       description: 'ملازم الدكاترة مرتبة حسب المادة',
       href: '/lawazem',
-      enabled: true,
     },
     {
       title: 'القنوات الدراسية',
       description: 'دليل قنوات تليجرام لكل مادة',
       href: '/channels',
-      enabled: true,
     },
     {
       title: 'الجدول',
       description: 'جدول المحاضرات الأسبوعي لمرحلتك',
       href: '/schedule',
-      enabled: true,
     },
     {
       title: 'جات الدراسة',
       description: 'برومبت جاهز يساعدك تذاكر بالذكاء الاصطناعي',
       href: '/study-prompt',
-      enabled: true,
+    },
+    {
+      title: 'المعدل',
+      description: 'احسب معدلك الموزون حسب وحدات موادك',
+      href: '/gpa',
     },
   ];
 

@@ -22,6 +22,7 @@ export default function RootLayout({
               <a href="/channels" className="transition-colors hover:text-teal">قنوات الدراسية</a>
               <a href="/schedule" className="transition-colors hover:text-teal">الجدول</a>
               <a href="/study-prompt" className="transition-colors hover:text-teal">جات الدراسة</a>
+              <a href="/gpa" className="transition-colors hover:text-teal">المعدل</a>
             </div>
           </nav>
         </header>
