@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       channel: {
         id: channel.id,
         name: channel.name,
-        subject_id: channel.subject_id,
+        stage: channel.stage,
         description: channel.description,
         telegram_link: channel.telegram_link,
         image_url: channel.image_url,
@@ -39,27 +39,27 @@ export async function POST(request: Request) {
   }
 
   if (action === 'add') {
-    const { content_type, title, description, due_date, file_url } = body;
+    const { content_type, title, description, due_date, file_url, folder } = body;
     const { error } = await supabaseAdmin.from('channel_content').insert({
       channel_id: channel.id,
-      subject_id: channel.subject_id,
       content_type,
       title,
       description,
       due_date: due_date || null,
       file_url: file_url || null,
+      folder: folder || null,
     });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });
   }
 
   if (action === 'edit') {
-    const { id, content_type, title, description, due_date, file_url } = body;
+    const { id, content_type, title, description, due_date, file_url, folder } = body;
     const { data: existing } = await supabaseAdmin.from('channel_content').select('channel_id').eq('id', id).single();
     if (!existing || existing.channel_id !== channel.id) {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
     }
-    const { error } = await supabaseAdmin.from('channel_content').update({ content_type, title, description, due_date: due_date || null, file_url: file_url || null }).eq('id', id);
+    const { error } = await supabaseAdmin.from('channel_content').update({ content_type, title, description, due_date: due_date || null, file_url: file_url || null, folder: folder || null }).eq('id', id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });
   }

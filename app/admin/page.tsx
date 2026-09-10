@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabaseClient';
 
 function generateChannelPassword() {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
@@ -10,6 +11,8 @@ function generateChannelPassword() {
   }
   return result;
 }
+
+const STAGES = ['المرحلة الأولى', 'المرحلة الثانية', 'المرحلة الثالثة'];
 
 export default function AdminPage() {
   const [password, setPassword] = useState('');
@@ -38,29 +41,21 @@ export default function AdminPage() {
 
   const [channels, setChannels] = useState<any[]>([]);
   const [newChannelName, setNewChannelName] = useState('');
-  const [newChannelSubject, setNewChannelSubject] = useState('');
+  const [newChannelStage, setNewChannelStage] = useState('');
   const [newChannelDesc, setNewChannelDesc] = useState('');
   const [newChannelLink, setNewChannelLink] = useState('');
   const [newChannelPassword, setNewChannelPassword] = useState('');
   const [copiedNewChannelPassword, setCopiedNewChannelPassword] = useState(false);
   const [editingChannelId, setEditingChannelId] = useState<string | null>(null);
   const [editChannelName, setEditChannelName] = useState('');
-  const [editChannelSubject, setEditChannelSubject] = useState('');
+  const [editChannelStage, setEditChannelStage] = useState('');
   const [editChannelDesc, setEditChannelDesc] = useState('');
   const [editChannelLink, setEditChannelLink] = useState('');
   const [editChannelPassword, setEditChannelPassword] = useState('');
   const [copiedChannelId, setCopiedChannelId] = useState<string | null>(null);
 
-  const [assignments, setAssignments] = useState<any[]>([]);
-  const [newAssignmentSubject, setNewAssignmentSubject] = useState('');
-  const [newAssignmentTitle, setNewAssignmentTitle] = useState('');
-  const [newAssignmentDesc, setNewAssignmentDesc] = useState('');
-  const [newAssignmentDue, setNewAssignmentDue] = useState('');
-  const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
-  const [editAssignmentSubject, setEditAssignmentSubject] = useState('');
-  const [editAssignmentTitle, setEditAssignmentTitle] = useState('');
-  const [editAssignmentDesc, setEditAssignmentDesc] = useState('');
-  const [editAssignmentDue, setEditAssignmentDue] = useState('');
+  const [schedules, setSchedules] = useState<any[]>([]);
+  const [uploadingScheduleStage, setUploadingScheduleStage] = useState<string | null>(null);
 
   useEffect(() => {
     const saved = sessionStorage.getItem('admin_password');
@@ -92,7 +87,7 @@ export default function AdminPage() {
     setAuthenticated(true);
     await loadMaterials(pw);
     await loadChannels(pw);
-    await loadAssignments(pw);
+    await loadSchedules(pw);
     setLoading(false);
   }
 
@@ -138,16 +133,45 @@ export default function AdminPage() {
     }
   }
 
-  async function loadAssignments(pw: string) {
-    const res = await fetch('/api/admin/assignments', {
+  async function loadSchedules(pw: string) {
+    const res = await fetch('/api/admin/schedules', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: pw, action: 'list' }),
     });
     if (res.ok) {
       const json = await res.json();
-      setAssignments(json.assignments || []);
+      setSchedules(json.schedules || []);
     }
+  }
+
+  async function handleScheduleUpload(stage: string, file: File) {
+    setUploadingScheduleStage(stage);
+
+    const safeStage = stage.replace(/\s/g, '-');
+    const fileExt = file.name.split('.').pop();
+    const filePath = `${safeStage}-${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage.from('schedule-images').upload(filePath, file, { upsert: true });
+
+    if (uploadError) {
+      setUploadingScheduleStage(null);
+      alert('فشل رفع الصورة: ' + uploadError.message);
+      return;
+    }
+
+    const { data } = supabase.storage.from('schedule-images').getPublicUrl(filePath);
+
+    const res = await fetch('/api/admin/schedules', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password, action: 'update', stage, image_url: data.publicUrl }),
+    });
+
+    if (res.ok) {
+      await loadSchedules(password);
+    }
+    setUploadingScheduleStage(null);
   }
 
   async function handleAddSubject(e: any) {
@@ -274,7 +298,7 @@ export default function AdminPage() {
         password,
         action: 'add',
         name: newChannelName,
-        subject_id: newChannelSubject,
+        stage: newChannelStage,
         description: newChannelDesc,
         telegram_link: newChannelLink,
         channel_password: newChannelPassword,
@@ -282,7 +306,7 @@ export default function AdminPage() {
     });
     if (res.ok) {
       setNewChannelName('');
-      setNewChannelSubject('');
+      setNewChannelStage('');
       setNewChannelDesc('');
       setNewChannelLink('');
       setNewChannelPassword('');
@@ -293,7 +317,7 @@ export default function AdminPage() {
   function startEditChannel(c: any) {
     setEditingChannelId(c.id);
     setEditChannelName(c.name);
-    setEditChannelSubject(c.subject_id);
+    setEditChannelStage(c.stage);
     setEditChannelDesc(c.description || '');
     setEditChannelLink(c.telegram_link);
     setEditChannelPassword(c.channel_password || '');
@@ -308,7 +332,7 @@ export default function AdminPage() {
         action: 'edit',
         id,
         name: editChannelName,
-        subject_id: editChannelSubject,
+        stage: editChannelStage,
         description: editChannelDesc,
         telegram_link: editChannelLink,
         channel_password: editChannelPassword,
@@ -331,71 +355,6 @@ export default function AdminPage() {
     });
     if (res.ok) {
       loadChannels(password);
-    }
-  }
-
-  async function handleAddAssignment(e: any) {
-    e.preventDefault();
-    const res = await fetch('/api/admin/assignments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        password,
-        action: 'add',
-        subject_id: newAssignmentSubject,
-        title: newAssignmentTitle,
-        description: newAssignmentDesc,
-        due_date: newAssignmentDue,
-      }),
-    });
-    if (res.ok) {
-      setNewAssignmentSubject('');
-      setNewAssignmentTitle('');
-      setNewAssignmentDesc('');
-      setNewAssignmentDue('');
-      loadAssignments(password);
-    }
-  }
-
-  function startEditAssignment(a: any) {
-    setEditingAssignmentId(a.id);
-    setEditAssignmentSubject(a.subject_id);
-    setEditAssignmentTitle(a.title);
-    setEditAssignmentDesc(a.description || '');
-    setEditAssignmentDue(a.due_date || '');
-  }
-
-  async function saveEditAssignment(id: string) {
-    const res = await fetch('/api/admin/assignments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        password,
-        action: 'edit',
-        id,
-        subject_id: editAssignmentSubject,
-        title: editAssignmentTitle,
-        description: editAssignmentDesc,
-        due_date: editAssignmentDue,
-      }),
-    });
-    if (res.ok) {
-      setEditingAssignmentId(null);
-      loadAssignments(password);
-    }
-  }
-
-  async function deleteAssignment(id: string) {
-    const confirmed = window.confirm('حذف الواجب نهائي. متأكد؟');
-    if (!confirmed) return;
-
-    const res = await fetch('/api/admin/assignments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password, action: 'delete', id }),
-    });
-    if (res.ok) {
-      loadAssignments(password);
     }
   }
 
@@ -426,7 +385,12 @@ export default function AdminPage() {
 
         <form onSubmit={handleAddSubject} className="mb-4 flex flex-wrap gap-2 rounded-lg border border-line bg-white/70 p-4">
           <input type="text" value={newSubjectName} onChange={(e) => setNewSubjectName(e.target.value)} placeholder="اسم المادة" required className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
-          <input type="text" value={newSubjectStage} onChange={(e) => setNewSubjectStage(e.target.value)} placeholder="المرحلة (اختياري)" className="w-40 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+          <select value={newSubjectStage} onChange={(e) => setNewSubjectStage(e.target.value)} required className="w-44 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20">
+            <option value="">اختر المرحلة</option>
+            {STAGES.map((st) => (
+              <option key={st} value={st}>{st}</option>
+            ))}
+          </select>
           <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">إضافة</button>
         </form>
 
@@ -436,7 +400,11 @@ export default function AdminPage() {
               {editingId === s.id ? (
                 <div className="flex flex-1 flex-wrap items-center gap-2">
                   <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="flex-1 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
-                  <input type="text" value={editStage} onChange={(e) => setEditStage(e.target.value)} className="w-32 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
+                  <select value={editStage} onChange={(e) => setEditStage(e.target.value)} className="w-44 rounded-lg border border-line bg-white px-3 py-1.5 text-sm">
+                    {STAGES.map((st) => (
+                      <option key={st} value={st}>{st}</option>
+                    ))}
+                  </select>
                   <button onClick={() => saveEdit(s.id)} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-bold text-white hover:bg-teal/90">حفظ</button>
                   <button onClick={() => setEditingId(null)} className="rounded-lg border border-line px-3 py-1.5 text-sm">إلغاء</button>
                 </div>
@@ -529,10 +497,10 @@ export default function AdminPage() {
         <form onSubmit={handleAddChannel} className="mb-4 space-y-2 rounded-lg border border-line bg-white/70 p-4">
           <div className="flex flex-wrap gap-2">
             <input type="text" value={newChannelName} onChange={(e) => setNewChannelName(e.target.value)} placeholder="اسم القناة" required className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
-            <select value={newChannelSubject} onChange={(e) => setNewChannelSubject(e.target.value)} required className="w-44 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20">
-              <option value="">اختر المادة</option>
-              {subjects.map((s: any) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
+            <select value={newChannelStage} onChange={(e) => setNewChannelStage(e.target.value)} required className="w-44 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20">
+              <option value="">اختر المرحلة</option>
+              {STAGES.map((st) => (
+                <option key={st} value={st}>{st}</option>
               ))}
             </select>
           </div>
@@ -557,9 +525,9 @@ export default function AdminPage() {
                 <div className="space-y-2">
                   <div className="flex flex-wrap gap-2">
                     <input type="text" value={editChannelName} onChange={(e) => setEditChannelName(e.target.value)} className="flex-1 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
-                    <select value={editChannelSubject} onChange={(e) => setEditChannelSubject(e.target.value)} className="w-44 rounded-lg border border-line bg-white px-3 py-1.5 text-sm">
-                      {subjects.map((s: any) => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
+                    <select value={editChannelStage} onChange={(e) => setEditChannelStage(e.target.value)} className="w-44 rounded-lg border border-line bg-white px-3 py-1.5 text-sm">
+                      {STAGES.map((st) => (
+                        <option key={st} value={st}>{st}</option>
                       ))}
                     </select>
                   </div>
@@ -578,7 +546,7 @@ export default function AdminPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="font-bold">{c.name}</span>
-                    <span className="mr-2 text-sm text-ink/50">{c.subjects?.name}</span>
+                    <span className="mr-2 text-sm text-ink/50">{c.stage}</span>
                     {c.description && <p className="text-sm text-ink/60">{c.description}</p>}
                     <a href={c.telegram_link} target="_blank" rel="noopener noreferrer" className="text-sm text-teal underline">{c.telegram_link}</a>
                     <p className="flex flex-wrap items-center gap-2 text-sm text-ink/50">
@@ -606,59 +574,31 @@ export default function AdminPage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="mb-3 text-lg font-extrabold text-teal">إدارة الواجبات</h2>
+        <h2 className="mb-3 text-lg font-extrabold text-teal">الجدول</h2>
+        <p className="mb-3 text-sm text-ink/50">ارفع صورة جدول المحاضرات لكل مرحلة، تظهر للطلاب مباشرة بصفحة "الجدول".</p>
 
-        <form onSubmit={handleAddAssignment} className="mb-4 space-y-2 rounded-lg border border-line bg-white/70 p-4">
-          <div className="flex flex-wrap gap-2">
-            <select value={newAssignmentSubject} onChange={(e) => setNewAssignmentSubject(e.target.value)} required className="w-44 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20">
-              <option value="">اختر المادة</option>
-              {subjects.map((s: any) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-            <input type="text" value={newAssignmentTitle} onChange={(e) => setNewAssignmentTitle(e.target.value)} placeholder="عنوان الواجب" required className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
-            <input type="date" value={newAssignmentDue} onChange={(e) => setNewAssignmentDue(e.target.value)} className="w-40 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
-          </div>
-          <input type="text" value={newAssignmentDesc} onChange={(e) => setNewAssignmentDesc(e.target.value)} placeholder="تفاصيل إضافية (اختياري)" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
-          <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">إضافة واجب</button>
-        </form>
-
-        <div className="space-y-2">
-          {assignments.map((a: any) => (
-            <div key={a.id} className="rounded-lg border border-line bg-white/70 p-3">
-              {editingAssignmentId === a.id ? (
-                <div className="space-y-2">
-                  <div className="flex flex-wrap gap-2">
-                    <select value={editAssignmentSubject} onChange={(e) => setEditAssignmentSubject(e.target.value)} className="w-44 rounded-lg border border-line bg-white px-3 py-1.5 text-sm">
-                      {subjects.map((s: any) => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
-                      ))}
-                    </select>
-                    <input type="text" value={editAssignmentTitle} onChange={(e) => setEditAssignmentTitle(e.target.value)} className="flex-1 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
-                    <input type="date" value={editAssignmentDue} onChange={(e) => setEditAssignmentDue(e.target.value)} className="w-40 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
-                  </div>
-                  <input type="text" value={editAssignmentDesc} onChange={(e) => setEditAssignmentDesc(e.target.value)} className="w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
-                  <div className="flex gap-2">
-                    <button onClick={() => saveEditAssignment(a.id)} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-bold text-white hover:bg-teal/90">حفظ</button>
-                    <button onClick={() => setEditingAssignmentId(null)} className="rounded-lg border border-line px-3 py-1.5 text-sm">إلغاء</button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="font-bold">{a.title}</span>
-                    <span className="mr-2 text-sm text-ink/50">{a.subjects?.name}</span>
-                    {a.due_date && <span className="mr-2 text-sm text-amber">تاريخ التسليم: {a.due_date}</span>}
-                    {a.description && <p className="text-sm text-ink/60">{a.description}</p>}
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => startEditAssignment(a)} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-ink/5">تعديل</button>
-                    <button onClick={() => deleteAssignment(a.id)} className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">حذف</button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
+        <div className="space-y-4">
+          {STAGES.map((st) => {
+            const sched = schedules.find((s: any) => s.stage === st);
+            return (
+              <div key={st} className="rounded-lg border border-line bg-white/70 p-4">
+                <h3 className="mb-2 font-bold">{st}</h3>
+                {sched?.image_url && (
+                  <img src={sched.image_url} alt={`جدول ${st}`} className="mb-3 max-h-48 rounded-lg border border-line object-contain" />
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleScheduleUpload(st, file);
+                  }}
+                  className="w-full text-sm"
+                />
+                {uploadingScheduleStage === st && <p className="mt-1 text-sm text-ink/50">جاري الرفع...</p>}
+              </div>
+            );
+          })}
         </div>
       </section>
     </main>

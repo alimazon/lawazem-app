@@ -12,21 +12,21 @@ export async function POST(request: Request) {
   const supabaseAdmin = getSupabaseAdmin();
 
   if (action === 'list') {
-    const { data, error } = await supabaseAdmin.from('channels').select('*, subjects(name)').order('created_at');
+    const { data, error } = await supabaseAdmin.from('channels').select('*').order('created_at');
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ channels: data });
   }
 
   if (action === 'add') {
-    const { name, subject_id, description, telegram_link, channel_password } = body;
-    const { error } = await supabaseAdmin.from('channels').insert({ name, subject_id, description, telegram_link, channel_password: channel_password || null });
+    const { name, stage, description, telegram_link, channel_password } = body;
+    const { error } = await supabaseAdmin.from('channels').insert({ name, stage, description, telegram_link, channel_password: channel_password || null });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });
   }
 
   if (action === 'edit') {
-    const { id, name, subject_id, description, telegram_link, channel_password } = body;
-    const { error } = await supabaseAdmin.from('channels').update({ name, subject_id, description, telegram_link, channel_password: channel_password || null }).eq('id', id);
+    const { id, name, stage, description, telegram_link, channel_password } = body;
+    const { error } = await supabaseAdmin.from('channels').update({ name, stage, description, telegram_link, channel_password: channel_password || null }).eq('id', id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });
   }

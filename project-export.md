@@ -681,53 +681,6 @@ export default function AdminPage() {
 }
 ```
 
-## app\api\admin\assignments\route.ts
-
-```
-import { NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '../../../../lib/supabaseAdmin';
-
-export async function POST(request: Request) {
-  const body = await request.json();
-  const { password, action } = body;
-
-  if (password !== process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ error: 'كلمة المرور غير صحيحة' }, { status: 401 });
-  }
-
-  const supabaseAdmin = getSupabaseAdmin();
-
-  if (action === 'list') {
-    const { data, error } = await supabaseAdmin.from('assignments').select('*, subjects(name)').order('due_date', { ascending: true });
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ assignments: data });
-  }
-
-  if (action === 'add') {
-    const { subject_id, title, description, due_date } = body;
-    const { error } = await supabaseAdmin.from('assignments').insert({ subject_id, title, description, due_date: due_date || null });
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ success: true });
-  }
-
-  if (action === 'edit') {
-    const { id, subject_id, title, description, due_date } = body;
-    const { error } = await supabaseAdmin.from('assignments').update({ subject_id, title, description, due_date: due_date || null }).eq('id', id);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ success: true });
-  }
-
-  if (action === 'delete') {
-    const { id } = body;
-    const { error } = await supabaseAdmin.from('assignments').delete().eq('id', id);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ success: true });
-  }
-
-  return NextResponse.json({ error: 'إجراء غير معروف' }, { status: 400 });
-}
-```
-
 ## app\api\admin\channels\route.ts
 
 ```
@@ -882,7 +835,7 @@ export async function POST(request: Request) {
 }
 ```
 
-## app\api\channel\assignments\route.ts
+## app\api\channel\content\route.ts
 
 ```
 import { NextResponse } from 'next/server';
@@ -907,53 +860,64 @@ export async function POST(request: Request) {
   }
 
   if (action === 'login') {
-    return NextResponse.json({ channel: { id: channel.id, name: channel.name, subject_id: channel.subject_id, description: channel.description, telegram_link: channel.telegram_link } });
+    return NextResponse.json({
+      channel: {
+        id: channel.id,
+        name: channel.name,
+        subject_id: channel.subject_id,
+        description: channel.description,
+        telegram_link: channel.telegram_link,
+        image_url: channel.image_url,
+      },
+    });
   }
 
   if (action === 'list') {
-    const { data, error } = await supabaseAdmin.from('assignments').select('*').eq('channel_id', channel_id).order('due_date', { ascending: true });
+    const { data, error } = await supabaseAdmin.from('channel_content').select('*').eq('channel_id', channel_id).order('created_at', { ascending: false });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ assignments: data });
+    return NextResponse.json({ items: data });
   }
 
   if (action === 'add') {
-    const { title, description, due_date } = body;
-    const { error } = await supabaseAdmin.from('assignments').insert({
-      subject_id: channel.subject_id,
+    const { content_type, title, description, due_date, file_url } = body;
+    const { error } = await supabaseAdmin.from('channel_content').insert({
       channel_id: channel.id,
+      subject_id: channel.subject_id,
+      content_type,
       title,
       description,
       due_date: due_date || null,
+      file_url: file_url || null,
     });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });
   }
 
   if (action === 'edit') {
-    const { id, title, description, due_date } = body;
-    const { data: existing } = await supabaseAdmin.from('assignments').select('channel_id').eq('id', id).single();
+    const { id, content_type, title, description, due_date, file_url } = body;
+    const { data: existing } = await supabaseAdmin.from('channel_content').select('channel_id').eq('id', id).single();
     if (!existing || existing.channel_id !== channel.id) {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
     }
-    const { error } = await supabaseAdmin.from('assignments').update({ title, description, due_date: due_date || null }).eq('id', id);
+    const { error } = await supabaseAdmin.from('channel_content').update({ content_type, title, description, due_date: due_date || null, file_url: file_url || null }).eq('id', id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });
   }
 
   if (action === 'delete') {
     const { id } = body;
-    const { data: existing } = await supabaseAdmin.from('assignments').select('channel_id').eq('id', id).single();
+    const { data: existing } = await supabaseAdmin.from('channel_content').select('channel_id').eq('id', id).single();
     if (!existing || existing.channel_id !== channel.id) {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
     }
-    const { error } = await supabaseAdmin.from('assignments').delete().eq('id', id);
+    const { error } = await supabaseAdmin.from('channel_content').delete().eq('id', id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });
   }
 
   if (action === 'update_channel') {
-    const { name, description, telegram_link } = body;
-    const { error } = await supabaseAdmin.from('channels').update({ name, description, telegram_link }).eq('id', channel.id);
+    const { description, image_url } = body;
+    const { error } = await supabaseAdmin.from('channels').update({ description, image_url }).eq('id', channel.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });
   }
@@ -980,6 +944,13 @@ export async function POST(request: Request) {
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
+const typeLabels: any = {
+  assignment: 'واجب',
+  lecture_note: 'ملزمة',
+  summary: 'ملخص',
+  task: 'مهمة',
+};
+
 export default function ChannelPortalPage() {
   const [channelsList, setChannelsList] = useState<any[]>([]);
   const [selectedChannelId, setSelectedChannelId] = useState('');
@@ -989,20 +960,24 @@ export default function ChannelPortalPage() {
 
   const [authenticated, setAuthenticated] = useState(false);
   const [channelInfo, setChannelInfo] = useState<any>(null);
-  const [assignments, setAssignments] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'assignments' | 'settings'>('assignments');
+  const [items, setItems] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'content' | 'settings'>('content');
 
+  const [newType, setNewType] = useState('assignment');
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newDue, setNewDue] = useState('');
+  const [newLink, setNewLink] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editType, setEditType] = useState('assignment');
   const [editTitle, setEditTitle] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editDue, setEditDue] = useState('');
+  const [editLink, setEditLink] = useState('');
 
-  const [settingsName, setSettingsName] = useState('');
   const [settingsDesc, setSettingsDesc] = useState('');
-  const [settingsLink, setSettingsLink] = useState('');
+  const [settingsImageUrl, setSettingsImageUrl] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [settingsStatus, setSettingsStatus] = useState('');
 
   const [newPassword, setNewPassword] = useState('');
@@ -1029,7 +1004,7 @@ export default function ChannelPortalPage() {
     setLoading(true);
     setLoginError('');
 
-    const res = await fetch('/api/channel/assignments', {
+    const res = await fetch('/api/channel/content', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'login', channel_id: channelId, password: pw }),
@@ -1048,11 +1023,10 @@ export default function ChannelPortalPage() {
 
     const json = await res.json();
     setChannelInfo(json.channel);
-    setSettingsName(json.channel.name);
     setSettingsDesc(json.channel.description || '');
-    setSettingsLink(json.channel.telegram_link || '');
+    setSettingsImageUrl(json.channel.image_url || '');
     setAuthenticated(true);
-    await loadAssignmentsFor(channelId, pw);
+    await loadItemsFor(channelId, pw);
     setLoading(false);
   }
 
@@ -1069,106 +1043,152 @@ export default function ChannelPortalPage() {
     setSelectedChannelId('');
   }
 
-  async function loadAssignmentsFor(channelId: string, pw: string) {
-    const res = await fetch('/api/channel/assignments', {
+  async function loadItemsFor(channelId: string, pw: string) {
+    const res = await fetch('/api/channel/content', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'list', channel_id: channelId, password: pw }),
     });
     if (res.ok) {
       const json = await res.json();
-      setAssignments(json.assignments || []);
+      setItems(json.items || []);
     }
   }
 
   async function handleAdd(e: any) {
     e.preventDefault();
-    const res = await fetch('/api/channel/assignments', {
+    const res = await fetch('/api/channel/content', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'add', channel_id: selectedChannelId, password, title: newTitle, description: newDesc, due_date: newDue }),
+      body: JSON.stringify({
+        action: 'add',
+        channel_id: selectedChannelId,
+        password,
+        content_type: newType,
+        title: newTitle,
+        description: newDesc,
+        due_date: newDue,
+        file_url: newLink,
+      }),
     });
     if (res.ok) {
       setNewTitle('');
       setNewDesc('');
       setNewDue('');
-      loadAssignmentsFor(selectedChannelId, password);
+      setNewLink('');
+      loadItemsFor(selectedChannelId, password);
     }
   }
 
-  function startEdit(a: any) {
-    setEditingId(a.id);
-    setEditTitle(a.title);
-    setEditDesc(a.description || '');
-    setEditDue(a.due_date || '');
+  function startEdit(item: any) {
+    setEditingId(item.id);
+    setEditType(item.content_type);
+    setEditTitle(item.title);
+    setEditDesc(item.description || '');
+    setEditDue(item.due_date || '');
+    setEditLink(item.file_url || '');
   }
 
   async function saveEdit(id: string) {
-    const res = await fetch('/api/channel/assignments', {
+    const res = await fetch('/api/channel/content', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'edit', channel_id: selectedChannelId, password, id, title: editTitle, description: editDesc, due_date: editDue }),
+      body: JSON.stringify({
+        action: 'edit',
+        channel_id: selectedChannelId,
+        password,
+        id,
+        content_type: editType,
+        title: editTitle,
+        description: editDesc,
+        due_date: editDue,
+        file_url: editLink,
+      }),
     });
     if (res.ok) {
       setEditingId(null);
-      loadAssignmentsFor(selectedChannelId, password);
+      loadItemsFor(selectedChannelId, password);
     }
   }
 
-  async function deleteAssignment(id: string) {
-    const confirmed = window.confirm('حذف الواجب نهائي. متأكد؟');
+  async function deleteItem(id: string) {
+    const confirmed = window.confirm('حذف هذا العنصر نهائي. متأكد؟');
     if (!confirmed) return;
 
-    const res = await fetch('/api/channel/assignments', {
+    const res = await fetch('/api/channel/content', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'delete', channel_id: selectedChannelId, password, id }),
     });
     if (res.ok) {
-      loadAssignmentsFor(selectedChannelId, password);
+      loadItemsFor(selectedChannelId, password);
     }
+  }
+
+  async function handleImageUpload(e: any) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    const fileExt = file.name.split('.').pop();
+    const filePath = `${selectedChannelId}-${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage.from('channel-images').upload(filePath, file, { upsert: true });
+
+    if (uploadError) {
+      setUploadingImage(false);
+      alert('فشل رفع الصورة: ' + uploadError.message);
+      return;
+    }
+
+    const { data } = supabase.storage.from('channel-images').getPublicUrl(filePath);
+    setSettingsImageUrl(data.publicUrl);
+    setUploadingImage(false);
   }
 
   async function handleUpdateChannel(e: any) {
     e.preventDefault();
     setSettingsStatus('');
-    const res = await fetch('/api/channel/assignments', {
+    const res = await fetch('/api/channel/content', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'update_channel', channel_id: selectedChannelId, password, name: settingsName, description: settingsDesc, telegram_link: settingsLink }),
+      body: JSON.stringify({
+        action: 'update_channel',
+        channel_id: selectedChannelId,
+        password,
+        description: settingsDesc,
+        image_url: settingsImageUrl,
+      }),
     });
-    if (res.ok) {
-      setSettingsStatus('تم الحفظ بنجاح.');
-    } else {
-      const json = await res.json();
-      setSettingsStatus('صار خطأ: ' + json.error);
-    }
+    setSettingsStatus(res.ok ? 'تم الحفظ.' : 'صار خطأ، حاول مرة ثانية.');
   }
 
   async function handleChangePassword(e: any) {
     e.preventDefault();
     setPasswordStatus('');
-
     if (newPassword !== confirmNewPassword) {
       setPasswordStatus('كلمتا المرور غير متطابقتين.');
       return;
     }
-
-    const res = await fetch('/api/channel/assignments', {
+    const res = await fetch('/api/channel/content', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'change_password', channel_id: selectedChannelId, password, new_password: newPassword }),
+      body: JSON.stringify({
+        action: 'change_password',
+        channel_id: selectedChannelId,
+        password,
+        new_password: newPassword,
+      }),
     });
-
     if (res.ok) {
-      setPasswordStatus('تم تغيير كلمة المرور بنجاح.');
-      sessionStorage.setItem('channel_password', newPassword);
       setPassword(newPassword);
+      sessionStorage.setItem('channel_password', newPassword);
       setNewPassword('');
       setConfirmNewPassword('');
+      setPasswordStatus('تم تغيير كلمة المرور.');
     } else {
       const json = await res.json();
-      setPasswordStatus('صار خطأ: ' + json.error);
+      setPasswordStatus(json.error || 'صار خطأ.');
     }
   }
 
@@ -1198,53 +1218,65 @@ export default function ChannelPortalPage() {
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-black">قناة: {channelInfo?.name}</h1>
-        <button onClick={handleLogout} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-ink/5">تسجيل خروج</button>
+        <button onClick={handleLogout} className="rounded-lg border border-line px-4 py-2 text-sm hover:bg-ink/5">تسجيل خروج</button>
       </div>
 
       <div className="mt-6 flex gap-2 border-b border-line">
-        <button onClick={() => setActiveTab('assignments')} className={`px-4 py-2 text-sm font-bold ${activeTab === 'assignments' ? 'border-b-2 border-teal text-teal' : 'text-ink/50'}`}>الواجبات</button>
-        <button onClick={() => setActiveTab('settings')} className={`px-4 py-2 text-sm font-bold ${activeTab === 'settings' ? 'border-b-2 border-teal text-teal' : 'text-ink/50'}`}>إعدادات القناة</button>
+        <button onClick={() => setActiveTab('content')} className={`px-4 py-2 text-sm font-bold ${activeTab === 'content' ? 'border-b-2 border-teal text-teal' : 'text-ink/50'}`}>المحتوى</button>
+        <button onClick={() => setActiveTab('settings')} className={`px-4 py-2 text-sm font-bold ${activeTab === 'settings' ? 'border-b-2 border-teal text-teal' : 'text-ink/50'}`}>الإعدادات</button>
       </div>
 
-      {activeTab === 'assignments' && (
+      {activeTab === 'content' && (
         <section className="mt-6">
-          <p className="mb-4 text-sm text-ink/60">أضف واجبات أو مهام أو مواعيد لطلابك، وتظهر تلقائيًا بصفحة الموقع.</p>
-
           <form onSubmit={handleAdd} className="mb-6 space-y-2 rounded-lg border border-line bg-white/70 p-4">
             <div className="flex flex-wrap gap-2">
-              <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="العنوان (مثل: حل أسئلة الفصل الثالث)" required className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+              <select value={newType} onChange={(e) => setNewType(e.target.value)} className="w-36 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20">
+                {Object.entries(typeLabels).map(([value, label]: any) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+              <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="العنوان" required className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
               <input type="date" value={newDue} onChange={(e) => setNewDue(e.target.value)} className="w-40 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
             </div>
+            <input type="text" value={newLink} onChange={(e) => setNewLink(e.target.value)} placeholder="رابط (اختياري — مثل رابط ملف أو منشور تليجرام)" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
             <input type="text" value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="تفاصيل إضافية (اختياري)" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
             <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">إضافة</button>
           </form>
 
           <div className="space-y-2">
-            {assignments.length === 0 && <p className="text-ink/50">ما أضفت شي لسا.</p>}
-            {assignments.map((a: any) => (
-              <div key={a.id} className="rounded-lg border border-line bg-white/70 p-3">
-                {editingId === a.id ? (
+            {items.length === 0 && <p className="text-ink/50">ما أضفت شي لسا.</p>}
+            {items.map((item: any) => (
+              <div key={item.id} className="rounded-lg border border-line bg-white/70 p-3">
+                {editingId === item.id ? (
                   <div className="space-y-2">
                     <div className="flex flex-wrap gap-2">
+                      <select value={editType} onChange={(e) => setEditType(e.target.value)} className="w-36 rounded-lg border border-line bg-white px-3 py-1.5 text-sm">
+                        {Object.entries(typeLabels).map(([value, label]: any) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
                       <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="flex-1 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
                       <input type="date" value={editDue} onChange={(e) => setEditDue(e.target.value)} className="w-40 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
                     </div>
+                    <input type="text" value={editLink} onChange={(e) => setEditLink(e.target.value)} className="w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
                     <input type="text" value={editDesc} onChange={(e) => setEditDesc(e.target.value)} className="w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
                     <div className="flex gap-2">
-                      <button onClick={() => saveEdit(a.id)} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-bold text-white hover:bg-teal/90">حفظ</button>
+                      <button onClick={() => saveEdit(item.id)} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-bold text-white hover:bg-teal/90">حفظ</button>
                       <button onClick={() => setEditingId(null)} className="rounded-lg border border-line px-3 py-1.5 text-sm">إلغاء</button>
                     </div>
                   </div>
                 ) : (
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="font-bold">{a.title}</span>
-                      {a.due_date && <span className="mr-2 text-sm text-amber">تاريخ التسليم: {a.due_date}</span>}
-                      {a.description && <p className="text-sm text-ink/60">{a.description}</p>}
+                      <span className="ml-2 rounded-full bg-teal/10 px-2 py-0.5 text-xs font-bold text-teal">{typeLabels[item.content_type] || item.content_type}</span>
+                      <span className="font-bold">{item.title}</span>
+                      {item.due_date && <span className="mr-2 text-sm text-amber">تاريخ التسليم: {item.due_date}</span>}
+                      {item.description && <p className="text-sm text-ink/60">{item.description}</p>}
+                      {item.file_url && <a href={item.file_url} target="_blank" rel="noopener noreferrer" className="text-sm text-teal underline">فتح الرابط</a>}
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => startEdit(a)} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-ink/5">تعديل</button>
-                      <button onClick={() => deleteAssignment(a.id)} className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">حذف</button>
+                      <button onClick={() => startEdit(item)} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-ink/5">تعديل</button>
+                      <button onClick={() => deleteItem(item.id)} className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">حذف</button>
                     </div>
                   </div>
                 )}
@@ -1258,37 +1290,27 @@ export default function ChannelPortalPage() {
         <section className="mt-6 max-w-md space-y-8">
           <div>
             <h2 className="mb-3 text-lg font-extrabold">بيانات القناة</h2>
-            <form onSubmit={handleUpdateChannel} className="space-y-3 rounded-lg border border-line bg-white/70 p-4">
+            <p className="mb-3 text-sm text-ink/50">الاسم والمادة ورابط تليجرام يديرها المشرف. تقدر تعدّل الصورة والوصف بس.</p>
+            <form onSubmit={handleUpdateChannel} className="space-y-3">
               <div>
-                <label className="mb-1 block text-sm font-bold text-ink/70">اسم القناة</label>
-                <input type="text" value={settingsName} onChange={(e) => setSettingsName(e.target.value)} required className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+                <label className="mb-1 block text-sm text-ink/60">صورة القناة</label>
+                {settingsImageUrl && <img src={settingsImageUrl} alt="صورة القناة" className="mb-2 h-20 w-20 rounded-lg object-cover" />}
+                <input type="file" accept="image/*" onChange={handleImageUpload} className="w-full text-sm" />
+                {uploadingImage && <p className="mt-1 text-sm text-ink/50">جاري الرفع...</p>}
               </div>
-              <div>
-                <label className="mb-1 block text-sm font-bold text-ink/70">الوصف</label>
-                <input type="text" value={settingsDesc} onChange={(e) => setSettingsDesc(e.target.value)} className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-bold text-ink/70">رابط تليجرام</label>
-                <input type="text" value={settingsLink} onChange={(e) => setSettingsLink(e.target.value)} required className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
-              </div>
-              <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">حفظ التغييرات</button>
-              {settingsStatus && <p className="text-sm text-ink/70">{settingsStatus}</p>}
+              <textarea value={settingsDesc} onChange={(e) => setSettingsDesc(e.target.value)} placeholder="وصف القناة" rows={3} className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+              <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">حفظ</button>
+              {settingsStatus && <p className="text-sm text-ink/60">{settingsStatus}</p>}
             </form>
           </div>
 
           <div>
             <h2 className="mb-3 text-lg font-extrabold">تغيير كلمة المرور</h2>
-            <form onSubmit={handleChangePassword} className="space-y-3 rounded-lg border border-line bg-white/70 p-4">
-              <div>
-                <label className="mb-1 block text-sm font-bold text-ink/70">كلمة المرور الجديدة</label>
-                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-bold text-ink/70">تأكيد كلمة المرور</label>
-                <input type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} required className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
-              </div>
-              <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">تغيير كلمة المرور</button>
-              {passwordStatus && <p className="text-sm text-ink/70">{passwordStatus}</p>}
+            <form onSubmit={handleChangePassword} className="space-y-3">
+              <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="كلمة المرور الجديدة" required className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+              <input type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} placeholder="تأكيد كلمة المرور الجديدة" required className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+              <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">تغيير</button>
+              {passwordStatus && <p className="text-sm text-ink/60">{passwordStatus}</p>}
             </form>
           </div>
         </section>
@@ -1298,13 +1320,21 @@ export default function ChannelPortalPage() {
 }
 ```
 
-## app\channels\page.tsx
+## app\channels\[id]\page.tsx
 
 ```
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabaseClient';
+import { useParams } from 'next/navigation';
+import { supabase } from '../../../lib/supabaseClient';
+
+const typeLabels: any = {
+  assignment: 'واجب',
+  lecture_note: 'ملزمة',
+  summary: 'ملخص',
+  task: 'مهمة',
+};
 
 function getDueInfo(dueDateStr: string) {
   const due = new Date(dueDateStr);
@@ -1322,26 +1352,123 @@ function getDueInfo(dueDateStr: string) {
   return { text: `تسليم: ${dueDateStr}`, className: 'bg-amber/20 text-ink' };
 }
 
+export default function ChannelPage() {
+  const params = useParams();
+  const channelId = params.id as string;
+
+  const [channel, setChannel] = useState<any>(null);
+  const [items, setItems] = useState<any[]>([]);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      const channelRes = await supabase.from('channels').select('id, name, description, telegram_link, image_url, subjects(name)').eq('id', channelId).single();
+      const itemsRes = await supabase.from('channel_content').select('*').eq('channel_id', channelId).order('created_at', { ascending: false });
+
+      if (channelRes.error) {
+        setError('ما لقينا هذي القناة.');
+      } else {
+        setChannel(channelRes.data);
+        setItems(itemsRes.data || []);
+      }
+      setLoading(false);
+    }
+    loadData();
+  }, [channelId]);
+
+  if (loading) {
+    return (
+      <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <p className="text-ink/50">جاري التحميل...</p>
+      </main>
+    );
+  }
+
+  if (error || !channel) {
+    return (
+      <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <h1 className="text-2xl font-extrabold">{error || 'ما لقينا هذي القناة.'}</h1>
+      </main>
+    );
+  }
+
+  const groups = ['assignment', 'lecture_note', 'summary', 'task'].map((type) => ({
+    type,
+    label: typeLabels[type],
+    items: items.filter((i: any) => i.content_type === type),
+  }));
+
+  return (
+    <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
+      <div className="flex items-center gap-4">
+        {channel.image_url ? (
+          <img src={channel.image_url} alt={channel.name} className="h-16 w-16 flex-shrink-0 rounded-xl object-cover" />
+        ) : (
+          <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-teal/10 text-xl font-bold text-teal">{channel.name.slice(0, 2)}</div>
+        )}
+        <div>
+          <h1 className="text-2xl font-black sm:text-3xl">{channel.name}</h1>
+          <p className="font-mono text-xs uppercase tracking-widest text-teal">{channel.subjects?.name}</p>
+        </div>
+      </div>
+
+      {channel.description && <p className="mt-4 text-ink/70">{channel.description}</p>}
+
+      <a href={channel.telegram_link} target="_blank" rel="noopener noreferrer" className="mt-4 inline-block rounded-lg bg-teal px-5 py-2.5 text-sm font-bold text-white hover:bg-teal/90">فتح القناة بتليجرام</a>
+
+      {groups.map((group) => (
+        group.items.length > 0 && (
+          <section key={group.type} className="mt-8">
+            <h2 className="mb-3 border-b border-line pb-2 text-lg font-extrabold">{group.label}</h2>
+            <div className="space-y-2">
+              {group.items.map((item: any) => {
+                const dueInfo = item.due_date ? getDueInfo(item.due_date) : null;
+                return (
+                  <div key={item.id} className="rounded-lg border border-line bg-white/70 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-bold">{item.title}</span>
+                      {dueInfo && <span className={`rounded-full px-3 py-1 text-xs font-bold ${dueInfo.className}`}>{dueInfo.text}</span>}
+                    </div>
+                    {item.description && <p className="mt-1 text-sm text-ink/60">{item.description}</p>}
+                    {item.file_url && <a href={item.file_url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block text-sm text-teal underline">فتح الرابط</a>}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )
+      ))}
+
+      {items.length === 0 && <p className="mt-8 text-ink/50">ما فيه محتوى مضاف لهذي القناة لسا.</p>}
+    </main>
+  );
+}
+```
+
+## app\channels\page.tsx
+
+```
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { supabase } from '../../lib/supabaseClient';
+
 export default function ChannelsPage() {
   const [subjects, setSubjects] = useState<any[]>([]);
-  const [assignments, setAssignments] = useState<any[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     async function loadData() {
-      const subjectsRes = await supabase.from('subjects').select('*, channels(id, name, description, telegram_link)');
-      const assignmentsRes = await supabase.from('assignments').select('*');
+      const subjectsRes = await supabase.from('subjects').select('*, channels(id, name, description, image_url)');
 
       if (subjectsRes.error) {
         setError(subjectsRes.error.message);
-      } else if (assignmentsRes.error) {
-        setError(assignmentsRes.error.message);
       } else {
-        const allAssignments = assignmentsRes.data || [];
-        setAssignments(allAssignments);
-        setSubjects((subjectsRes.data || []).filter((s: any) => s.channels.length > 0 || allAssignments.some((a: any) => a.subject_id === s.id)));
+        setSubjects((subjectsRes.data || []).filter((s: any) => s.channels.length > 0));
       }
       setLoading(false);
     }
@@ -1408,59 +1535,30 @@ export default function ChannelsPage() {
 
       {visibleSubjects.length === 0 && <p className="mt-8 text-ink/60">لا نتائج مطابقة.</p>}
 
-      {visibleSubjects.map((s: any) => {
-        const subjectAssignments = assignments
-          .filter((a: any) => a.subject_id === s.id)
-          .sort((a: any, b: any) => {
-            if (!a.due_date) return 1;
-            if (!b.due_date) return -1;
-            return a.due_date.localeCompare(b.due_date);
-          });
+      {visibleSubjects.map((s: any) => (
+        <section key={s.id} id={`subject-${s.id}`} className="mt-8 scroll-mt-4">
+          <h2 className="mb-3 border-b border-line pb-2 text-lg font-extrabold">{s.name}</h2>
 
-        return (
-          <section key={s.id} id={`subject-${s.id}`} className="mt-8 scroll-mt-4">
-            <h2 className="mb-3 border-b border-line pb-2 text-lg font-extrabold">{s.name}</h2>
-
-            {s.filteredChannels.length > 0 && (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {s.filteredChannels.map((c: any) => {
-                  const linkClass = "mt-3 inline-block rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90";
-                  return (
-                    <div key={c.id} className="rounded-xl border border-line bg-white/70 p-4 shadow-sm transition-shadow hover:shadow-md">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-teal/10 font-bold text-teal">{c.name.slice(0, 2)}</div>
-                        <span className="font-bold">{c.name}</span>
-                      </div>
-                      {c.description && <p className="mt-2 text-sm text-ink/60">{c.description}</p>}
-                      <a href={c.telegram_link} target="_blank" rel="noopener noreferrer" className={linkClass}>فتح القناة</a>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {term === '' && subjectAssignments.length > 0 && (
-              <div className="mt-4 space-y-2">
-                <h3 className="text-sm font-bold text-teal">الواجبات والمواعيد</h3>
-                {subjectAssignments.map((a: any) => {
-                  const channel = s.channels.find((c: any) => c.id === a.channel_id);
-                  const dueInfo = a.due_date ? getDueInfo(a.due_date) : null;
-                  return (
-                    <div key={a.id} className="rounded-lg border border-line bg-white/70 p-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="font-bold">{a.title}</span>
-                        {dueInfo && <span className={`rounded-full px-3 py-1 text-xs font-bold ${dueInfo.className}`}>{dueInfo.text}</span>}
-                      </div>
-                      {a.description && <p className="mt-1 text-sm text-ink/60">{a.description}</p>}
-                      <p className="mt-1 text-xs text-ink/40">{channel ? `من قناة: ${channel.name}` : 'من الإدارة'}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-        );
-      })}
+          {s.filteredChannels.length > 0 && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {s.filteredChannels.map((c: any) => (
+                <Link key={c.id} href={`/channels/${c.id}`} className="block rounded-xl border border-line bg-white/70 p-4 shadow-sm transition-shadow hover:shadow-md">
+                  <div className="flex items-center gap-3">
+                    {c.image_url ? (
+                      <img src={c.image_url} alt={c.name} className="h-9 w-9 flex-shrink-0 rounded-lg object-cover" />
+                    ) : (
+                      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-teal/10 font-bold text-teal">{c.name.slice(0, 2)}</div>
+                    )}
+                    <span className="font-bold">{c.name}</span>
+                  </div>
+                  {c.description && <p className="mt-2 text-sm text-ink/60">{c.description}</p>}
+                  <span className="mt-3 inline-block text-sm font-bold text-teal">فتح صفحة القناة ←</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+      ))}
     </main>
   );
 }
@@ -1517,7 +1615,7 @@ export default function RootLayout({
           <nav className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
             <a href="/" className="text-lg font-black text-teal sm:text-xl">الملازم</a>
             <div className="flex gap-4 text-sm sm:gap-5">
-              <a href="/materials" className="transition-colors hover:text-teal">ملازم الدكاترة</a>
+              <a href="/" className="transition-colors hover:text-teal">ملازم الدكاترة</a>
               <a href="/channels" className="transition-colors hover:text-teal">قنوات الدراسة</a>
             </div>
           </nav>
@@ -1547,7 +1645,7 @@ export default function Home() {
     async function loadData() {
       const { data, error } = await supabase
         .from('subjects')
-        .select('*, lecture_notes(*, exam_questions(*)), professor_focus_notes(*)');
+        .select('*, lecture_notes(*)');
       if (error) {
         setError(error.message);
       } else {
@@ -1594,42 +1692,18 @@ export default function Home() {
               <span className="font-mono text-xs text-ink/50">{s.stage}</span>
             </div>
 
-            <h3 className="mb-2 text-sm font-bold text-teal">الملازم</h3>
             {filteredNotes.length === 0 ? (
-              <p className="mb-6 text-sm text-ink/50">لا توجد ملازم مطابقة.</p>
+              <p className="text-sm text-ink/50">لا توجد ملازم مطابقة.</p>
             ) : (
-              <ul className="mb-6 space-y-3">
+              <ul className="space-y-3">
                 {filteredNotes.map((note: any) => (
                   <li key={note.id}>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <a href={note.file_path} target="_blank" rel="noopener noreferrer" className="font-medium underline decoration-teal/40 underline-offset-4 hover:text-teal">{note.title}</a>
-                      <a href={`/study/${note.id}`} className="rounded-full bg-amber/20 px-3 py-1 text-xs font-bold text-ink hover:bg-amber/30">بطاقات مذاكرة</a>
+                    <a href={note.file_path} target="_blank" rel="noopener noreferrer" className="font-medium underline decoration-teal/40 underline-offset-4 hover:text-teal">{note.title}</a>
+                    <div className="mt-0.5 text-sm text-ink/50">
+                      {note.professor_name && <span>د. {note.professor_name}</span>}
+                      {note.professor_name && note.lecture_number && <span> · </span>}
+                      {note.lecture_number && <span>محاضرة {note.lecture_number}</span>}
                     </div>
-                    {note.exam_questions.length > 0 && (
-                      <ul className="mt-2 space-y-1 border-r-2 border-line pr-4">
-                        {note.exam_questions.map((q: any) => (
-                          <li key={q.id} className="text-sm text-ink/60">
-                            {q.question_text}
-                            {q.exam_term && <span className="mr-2 rounded bg-ink/5 px-1.5 py-0.5 font-mono text-xs text-ink/50">{q.exam_term}</span>}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            <h3 className="mb-2 text-sm font-bold text-teal">ملاحظات تركيز الدكاترة</h3>
-            {s.professor_focus_notes.length === 0 ? (
-              <p className="text-sm text-ink/50">لا توجد ملاحظات معتمدة بعد.</p>
-            ) : (
-              <ul className="space-y-2">
-                {s.professor_focus_notes.map((n: any) => (
-                  <li key={n.id} className="relative rounded-md bg-amber/15 py-2 pl-3 pr-5">
-                    <span className="absolute right-0 top-0 h-full w-1.5 rounded-r-md bg-amber" />
-                    <strong>{n.professor_name}</strong>
-                    <span className="text-ink/80"> — {n.notes_text}</span>
                   </li>
                 ))}
               </ul>
@@ -1637,113 +1711,6 @@ export default function Home() {
           </section>
         );
       })}
-    </main>
-  );
-}
-```
-
-## app\study\[id]\page.tsx
-
-```
-'use client';
-
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import { supabase } from '../../../lib/supabaseClient';
-
-export default function StudyPage() {
-  const params = useParams();
-  const noteId = params.id as string;
-
-  const [cards, setCards] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [index, setIndex] = useState(0);
-  const [flipped, setFlipped] = useState(false);
-
-  useEffect(() => {
-    async function loadCards() {
-      const { data, error } = await supabase
-        .from('flashcards')
-        .select('*')
-        .eq('lecture_note_id', noteId)
-        .eq('status', 'approved');
-      if (error) {
-        setError(error.message);
-      } else {
-        setCards(data || []);
-      }
-      setLoading(false);
-    }
-    loadCards();
-  }, [noteId]);
-
-  function goNext() {
-    setFlipped(false);
-    setIndex((i) => Math.min(i + 1, cards.length - 1));
-  }
-
-  function goPrev() {
-    setFlipped(false);
-    setIndex((i) => Math.max(i - 1, 0));
-  }
-
-  if (loading) {
-    return (
-      <main className="mx-auto max-w-md px-4 py-10 sm:px-6">
-        <p className="text-ink/50">جاري تحميل البطاقات...</p>
-      </main>
-    );
-  }
-
-  if (error) {
-    return (
-      <main className="mx-auto max-w-md px-4 py-10 sm:px-6">
-        <h1 className="text-2xl font-extrabold">خطأ في تحميل البطاقات</h1>
-        <p className="mt-2 text-ink/70">{error}</p>
-      </main>
-    );
-  }
-
-  if (cards.length === 0) {
-    return (
-      <main className="mx-auto max-w-md px-4 py-10 sm:px-6">
-        <h1 className="text-2xl font-black">بطاقات المذاكرة</h1>
-        <p className="mt-4 text-ink/60">لا توجد بطاقات لهذه الملزمة بعد.</p>
-      </main>
-    );
-  }
-
-  const card = cards[index];
-
-  return (
-    <main className="mx-auto max-w-md px-4 py-10 sm:px-6">
-      <p className="font-mono text-xs uppercase tracking-widest text-teal">بطاقات مذاكرة</p>
-      <h1 className="mt-1 text-2xl font-black">راجع البطاقات</h1>
-
-      <p className="mt-4 text-sm text-ink/50">{index + 1} / {cards.length}</p>
-
-      <div onClick={() => setFlipped(!flipped)} className="relative mt-4 h-64 cursor-pointer [perspective:1000px]">
-        <div className={`relative h-full w-full transition-transform duration-500 [transform-style:preserve-3d] ${flipped ? '[transform:rotateY(180deg)]' : ''}`}>
-          <div className="absolute inset-0 flex items-center justify-center rounded-xl border border-line bg-white p-6 text-center shadow-sm [backface-visibility:hidden]">
-            <p className="text-lg font-bold">{card.front_text}</p>
-          </div>
-          <div className="absolute inset-0 flex items-center justify-center rounded-xl border border-line bg-amber/15 p-6 text-center shadow-sm [backface-visibility:hidden] [transform:rotateY(180deg)]">
-            <p className="text-ink">{card.back_text}</p>
-          </div>
-        </div>
-      </div>
-
-      <p className="mt-3 text-center text-xs text-ink/40">اضغط على البطاقة لقلبها</p>
-
-      <div className="mt-6 flex justify-between gap-3">
-        <button onClick={goPrev} disabled={index === 0} className="flex-1 rounded-lg border border-line px-4 py-2.5 font-bold hover:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-40">
-          السابق
-        </button>
-        <button onClick={goNext} disabled={index === cards.length - 1} className="flex-1 rounded-lg bg-teal px-4 py-2.5 font-bold text-white hover:bg-teal/90 disabled:cursor-not-allowed disabled:opacity-40">
-          التالي
-        </button>
-      </div>
     </main>
   );
 }

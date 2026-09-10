@@ -24,15 +24,21 @@ export default function ChannelPortalPage() {
 
   const [newType, setNewType] = useState('assignment');
   const [newTitle, setNewTitle] = useState('');
+  const [newFolder, setNewFolder] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newDue, setNewDue] = useState('');
   const [newLink, setNewLink] = useState('');
+  const [uploadingNewFile, setUploadingNewFile] = useState(false);
+  const [newFileName, setNewFileName] = useState('');
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editType, setEditType] = useState('assignment');
   const [editTitle, setEditTitle] = useState('');
+  const [editFolder, setEditFolder] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editDue, setEditDue] = useState('');
   const [editLink, setEditLink] = useState('');
+  const [uploadingEditFile, setUploadingEditFile] = useState(false);
 
   const [settingsDesc, setSettingsDesc] = useState('');
   const [settingsImageUrl, setSettingsImageUrl] = useState('');
@@ -114,6 +120,39 @@ export default function ChannelPortalPage() {
     }
   }
 
+  async function uploadContentFile(file: File): Promise<string | null> {
+    const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+    const filePath = `${selectedChannelId}/${Date.now()}-${safeName}`;
+
+    const { error: uploadError } = await supabase.storage.from('channel-files').upload(filePath, file);
+    if (uploadError) {
+      alert('فشل رفع الملف: ' + uploadError.message);
+      return null;
+    }
+
+    const { data } = supabase.storage.from('channel-files').getPublicUrl(filePath);
+    return data.publicUrl;
+  }
+
+  async function handleNewFileUpload(e: any) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingNewFile(true);
+    setNewFileName(file.name);
+    const url = await uploadContentFile(file);
+    if (url) setNewLink(url);
+    setUploadingNewFile(false);
+  }
+
+  async function handleEditFileUpload(e: any) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingEditFile(true);
+    const url = await uploadContentFile(file);
+    if (url) setEditLink(url);
+    setUploadingEditFile(false);
+  }
+
   async function handleAdd(e: any) {
     e.preventDefault();
     const res = await fetch('/api/channel/content', {
@@ -125,6 +164,7 @@ export default function ChannelPortalPage() {
         password,
         content_type: newType,
         title: newTitle,
+        folder: newFolder,
         description: newDesc,
         due_date: newDue,
         file_url: newLink,
@@ -132,9 +172,11 @@ export default function ChannelPortalPage() {
     });
     if (res.ok) {
       setNewTitle('');
+      setNewFolder('');
       setNewDesc('');
       setNewDue('');
       setNewLink('');
+      setNewFileName('');
       loadItemsFor(selectedChannelId, password);
     }
   }
@@ -143,6 +185,7 @@ export default function ChannelPortalPage() {
     setEditingId(item.id);
     setEditType(item.content_type);
     setEditTitle(item.title);
+    setEditFolder(item.folder || '');
     setEditDesc(item.description || '');
     setEditDue(item.due_date || '');
     setEditLink(item.file_url || '');
@@ -159,6 +202,7 @@ export default function ChannelPortalPage() {
         id,
         content_type: editType,
         title: editTitle,
+        folder: editFolder,
         description: editDesc,
         due_date: editDue,
         file_url: editLink,
@@ -276,7 +320,10 @@ export default function ChannelPortalPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-black">قناة: {channelInfo?.name}</h1>
+        <div>
+          <h1 className="text-3xl font-black">قناة: {channelInfo?.name}</h1>
+          <p className="mt-1 font-mono text-xs uppercase tracking-widest text-teal">{channelInfo?.stage}</p>
+        </div>
         <button onClick={handleLogout} className="rounded-lg border border-line px-4 py-2 text-sm hover:bg-ink/5">تسجيل خروج</button>
       </div>
 
@@ -297,9 +344,18 @@ export default function ChannelPortalPage() {
               <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="العنوان" required className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
               <input type="date" value={newDue} onChange={(e) => setNewDue(e.target.value)} className="w-40 rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
             </div>
-            <input type="text" value={newLink} onChange={(e) => setNewLink(e.target.value)} placeholder="رابط (اختياري — مثل رابط ملف أو منشور تليجرام)" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+            <input type="text" value={newFolder} onChange={(e) => setNewFolder(e.target.value)} placeholder="اسم المجلد (اختياري — مثلاً: تشريح، أو دكتور فلان)" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
+
+            <div className="rounded-lg border border-dashed border-line bg-paper/50 p-3">
+              <label className="mb-1 block text-sm font-bold text-ink/70">رفع ملف (PDF أو صورة أو Word)</label>
+              <input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,image/*" onChange={handleNewFileUpload} className="w-full text-sm" />
+              {uploadingNewFile && <p className="mt-1 text-sm text-ink/50">جاري رفع {newFileName}...</p>}
+              {!uploadingNewFile && newLink && <p className="mt-1 truncate text-sm text-teal">✓ الملف جاهز: {newLink}</p>}
+            </div>
+
+            <input type="text" value={newLink} onChange={(e) => setNewLink(e.target.value)} placeholder="أو الصق رابط بديل (اختياري — لو ما رفعت ملف فوق)" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
             <input type="text" value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="تفاصيل إضافية (اختياري)" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20" />
-            <button type="submit" className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">إضافة</button>
+            <button type="submit" disabled={uploadingNewFile} className="rounded-lg bg-teal px-4 py-2 text-sm font-bold text-white hover:bg-teal/90">إضافة</button>
           </form>
 
           <div className="space-y-2">
@@ -317,10 +373,18 @@ export default function ChannelPortalPage() {
                       <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="flex-1 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
                       <input type="date" value={editDue} onChange={(e) => setEditDue(e.target.value)} className="w-40 rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
                     </div>
-                    <input type="text" value={editLink} onChange={(e) => setEditLink(e.target.value)} className="w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
+                    <input type="text" value={editFolder} onChange={(e) => setEditFolder(e.target.value)} placeholder="اسم المجلد (اختياري)" className="w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
+
+                    <div className="rounded-lg border border-dashed border-line bg-paper/50 p-2">
+                      <label className="mb-1 block text-xs font-bold text-ink/70">رفع ملف جديد (يستبدل الرابط الحالي)</label>
+                      <input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,image/*" onChange={handleEditFileUpload} className="w-full text-sm" />
+                      {uploadingEditFile && <p className="mt-1 text-sm text-ink/50">جاري رفع الملف...</p>}
+                    </div>
+
+                    <input type="text" value={editLink} onChange={(e) => setEditLink(e.target.value)} placeholder="رابط الملف" className="w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
                     <input type="text" value={editDesc} onChange={(e) => setEditDesc(e.target.value)} className="w-full rounded-lg border border-line bg-white px-3 py-1.5 text-sm" />
                     <div className="flex gap-2">
-                      <button onClick={() => saveEdit(item.id)} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-bold text-white hover:bg-teal/90">حفظ</button>
+                      <button onClick={() => saveEdit(item.id)} disabled={uploadingEditFile} className="rounded-lg bg-teal px-3 py-1.5 text-sm font-bold text-white hover:bg-teal/90">حفظ</button>
                       <button onClick={() => setEditingId(null)} className="rounded-lg border border-line px-3 py-1.5 text-sm">إلغاء</button>
                     </div>
                   </div>
@@ -328,10 +392,11 @@ export default function ChannelPortalPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="ml-2 rounded-full bg-teal/10 px-2 py-0.5 text-xs font-bold text-teal">{typeLabels[item.content_type] || item.content_type}</span>
+                      {item.folder && <span className="ml-2 rounded-full bg-amber/20 px-2 py-0.5 text-xs font-bold text-ink">📁 {item.folder}</span>}
                       <span className="font-bold">{item.title}</span>
                       {item.due_date && <span className="mr-2 text-sm text-amber">تاريخ التسليم: {item.due_date}</span>}
                       {item.description && <p className="text-sm text-ink/60">{item.description}</p>}
-                      {item.file_url && <a href={item.file_url} target="_blank" rel="noopener noreferrer" className="text-sm text-teal underline">فتح الرابط</a>}
+                      {item.file_url && <a href={item.file_url} target="_blank" rel="noopener noreferrer" className="text-sm text-teal underline">فتح الملف/الرابط</a>}
                     </div>
                     <div className="flex gap-2">
                       <button onClick={() => startEdit(item)} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-ink/5">تعديل</button>
@@ -349,7 +414,7 @@ export default function ChannelPortalPage() {
         <section className="mt-6 max-w-md space-y-8">
           <div>
             <h2 className="mb-3 text-lg font-extrabold">بيانات القناة</h2>
-            <p className="mb-3 text-sm text-ink/50">الاسم والمادة ورابط تليجرام يديرها المشرف. تقدر تعدّل الصورة والوصف بس.</p>
+            <p className="mb-3 text-sm text-ink/50">الاسم والمرحلة ورابط تليجرام يديرها المشرف. تقدر تعدّل الصورة والوصف بس.</p>
             <form onSubmit={handleUpdateChannel} className="space-y-3">
               <div>
                 <label className="mb-1 block text-sm text-ink/60">صورة القناة</label>
