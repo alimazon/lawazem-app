@@ -7,7 +7,7 @@ import { Input, Select } from '@/components/ui/Field';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { postJson } from '@/lib/api-client';
-import type { LectureNote, Subject } from '@/lib/types';
+import type { LectureNote, Subject, Track } from '@/lib/types';
 
 interface Props { password: string }
 
@@ -16,11 +16,12 @@ interface MaterialForm {
   title: string;
   professor_name: string;
   lecture_number: string;
+  track: Track | '';
   file_path: string;
 }
 
 function emptyForm(): MaterialForm {
-  return { subject_id: '', title: '', professor_name: '', lecture_number: '', file_path: '' };
+  return { subject_id: '', title: '', professor_name: '', lecture_number: '', track: '', file_path: '' };
 }
 function formFromNote(n: LectureNote): MaterialForm {
   return {
@@ -28,11 +29,12 @@ function formFromNote(n: LectureNote): MaterialForm {
     title: n.title,
     professor_name: n.professor_name ?? '',
     lecture_number: n.lecture_number != null ? String(n.lecture_number) : '',
+    track: n.track ?? '',
     file_path: n.file_path,
   };
 }
 function isFormValid(f: MaterialForm): boolean {
-  return f.subject_id.trim() !== '' && f.title.trim() !== '' && f.file_path.trim() !== '';
+  return f.subject_id.trim() !== '' && f.title.trim() !== '' && f.track !== '' && f.file_path.trim() !== '';
 }
 
 function IconDoc() {
@@ -117,6 +119,7 @@ export function MaterialsSection({ password }: Props) {
         title: newForm.title.trim(),
         professor_name: newForm.professor_name.trim() || null,
         lecture_number: newForm.lecture_number ? Number(newForm.lecture_number) : null,
+        track: newForm.track,
         file_path: newForm.file_path.trim(),
       });
       const keptSubject = newForm.subject_id;
@@ -145,6 +148,7 @@ export function MaterialsSection({ password }: Props) {
         title: editForm.title.trim(),
         professor_name: editForm.professor_name.trim() || null,
         lecture_number: editForm.lecture_number ? Number(editForm.lecture_number) : null,
+        track: editForm.track,
         file_path: editForm.file_path.trim(),
       });
       cancelEdit();
@@ -191,6 +195,17 @@ export function MaterialsSection({ password }: Props) {
           >
             <option value="">اختر المادة</option>
             {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </Select>
+          <Select
+            value={newForm.track}
+            onChange={(e) => setNewForm({ ...newForm, track: e.target.value as Track })}
+            required
+            className="w-36"
+            aria-label="نظري أو عملي"
+          >
+            <option value="">نظري / عملي</option>
+            <option value="نظري">نظري</option>
+            <option value="عملي">عملي</option>
           </Select>
           <Input
             type="text"
@@ -262,6 +277,16 @@ export function MaterialsSection({ password }: Props) {
                       >
                         {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </Select>
+                      <Select
+                        value={editForm.track}
+                        onChange={(e) => setEditForm({ ...editForm, track: e.target.value as Track })}
+                        className="w-36"
+                        aria-label="نظري أو عملي"
+                      >
+                        <option value="">نظري / عملي</option>
+                        <option value="نظري">نظري</option>
+                        <option value="عملي">عملي</option>
+                      </Select>
                       <Input
                         type="text"
                         value={editForm.title}
@@ -310,6 +335,11 @@ export function MaterialsSection({ password }: Props) {
                         <span className="rounded-full bg-teal/8 px-2 py-0.5 font-mono text-xs text-teal/70">
                           {m.subjects?.name ?? subjectNameById.get(m.subject_id) ?? '—'}
                         </span>
+                        {m.track && (
+                          <span className="rounded-full bg-amber/15 px-2 py-0.5 font-mono text-xs text-amber-800">
+                            {m.track}
+                          </span>
+                        )}
                       </div>
                       {(m.professor_name || m.lecture_number != null) && (
                         <p className="mt-1 text-sm text-ink/50">

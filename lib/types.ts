@@ -4,6 +4,8 @@ export type Stage = 'المرحلة الأولى' | 'المرحلة الثاني
 
 export type ContentType = 'assignment' | 'lecture_note' | 'summary' | 'task';
 
+export type Track = 'نظري' | 'عملي';
+
 export interface Subject {
   id: string;
   name: string;
@@ -18,6 +20,7 @@ export interface LectureNote {
   title: string;
   professor_name: string | null;
   lecture_number: number | null;
+  track: Track | null;
   file_path: string;
   status?: string;
   created_at?: string;
@@ -48,6 +51,7 @@ export interface ChannelContent {
   title: string;
   description: string | null;
   due_date: string | null;
+  track: Track | null;
   file_urls: FileEntry[];
   folder: string | null;
   pinned: boolean;

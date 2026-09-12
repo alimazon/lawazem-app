@@ -15,10 +15,15 @@ export function AnimatedBackground() {
     ).matches;
     if (prefersReduced) return;
 
+    // على أجهزة اللمس ما فيه فايدة من تفاعل الماوس، ونوفر المعالج كليًا.
+    const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+    if (isCoarsePointer) return;
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     let rafId = 0;
+    let running = true;
     let width = 0;
     let height = 0;
     let dpr = 1;
@@ -68,7 +73,7 @@ export function AnimatedBackground() {
     }
 
     function step() {
-      if (!ctx) return;
+      if (!ctx || !running) return;
       ctx.clearRect(0, 0, width, height);
 
       for (let i = 0; i < particles.length; i++) {
@@ -135,6 +140,15 @@ export function AnimatedBackground() {
       resize();
       init();
     }
+    function onVisibilityChange() {
+      if (document.hidden) {
+        running = false;
+        cancelAnimationFrame(rafId);
+      } else if (!running) {
+        running = true;
+        step();
+      }
+    }
 
     resize();
     init();
@@ -143,12 +157,15 @@ export function AnimatedBackground() {
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseleave', onMouseLeave);
     window.addEventListener('resize', onResize);
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
+      running = false;
       cancelAnimationFrame(rafId);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseleave', onMouseLeave);
       window.removeEventListener('resize', onResize);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, []);
 

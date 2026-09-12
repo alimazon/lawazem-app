@@ -1,12 +1,18 @@
 // app/api/admin/lecture-notes/route.ts
 import { NextResponse } from 'next/server';
 import { adminGuard, jsonError, safeOptionalString, safeString } from '@/lib/api-server';
+import type { Track } from '@/lib/types';
 
 function parseLectureNumber(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return null;
   const n = Number(value);
   if (!Number.isFinite(n) || n < 0) return null;
   return Math.floor(n);
+}
+
+function parseTrack(value: unknown): Track | null {
+  if (value === 'نظري' || value === 'عملي') return value;
+  return null;
 }
 
 export async function POST(request: Request) {
@@ -42,10 +48,12 @@ export async function POST(request: Request) {
       const title = safeString(body.title, 300);
       const professor_name = safeOptionalString(body.professor_name, 200);
       const lecture_number = parseLectureNumber(body.lecture_number);
+      const track = parseTrack(body.track);
       const file_path = safeString(body.file_path, 2000);
 
       if (!subject_id) return jsonError('اختر المادة');
       if (!title) return jsonError('عنوان الملزمة مطلوب');
+      if (!track) return jsonError('اختر نظري أو عملي');
       if (!file_path) return jsonError('رابط الملف مطلوب');
 
       const { error } = await supabaseAdmin.from('lecture_notes').insert({
@@ -53,6 +61,7 @@ export async function POST(request: Request) {
         title,
         professor_name,
         lecture_number,
+        track,
         file_path,
         status: 'approved',
       });
@@ -70,11 +79,13 @@ export async function POST(request: Request) {
       const title = safeString(body.title, 300);
       const professor_name = safeOptionalString(body.professor_name, 200);
       const lecture_number = parseLectureNumber(body.lecture_number);
+      const track = parseTrack(body.track);
       const file_path = safeString(body.file_path, 2000);
 
       if (!id) return jsonError('id مطلوب');
       if (!subject_id) return jsonError('اختر المادة');
       if (!title) return jsonError('عنوان الملزمة مطلوب');
+      if (!track) return jsonError('اختر نظري أو عملي');
       if (!file_path) return jsonError('رابط الملف مطلوب');
 
       const { error } = await supabaseAdmin
@@ -84,6 +95,7 @@ export async function POST(request: Request) {
           title,
           professor_name,
           lecture_number,
+          track,
           file_path,
         })
         .eq('id', id);
