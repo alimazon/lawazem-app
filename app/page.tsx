@@ -163,7 +163,7 @@ export default function HomePage() {
           <div className="relative animate-slide-up">
             <span className="inline-flex items-center gap-2 rounded-full border border-teal/20 bg-teal/5 px-4 py-1.5 font-mono text-xs uppercase tracking-widest text-teal backdrop-blur-sm">
               <IconCheck />
-              منصة طلابية
+              منصة لطلبة جامعةالعميد
             </span>
           </div>
 
@@ -181,7 +181,7 @@ export default function HomePage() {
           </div>
 
           <p className="mt-10 text-xs text-ink/40 animate-slide-up" style={{ animationDelay: '400ms' }}>
-            تكدر تغيّرها لاحقًا من أي وقت
+            تكدر تغيّرها لاحقًا 
           </p>
         </main>
       ) : (
