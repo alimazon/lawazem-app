@@ -150,7 +150,7 @@ function SubjectFolder({
           </h2>
           <p className="mt-0.5 text-xs font-bold text-ink/50">
             {notesCount === 0
-              ? 'لا توجد ملازم بعد'
+              ? 'لا توجد ملازم حاليا'
               : notesCount === 1
               ? 'ملزمة وحدة'
               : `${notesCount} ملزمة`}
