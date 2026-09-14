@@ -71,7 +71,7 @@ const SECTIONS: Section[] = [
   { title: 'الملازم', description: 'ملازم الدكاترة مرتبة حسب المادة', href: '/lawazem', icon: <IconBook />, accent: 'teal' },
   { title: 'القنوات الدراسية', description: 'دليل قنوات التليكرام الدراسية', href: '/channels', icon: <IconChat />, accent: 'teal' },
   { title: 'الجدول', description: 'جدول المحاضرات الأسبوعي لمرحلتك', href: '/schedule', icon: <IconCalendar />, accent: 'amber' },
-  { title: 'جات الدراسة', description: 'برومبت ذكي يذاكر معك بالـAI', href: '/study-prompt', icon: <IconSparkles />, accent: 'amber' },
+  { title: 'جات الدراسة', description: 'برومبت ذكي يدرس معك بالـAI', href: '/study-prompt', icon: <IconSparkles />, accent: 'amber' },
   { title: 'المعدل', description: 'احفظ درجاتك واحسب معدلك الموزون حسب وحدات موادك', href: '/gpa', icon: <IconChart />, accent: 'teal' },
 ];
 
