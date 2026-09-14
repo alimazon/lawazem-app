@@ -15,7 +15,7 @@ export function AnimatedBackground() {
     ).matches;
     if (prefersReduced) return;
 
-    // على أجهزة اللمس ما فيه فايدة من تفاعل الماوس، ونوفر المعالج كليًا.
+    // على أجهزة اللمس لا توجد فايدة من تفاعل الماوس، ونوفر المعالج كليًا.
     const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
     if (isCoarsePointer) return;
 

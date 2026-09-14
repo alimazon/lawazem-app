@@ -150,7 +150,7 @@ function SubjectFolder({
           </h2>
           <p className="mt-0.5 text-xs font-bold text-ink/50">
             {notesCount === 0
-              ? 'ما فيه ملازم بعد'
+              ? 'لا توجد ملازم بعد'
               : notesCount === 1
               ? 'ملزمة وحدة'
               : `${notesCount} ملزمة`}
@@ -170,7 +170,7 @@ function SubjectFolder({
           <div className="border-t border-line/60 bg-paper/40 px-5 py-4">
             {notesCount === 0 ? (
               <p className="text-center text-sm text-ink/40 py-2">
-                ما فيه ملازم لهذي المادة لسا.
+                لا توجد ملازم لهذه المادة حاليا.
               </p>
             ) : (
               <ul className="space-y-1.5">
@@ -378,16 +378,16 @@ export default function LawazemPage() {
         </div>
       )}
 
-      {/* ما فيه مواد */}
+      {/* لا توجد مواد */}
       {!loading && !error && subjects.length === 0 && (
         <div className="rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up">
           <IconEmpty />
-          <p className="mt-4 font-bold text-ink/70">لا توجد مواد مضافة لمرحلتك لسا.</p>
+          <p className="mt-4 font-bold text-ink/70">لا توجد مواد مضافة لمرحلتك حاليا.</p>
           <p className="mt-1 text-sm text-ink/50">تفقدها لاحقًا</p>
         </div>
       )}
 
-      {/* ما فيه نتائج بحث */}
+      {/* لا توجد نتائج بحث */}
       {!loading && !error && subjects.length > 0 && term && visibleCount === 0 && (
         <div className="rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up">
           <IconSearch />
@@ -400,7 +400,7 @@ export default function LawazemPage() {
       {!loading && !error && (
         <div className="space-y-3">
           {filteredSubjects.map((s, idx) => {
-            // في وضع البحث: اخفِ المجلدات اللي ما فيها نتائج
+            // في وضع البحث: اخفِ المجلدات اللي لا توجدا نتائج
             if (term && s.lecture_notes.length === 0) return null;
 
             return (
