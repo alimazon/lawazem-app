@@ -786,7 +786,7 @@ export default function GroupSwapPage() {
                 type="text"
                 value={form.telegram_username}
                 onChange={(e) => setForm({ ...form, telegram_username: e.target.value })}
-                placeholder="مثلاً: ali_2004"
+                placeholder="مثلاً: E_W_9"
                 maxLength={100}
                 required
               />
