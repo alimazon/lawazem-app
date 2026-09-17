@@ -173,3 +173,34 @@ button, a, input, select, textarea {
     scroll-behavior: auto !important;
   }
 }
+/* ==================== Native Form Elements Theming ==================== */
+/* إصلاح خلفية القوائم المنسدلة في الوضع الليلي */
+select,
+option,
+textarea,
+input {
+  color-scheme: light;
+}
+
+html.dark select,
+html.dark option,
+html.dark textarea,
+html.dark input {
+  color-scheme: dark;
+}
+
+/* إصلاح صريح لخيارات القائمة المنسدلة */
+select option {
+  background-color: #F7F6F2;
+  color: #1A211F;
+}
+
+html.dark select option {
+  background-color: #131918;
+  color: #ECEFEE;
+}
+
+html.dark select optgroup {
+  background-color: #131918;
+  color: #ECEFEE;
+}

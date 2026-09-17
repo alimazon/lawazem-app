@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { STAGES, STORAGE_KEYS } from '@/lib/constants';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
-import { RecentViewsCard } from '@/components/RecentViewsCard';   // ✅ جديد
+import { RecentViewsCard } from '@/components/RecentViewsCard';
 import type { Stage } from '@/lib/types';
 
 // ==================== Icons ====================
@@ -44,6 +44,13 @@ function IconChart() {
     </svg>
   );
 }
+function IconSwap() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+    </svg>
+  );
+}
 function IconArrowLeft() {
   return (
     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -58,6 +65,13 @@ function IconCheck() {
     </svg>
   );
 }
+function IconLock() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+    </svg>
+  );
+}
 
 // ==================== Section Config ====================
 interface Section {
@@ -66,6 +80,7 @@ interface Section {
   href: string;
   icon: React.ReactNode;
   accent: 'teal' | 'amber';
+  requiresStage?: Stage;   // ✅ إذا موجود، تفتح فقط لهذي المرحلة
 }
 
 const SECTIONS: Section[] = [
@@ -74,6 +89,14 @@ const SECTIONS: Section[] = [
   { title: 'الجدول', description: 'جدول المحاضرات الأسبوعي لمرحلتك', href: '/schedule', icon: <IconCalendar />, accent: 'amber' },
   { title: 'جات الدراسة', description: 'برومبت ذكي يدرس معك بالـAI', href: '/study-prompt', icon: <IconSparkles />, accent: 'amber' },
   { title: 'المعدل', description: 'احفظ درجاتك واحسب معدلك الموزون حسب وحدات موادك', href: '/gpa', icon: <IconChart />, accent: 'teal' },
+  {
+    title: 'تبديل الكروبات',
+    description: 'تبديل كروبات العملي — متاح للمرحلة الثانية فقط',
+    href: '/group-swap',
+    icon: <IconSwap />,
+    accent: 'amber',
+    requiresStage: 'المرحلة الثانية',
+  },
 ];
 
 // ==================== Stage Card ====================
@@ -101,21 +124,62 @@ function StageCard({ stage, index, onClick }: { stage: string; index: number; on
 }
 
 // ==================== Section Card ====================
-function SectionCard({ section, index }: { section: Section; index: number }) {
+function SectionCard({
+  section,
+  index,
+  currentStage,
+}: {
+  section: Section;
+  index: number;
+  currentStage: Stage;
+}) {
   const isTeal = section.accent === 'teal';
+  const accentText = isTeal ? 'text-teal' : 'text-amber-700 dark:text-amber-300';
+
+  // ===== مقفل؟ =====
+  const isLocked = !!section.requiresStage && section.requiresStage !== currentStage;
+
+  // ===== مقفل =====
+  if (isLocked) {
+    return (
+      <div
+        style={{ animationDelay: `${index * 60}ms` }}
+        className="group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-white/40 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.02)] backdrop-blur-sm animate-slide-up dark:bg-paper/40"
+        aria-disabled="true"
+      >
+        <div className="relative">
+          <div className="flex items-start justify-between">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-ink/5 text-ink/30 dark:bg-white/5">
+              {section.icon}
+            </div>
+            <span className="flex h-7 items-center gap-1 rounded-full bg-ink/5 px-2.5 text-[10px] font-black text-ink/40 dark:bg-white/5">
+              <IconLock />
+              مقفل
+            </span>
+          </div>
+          <h2 className="mt-4 text-base font-extrabold text-ink/50">{section.title}</h2>
+          <p className="mt-1 text-sm leading-relaxed text-ink/35">{section.description}</p>
+          <div className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-ink/30">
+            <span>متاح فقط للمرحلة الثانية</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ===== مفتوح =====
   const gradient = isTeal
     ? 'from-teal/8 to-teal/4 group-hover:from-teal/12 group-hover:to-teal/6'
     : 'from-amber/12 to-amber/6 group-hover:from-amber/18 group-hover:to-amber/10';
   const iconBg = isTeal
     ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] group-hover:shadow-[0_6px_18px_rgba(14,74,74,0.34)]'
     : 'bg-amber text-ink shadow-[0_2px_8px_rgba(224,166,58,0.30)] group-hover:shadow-[0_6px_18px_rgba(224,166,58,0.42)]';
-  const accentText = isTeal ? 'text-teal' : 'text-amber-700';
 
   return (
     <Link
       href={section.href}
       style={{ animationDelay: `${index * 60}ms` }}
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-teal/30 hover:shadow-[0_12px_30px_rgba(14,74,74,0.10)] active:scale-[0.99] animate-slide-up dark:bg-paper/80"
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-teal/30 hover:shadow-[0_12px_30px_rgba(14,74,74,0.10)] active:scale-[0.99] animate-slide-up dark:bg-paper/80 dark:hover:shadow-[0_12px_30px_rgba(0,0,0,0.40)]"
     >
       <div className={`pointer-events-none absolute inset-0 bg-gradient-to-bl opacity-0 transition-opacity duration-300 ${gradient} group-hover:opacity-100`} />
       <div className="relative">
@@ -162,9 +226,9 @@ export default function HomePage() {
       {!stage ? (
         <main className="relative mx-auto flex min-h-[calc(100vh-70px)] max-w-2xl flex-col items-center justify-center px-6 py-16 text-center">
           <div className="relative animate-slide-up">
-            <span className="inline-flex items-center gap-2 rounded-full border border-teal/20 bg-teal/5 px-4 py-1.5 font-mono text-xs uppercase tracking-widest text-teal backdrop-blur-sm">
+            <span className="inline-flex items-center gap-2 rounded-full border border-teal/20 bg-teal/5 px-4 py-1.5 font-mono text-xs uppercase tracking-widest text-teal backdrop-blur-sm dark:border-teal/30 dark:bg-teal/15">
               <IconCheck />
-              منصة لطلبة جامعةالعميد
+              منصة لطلبة جامعة العميد
             </span>
           </div>
 
@@ -172,7 +236,7 @@ export default function HomePage() {
             اختر مرحلتك الدراسية
           </h1>
           <p className="mt-3 max-w-md text-base leading-relaxed text-ink/60 animate-slide-up" style={{ animationDelay: '160ms' }}>
-            في لوازم نعرض لك المحتوى المناسب لمرحلتك قنوات، جداول، وكل شي.
+            في لوازم نعرض لك المحتوى المناسب لمرحلتك — قنوات، جداول، وكل ما تحتاجه.
           </p>
 
           <div className="relative mt-12 grid w-full gap-4 sm:grid-cols-3">
@@ -182,19 +246,19 @@ export default function HomePage() {
           </div>
 
           <p className="mt-10 text-xs text-ink/40 animate-slide-up" style={{ animationDelay: '400ms' }}>
-            تكدر تغيّرها لاحقًا
+            يمكنك تغييرها لاحقاً
           </p>
         </main>
       ) : (
         <main className="relative mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
           <div className="flex flex-wrap items-end justify-between gap-3 animate-slide-up">
             <div>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal backdrop-blur-sm">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal backdrop-blur-sm dark:border-teal/30 dark:bg-teal/15">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
                 {stage}
               </span>
-              <h1 className="mt-3 text-3xl font-black leading-tight text-ink sm:text-4xl">شنو تحتاج اليوم؟</h1>
-              <p className="mt-2 text-sm text-ink/50">كل شي بمكان واحد — اختر القسم اللي تحتاجه</p>
+              <h1 className="mt-3 text-3xl font-black leading-tight text-ink sm:text-4xl">ماذا تحتاج اليوم؟</h1>
+              <p className="mt-2 text-sm text-ink/50">كل شيء في مكان واحد — اختر القسم الذي تحتاجه</p>
             </div>
             <button
               onClick={changeStage}
@@ -206,17 +270,16 @@ export default function HomePage() {
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {SECTIONS.map((sec, i) => (
-              <SectionCard key={sec.href} section={sec} index={i} />
+              <SectionCard key={sec.href} section={sec} index={i} currentStage={stage} />
             ))}
           </div>
 
-          {/* ✅ جديد: آخر ما زرته */}
           <div className="mt-8">
             <RecentViewsCard />
           </div>
 
           <p className="mt-12 text-center text-xs text-ink/40 animate-slide-up" style={{ animationDelay: '400ms' }}>
-            صُنع بكل حب لطلاب كلية الطب · جامعةالعميد · برمجة واعدادالطالب : علي مازن @E_W_9
+            صُنع بكل حب لطلاب كلية الطب · جامعة العميد · برمجة وإعداد الطالب: علي مازن @E_W_9
           </p>
         </main>
       )}

@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ThemeToggle } from './ThemeToggle'; // ✅ جديد
+import { ThemeToggle } from './ThemeToggle';
 
 const NAV = [
   { href: '/lawazem', label: 'الملازم' },
@@ -28,7 +28,6 @@ export function NavBar() {
           <span className="text-base font-black text-ink sm:text-lg">لوازم</span>
         </Link>
 
-        {/* ✅ تعديل: إضافة flex-1 و justify-end وزر الثيم */}
         <div className="flex flex-1 items-center justify-end gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-1.5 sm:overflow-visible [&::-webkit-scrollbar]:hidden">
           {NAV.map((item) => {
             const active = pathname === item.href || pathname?.startsWith(item.href + '/');
@@ -47,7 +46,6 @@ export function NavBar() {
             );
           })}
 
-          {/* ✅ جديد: زر تبديل الثيم */}
           <div className="ml-1 flex-shrink-0 border-r border-line/60 pr-2">
             <ThemeToggle />
           </div>
