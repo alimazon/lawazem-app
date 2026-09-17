@@ -938,7 +938,7 @@ export default function GroupSwapPage() {
                 request={r}
                 isOwn={
                   owners[r.id] !== undefined ||
-                  (savedUsername &&
+                  (!!savedUsername &&
                     r.telegram_username.toLowerCase() === normalizeUsername(savedUsername))
                 }
                 matchCount={matchCounts.get(r.id) ?? 0}
