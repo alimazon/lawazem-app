@@ -71,7 +71,7 @@ function StageCard({ stage, schedule, password, onUploaded }: StageCardProps) {
       return;
     }
     if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      toast.show(`حجم الصورة كبير جدًا (الحد ${MAX_FILE_SIZE_MB} ميجا).`, 'error');
+      toast.show(`حجم الصورة كبير جداً (بحد أقصى ${MAX_FILE_SIZE_MB} ميجا).`, 'error');
       return;
     }
 
@@ -104,7 +104,7 @@ function StageCard({ stage, schedule, password, onUploaded }: StageCardProps) {
   function openFilePicker() { fileInputRef.current?.click(); }
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-line bg-white/80 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm transition-all duration-200 hover:border-teal/20">
+    <div className="overflow-hidden rounded-3xl border border-line bg-white/80 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm transition-all duration-200 hover:border-teal/20 dark:bg-paper/80 dark:hover:shadow-[0_4px_16px_rgba(0,0,0,0.30)]">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line/60 px-5 py-3">
         <div className="flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal/8 text-teal">
@@ -128,22 +128,26 @@ function StageCard({ stage, schedule, password, onUploaded }: StageCardProps) {
             className="max-h-56 w-full rounded-2xl border border-line object-contain"
           />
         ) : currentImageUrl && imageError ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-center text-sm text-red-700">
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-center text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
             تعذّر تحميل الصورة الحالية.
-            <button type="button" onClick={openFilePicker} className="mr-2 font-bold underline">ارفع صورة جديدة</button>
+            <button type="button" onClick={openFilePicker} className="mr-2 font-bold underline">
+              رفع صورة جديدة
+            </button>
           </div>
         ) : (
           <button
             type="button"
             onClick={openFilePicker}
             disabled={uploading}
-            className="group flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line bg-paper/50 py-10 transition-all duration-200 hover:border-teal/40 hover:bg-teal/[0.03] disabled:opacity-60"
+            className="group flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line bg-paper/50 py-10 transition-all duration-200 hover:border-teal/40 hover:bg-teal/[0.03] disabled:opacity-60 dark:bg-white/[0.03] dark:hover:bg-teal/10"
           >
             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal/8 text-teal transition-all group-hover:bg-teal/15">
               <IconImage />
             </span>
-            <span className="text-sm font-bold text-ink/70">ارفع صورة الجدول</span>
-            <span className="text-xs text-ink/40">PNG / JPG / WebP — حتى {MAX_FILE_SIZE_MB} ميجا</span>
+            <span className="text-sm font-bold text-ink/70">رفع صورة الجدول</span>
+            <span className="text-xs text-ink/40">
+              PNG / JPG / WebP — بحد أقصى {MAX_FILE_SIZE_MB} ميجا
+            </span>
           </button>
         )}
 
@@ -157,7 +161,7 @@ function StageCard({ stage, schedule, password, onUploaded }: StageCardProps) {
         />
 
         {uploading && (
-          <div className="mt-3 flex items-center gap-2 rounded-xl bg-teal/5 px-3 py-2 text-sm">
+          <div className="mt-3 flex items-center gap-2 rounded-xl bg-teal/5 px-3 py-2 text-sm dark:bg-teal/15">
             <svg className="h-4 w-4 animate-spin text-teal" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
               <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
@@ -192,10 +196,10 @@ export function SchedulesSection({ password }: Props) {
 
   return (
     <section>
-      <div className="mb-5 flex items-start gap-3 rounded-2xl border border-teal/20 bg-teal/[0.04] p-4 text-sm">
+      <div className="mb-5 flex items-start gap-3 rounded-2xl border border-teal/20 bg-teal/[0.04] p-4 text-sm dark:border-teal/30 dark:bg-teal/10">
         <span className="text-teal"><IconCalendar /></span>
         <p className="font-medium text-ink/70">
-          ارفع صورة جدول المحاضرات لكل مرحلة، تظهر للطلاب مباشرة بصفحة «الجدول».
+          ارفع صورة جدول المحاضرات لكل مرحلة، وستظهر للطلاب مباشرة في صفحة «الجدول».
         </p>
       </div>
 

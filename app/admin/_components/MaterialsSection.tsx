@@ -59,7 +59,6 @@ function isFormValid(f: MaterialForm): boolean {
 // ===== مساعدات بناء المسار =====
 function slugify(value: string): string {
   if (!value) return 'general';
-  // نحول المسافات إلى شرطات، ونمنع الأحرف الخاصة
   const slug = value.trim().replace(/\s+/g, '-').replace(/[^\w\u0600-\u06FF-]/g, '');
   return slug || 'general';
 }
@@ -126,7 +125,7 @@ function TagsPreview({ tags }: { tags: string[] }) {
       {tags.map((tag, i) => (
         <span
           key={i}
-          className="rounded-md bg-teal/8 px-1.5 py-0.5 text-[10px] font-bold text-teal/80"
+          className="rounded-md bg-teal/8 px-1.5 py-0.5 text-[10px] font-bold text-teal/80 dark:bg-teal/15 dark:text-teal"
         >
           #{tag}
         </span>
@@ -143,12 +142,11 @@ function FilePathPreview({
   url: string;
   onRemove: () => void;
 }) {
-  // استخراج اسم الملف من URL
   const fileName = url.split('/').pop() || url;
   const isTelegram = url.includes('t.me');
 
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-teal/20 bg-teal/5 px-3 py-2.5 dark:bg-teal/10">
+    <div className="flex items-center gap-2 rounded-xl border border-teal/20 bg-teal/5 px-3 py-2.5 dark:border-teal/30 dark:bg-teal/15">
       <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-teal text-white">
         {isTelegram ? (
           <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
@@ -163,7 +161,7 @@ function FilePathPreview({
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-bold text-teal">
-          {isTelegram ? 'رابط تيليكرام' : 'الملف جاهز'}
+          {isTelegram ? 'رابط تلغرام' : 'الملف جاهز'}
         </p>
         <p className="truncate font-mono text-[10px] text-teal/70">{fileName}</p>
       </div>
@@ -332,9 +330,9 @@ export function MaterialsSection({ password }: Props) {
 
   // ===== حذف =====
   async function handleDelete(n: LectureNote) {
-    const ok = await confirm(`حذف الملزمة «${n.title}» نهائي. متأكد؟`, {
+    const ok = await confirm(`حذف الملزمة «${n.title}» نهائياً. هل أنت متأكد؟`, {
       variant: 'danger',
-      confirmLabel: 'احذف',
+      confirmLabel: 'حذف',
     });
     if (!ok) return;
     try {
@@ -349,10 +347,10 @@ export function MaterialsSection({ password }: Props) {
   return (
     <section>
       {subjects.length === 0 && !loading && (
-        <div className="mb-5 flex items-start gap-3 rounded-2xl border border-amber/30 bg-amber/8 p-4 text-sm">
+        <div className="mb-5 flex items-start gap-3 rounded-2xl border border-amber/30 bg-amber/8 p-4 text-sm dark:bg-amber/15">
           <span className="text-amber"><IconAlert /></span>
           <p className="font-medium text-ink/70">
-            أضف مادة أولًا من تبويب «المواد» حتى تكدر تضيف ملازم.
+            أضف مادة أولاً من تبويب «المواد» حتى تستطيع إضافة الملازم.
           </p>
         </div>
       )}
@@ -389,7 +387,7 @@ export function MaterialsSection({ password }: Props) {
             type="text"
             value={newForm.title}
             onChange={(e) => setNewForm({ ...newForm, title: e.target.value })}
-            placeholder="اسم الملزمة/المحاضرة"
+            placeholder="اسم الملزمة / المحاضرة"
             required
             maxLength={300}
             className="min-w-[200px] flex-1"
@@ -417,7 +415,7 @@ export function MaterialsSection({ password }: Props) {
         </div>
 
         {/* ===== الملف: Drag & Drop أو رابط ===== */}
-        <div className="space-y-2 rounded-2xl border border-dashed border-line bg-paper/40 p-4 dark:bg-paper-deep/40">
+        <div className="space-y-2 rounded-2xl border border-dashed border-line bg-paper/40 p-4 dark:bg-white/[0.03]">
           <p className="text-sm font-bold text-ink/70">ملف الملزمة</p>
 
           {newForm.file_path ? (
@@ -432,14 +430,12 @@ export function MaterialsSection({ password }: Props) {
                 uploading={uploadingNew}
                 maxSizeMB={50}
               />
-              <p className="text-center text-xs text-ink/50">
-                أو
-              </p>
+              <p className="text-center text-xs text-ink/50">أو</p>
               <Input
                 type="url"
                 value={newForm.file_path}
                 onChange={(e) => setNewForm({ ...newForm, file_path: e.target.value })}
-                placeholder="الصق رابط تيليكرام أو Supabase يدويًا"
+                placeholder="الصق رابط تلغرام أو Supabase يدوياً"
                 maxLength={2000}
               />
             </>
@@ -475,7 +471,7 @@ export function MaterialsSection({ password }: Props) {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-teal/8 text-teal">
             <IconDoc />
           </div>
-          <p className="mt-4 font-bold text-ink/70">لا توجد ملازم مضافة حاليا.</p>
+          <p className="mt-4 font-bold text-ink/70">لا توجد ملازم مضافة حالياً.</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -486,7 +482,7 @@ export function MaterialsSection({ password }: Props) {
             return (
               <div
                 key={m.id}
-                className="rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 hover:border-teal/20 dark:bg-paper/80"
+                className="rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 hover:border-teal/20 dark:bg-paper/80 dark:hover:shadow-[0_4px_16px_rgba(0,0,0,0.30)]"
               >
                 {isEditing ? (
                   <div className="space-y-3">
@@ -539,7 +535,7 @@ export function MaterialsSection({ password }: Props) {
                     </div>
 
                     {/* الملف في التعديل */}
-                    <div className="space-y-2 rounded-2xl border border-dashed border-line bg-paper/40 p-4 dark:bg-paper-deep/40">
+                    <div className="space-y-2 rounded-2xl border border-dashed border-line bg-paper/40 p-4 dark:bg-white/[0.03]">
                       <p className="text-sm font-bold text-ink/70">ملف الملزمة</p>
                       {editForm.file_path ? (
                         <FilePathPreview
@@ -558,7 +554,7 @@ export function MaterialsSection({ password }: Props) {
                             type="url"
                             value={editForm.file_path}
                             onChange={(e) => setEditForm({ ...editForm, file_path: e.target.value })}
-                            placeholder="الصق رابط تيليكرام أو Supabase يدويًا"
+                            placeholder="الصق رابط تلغرام أو Supabase يدوياً"
                             maxLength={2000}
                           />
                         </>
@@ -593,11 +589,11 @@ export function MaterialsSection({ password }: Props) {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-baseline gap-2">
                         <span className="font-bold text-ink">{m.title}</span>
-                        <span className="rounded-full bg-teal/8 px-2 py-0.5 font-mono text-xs text-teal/70">
+                        <span className="rounded-full bg-teal/8 px-2 py-0.5 font-mono text-xs text-teal/70 dark:bg-teal/15 dark:text-teal">
                           {m.subjects?.name ?? subjectNameById.get(m.subject_id) ?? '—'}
                         </span>
                         {m.track && (
-                          <span className="rounded-full bg-amber/15 px-2 py-0.5 font-mono text-xs text-amber-800">
+                          <span className="rounded-full bg-amber/15 px-2 py-0.5 font-mono text-xs text-amber-800 dark:bg-amber/25 dark:text-amber-300">
                             {m.track}
                           </span>
                         )}

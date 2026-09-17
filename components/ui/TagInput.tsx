@@ -14,7 +14,7 @@ interface TagInputProps {
 export function TagInput({
   tags,
   onChange,
-  placeholder = 'أضف وسم...',
+  placeholder = 'أضف وسماً...',
   maxTags = 10,
   suggestions = [],
 }: TagInputProps) {
@@ -53,18 +53,17 @@ export function TagInput({
 
   return (
     <div className="space-y-2">
-      {/* حاوية الوسوم + الإدخال */}
-      <div className="flex min-h-[44px] flex-wrap items-center gap-1.5 rounded-xl border-2 border-line bg-white px-3 py-2 transition-all duration-200 focus-within:border-teal focus-within:shadow-[0_0_0_4px_rgba(14,74,74,0.10)]">
+      <div className="flex min-h-[44px] flex-wrap items-center gap-1.5 rounded-xl border-2 border-line bg-white px-3 py-2 transition-all duration-200 focus-within:border-teal focus-within:shadow-[0_0_0_4px_rgba(14,74,74,0.10)] dark:bg-white/[0.06] dark:focus-within:bg-white/[0.08] dark:focus-within:shadow-[0_0_0_4px_rgba(77,184,184,0.15)]">
         {tags.map((tag, i) => (
           <span
             key={`${tag}-${i}`}
-            className="inline-flex items-center gap-1 rounded-full bg-teal/10 px-2.5 py-1 text-xs font-bold text-teal transition-all duration-150"
+            className="inline-flex items-center gap-1 rounded-full bg-teal/10 px-2.5 py-1 text-xs font-bold text-teal dark:bg-teal/20"
           >
             <span>#{tag}</span>
             <button
               type="button"
               onClick={() => removeTag(i)}
-              className="ml-0.5 rounded-full p-0.5 transition-colors hover:bg-teal/20"
+              className="ml-0.5 rounded-full p-0.5 transition-colors hover:bg-teal/20 dark:hover:bg-teal/30"
               aria-label={`حذف ${tag}`}
             >
               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -81,11 +80,10 @@ export function TagInput({
           onBlur={() => addTag(input)}
           placeholder={tags.length === 0 ? placeholder : ''}
           disabled={reachedMax}
-          className="min-w-[100px] flex-1 bg-transparent text-sm text-ink placeholder:text-ink/35 focus:outline-none disabled:cursor-not-allowed"
+          className="min-w-[100px] flex-1 bg-transparent text-sm text-ink placeholder:text-ink/35 focus:outline-none disabled:cursor-not-allowed dark:placeholder:text-ink/40"
         />
       </div>
 
-      {/* اقتراحات */}
       {input && filteredSuggestions.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {filteredSuggestions.map((s) => (
@@ -93,7 +91,7 @@ export function TagInput({
               key={s}
               type="button"
               onClick={() => addTag(s)}
-              className="rounded-full border border-line bg-white px-2.5 py-1 text-xs font-bold text-ink/70 transition-all duration-150 hover:border-teal hover:bg-teal/5 hover:text-teal active:scale-95"
+              className="rounded-full border border-line bg-white px-2.5 py-1 text-xs font-bold text-ink/70 transition-all duration-150 hover:border-teal hover:bg-teal/5 hover:text-teal active:scale-95 dark:bg-white/[0.06] dark:hover:bg-teal/10"
             >
               + {s}
             </button>
@@ -101,10 +99,9 @@ export function TagInput({
         </div>
       )}
 
-      {/* تلميح */}
       <p className="text-xs text-ink/40">
         {reachedMax
-          ? `وصلت للحد الأقصى (${maxTags} وسوم)`
+          ? `وصلت إلى الحد الأقصى (${maxTags} وسوم)`
           : `اضغط Enter أو فاصلة لإضافة وسم — ${tags.length}/${maxTags}`}
       </p>
     </div>

@@ -87,7 +87,7 @@ function CopyButton({ value }: { value: string }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast.show('فشل النسخ — انسخ يدويًا', 'error');
+      toast.show('فشل النسخ — يرجى النسخ يدوياً', 'error');
     }
   }
   return (
@@ -110,7 +110,13 @@ function PasswordField({
         maxLength={200}
         className="min-w-[160px] flex-1 font-mono"
       />
-      <Button type="button" variant="outline" size="sm" onClick={() => onChange(generateChannelPassword())} icon={<IconSparkles />}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => onChange(generateChannelPassword())}
+        icon={<IconSparkles />}
+      >
         توليد
       </Button>
       {value && <CopyButton value={value} />}
@@ -187,7 +193,7 @@ export function ChannelsSection({ password }: Props) {
   }
 
   async function handleDelete(c: Channel) {
-    const ok = await confirm(`حذف القناة «${c.name}» نهائي. متأكد؟`, { variant: 'danger', confirmLabel: 'احذف' });
+    const ok = await confirm(`حذف القناة «${c.name}» نهائياً. هل أنت متأكد؟`, { variant: 'danger', confirmLabel: 'حذف' });
     if (!ok) return;
     try {
       await postJson('/api/admin/channels', { password, action: 'delete', id: c.id });
@@ -202,7 +208,7 @@ export function ChannelsSection({ password }: Props) {
     <section>
       <form
         onSubmit={handleAdd}
-        className="mb-5 space-y-3 rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm"
+        className="mb-5 space-y-3 rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm dark:bg-paper/80"
       >
         <div className="flex flex-wrap gap-2">
           <Input
@@ -236,7 +242,7 @@ export function ChannelsSection({ password }: Props) {
           type="url"
           value={newForm.telegram_link}
           onChange={(e) => setNewForm({ ...newForm, telegram_link: e.target.value })}
-          placeholder="رابط تليكرام (https://t.me/channelname)"
+          placeholder="رابط تلغرام (https://t.me/channelname)"
           required
           maxLength={500}
         />
@@ -253,18 +259,21 @@ export function ChannelsSection({ password }: Props) {
           {[0, 1, 2].map((i) => <div key={i} className="h-28 skeleton-shimmer rounded-2xl" />)}
         </div>
       ) : channels.length === 0 ? (
-        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center backdrop-blur-sm">
+        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center backdrop-blur-sm dark:bg-paper/80">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-teal/8 text-teal">
             <IconChat />
           </div>
-          <p className="mt-4 font-bold text-ink/70">لا يوجد قنوات مضافة حاليا.</p>
+          <p className="mt-4 font-bold text-ink/70">لا توجد قنوات مضافة حالياً.</p>
         </div>
       ) : (
         <div className="space-y-2">
           {channels.map((c) => {
             const isEditing = editingId === c.id;
             return (
-              <div key={c.id} className="rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 hover:border-teal/20">
+              <div
+                key={c.id}
+                className="rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 hover:border-teal/20 dark:bg-paper/80 dark:hover:shadow-[0_4px_16px_rgba(0,0,0,0.30)]"
+              >
                 {isEditing ? (
                   <div className="space-y-2">
                     <div className="flex flex-wrap gap-2">
@@ -296,7 +305,7 @@ export function ChannelsSection({ password }: Props) {
                       type="url"
                       value={editForm.telegram_link}
                       onChange={(e) => setEditForm({ ...editForm, telegram_link: e.target.value })}
-                      placeholder="رابط تليكرام"
+                      placeholder="رابط تلغرام"
                       maxLength={500}
                     />
                     <PasswordField
@@ -314,9 +323,13 @@ export function ChannelsSection({ password }: Props) {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-baseline gap-2">
                         <span className="font-bold text-ink">{c.name}</span>
-                        <span className="rounded-full bg-teal/8 px-2 py-0.5 font-mono text-xs text-teal/70">{c.stage}</span>
+                        <span className="rounded-full bg-teal/8 px-2 py-0.5 font-mono text-xs text-teal/70 dark:bg-teal/15 dark:text-teal">
+                          {c.stage}
+                        </span>
                       </div>
-                      {c.description && <p className="mt-1 text-sm text-ink/55">{c.description}</p>}
+                      {c.description && (
+                        <p className="mt-1 text-sm text-ink/55">{c.description}</p>
+                      )}
                       <a
                         href={c.telegram_link}
                         target="_blank"
@@ -327,15 +340,19 @@ export function ChannelsSection({ password }: Props) {
                       </a>
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                         <span className="font-bold text-ink/50">كلمة المرور:</span>
-                        <code className="rounded-md bg-ink/5 px-2 py-0.5 font-mono text-ink/80">
+                        <code className="rounded-md bg-ink/5 px-2 py-0.5 font-mono text-ink/80 dark:bg-white/10 dark:text-ink/90">
                           {c.channel_password || 'غير محددة'}
                         </code>
                         {c.channel_password && <CopyButton value={c.channel_password} />}
                       </div>
                     </div>
                     <div className="flex flex-shrink-0 gap-1.5">
-                      <Button size="sm" variant="secondary" onClick={() => startEdit(c)} icon={<IconEdit />}>تعديل</Button>
-                      <Button size="sm" variant="danger" onClick={() => handleDelete(c)} icon={<IconTrash />}>حذف</Button>
+                      <Button size="sm" variant="secondary" onClick={() => startEdit(c)} icon={<IconEdit />}>
+                        تعديل
+                      </Button>
+                      <Button size="sm" variant="danger" onClick={() => handleDelete(c)} icon={<IconTrash />}>
+                        حذف
+                      </Button>
                     </div>
                   </div>
                 )}

@@ -96,7 +96,7 @@ export function SubjectsSection({ password }: Props) {
   }
 
   async function handleDelete(s: Subject) {
-    const ok = await confirm(`حذف مادة «${s.name}» سيحذف كل الملازم والأسئلة المرتبطة بها نهائيًا. متأكد؟`, { variant: 'danger', confirmLabel: 'احذف' });
+    const ok = await confirm(`حذف مادة «${s.name}» سيحذف كل الملازم والأسئلة المرتبطة بها نهائيًا. هل أنت متأكد؟`, { variant: 'danger', confirmLabel: 'حذف' });
     if (!ok) return;
     try {
       await postJson('/api/admin/subjects', { password, action: 'delete', id: s.id });
@@ -111,7 +111,7 @@ export function SubjectsSection({ password }: Props) {
     <section>
       <form
         onSubmit={handleAdd}
-        className="mb-5 flex flex-wrap gap-2 rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm"
+        className="mb-5 flex flex-wrap gap-2 rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm dark:bg-paper/80"
       >
         <Input
           type="text"
@@ -140,12 +140,12 @@ export function SubjectsSection({ password }: Props) {
           {[0, 1, 2].map((i) => <div key={i} className="h-16 skeleton-shimmer rounded-2xl" />)}
         </div>
       ) : subjects.length === 0 ? (
-        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center backdrop-blur-sm">
+        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center backdrop-blur-sm dark:bg-paper/80">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-teal/8 text-teal">
             <IconBook />
           </div>
-          <p className="mt-4 font-bold text-ink/70">لا توجد مواد مضافة حاليا.</p>
-          <p className="mt-1 text-sm text-ink/50">أضف أول مادة من فوق</p>
+          <p className="mt-4 font-bold text-ink/70">لا توجد مواد مضافة حالياً.</p>
+          <p className="mt-1 text-sm text-ink/50">أضف أول مادة من الأعلى</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -154,7 +154,7 @@ export function SubjectsSection({ password }: Props) {
             return (
               <div
                 key={s.id}
-                className="group flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 hover:border-teal/20 hover:shadow-[0_4px_16px_rgba(14,74,74,0.06)]"
+                className="group flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 hover:border-teal/20 hover:shadow-[0_4px_16px_rgba(14,74,74,0.06)] dark:bg-paper/80 dark:hover:shadow-[0_4px_16px_rgba(0,0,0,0.30)]"
               >
                 {isEditing ? (
                   <>
@@ -184,7 +184,7 @@ export function SubjectsSection({ password }: Props) {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-baseline gap-2">
                         <span className="font-bold text-ink">{s.name}</span>
-                        <span className="rounded-full bg-teal/8 px-2 py-0.5 font-mono text-xs text-teal/70">{s.stage}</span>
+                        <span className="rounded-full bg-teal/8 px-2 py-0.5 font-mono text-xs text-teal/70 dark:bg-teal/15 dark:text-teal">{s.stage}</span>
                       </div>
                     </div>
                     <div className="flex flex-shrink-0 gap-1.5">

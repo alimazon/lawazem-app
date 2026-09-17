@@ -77,7 +77,7 @@ function LoginScreen({
 
   return (
     <main className="relative mx-auto flex min-h-[calc(100vh-70px)] max-w-sm flex-col items-center justify-center px-6 py-16">
-      <div className="w-full rounded-3xl border border-line bg-white/80 p-8 shadow-[0_8px_30px_rgba(14,74,74,0.08)] backdrop-blur-sm animate-slide-up">
+      <div className="w-full rounded-3xl border border-line bg-white/80 p-8 shadow-[0_8px_30px_rgba(14,74,74,0.08)] backdrop-blur-sm animate-slide-up dark:bg-paper/80 dark:shadow-[0_8px_30px_rgba(0,0,0,0.40)]">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-teal/10 text-teal">
           <IconLock />
         </div>
@@ -104,7 +104,7 @@ function LoginScreen({
             className="text-center"
           />
           {error && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-center text-sm font-bold text-red-600" role="alert">
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-center text-sm font-bold text-red-600 dark:bg-red-950/40 dark:text-red-300" role="alert">
               {error}
             </p>
           )}
@@ -131,14 +131,14 @@ export default function AdminPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 animate-slide-up">
         <div>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
             مشرف
           </span>
           <h1 className="mt-3 text-3xl font-black text-ink sm:text-4xl">لوحة التحكم</h1>
         </div>
         <Button variant="secondary" size="sm" onClick={logout} icon={<IconLogout />}>
-          تسجيل خروج
+          تسجيل الخروج
         </Button>
       </div>
 
@@ -146,7 +146,7 @@ export default function AdminPage() {
       <div
         role="tablist"
         aria-label="أقسام لوحة التحكم"
-        className="mt-6 flex gap-1.5 overflow-x-auto rounded-2xl border border-line bg-white/60 p-1.5 backdrop-blur-sm [-ms-overflow-style:none] [scrollbar-width:none] sm:overflow-visible [&::-webkit-scrollbar]:hidden animate-slide-up"
+        className="mt-6 flex gap-1.5 overflow-x-auto rounded-2xl border border-line bg-white/60 p-1.5 backdrop-blur-sm [-ms-overflow-style:none] [scrollbar-width:none] sm:overflow-visible dark:bg-white/[0.04] [&::-webkit-scrollbar]:hidden animate-slide-up"
         style={{ animationDelay: '80ms' }}
       >
         {TABS.map((t) => {
@@ -160,8 +160,8 @@ export default function AdminPage() {
               onClick={() => setTab(t.id)}
               className={`flex flex-shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 ${
                 active
-                  ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)]'
-                  : 'text-ink/60 hover:bg-ink/5 hover:text-ink'
+                  ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.30)]'
+                  : 'text-ink/60 hover:bg-ink/5 hover:text-ink dark:hover:bg-white/5'
               }`}
             >
               {t.icon}
