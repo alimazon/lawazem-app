@@ -14,8 +14,8 @@ import { useStudentStage } from '@/hooks/useStudentStage';
 const GROUPS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] as const;
 type Group = (typeof GROUPS)[number];
 
-const OWNERS_KEY = 'my_group_swap_owners';        // { [requestId]: owner_secret }
-const USERNAME_KEY = 'my_group_swap_username';    // آخر يوزر استخدمه الطالب
+const OWNERS_KEY = 'my_group_swap_owners';
+const USERNAME_KEY = 'my_group_swap_username';
 
 // ==================== Types ====================
 interface SwapRequest {
@@ -250,13 +250,11 @@ function RequestCard({
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-start gap-3">
-          {/* Avatar */}
           <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal to-teal-light text-base font-black text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.30)]">
             {initial}
           </span>
 
           <div className="min-w-0 flex-1">
-            {/* الاسم + Badges */}
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-bold text-ink">{request.student_name}</span>
               {isOwn && (
@@ -272,7 +270,6 @@ function RequestCard({
               )}
             </div>
 
-            {/* اليوزر */}
             <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
               <a
                 href={telegramUrl}
@@ -285,7 +282,6 @@ function RequestCard({
               <CopyUsernameButton username={request.telegram_username} />
             </div>
 
-            {/* الانتقال بين الكروبات */}
             <div className="mt-3 flex items-center gap-2">
               <GroupBadge group={request.current_group} variant="current" />
               <svg className="h-4 w-4 text-ink/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -297,14 +293,12 @@ function RequestCard({
               </span>
             </div>
 
-            {/* ملاحظات */}
             {request.notes && (
               <p className="mt-2 rounded-lg bg-paper/60 px-2.5 py-1.5 text-xs leading-relaxed text-ink/60 dark:bg-white/[0.04]">
                 {request.notes}
               </p>
             )}
 
-            {/* الوقت */}
             <div className="mt-2 flex items-center gap-1 text-[11px] text-ink/40">
               <IconClock />
               {formatRelativeTime(request.created_at)}
@@ -312,7 +306,6 @@ function RequestCard({
           </div>
         </div>
 
-        {/* أزرار الإجراءات */}
         {showActions && (
           <div className="flex flex-shrink-0 gap-1.5">
             {!isOwn && (
@@ -417,13 +410,10 @@ export default function GroupSwapPage() {
   }, [stage, loadRequests]);
 
   // ===== طلبي =====
-  // نكتشفه من owner_secret أو من اليوزر المحفوظ
   const myRequest = useMemo(() => {
-    // أولوية 1: owner_secret معروف
     const byOwner = requests.find((r) => owners[r.id] !== undefined);
     if (byOwner) return byOwner;
 
-    // أولوية 2: اليوزر المحفوظ
     if (savedUsername) {
       const normalized = normalizeUsername(savedUsername);
       const byUsername = requests.find(
@@ -503,13 +493,11 @@ export default function GroupSwapPage() {
 
     const normalizedUsername = normalizeUsername(form.telegram_username);
 
-    // ✅ فحص إضافي: هل يوجد طلب مفتوح بنفس اليوزر في القائمة الحالية؟
     const existingByUsername = requests.find(
       (r) => normalizeUsername(r.telegram_username) === normalizedUsername
     );
     if (existingByUsername) {
       toast.show('لديك طلب مفتوح بهذا اليوزر. احذفه أولاً.', 'error');
-      // حفظ اليوزر حتى نكتشف طلبه في المرات القادمة
       saveUsername(normalizedUsername);
       setSavedUsername(normalizedUsername);
       return;
@@ -526,7 +514,6 @@ export default function GroupSwapPage() {
         notes: form.notes.trim() || null,
       });
 
-      // حفظ owner_secret + اليوزر
       const nextOwners = { ...owners, [data.id]: data.owner_secret };
       setOwners(nextOwners);
       saveOwners(nextOwners);
@@ -546,46 +533,30 @@ export default function GroupSwapPage() {
   // ===== حذف طلب =====
   async function handleDelete(request: SwapRequest) {
     const owner_secret = owners[request.id] ?? '';
+    const isByUsername = !owner_secret;
 
-    if (!owner_secret) {
-      // لم نجد owner_secret — نطلب من الطالب تأكيد أنه طلبه
-      const ok = await confirm(
-        `سيتم حذف الطلب الخاص بـ @${request.telegram_username}. هل أنت متأكد أنه طلبك؟`,
-        { variant: 'danger', confirmLabel: 'نعم، احذف' }
-      );
-      if (!ok) return;
+    const message = isByUsername
+      ? `سيتم حذف الطلب الخاص بـ @${request.telegram_username}. هل أنت متأكد أنه طلبك؟`
+      : 'سيتم حذف طلبك نهائياً. هل أنت متأكد؟';
 
-      // نستخدم username كبديل للتحقق
-      try {
-        await postJson('/api/group-swap', {
-          action: 'delete',
-          id: request.id,
-          owner_secret: '',  // ← قد يفشل، شوف الـAPI
-        });
-      } catch {
-        toast.show('لا يمكنك حذف هذا الطلب. ربما لم تنشئه من هذا الجهاز.', 'error');
-        return;
-      }
-    } else {
-      const ok = await confirm('سيتم حذف طلبك نهائياً. هل أنت متأكد؟', {
-        variant: 'danger',
-        confirmLabel: 'حذف',
+    const ok = await confirm(message, {
+      variant: 'danger',
+      confirmLabel: isByUsername ? 'نعم، احذف' : 'حذف',
+    });
+    if (!ok) return;
+
+    try {
+      await postJson('/api/group-swap', {
+        action: 'delete',
+        id: request.id,
+        owner_secret,
+        telegram_username: request.telegram_username,
       });
-      if (!ok) return;
-
-      try {
-        await postJson('/api/group-swap', {
-          action: 'delete',
-          id: request.id,
-          owner_secret,
-        });
-      } catch (err) {
-        toast.show(err instanceof Error ? err.message : 'فشل الحذف', 'error');
-        return;
-      }
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الحذف', 'error');
+      return;
     }
 
-    // تحديث الحالة
     const nextOwners = { ...owners };
     delete nextOwners[request.id];
     setOwners(nextOwners);
@@ -766,7 +737,7 @@ export default function GroupSwapPage() {
                 type="text"
                 value={form.telegram_username}
                 onChange={(e) => setForm({ ...form, telegram_username: e.target.value })}
-                placeholder="مثلاً: E_W_9"
+                placeholder="مثلاً: ali_2004"
                 maxLength={100}
                 required
               />
@@ -916,7 +887,11 @@ export default function GroupSwapPage() {
               <RequestCard
                 key={r.id}
                 request={r}
-                isOwn={owners[r.id] !== undefined || (savedUsername && r.telegram_username.toLowerCase() === normalizeUsername(savedUsername))}
+                isOwn={
+                  owners[r.id] !== undefined ||
+                  (!!savedUsername &&
+                    r.telegram_username.toLowerCase() === normalizeUsername(savedUsername))
+                }
                 matchCount={matchCounts.get(r.id) ?? 0}
                 onDelete={() => handleDelete(r)}
               />
