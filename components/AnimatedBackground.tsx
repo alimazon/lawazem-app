@@ -2,9 +2,11 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useTheme } from './ThemeProvider'; // ✅ جديد
 
 export function AnimatedBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { theme } = useTheme(); // ✅ جديد: نقرأ الثيمة الحالية
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -38,8 +40,16 @@ export function AnimatedBackground() {
     }
 
     const particles: Particle[] = [];
-    const TEAL = 'rgba(14, 74, 74, 0.35)';
-    const AMBER = 'rgba(224, 166, 58, 0.30)';
+
+    // ✅ جديد: ألوان ديناميكية حسب الثيمة
+    const isDark = theme === 'dark';
+    const TEAL = isDark
+      ? 'rgba(42, 136, 136, 0.45)'
+      : 'rgba(14, 74, 74, 0.35)';
+    const AMBER = isDark
+      ? 'rgba(240, 199, 105, 0.40)'
+      : 'rgba(224, 166, 58, 0.30)';
+    const LINE_RGB = isDark ? '42, 136, 136' : '14, 74, 74';
     const CONNECT_DISTANCE = 140;
 
     const mouse = { x: -9999, y: -9999 };
@@ -85,7 +95,8 @@ export function AnimatedBackground() {
           const dist2 = dx * dx + dy * dy;
           if (dist2 < CONNECT_DISTANCE * CONNECT_DISTANCE) {
             const opacity = 1 - Math.sqrt(dist2) / CONNECT_DISTANCE;
-            ctx.strokeStyle = `rgba(14, 74, 74, ${opacity * 0.12})`;
+            // ✅ جديد: يستخدم LINE_RGB الديناميكي
+            ctx.strokeStyle = `rgba(${LINE_RGB}, ${opacity * 0.12})`;
             ctx.lineWidth = 0.6;
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
@@ -167,7 +178,8 @@ export function AnimatedBackground() {
       window.removeEventListener('resize', onResize);
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, []);
+    // ✅ جديد: أضفنا theme للتبعيات، فيُعاد التشغيل عند تغيير الثيمة
+  }, [theme]);
 
   return (
     <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">

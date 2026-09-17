@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { STAGES, STORAGE_KEYS } from '@/lib/constants';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
+import { RecentViewsCard } from '@/components/RecentViewsCard';   // ✅ جديد
 import type { Stage } from '@/lib/types';
 
 // ==================== Icons ====================
@@ -81,7 +82,7 @@ function StageCard({ stage, index, onClick }: { stage: string; index: number; on
     <button
       onClick={onClick}
       style={{ animationDelay: `${index * 80}ms` }}
-      className="group relative w-full overflow-hidden rounded-2xl border-2 border-line bg-white/80 p-6 text-right shadow-[0_2px_8px_rgba(26,33,31,0.05)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-teal hover:shadow-[0_12px_30px_rgba(14,74,74,0.15)] active:scale-[0.98] animate-slide-up"
+      className="group relative w-full overflow-hidden rounded-2xl border-2 border-line bg-white/80 p-6 text-right shadow-[0_2px_8px_rgba(26,33,31,0.05)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-teal hover:shadow-[0_12px_30px_rgba(14,74,74,0.15)] active:scale-[0.98] animate-slide-up dark:bg-paper/80"
     >
       <div className="absolute inset-x-0 top-0 h-1 origin-right scale-x-0 bg-gradient-to-l from-teal via-teal-light to-teal transition-transform duration-500 group-hover:scale-x-100" />
       <div className="flex items-center justify-between">
@@ -114,7 +115,7 @@ function SectionCard({ section, index }: { section: Section; index: number }) {
     <Link
       href={section.href}
       style={{ animationDelay: `${index * 60}ms` }}
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-teal/30 hover:shadow-[0_12px_30px_rgba(14,74,74,0.10)] active:scale-[0.99] animate-slide-up"
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-teal/30 hover:shadow-[0_12px_30px_rgba(14,74,74,0.10)] active:scale-[0.99] animate-slide-up dark:bg-paper/80"
     >
       <div className={`pointer-events-none absolute inset-0 bg-gradient-to-bl opacity-0 transition-opacity duration-300 ${gradient} group-hover:opacity-100`} />
       <div className="relative">
@@ -181,7 +182,7 @@ export default function HomePage() {
           </div>
 
           <p className="mt-10 text-xs text-ink/40 animate-slide-up" style={{ animationDelay: '400ms' }}>
-            تكدر تغيّرها لاحقًا 
+            تكدر تغيّرها لاحقًا
           </p>
         </main>
       ) : (
@@ -197,7 +198,7 @@ export default function HomePage() {
             </div>
             <button
               onClick={changeStage}
-              className="rounded-lg border border-line bg-white/80 px-3.5 py-2 text-xs font-bold text-ink/70 shadow-[0_1px_2px_rgba(26,33,31,0.04)] backdrop-blur-sm transition-all duration-200 hover:border-ink/20 hover:bg-paper hover:text-ink active:scale-95"
+              className="rounded-lg border border-line bg-white/80 px-3.5 py-2 text-xs font-bold text-ink/70 shadow-[0_1px_2px_rgba(26,33,31,0.04)] backdrop-blur-sm transition-all duration-200 hover:border-ink/20 hover:bg-paper hover:text-ink active:scale-95 dark:bg-paper/80"
             >
               تغيير المرحلة
             </button>
@@ -207,6 +208,11 @@ export default function HomePage() {
             {SECTIONS.map((sec, i) => (
               <SectionCard key={sec.href} section={sec} index={i} />
             ))}
+          </div>
+
+          {/* ✅ جديد: آخر ما زرته */}
+          <div className="mt-8">
+            <RecentViewsCard />
           </div>
 
           <p className="mt-12 text-center text-xs text-ink/40 animate-slide-up" style={{ animationDelay: '400ms' }}>

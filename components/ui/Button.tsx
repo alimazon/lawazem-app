@@ -15,16 +15,16 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANTS: Record<Variant, string> = {
   primary:
-    'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] hover:bg-teal-light hover:shadow-[0_4px_14px_rgba(14,74,74,0.30)]',
+    'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] hover:bg-teal-light hover:shadow-[0_4px_14px_rgba(14,74,74,0.30)] dark:bg-teal dark:hover:bg-teal-light',
   secondary:
-    'bg-white text-ink border border-line shadow-[0_1px_2px_rgba(26,33,31,0.04)] hover:bg-paper hover:border-ink/20',
+    'bg-white text-ink border border-line shadow-[0_1px_2px_rgba(26,33,31,0.04)] hover:bg-paper hover:border-ink/20 dark:bg-white/[0.06] dark:text-ink dark:hover:bg-white/[0.10] dark:hover:border-ink/30',
   outline:
-    'bg-transparent text-teal border-2 border-teal/30 hover:bg-teal/5 hover:border-teal/60',
+    'bg-transparent text-teal border-2 border-teal/30 hover:bg-teal/5 hover:border-teal/60 dark:text-teal dark:border-teal/40 dark:hover:bg-teal/10 dark:hover:border-teal/60',
   danger:
-    'bg-white text-red-600 border border-red-200 hover:bg-red-50 hover:border-red-300',
-  ghost: 'bg-transparent text-ink/70 hover:bg-ink/5 hover:text-ink',
+    'bg-white text-red-600 border border-red-200 hover:bg-red-50 hover:border-red-300 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900/50 dark:hover:bg-red-950/50 dark:hover:border-red-800',
+  ghost: 'bg-transparent text-ink/70 hover:bg-ink/5 hover:text-ink dark:text-ink/70 dark:hover:bg-white/5 dark:hover:text-ink',
   amber:
-    'bg-amber text-ink shadow-[0_2px_8px_rgba(224,166,58,0.28)] hover:bg-amber-soft',
+    'bg-amber text-ink shadow-[0_2px_8px_rgba(224,166,58,0.28)] hover:bg-amber-soft dark:bg-amber dark:text-ink dark:hover:bg-amber-soft',
 };
 
 const SIZES: Record<Size, string> = {

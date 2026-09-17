@@ -21,6 +21,7 @@ export interface LectureNote {
   professor_name: string | null;
   lecture_number: number | null;
   track: Track | null;
+  tags: string[];                  // ✅ جديد
   file_path: string;
   status?: string;
   created_at?: string;
@@ -52,6 +53,7 @@ export interface ChannelContent {
   description: string | null;
   due_date: string | null;
   track: Track | null;
+  tags: string[];                  // ✅ جديد
   file_urls: FileEntry[];
   folder: string | null;
   pinned: boolean;

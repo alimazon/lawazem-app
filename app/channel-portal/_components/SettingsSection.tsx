@@ -87,7 +87,7 @@ function ChannelInfoForm({
       return;
     }
     if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
-      toast.show(`حجم الصورة كبير جدًا (الحد ${MAX_IMAGE_SIZE_MB} ميجا).`, 'error');
+      toast.show(`حجم الصورة كبير جداً (بحد أقصى ${MAX_IMAGE_SIZE_MB} ميجا).`, 'error');
       return;
     }
 
@@ -98,10 +98,12 @@ function ChannelInfoForm({
       const publicUrl = await uploadToStorage(STORAGE_BUCKETS.channelImages, filePath, file, { upsert: true });
       setImageUrl(publicUrl);
       setImageError(false);
-      toast.show('تم رفع الصورة — لا تنسى الحفظ', 'success');
+      toast.show('تم رفع الصورة — لا تنسَ الحفظ', 'success');
     } catch (err) {
       toast.show(err instanceof Error ? err.message : 'فشل رفع الصورة', 'error');
-    } finally { setUploadingImage(false); }
+    } finally {
+      setUploadingImage(false);
+    }
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -123,23 +125,25 @@ function ChannelInfoForm({
       toast.show('تم حفظ بيانات القناة', 'success');
     } catch (err) {
       toast.show(err instanceof Error ? err.message : 'فشل الحفظ', 'error');
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   }
 
   function openFilePicker() { fileInputRef.current?.click(); }
 
   return (
     <section>
-      <div className="mb-4 flex items-start gap-3 rounded-2xl border border-teal/20 bg-teal/[0.04] p-4 text-sm">
+      <div className="mb-4 flex items-start gap-3 rounded-2xl border border-teal/20 bg-teal/[0.04] p-4 text-sm dark:border-teal/30 dark:bg-teal/10">
         <span className="text-teal"><IconInfo /></span>
         <p className="font-medium text-ink/70">
-          الاسم والمرحلة ورابط تليكرام يديرها المشرف. تكدر تعدّل الصورة والوصف بس.
+          الاسم والمرحلة ورابط تلغرام يديرها المشرف. يمكنك تعديل الصورة والوصف فقط.
         </p>
       </div>
 
       <form
         onSubmit={handleSave}
-        className="space-y-5 rounded-3xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm"
+        className="space-y-5 rounded-3xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm dark:bg-paper/80"
       >
         {/* الصورة */}
         <div>
@@ -161,10 +165,10 @@ function ChannelInfoForm({
               </Button>
             </div>
           ) : imageError ? (
-            <div className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <div className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
               تعذّر تحميل الصورة الحالية.
               <button type="button" onClick={openFilePicker} className="mr-2 font-bold underline">
-                ارفع صورة جديدة
+                رفع صورة جديدة
               </button>
             </div>
           ) : (
@@ -172,12 +176,12 @@ function ChannelInfoForm({
               type="button"
               onClick={openFilePicker}
               disabled={uploadingImage}
-              className="group mb-3 flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line bg-paper/50 py-6 transition-all duration-200 hover:border-teal/40 hover:bg-teal/[0.03] disabled:opacity-60"
+              className="group mb-3 flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line bg-paper/50 py-6 transition-all duration-200 hover:border-teal/40 hover:bg-teal/[0.03] disabled:opacity-60 dark:bg-white/[0.03] dark:hover:bg-teal/10"
             >
               <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal/8 text-teal transition-all group-hover:bg-teal/15">
                 <IconImage />
               </span>
-              <span className="text-sm font-bold text-ink/70">ارفع صورة للقناة</span>
+              <span className="text-sm font-bold text-ink/70">رفع صورة للقناة</span>
             </button>
           )}
 
@@ -191,7 +195,7 @@ function ChannelInfoForm({
           />
 
           {uploadingImage && (
-            <div className="mb-2 flex items-center gap-2 rounded-xl bg-teal/5 px-3 py-2 text-sm font-bold text-teal">
+            <div className="mb-2 flex items-center gap-2 rounded-xl bg-teal/5 px-3 py-2 text-sm font-bold text-teal dark:bg-teal/15">
               <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
                 <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
@@ -201,7 +205,7 @@ function ChannelInfoForm({
           )}
 
           <p className="text-xs text-ink/40">
-            PNG / JPG / WebP / GIF — الحد {MAX_IMAGE_SIZE_MB} ميجا
+            PNG / JPG / WebP / GIF — بحد أقصى {MAX_IMAGE_SIZE_MB} ميجا
           </p>
         </div>
 
@@ -226,9 +230,9 @@ function ChannelInfoForm({
             حفظ
           </Button>
           {dirty && !saving && (
-            <span className="flex items-center gap-1 text-xs font-bold text-amber-700">
+            <span className="flex items-center gap-1 text-xs font-bold text-amber-700 dark:text-amber-400">
               <span className="h-2 w-2 animate-pulse rounded-full bg-amber" />
-              فيه تغييرات ما محفوظة
+              توجد تغييرات غير محفوظة
             </span>
           )}
         </div>
@@ -270,21 +274,23 @@ function ChangePasswordForm({
       toast.show('تم تغيير كلمة المرور', 'success');
     } catch (err) {
       toast.show(err instanceof Error ? err.message : 'فشل التغيير', 'error');
-    } finally { setChanging(false); }
+    } finally {
+      setChanging(false);
+    }
   }
 
   return (
     <section>
-      <div className="mb-4 flex items-start gap-3 rounded-2xl border border-amber/30 bg-amber/8 p-4 text-sm">
+      <div className="mb-4 flex items-start gap-3 rounded-2xl border border-amber/30 bg-amber/8 p-4 text-sm dark:bg-amber/10">
         <span className="text-amber"><IconLock /></span>
         <p className="font-medium text-ink/70">
-          بعد التغيير . تأكد إنك تحفظ الرمز الجديد بمكان آمن.
+          بعد التغيير، لن تعمل كلمة المرور القديمة. تأكد من حفظ الجديدة في مكان آمن.
         </p>
       </div>
 
       <form
         onSubmit={handleChange}
-        className="space-y-4 rounded-3xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm"
+        className="space-y-4 rounded-3xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm dark:bg-paper/80"
       >
         <div>
           <label htmlFor="new-password" className="mb-2 block text-sm font-bold text-ink/70">
@@ -318,7 +324,7 @@ function ChangePasswordForm({
             aria-invalid={mismatch || undefined}
           />
           {mismatch && (
-            <p className="mt-1.5 text-xs font-bold text-red-600" role="alert">
+            <p className="mt-1.5 text-xs font-bold text-red-600 dark:text-red-400" role="alert">
               كلمتا المرور غير متطابقتين.
             </p>
           )}

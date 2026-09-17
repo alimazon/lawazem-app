@@ -15,6 +15,17 @@ function parseTrack(value: unknown): Track | null {
   return null;
 }
 
+// ✅ جديد: تحويل الوسوم القادمة من الـclient
+function parseTags(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const cleaned = value
+    .filter((t): t is string => typeof t === 'string')
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0 && t.length <= 50)
+    .slice(0, 10);
+  return Array.from(new Set(cleaned)); // إزالة المكرر
+}
+
 export async function POST(request: Request) {
   let body: Record<string, unknown>;
   try {
@@ -49,6 +60,7 @@ export async function POST(request: Request) {
       const professor_name = safeOptionalString(body.professor_name, 200);
       const lecture_number = parseLectureNumber(body.lecture_number);
       const track = parseTrack(body.track);
+      const tags = parseTags(body.tags);           // ✅ جديد
       const file_path = safeString(body.file_path, 2000);
 
       if (!subject_id) return jsonError('اختر المادة');
@@ -62,6 +74,7 @@ export async function POST(request: Request) {
         professor_name,
         lecture_number,
         track,
+        tags,                                       // ✅ جديد
         file_path,
         status: 'approved',
       });
@@ -80,6 +93,7 @@ export async function POST(request: Request) {
       const professor_name = safeOptionalString(body.professor_name, 200);
       const lecture_number = parseLectureNumber(body.lecture_number);
       const track = parseTrack(body.track);
+      const tags = parseTags(body.tags);           // ✅ جديد
       const file_path = safeString(body.file_path, 2000);
 
       if (!id) return jsonError('id مطلوب');
@@ -96,6 +110,7 @@ export async function POST(request: Request) {
           professor_name,
           lecture_number,
           track,
+          tags,                                     // ✅ جديد
           file_path,
         })
         .eq('id', id);

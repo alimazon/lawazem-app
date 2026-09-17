@@ -71,13 +71,13 @@ function LoginScreen({
 
   return (
     <main className="relative mx-auto flex min-h-[calc(100vh-70px)] max-w-sm flex-col items-center justify-center px-6 py-16">
-      <div className="w-full rounded-3xl border border-line bg-white/80 p-8 shadow-[0_8px_30px_rgba(14,74,74,0.08)] backdrop-blur-sm animate-slide-up">
+      <div className="w-full rounded-3xl border border-line bg-white/80 p-8 shadow-[0_8px_30px_rgba(14,74,74,0.08)] backdrop-blur-sm animate-slide-up dark:bg-paper/80 dark:shadow-[0_8px_30px_rgba(0,0,0,0.40)]">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-teal/10 text-teal">
           <IconLock />
         </div>
         <h1 className="mt-5 text-center text-2xl font-black text-ink">دخول صاحب القناة</h1>
         <p className="mt-2 text-center text-sm text-ink/55">
-          اختر قناتك وأدخل كلمة المرور اللي انطاك ياها الادمن
+          اختر قناتك وأدخل كلمة المرور التي أعطاك إياها المشرف
         </p>
 
         <form
@@ -111,7 +111,7 @@ function LoginScreen({
           />
 
           {error && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-center text-sm font-bold text-red-600" role="alert">
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-center text-sm font-bold text-red-600 dark:bg-red-950/40 dark:text-red-300" role="alert">
               {error}
             </p>
           )}
@@ -160,7 +160,7 @@ export default function ChannelPortalPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 animate-slide-up">
         <div className="min-w-0">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
             {channelInfo.stage}
           </span>
@@ -168,14 +168,14 @@ export default function ChannelPortalPage() {
             قناة: {channelInfo.name}
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-ink/5 px-2.5 py-1 text-xs font-bold text-ink/60">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-ink/5 px-2.5 py-1 text-xs font-bold text-ink/60 dark:bg-white/10 dark:text-ink/70">
               <IconEye />
               {channelInfo.views ?? 0} زيارة
             </span>
           </div>
         </div>
         <Button variant="secondary" size="sm" onClick={logout} icon={<IconLogout />}>
-          تسجيل خروج
+          تسجيل الخروج
         </Button>
       </div>
 
@@ -183,7 +183,7 @@ export default function ChannelPortalPage() {
       <div
         role="tablist"
         aria-label="أقسام بوابة القناة"
-        className="mt-6 flex gap-1.5 overflow-x-auto rounded-2xl border border-line bg-white/60 p-1.5 backdrop-blur-sm [-ms-overflow-style:none] [scrollbar-width:none] sm:overflow-visible [&::-webkit-scrollbar]:hidden animate-slide-up"
+        className="mt-6 flex gap-1.5 overflow-x-auto rounded-2xl border border-line bg-white/60 p-1.5 backdrop-blur-sm [-ms-overflow-style:none] [scrollbar-width:none] sm:overflow-visible dark:bg-white/[0.04] [&::-webkit-scrollbar]:hidden animate-slide-up"
         style={{ animationDelay: '80ms' }}
       >
         {TABS.map((t) => {
@@ -197,8 +197,8 @@ export default function ChannelPortalPage() {
               onClick={() => setTab(t.id)}
               className={`flex flex-shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 ${
                 active
-                  ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)]'
-                  : 'text-ink/60 hover:bg-ink/5 hover:text-ink'
+                  ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] dark:bg-teal dark:shadow-[0_2px_8px_rgba(0,0,0,0.30)]'
+                  : 'text-ink/60 hover:bg-ink/5 hover:text-ink dark:text-ink/60 dark:hover:bg-white/5 dark:hover:text-ink'
               }`}
             >
               {t.icon}
