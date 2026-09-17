@@ -51,7 +51,7 @@ function IconSearch() {
 function IconTelegram() {
   return (
     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
     </svg>
   );
 }
@@ -65,11 +65,11 @@ function getDueInfo(dueDateStr: string): DueInfo {
   due.setHours(0, 0, 0, 0);
   const diffDays = Math.round((due.getTime() - today.getTime()) / 86400000);
 
-  if (Number.isNaN(diffDays)) return { text: `تسليم: ${dueDateStr}`, className: 'bg-amber/20 text-amber-800' };
+  if (Number.isNaN(diffDays)) return { text: `تسليم: ${dueDateStr}`, className: 'bg-amber/20 text-amber-800 dark:bg-amber/25 dark:text-amber-300' };
   if (diffDays < 0) return { text: 'انتهى الموعد', className: 'bg-ink/10 text-ink/50' };
-  if (diffDays === 0) return { text: 'تسليم اليوم!', className: 'bg-red-100 text-red-700 ring-1 ring-red-200' };
-  if (diffDays <= 3) return { text: `تسليم: ${dueDateStr} (بعد ${diffDays} يوم)`, className: 'bg-red-100 text-red-700' };
-  return { text: `تسليم: ${dueDateStr}`, className: 'bg-amber/20 text-amber-800' };
+  if (diffDays === 0) return { text: 'التسليم اليوم!', className: 'bg-red-100 text-red-700 ring-1 ring-red-200 dark:bg-red-950/50 dark:text-red-300 dark:ring-red-900/50' };
+  if (diffDays <= 3) return { text: `تسليم: ${dueDateStr} (بعد ${diffDays} يوم)`, className: 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300' };
+  return { text: `تسليم: ${dueDateStr}`, className: 'bg-amber/20 text-amber-800 dark:bg-amber/25 dark:text-amber-300' };
 }
 
 // ==================== File Links ====================
@@ -83,7 +83,7 @@ function FileLinks({ files }: { files: FileEntry[] }) {
           href={f.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-teal/20 bg-teal/5 px-3 py-1.5 text-xs font-bold text-teal transition-all duration-200 hover:border-teal/40 hover:bg-teal/10 active:scale-95"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-teal/20 bg-teal/5 px-3 py-1.5 text-xs font-bold text-teal transition-all duration-200 hover:border-teal/40 hover:bg-teal/10 active:scale-95 dark:border-teal/30 dark:bg-teal/10 dark:hover:bg-teal/15"
         >
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -99,7 +99,7 @@ function FileLinks({ files }: { files: FileEntry[] }) {
 function ContentItem({ item }: { item: ChannelContent }) {
   const dueInfo = item.due_date ? getDueInfo(item.due_date) : null;
   return (
-    <div className="group rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-300 hover:border-teal/20 hover:shadow-[0_4px_16px_rgba(14,74,74,0.06)]">
+    <div className="group rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-300 hover:border-teal/20 hover:shadow-[0_4px_16px_rgba(14,74,74,0.06)] dark:bg-paper/80 dark:hover:shadow-[0_4px_16px_rgba(0,0,0,0.30)]">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="font-bold text-ink">{item.title}</span>
         {dueInfo && (
@@ -127,7 +127,7 @@ function Skeleton() {
       </div>
       <div className="space-y-3">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="rounded-2xl border border-line bg-white/80 p-4">
+          <div key={i} className="rounded-2xl border border-line bg-white/80 p-4 dark:bg-paper/80">
             <div className="h-4 w-2/3 skeleton-shimmer rounded" />
             <div className="mt-2 h-3 w-full skeleton-shimmer rounded" />
           </div>
@@ -139,7 +139,7 @@ function Skeleton() {
 
 function EmptyState({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mt-8 rounded-3xl border border-line bg-white/80 p-10 text-center text-sm font-medium text-ink/60 backdrop-blur-sm animate-slide-up">
+    <div className="mt-8 rounded-3xl border border-line bg-white/80 p-10 text-center text-sm font-medium text-ink/60 backdrop-blur-sm animate-slide-up dark:bg-paper/80">
       {children}
     </div>
   );
@@ -183,7 +183,7 @@ export default function ChannelPage() {
       if (cancelled) return;
 
       if (channelRes.error || !channelRes.data) {
-        setError('ما لقينا هاي القناة.');
+        setError('لم نجد هذه القناة.');
         setLoading(false);
         return;
       }
@@ -236,9 +236,9 @@ export default function ChannelPage() {
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
         <Link href="/channels" className="group inline-flex items-center gap-1.5 text-sm font-bold text-teal/70 transition-colors hover:text-teal">
           <span className="transition-transform duration-200 group-hover:translate-x-1"><IconArrowLeft /></span>
-          رجوع للقنوات
+          رجوع إلى القنوات
         </Link>
-        <h1 className="mt-6 text-2xl font-extrabold text-ink">{error || 'ما لقينا هاي القناة.'}</h1>
+        <h1 className="mt-6 text-2xl font-extrabold text-ink">{error || 'لم نجد هذه القناة.'}</h1>
       </main>
     );
   }
@@ -260,7 +260,7 @@ export default function ChannelPage() {
     <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <Link href="/channels" className="group inline-flex items-center gap-1.5 text-sm font-bold text-teal/70 transition-colors hover:text-teal">
         <span className="transition-transform duration-200 group-hover:translate-x-1"><IconArrowLeft /></span>
-        رجوع للقنوات
+        رجوع إلى القنوات
       </Link>
 
       {/* Header */}
@@ -269,16 +269,16 @@ export default function ChannelPage() {
           <img
             src={channel.image_url}
             alt={channel.name}
-            className="h-20 w-20 flex-shrink-0 rounded-2xl border border-line/60 object-cover shadow-[0_4px_14px_rgba(26,33,31,0.10)]"
+            className="h-20 w-20 flex-shrink-0 rounded-2xl border border-line/60 object-cover shadow-[0_4px_14px_rgba(26,33,31,0.10)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.40)]"
           />
         ) : (
-          <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal to-teal-light text-2xl font-black text-white shadow-[0_4px_14px_rgba(14,74,74,0.24)]">
+          <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal to-teal-light text-2xl font-black text-white shadow-[0_4px_14px_rgba(14,74,74,0.24)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.40)]">
             {channel.name.trim().slice(0, 2)}
           </div>
         )}
         <div className="min-w-0">
           <h1 className="truncate text-2xl font-black text-ink sm:text-3xl">{channel.name}</h1>
-          <span className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-2.5 py-0.5 font-mono text-xs uppercase tracking-widest text-teal">
+          <span className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-2.5 py-0.5 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
             {channel.stage}
           </span>
         </div>
@@ -294,11 +294,11 @@ export default function ChannelPage() {
         href={channel.telegram_link}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-5 inline-flex items-center gap-2 rounded-xl bg-teal px-5 py-2.5 text-sm font-bold text-white shadow-[0_2px_10px_rgba(14,74,74,0.28)] transition-all duration-200 hover:bg-teal-light hover:shadow-[0_4px_16px_rgba(14,74,74,0.34)] active:scale-95 animate-slide-up"
+        className="mt-5 inline-flex items-center gap-2 rounded-xl bg-teal px-5 py-2.5 text-sm font-bold text-white shadow-[0_2px_10px_rgba(14,74,74,0.28)] transition-all duration-200 hover:bg-teal-light hover:shadow-[0_4px_16px_rgba(14,74,74,0.34)] active:scale-95 animate-slide-up dark:shadow-[0_2px_10px_rgba(0,0,0,0.30)]"
         style={{ animationDelay: '120ms' }}
       >
         <IconTelegram />
-        فتح القناة بتليكرام
+        فتح القناة على تلغرام
       </a>
 
       {/* Search */}
@@ -356,8 +356,8 @@ export default function ChannelPage() {
         )
       )}
 
-      {!hasItems && <EmptyState>لا يوجد محتوى مضاف لهذه القناة حاليا.</EmptyState>}
-      {hasItems && !hasResults && <EmptyState>لا نتائج مطابقة لبحثك &laquo;{searchTerm}&raquo;.</EmptyState>}
+      {!hasItems && <EmptyState>لا يوجد محتوى مضاف لهذه القناة حالياً.</EmptyState>}
+      {hasItems && !hasResults && <EmptyState>لا توجد نتائج مطابقة لبحثك &laquo;{searchTerm}&raquo;.</EmptyState>}
     </main>
   );
 }

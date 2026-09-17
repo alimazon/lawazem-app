@@ -40,14 +40,14 @@ function ChannelAvatar({ name, imageUrl }: { name: string; imageUrl: string | nu
       <img
         src={imageUrl}
         alt={name}
-        className="h-12 w-12 flex-shrink-0 rounded-xl border border-line/60 object-cover shadow-[0_2px_6px_rgba(26,33,31,0.06)]"
+        className="h-12 w-12 flex-shrink-0 rounded-xl border border-line/60 object-cover shadow-[0_2px_6px_rgba(26,33,31,0.06)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.30)]"
         loading="lazy"
       />
     );
   }
   const initials = name.trim().slice(0, 2);
   return (
-    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal to-teal-light text-base font-black text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)]">
+    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal to-teal-light text-base font-black text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.30)]">
       {initials}
     </div>
   );
@@ -58,7 +58,10 @@ function Skeleton() {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="rounded-2xl border border-line bg-white/80 p-5 backdrop-blur-sm">
+        <div
+          key={i}
+          className="rounded-2xl border border-line bg-white/80 p-5 backdrop-blur-sm dark:bg-paper/80"
+        >
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-xl skeleton-shimmer" />
             <div className="h-4 w-24 skeleton-shimmer rounded" />
@@ -75,7 +78,7 @@ function BackLink() {
   return (
     <Link href="/" className="group inline-flex items-center gap-1.5 text-sm font-bold text-teal/70 transition-colors hover:text-teal">
       <span className="transition-transform duration-200 group-hover:translate-x-1"><IconArrowLeft /></span>
-      رجوع للوحة الأقسام
+      رجوع إلى لوحة الأقسام
     </Link>
   );
 }
@@ -135,7 +138,7 @@ export default function ChannelsPage() {
       <BackLink />
 
       <div className="mt-6 animate-slide-up">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
           {stage}
         </span>
@@ -164,26 +167,26 @@ export default function ChannelsPage() {
       {loading && <Skeleton />}
 
       {!loading && error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 animate-slide-up">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 animate-slide-up dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
           <p className="font-bold">خطأ في الاتصال بقاعدة البيانات</p>
-          <p className="mt-1 text-red-600/80">{error}</p>
+          <p className="mt-1 text-red-600/80 dark:text-red-300/80">{error}</p>
         </div>
       )}
 
       {!loading && !error && channels.length === 0 && (
-        <div className="rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up">
+        <div className="rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up dark:bg-paper/80">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-teal/8 text-teal">
             <IconChat />
           </div>
-          <p className="mt-4 font-bold text-ink/70">لا توجد قنوات مضافة لمرحلتك حاليا.</p>
-          <p className="mt-1 text-sm text-ink/50">تفقدها لاحقًا</p>
+          <p className="mt-4 font-bold text-ink/70">لا توجد قنوات مضافة لمرحلتك حالياً.</p>
+          <p className="mt-1 text-sm text-ink/50">يرجى العودة لاحقاً</p>
         </div>
       )}
 
       {!loading && !error && channels.length > 0 && visibleChannels.length === 0 && (
-        <div className="rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up">
+        <div className="rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up dark:bg-paper/80">
           <IconSearch />
-          <p className="mt-4 font-bold text-ink/70">لا نتائج مطابقة</p>
+          <p className="mt-4 font-bold text-ink/70">لا توجد نتائج مطابقة</p>
           <p className="mt-1 text-sm text-ink/50">&laquo;{searchTerm}&raquo;</p>
         </div>
       )}
@@ -195,7 +198,7 @@ export default function ChannelsPage() {
               key={c.id}
               href={`/channels/${c.id}`}
               style={{ animationDelay: `${idx * 50}ms` }}
-              className="group relative overflow-hidden rounded-2xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-teal/30 hover:shadow-[0_12px_30px_rgba(14,74,74,0.10)] active:scale-[0.99] animate-slide-up"
+              className="group relative overflow-hidden rounded-2xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-teal/30 hover:shadow-[0_12px_30px_rgba(14,74,74,0.10)] active:scale-[0.99] animate-slide-up dark:bg-paper/80 dark:hover:shadow-[0_12px_30px_rgba(0,0,0,0.40)]"
             >
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-bl from-teal/0 via-teal/0 to-teal/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 

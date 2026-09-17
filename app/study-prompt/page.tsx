@@ -52,7 +52,7 @@ function IconCheck() {
 // ==================== Skeleton ====================
 function Skeleton() {
   return (
-    <div className="mt-6 space-y-5 rounded-3xl border border-line bg-white/80 p-6 backdrop-blur-sm">
+    <div className="mt-6 space-y-5 rounded-3xl border border-line bg-white/80 p-6 backdrop-blur-sm dark:bg-paper/80">
       {[0, 1, 2].map((i) => (
         <div key={i} className="space-y-2">
           <div className="h-4 w-24 skeleton-shimmer rounded" />
@@ -67,7 +67,7 @@ function BackLink() {
   return (
     <Link href="/" className="group inline-flex items-center gap-1.5 text-sm font-bold text-teal/70 transition-colors hover:text-teal">
       <span className="transition-transform duration-200 group-hover:translate-x-1"><IconArrowLeft /></span>
-      رجوع للوحة الأقسام
+      رجوع إلى لوحة الأقسام
     </Link>
   );
 }
@@ -146,7 +146,7 @@ export default function StudyPromptPage() {
       setResult(data.prompt);
       toast.show('تم توليد البرومبت', 'success');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'صار خطأ، حاول مرة ثانية.';
+      const message = err instanceof Error ? err.message : 'حدث خطأ، يرجى المحاولة مرة أخرى.';
       toast.show(message, 'error');
     } finally {
       setGenerating(false);
@@ -161,7 +161,7 @@ export default function StudyPromptPage() {
       toast.show('تم النسخ', 'success');
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast.show('فشل النسخ — انسخ يدويًا', 'error');
+      toast.show('فشل النسخ — يرجى النسخ يدوياً', 'error');
     }
   }
 
@@ -180,31 +180,31 @@ export default function StudyPromptPage() {
       <BackLink />
 
       <div className="mt-6 animate-slide-up">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
           {stage}
         </span>
-        <h1 className="mt-3 text-3xl font-black leading-tight text-ink sm:text-4xl">جات الدراسة</h1>
+        <h1 className="mt-3 text-3xl font-black leading-tight text-ink sm:text-4xl">أدوات الدراسة</h1>
         <p className="mt-2 text-sm leading-relaxed text-ink/55">
-          اختر مادتك وشلون راح تزوّد المحتوى، وراح نصيغ لك برومبت احترافي تنسخه وتستخدمه بأي أداة ذكاء اصطناعي.
+          اختر مادتك وطريقة إرسال المحتوى، وسنصيغ لك برومبت احترافياً تنسخه وتستخدمه في أي أداة ذكاء اصطناعي.
         </p>
       </div>
 
       {loadingSubjects && <Skeleton />}
 
       {noSubjects && (
-        <div className="mt-6 rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-amber/10 text-amber">
+        <div className="mt-6 rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up dark:bg-paper/80">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-amber/10 text-amber dark:bg-amber/15">
             <IconSparkles />
           </div>
-          <p className="mt-4 font-bold text-ink/70">لا توجد مواد مضافة لمرحلتك حاليا.</p>
+          <p className="mt-4 font-bold text-ink/70">لا توجد مواد مضافة لمرحلتك حالياً.</p>
         </div>
       )}
 
       {!loadingSubjects && !noSubjects && (
         <form
           onSubmit={handleGenerate}
-          className="mt-6 space-y-6 rounded-3xl border border-line bg-white/80 p-6 shadow-[0_2px_8px_rgba(26,33,31,0.04)] backdrop-blur-sm animate-slide-up"
+          className="mt-6 space-y-6 rounded-3xl border border-line bg-white/80 p-6 shadow-[0_2px_8px_rgba(26,33,31,0.04)] backdrop-blur-sm animate-slide-up dark:bg-paper/80"
         >
           {/* المادة */}
           <div>
@@ -226,7 +226,7 @@ export default function StudyPromptPage() {
           {/* طريقة الإرسال */}
           <div>
             <label htmlFor="sp-method" className="mb-2 block text-sm font-bold text-ink/70">
-              شلون راح تزوّد المحتوى للذكاء الاصطناعي؟
+              كيف ستزود المحتوى للذكاء الاصطناعي؟
             </label>
             <Select
               id="sp-method"
@@ -243,7 +243,7 @@ export default function StudyPromptPage() {
           {/* أشكال الشرح */}
           <fieldset>
             <legend className="mb-3 block text-sm font-bold text-ink/70">
-              شكل الشرح المطلوب <span className="text-ink/40">(تكدر تختار أكثر من وحدة)</span>
+              شكل الشرح المطلوب <span className="text-ink/40">(يمكنك اختيار أكثر من خيار)</span>
             </legend>
             <div className="space-y-2">
               {STUDY_FORMATS.map((f) => (
@@ -257,7 +257,7 @@ export default function StudyPromptPage() {
               ))}
             </div>
             {selectedFormats.length === 0 && (
-              <p className="mt-2 text-xs font-bold text-red-600" role="alert">
+              <p className="mt-2 text-xs font-bold text-red-600 dark:text-red-400" role="alert">
                 اختر طريقة شرح واحدة على الأقل.
               </p>
             )}
@@ -274,8 +274,8 @@ export default function StudyPromptPage() {
               onChange={(e) => setLanguage(e.target.value as 'ar' | 'en')}
               className="w-full"
             >
-              <option value="ar">بالعربي</option>
-              <option value="en">بالإنكليزي</option>
+              <option value="ar">بالعربية</option>
+              <option value="en">بالإنجليزية</option>
             </Select>
           </div>
 
@@ -287,27 +287,32 @@ export default function StudyPromptPage() {
             icon={!generating ? <IconSparkles /> : undefined}
             className="w-full"
           >
-            {generating ? 'جاري التوليد...' : 'ولّد البرومبت'}
+            {generating ? 'جاري التوليد...' : 'توليد البرومبت'}
           </Button>
         </form>
       )}
 
       {result && (
-        <div className="mt-6 overflow-hidden rounded-3xl border border-line bg-white/80 shadow-[0_4px_16px_rgba(14,74,74,0.06)] backdrop-blur-sm animate-slide-up">
-          <div className="flex items-center justify-between gap-3 border-b border-line/60 bg-gradient-to-l from-teal/5 to-transparent px-6 py-4">
+        <div className="mt-6 overflow-hidden rounded-3xl border border-line bg-white/80 shadow-[0_4px_16px_rgba(14,74,74,0.06)] backdrop-blur-sm animate-slide-up dark:bg-paper/80 dark:shadow-[0_4px_16px_rgba(0,0,0,0.30)]">
+          <div className="flex items-center justify-between gap-3 border-b border-line/60 bg-gradient-to-l from-teal/5 to-transparent px-6 py-4 dark:from-teal/10">
             <h2 className="flex items-center gap-2 text-lg font-extrabold text-teal">
               <IconSparkles />
               البرومبت جاهز
             </h2>
-            <Button variant="secondary" size="sm" onClick={handleCopy} icon={copied ? <IconCheck /> : <IconCopy />}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleCopy}
+              icon={copied ? <IconCheck /> : <IconCopy />}
+            >
               {copied ? 'تم النسخ' : 'نسخ'}
             </Button>
           </div>
           <pre className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap break-words p-6 text-sm leading-relaxed text-ink/80 scrollbar-thin">
             {result}
           </pre>
-          <p className="border-t border-line/60 bg-paper/50 px-6 py-3 text-xs text-ink/50">
-            انسخ هذا النص والصقه بأي أداة ذكاء اصطناعي تحبها، وابدأ ترسل سلايداتك حسب الطريقة اللي اخترتها.
+          <p className="border-t border-line/60 bg-paper/50 px-6 py-3 text-xs text-ink/50 dark:bg-white/[0.03]">
+            انسخ هذا النص والصقه في أي أداة ذكاء اصطناعي تفضلها، ثم ابدأ بإرسال سلايداتك حسب الطريقة التي اخترتها.
           </p>
         </div>
       )}

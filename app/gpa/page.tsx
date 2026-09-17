@@ -101,7 +101,7 @@ function Skeleton() {
   return (
     <div className="mt-6 space-y-2">
       {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="flex items-center justify-between rounded-2xl border border-line bg-white/80 p-4 backdrop-blur-sm">
+        <div key={i} className="flex items-center justify-between rounded-2xl border border-line bg-white/80 p-4 backdrop-blur-sm dark:bg-paper/80">
           <div className="h-4 w-40 skeleton-shimmer rounded" />
           <div className="h-6 w-16 skeleton-shimmer rounded-full" />
         </div>
@@ -114,17 +114,17 @@ function BackLink() {
   return (
     <Link href="/" className="group inline-flex items-center gap-1.5 text-sm font-bold text-teal/70 transition-colors hover:text-teal">
       <span className="transition-transform duration-200 group-hover:translate-x-1"><IconArrowLeft /></span>
-      رجوع للوحة الأقسام
+      رجوع إلى لوحة الأقسام
     </Link>
   );
 }
 
 // ==================== Score Color ====================
 function getScoreColor(pct: number): string {
-  if (pct >= 85) return 'bg-teal/10 text-teal';
-  if (pct >= 70) return 'bg-teal/8 text-teal-light';
-  if (pct >= 50) return 'bg-amber/15 text-amber-800';
-  return 'bg-red-100 text-red-700';
+  if (pct >= 85) return 'bg-teal/10 text-teal dark:bg-teal/20 dark:text-teal';
+  if (pct >= 70) return 'bg-teal/8 text-teal-light dark:bg-teal/15 dark:text-teal';
+  if (pct >= 50) return 'bg-amber/15 text-amber-800 dark:bg-amber/25 dark:text-amber-300';
+  return 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300';
 }
 
 // ==================== Page ====================
@@ -205,8 +205,8 @@ export default function GpaPage() {
 
   const resetScores = useCallback(async () => {
     const ok = await confirm(
-      'حذف كل الدرجات المدخلة لهذه المرحلة. متأكد؟',
-      { variant: 'danger', confirmLabel: 'احذف' }
+      'حذف كل الدرجات المدخلة لهذه المرحلة. هل أنت متأكد؟',
+      { variant: 'danger', confirmLabel: 'حذف' }
     );
     if (!ok) return;
     const cleared: AllScores = {};
@@ -253,31 +253,31 @@ export default function GpaPage() {
       <BackLink />
 
       <div className="mt-6 animate-slide-up">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
           {stage}
         </span>
         <h1 className="mt-3 text-3xl font-black leading-tight text-ink sm:text-4xl">المعدل</h1>
         <p className="mt-2 text-sm leading-relaxed text-ink/55">
-          افتح كل مادة وأدخل درجاتك أول بأول على مدار السنة. تكدر تعدّل &laquo;من كم&raquo; لكل محطة إذا كانت تختلف بمادتك. الدرجات تنحفظ بمتصفحك بس.
+          افتح كل مادة وأدخل درجاتك أولاً بأول على مدار السنة. يمكنك تعديل «من كم» لكل محطة إذا كانت تختلف بكل مادة. الدرجات تُحفظ في متصفحك فقط.
         </p>
       </div>
 
       {loading && <Skeleton />}
 
       {!loading && error && (
-        <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 animate-slide-up">
+        <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 animate-slide-up dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
           <p className="font-bold">خطأ في الاتصال بقاعدة البيانات</p>
-          <p className="mt-1 text-red-600/80">{error}</p>
+          <p className="mt-1 text-red-600/80 dark:text-red-300/80">{error}</p>
         </div>
       )}
 
       {!loading && !error && subjects.length === 0 && (
-        <div className="mt-6 rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-teal/8 text-teal">
+        <div className="mt-6 rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up dark:bg-paper/80">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-teal/8 text-teal dark:bg-teal/15">
             <IconChart />
           </div>
-          <p className="mt-4 font-bold text-ink/70">لا يوجد مواد مضافة لمرحلتك حاليا.</p>
+          <p className="mt-4 font-bold text-ink/70">لا توجد مواد مضافة لمرحلتك حالياً.</p>
         </div>
       )}
 
@@ -290,8 +290,11 @@ export default function GpaPage() {
                 <span>التقدم</span>
                 <span>{stats.enteredCount} من {subjects.length} مادة</span>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-ink/8">
-                <div className="h-full rounded-full bg-gradient-to-l from-teal to-teal-light transition-all duration-500" style={{ width: `${stats.progress}%` }} />
+              <div className="h-2 overflow-hidden rounded-full bg-ink/8 dark:bg-white/10">
+                <div
+                  className="h-full rounded-full bg-gradient-to-l from-teal to-teal-light transition-all duration-500"
+                  style={{ width: `${stats.progress}%` }}
+                />
               </div>
             </div>
           )}
@@ -307,13 +310,13 @@ export default function GpaPage() {
                 <div
                   key={s.id}
                   style={{ animationDelay: `${idx * 40}ms` }}
-                  className="overflow-hidden rounded-2xl border border-line bg-white/80 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 animate-slide-up"
+                  className="overflow-hidden rounded-2xl border border-line bg-white/80 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 animate-slide-up dark:bg-paper/80"
                 >
                   <button
                     type="button"
                     onClick={() => toggleExpand(s.id)}
                     aria-expanded={isOpen}
-                    className="flex w-full items-center justify-between gap-3 p-4 text-right transition-colors hover:bg-ink/[0.02]"
+                    className="flex w-full items-center justify-between gap-3 p-4 text-right transition-colors hover:bg-ink/[0.02] dark:hover:bg-white/[0.03]"
                   >
                     <div className="min-w-0">
                       <span className="font-bold text-ink">{s.name}</span>
@@ -334,7 +337,7 @@ export default function GpaPage() {
                   </button>
 
                   {isOpen && (
-                    <div className="space-y-3 border-t border-line/60 bg-paper/40 p-4">
+                    <div className="space-y-3 border-t border-line/60 bg-paper/40 p-4 dark:bg-white/[0.03]">
                       {COMPONENTS.map((c) => {
                         const comp = subjectScores?.[c.key] ?? { max: '', score: '' };
                         return (
@@ -375,7 +378,7 @@ export default function GpaPage() {
           </div>
 
           {/* المعدل */}
-          <div className="mt-6 overflow-hidden rounded-3xl border border-line bg-gradient-to-bl from-teal/5 via-teal/3 to-amber/5 p-6 text-center shadow-[0_4px_16px_rgba(14,74,74,0.06)] animate-slide-up">
+          <div className="mt-6 overflow-hidden rounded-3xl border border-line bg-gradient-to-bl from-teal/5 via-teal/3 to-amber/5 p-6 text-center shadow-[0_4px_16px_rgba(14,74,74,0.06)] animate-slide-up dark:from-teal/10 dark:via-teal/5 dark:to-amber/10 dark:shadow-[0_4px_16px_rgba(0,0,0,0.30)]">
             {stats.average !== null ? (
               <>
                 <p className="text-sm font-bold text-ink/60">
@@ -386,12 +389,12 @@ export default function GpaPage() {
                 </p>
               </>
             ) : (
-              <p className="text-sm text-ink/50">أدخل درجاتك حتى يظهر معدلك.</p>
+              <p className="text-sm text-ink/50">أدخل درجاتك ليظهر معدلك.</p>
             )}
           </div>
 
           <div className="mt-4 text-center">
-            <Button variant="ghost" size="sm" onClick={resetScores} className="text-red-600 hover:bg-red-50">
+            <Button variant="ghost" size="sm" onClick={resetScores} className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40">
               مسح كل الدرجات
             </Button>
           </div>
