@@ -42,8 +42,7 @@ const THEME_INIT_SCRIPT = `
 (function() {
   try {
     var saved = localStorage.getItem('theme');
-    var prefers = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    var theme = saved || prefers;
+    var theme = saved || 'light';
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
     }

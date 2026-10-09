@@ -6,8 +6,6 @@ import type { CSSProperties } from 'react';
 import Image from 'next/image';
 import { STAGES, STORAGE_KEYS } from '@/lib/constants';
 import { BackgroundPattern } from '@/components/BackgroundPattern';
-import { RecentViewsCard } from '@/components/RecentViewsCard';
-import { ContinueCard } from '@/components/ContinueCard';
 import { TrendingNotes } from '@/components/TrendingNotes';
 import { BotChannelCard } from '@/components/BotChannelCard';
 import { Masthead } from './_components/Masthead';
@@ -286,10 +284,7 @@ export default function HomePage() {
         {/* ==================== Masthead ==================== */}
         <Masthead stage={stage} onChangeStage={changeStage} />
 
-        {/* ==================== Continue Reading ==================== */}
-        <div className="mt-2 ink-reveal">
-          <ContinueCard />
-        </div>
+        
 
         {/* ==================== Sections (Bento) ==================== */}
         <section aria-labelledby="sections-heading" className="mt-12">
@@ -359,10 +354,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ==================== Recent Views ==================== */}
-        <div className="mt-16">
-          <RecentViewsCard />
-        </div>
+       
 
         {/* ==================== Footer ==================== */}
         <footer className="mt-20 border-t border-line pt-8 pb-4">

@@ -81,7 +81,6 @@ interface Subscriber {
   total_opens: number;
 }
 
-// === ويزارد إنشاء التبليغ ===
 interface AnnouncementDraft {
   title: string | null;
   body: string | null;
@@ -191,8 +190,7 @@ function announcementPreviewText(d: AnnouncementDraft, creator: string): string 
   return lines.join('\n');
 }
 
-// ==================== Session storage (in-memory) ====================
-// بسيط: يُخزَّن فقط أثناء استخدام البوت. لا داعي للـDB.
+// ==================== Session storage ====================
 const sessions = new Map<number, AdminSession>();
 
 function getSession(chatId: number): AdminSession {
@@ -286,7 +284,7 @@ async function handleMessage(msg: TelegramMessage, baseUrl: string) {
 
   // === أوامر عامة ===
   if (lower === '/start' || lower.startsWith('/start ')) {
-    await handleStart(msg);
+    await handleStart(msg, baseUrl);
     return;
   }
   if (lower === '/help') {
@@ -306,7 +304,6 @@ async function handleMessage(msg: TelegramMessage, baseUrl: string) {
     return;
   }
 
-  // === فحص المشرف ===
   const admin = await getAdmin(chatId);
 
   // === /register (فقط أول مشرف) ===
@@ -315,9 +312,9 @@ async function handleMessage(msg: TelegramMessage, baseUrl: string) {
     return;
   }
 
-  // === إذا كان مشرف ===
+  // === أوامر المشرف ===
   if (admin) {
-    // /admin_help — دليل المشرف الكامل
+    // /admin_help
     if (
       lower === '/admin_help' ||
       lower === '/guide' ||
@@ -327,7 +324,7 @@ async function handleMessage(msg: TelegramMessage, baseUrl: string) {
       return;
     }
 
-    // /admins — للسوبر أدمن فقط
+    // /admins
     if (lower === '/admins') {
       if (admin.role !== 'super_admin') {
         await sendMessage(chatId, '❌ هذا الأمر للمشرف الأعلى فقط.');
@@ -401,7 +398,7 @@ async function handleMessage(msg: TelegramMessage, baseUrl: string) {
       return;
     }
 
-    // /cancel — لإلغاء أي wizard
+    // /cancel
     if (lower === '/cancel') {
       resetFlow(chatId);
       await sendMessage(chatId, '✅ تم الإلغاء.');
@@ -427,7 +424,6 @@ async function handleMessage(msg: TelegramMessage, baseUrl: string) {
     }
   }
 
-  // === افتراضي ===
   await sendMessage(
     chatId,
     `🤔 لم أفهم هذا الأمر.\n\nاكتب /help لرؤية القائمة، أو /start للتسجيل.`,
@@ -474,7 +470,7 @@ async function handleRegister(msg: TelegramMessage) {
   );
 }
 
-// ==================== /help (ديناميكي حسب الدور) ====================
+// ==================== /help ====================
 async function sendHelp(chatId: number, baseUrl: string) {
   const admin = await getAdmin(chatId);
 
@@ -516,13 +512,11 @@ async function sendHelp(chatId: number, baseUrl: string) {
   await sendMessage(chatId, lines.join('\n'));
 }
 
-// ==================== /admin_help (دليل المشرف الكامل) ====================
-// ==================== /admin_help (دليل المشرف الكامل) ====================
+// ==================== /admin_help ====================
 async function sendAdminHelp(chatId: number, admin: TelegramAdmin) {
   const isSuper = admin.role === 'super_admin';
   const lines: string[] = [];
 
-  // ==================== Header ====================
   lines.push(`📖 <b>دليل ${isSuper ? 'المشرف الأعلى' : 'المشرف'}</b>`);
   lines.push('');
   lines.push(`👤 دورك: <b>${roleLabel(admin.role)}</b>`);
@@ -532,7 +526,6 @@ async function sendAdminHelp(chatId: number, admin: TelegramAdmin) {
   );
   lines.push('');
 
-  // ==================== TOC ====================
   lines.push('━━━━━━━━━━━━━━━━━━━');
   lines.push('🗺️ <b>المحتويات</b>');
   lines.push('━━━━━━━━━━━━━━━━━━━');
@@ -548,7 +541,6 @@ async function sendAdminHelp(chatId: number, admin: TelegramAdmin) {
   }
   lines.push('');
 
-  // ==================== 1: Pending (super only) ====================
   if (isSuper) {
     lines.push('━━━━━━━━━━━━━━━━━━━');
     lines.push('1️⃣ <b>مراجعة التبليغات</b>');
@@ -566,7 +558,6 @@ async function sendAdminHelp(chatId: number, admin: TelegramAdmin) {
     lines.push('');
   }
 
-  // ==================== 2 (أو 1): Create announcement ====================
   lines.push('━━━━━━━━━━━━━━━━━━━');
   lines.push(`${isSuper ? '2️⃣' : '1️⃣'} <b>إنشاء تبليغ جديد</b>`);
   lines.push('━━━━━━━━━━━━━━━━━━━');
@@ -582,28 +573,21 @@ async function sendAdminHelp(chatId: number, admin: TelegramAdmin) {
   lines.push('5. أرسل <b>رابطاً</b> (اختياري) أو اضغط «تخطّي الرابط»');
   lines.push('');
   if (isSuper) {
-    lines.push(
-      '✅ يُحفظ التبليغ بحالة «قيد المراجعة»، ثم توافق عليه من <code>/pending</code>.',
-    );
+    lines.push('✅ يُحفظ التبليغ بحالة «قيد المراجعة»، ثم توافق عليه من <code>/pending</code>.');
   } else {
-    lines.push(
-      '✅ يُحفظ التبليغ بحالة «قيد المراجعة»، وينتظر موافقة المشرف الأعلى.',
-    );
+    lines.push('✅ يُحفظ التبليغ بحالة «قيد المراجعة»، وينتظر موافقة المشرف الأعلى.');
   }
   lines.push('');
   lines.push('💡 لإلغاء أي خطوة في أي وقت: <code>/cancel</code>');
   lines.push('');
 
-  // ==================== 3: Admin management (super only) ====================
   if (isSuper) {
     lines.push('━━━━━━━━━━━━━━━━━━━');
     lines.push('3️⃣ <b>إدارة المشرفين</b>');
     lines.push('━━━━━━━━━━━━━━━━━━━');
     lines.push('');
     lines.push('<b>📋 عرض القائمة</b>');
-    lines.push(
-      '<b>الأمر:</b> <code>/admins</code> — يعرض الاسم واليوزر والـChat ID والدور.',
-    );
+    lines.push('<b>الأمر:</b> <code>/admins</code> — يعرض الاسم واليوزر والـChat ID والدور.');
     lines.push('');
     lines.push('<b>➕ إضافة مشرف</b>');
     lines.push('<b>الأمر:</b> <code>/add_admin</code>');
@@ -622,16 +606,13 @@ async function sendAdminHelp(chatId: number, admin: TelegramAdmin) {
     lines.push('✍️ <b>ناشر</b> (<code>publisher</code>)');
     lines.push('   إنشاء تبليغات فقط. لا يرى المعلقة.');
     lines.push('');
-    lines.push(
-      '⚠️ <b>شرط مهم:</b> المشرف الجديد يجب أن يبدأ محادثة مع البوت أولاً، وإلا لن تصله الإشعارات.',
-    );
+    lines.push('⚠️ <b>شرط مهم:</b> المشرف الجديد يجب أن يبدأ محادثة مع البوت أولاً، وإلا لن تصله الإشعارات.');
     lines.push('');
     lines.push('<b>➖ حذف مشرف</b>');
     lines.push('<b>الأمر:</b> <code>/remove_admin 123456789</code>');
     lines.push('💡 لا يمكنك حذف نفسك.');
     lines.push('');
 
-    // ==================== 4: Insights ====================
     lines.push('━━━━━━━━━━━━━━━━━━━');
     lines.push('4️⃣ <b>السجل والإحصائيات</b>');
     lines.push('━━━━━━━━━━━━━━━━━━━');
@@ -641,7 +622,6 @@ async function sendAdminHelp(chatId: number, admin: TelegramAdmin) {
     lines.push('');
   }
 
-  // ==================== 5 (أو 2): Tools ====================
   lines.push('━━━━━━━━━━━━━━━━━━━');
   lines.push(`${isSuper ? '5️⃣' : '2️⃣'} <b>أدوات مساعدة</b>`);
   lines.push('━━━━━━━━━━━━━━━━━━━');
@@ -651,7 +631,6 @@ async function sendAdminHelp(chatId: number, admin: TelegramAdmin) {
   lines.push('• <code>/admin_help</code> — إعادة عرض هذا الدليل');
   lines.push('');
 
-  // ==================== Note (non-super) ====================
   if (!isSuper) {
     lines.push('━━━━━━━━━━━━━━━━━━━');
     lines.push('ℹ️ <b>ملاحظة</b>');
@@ -666,9 +645,6 @@ async function sendAdminHelp(chatId: number, admin: TelegramAdmin) {
 
 // ==================== /add_admin ====================
 async function handleAddAdminCommand(chatId: number, text: string) {
-  // يدعم نمطين:
-  //   /add_admin 123456789 admin
-  //   /add_admin (يفتح wizard)
   const parts = text.split(/\s+/).slice(1);
 
   if (parts.length >= 2) {
@@ -682,7 +658,6 @@ async function handleAddAdminCommand(chatId: number, text: string) {
     return;
   }
 
-  // Wizard
   setFlow(chatId, { type: 'add_admin', step: 'chat_id' });
   await sendMessage(
     chatId,
@@ -705,7 +680,6 @@ async function handleAddAdminFlow(
     if (/^-?\d+$/.test(clean)) {
       targetId = Number(clean);
     } else {
-      // ابحث عن مشترك بـ username
       const { data } = await getSupabaseAdmin()
         .from('telegram_subscribers')
         .select('chat_id')
@@ -728,8 +702,6 @@ async function handleAddAdminFlow(
     });
     return;
   }
-
-  // step === 'role' — يُعالج عبر callback فقط
 }
 
 async function handleRejectFlow(
@@ -770,7 +742,6 @@ async function handleRejectFlow(
 }
 
 async function doAddAdmin(chatId: number, targetId: number, role: AdminRole) {
-  // اجلب اسم المستخدم إن وُجد
   const { data: sub } = await getSupabaseAdmin()
     .from('telegram_subscribers')
     .select('first_name, username')
@@ -795,16 +766,13 @@ async function doAddAdmin(chatId: number, targetId: number, role: AdminRole) {
     `✅ تم إضافة <code>${targetId}</code> بدور <b>${roleLabel(role)}</b>.`,
   );
 
-  // أعلم المشرف الجديد
   try {
     await sendMessage(
       targetId,
       `🎉 <b>تم تفعيلك في بوت لوازم</b>\n\nالدور: <b>${roleLabel(role)}</b>\n\n` +
         (role === 'super_admin'
           ? 'يمكنك الموافقة على التبليغات وإرسالها عبر <code>/pending</code>.'
-          : role === 'admin'
-            ? 'يمكنك إنشاء تبليغات عبر <code>/announce</code>، وسيراجعها المشرف الأعلى.'
-            : 'يمكنك إنشاء تبليغات عبر <code>/announce</code>، وسيراجعها المشرف الأعلى.') +
+          : 'يمكنك إنشاء تبليغات عبر <code>/announce</code>، وسيراجعها المشرف الأعلى.') +
         '\n\n📖 لمزيد من التفاصيل، اكتب <code>/admin_help</code>',
     );
   } catch {
@@ -889,13 +857,11 @@ async function handleAnnounceFlow(
   }
 
   if (step === 'stage') {
-    // يُعالج عبر callback
     await sendMessage(chatId, 'اختر المرحلة من الأزرار أعلاه 👆');
     return;
   }
 
   if (step === 'link') {
-    // المستخدم يمكن يرسل رابط أو يتخطى
     if (trimmed.toLowerCase() === 'تخطي' || trimmed === '-') {
       await finalizeAnnouncement(chatId, admin, { ...draft, link_url: null, link_label: null });
       return;
@@ -957,13 +923,12 @@ async function finalizeAnnouncement(
         : 'سيتم إعلامك عند الموافقة أو الرفض.'),
   );
 
-  // أبلغ السوبر أدمن
   const supers = await listSuperAdmins();
   const preview = announcementPreviewText(draft, admin.first_name);
   const kb = announceActionsKeyboard(data.id);
 
   for (const s of supers) {
-    if (s.chat_id === chatId) continue; // لا نزعج المُنشئ
+    if (s.chat_id === chatId) continue;
     try {
       await sendMessage(s.chat_id, preview, { reply_markup: kb });
     } catch {
@@ -1166,14 +1131,53 @@ async function handleStop(chatId: number) {
   );
 }
 
-// ==================== /start ====================
-async function handleStart(msg: TelegramMessage) {
+// ==================== /start (مع حفظ الحالة) ====================
+async function handleStart(msg: TelegramMessage, baseUrl: string) {
   if (!msg.from) return;
   const chatId = msg.chat.id;
   const firstName = msg.from.first_name ?? '';
 
   const existing = await getSubscriber(chatId);
 
+  // ✅ إذا كان مسجّلاً بالكامل → لا تطلب منه المرحلة من جديد
+  const isFullyOnboarded =
+    existing !== null &&
+    existing.stage !== null &&
+    existing.group_name !== null &&
+    existing.onboarding_step === 'idle';
+
+  if (isFullyOnboarded && existing) {
+    const subjectCount = existing.subjects.length;
+    const groupLine = `${groupEmoji(existing.group_name!)} <b>${groupLabel(
+      existing.group_name!,
+    )}</b>`;
+
+    const lines: string[] = [];
+    lines.push(
+      `👋 <b>أهلاً من جديد${firstName ? `، ${escapeHtml(firstName)}` : ''}!</b>`,
+    );
+    lines.push('');
+    lines.push(`📌 مرحلتك: <b>${escapeHtml(existing.stage!)}</b>`);
+    lines.push(`👥 كروبك: ${groupLine}`);
+    lines.push(
+      `📚 موادك: <b>${subjectCount > 0 ? `${subjectCount} مادة` : 'الكل'}</b>`,
+    );
+    lines.push('');
+    lines.push('اختر ما تريد:');
+
+    await sendMessage(chatId, lines.join('\n'), {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '⚙️ الإعدادات', callback_data: 'settings:show' }],
+          [{ text: '🔄 تحديث التسجيل', callback_data: 'onboarding:restart' }],
+          [{ text: '🌐 افتح المنصة', url: baseUrl }],
+        ],
+      },
+    });
+    return;
+  }
+
+  // ===== مسجّل جزئياً أو جديد → ابدأ التسجيل =====
   await upsertSubscriber(msg.from, { onboarding_step: 'choosing_stage' });
 
   const greeting = firstName ? `، ${escapeHtml(firstName)}` : '';
@@ -1545,6 +1549,31 @@ async function handleCallback(cb: TelegramCallbackQuery, baseUrl: string) {
     return;
   }
 
+  // ==================== Settings: show (من زر /start) ====================
+  if (cb.data === 'settings:show') {
+    await answerCallbackQuery(cb.id);
+    await sendSettings(chatId);
+    return;
+  }
+
+  // ==================== Onboarding: restart ====================
+  if (cb.data === 'onboarding:restart') {
+    await upsertSubscriber(cb.from, {
+      stage: null,
+      group_name: null,
+      subjects: [],
+      onboarding_step: 'choosing_stage',
+    });
+    await answerCallbackQuery(cb.id, 'اختر مرحلتك من جديد');
+    await editMessageText(
+      chatId,
+      messageId,
+      '🔄 <b>إعادة التسجيل</b>\n\nاختر مرحلتك الدراسية:',
+      { reply_markup: stageKeyboard() },
+    );
+    return;
+  }
+
   // ==================== Settings: change stage ====================
   if (cb.data === 'settings:stage') {
     await upsertSubscriber(cb.from, { onboarding_step: 'choosing_stage' });
@@ -1614,9 +1643,12 @@ async function sendSubjectsKeyboard(
 
 المرحلة: <b>${escapeHtml(stage)}</b>
 
-اختر المواد التي تريد متابعتها، أو اضغط "تم" لمتابعة كل المواد.
+اضغط على المواد التي تريد متابعتها فقط.
+إذا لم تختر أي مادة → ستصلك تحديثات <b>كل المواد</b>.
 
-المحددة: <b>${selected.size > 0 ? selected.size : 'الكل'}</b>`;
+المحددة حالياً: <b>${
+    selected.size > 0 ? `${selected.size} مادة` : 'كل المواد'
+  }</b>`;
 
   const rows: { text: string; callback_data: string }[][] = [];
   subjectNames.slice(0, 20).forEach((name) => {

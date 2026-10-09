@@ -24,19 +24,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('light');
 
   // ===== تحميل الثيم المحفوظ أو المفضّل =====
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('theme') as Theme | null;
-      const preferred: Theme = window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light';
-      const initial = saved ?? preferred;
-      setThemeState(initial);
-      document.documentElement.classList.toggle('dark', initial === 'dark');
-    } catch {
-      /* في حال فشل localStorage */
-    }
-  }, []);
+  // ===== تحميل الثيم المحفوظ — الوضع النهاري افتراضياً =====
+useEffect(() => {
+  try {
+    const saved = localStorage.getItem('theme') as Theme | null;
+    const initial: Theme = saved ?? 'light';
+    setThemeState(initial);
+    document.documentElement.classList.toggle('dark', initial === 'dark');
+  } catch {
+    /* في حال فشل localStorage */
+  }
+}, []);
 
   // ===== تغيير الثيم =====
   const setTheme = useCallback((next: Theme) => {
