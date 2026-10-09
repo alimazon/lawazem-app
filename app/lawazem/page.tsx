@@ -8,9 +8,31 @@ import { useStudentStage } from '@/hooks/useStudentStage';
 import { useBookmarks } from '@/hooks/useBookmarks';
 import { useRecentViews } from '@/hooks/useRecentViews';
 import { Input } from '@/components/ui/Field';
+import { ReportModal } from '@/components/ReportModal';
+import { postJson } from '@/lib/api-client';
 import type { LectureNote, Subject, Track } from '@/lib/types';
 
 type SubjectWithNotes = Subject & { lecture_notes: LectureNote[] };
+
+// ==================== Track View (fire-and-forget) ====================
+function trackView(noteId: string) {
+  try {
+    const payload = JSON.stringify({ action: 'increment', note_id: noteId });
+    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+      const blob = new Blob([payload], { type: 'application/json' });
+      navigator.sendBeacon('/api/views', blob);
+    } else {
+      fetch('/api/views', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        keepalive: true,
+      }).catch(() => {});
+    }
+  } catch {
+    /* تجاهل */
+  }
+}
 
 // ==================== Tag Colors ====================
 const TAG_COLORS: Record<string, string> = {
@@ -106,13 +128,20 @@ function IconBookmark({ filled }: { filled: boolean }) {
     </svg>
   );
 }
+function IconFlag() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+    </svg>
+  );
+}
 
 // ==================== Skeleton ====================
 function Skeleton() {
   return (
     <div className="space-y-4">
       {[0, 1, 2].map((i) => (
-        <div key={i} className="rounded-3xl border border-line bg-white/80 p-5 backdrop-blur-sm">
+        <div key={i} className="rounded-3xl border border-line bg-white/80 p-5 backdrop-blur-sm dark:bg-paper/80">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 skeleton-shimmer rounded-lg" />
             <div className="h-5 w-40 skeleton-shimmer rounded" />
@@ -127,12 +156,12 @@ function BackLink() {
   return (
     <Link href="/" className="group inline-flex items-center gap-1.5 text-sm font-bold text-teal/70 transition-colors hover:text-teal">
       <span className="transition-transform duration-200 group-hover:translate-x-1"><IconArrowLeft /></span>
-      رجوع للوحة الأقسام
+      رجوع إلى لوحة الأقسام
     </Link>
   );
 }
 
-// ==================== Sorting Helper ====================
+// ==================== Sorting ====================
 function sortNotes(notes: LectureNote[]): LectureNote[] {
   return [...notes].sort((a, b) => {
     const aNum = a.lecture_number ?? Number.POSITIVE_INFINITY;
@@ -190,10 +219,14 @@ function DoctorAccordion({
   doctor,
   isOpen,
   onToggle,
+  reportCounts,
+  onReport,
 }: {
   doctor: DoctorGroup;
   isOpen: boolean;
   onToggle: () => void;
+  reportCounts: Record<string, number>;
+  onReport: (note: LectureNote) => void;
 }) {
   const initial = doctor.name === 'غير محدد' ? '?' : doctor.name.trim().charAt(0);
 
@@ -205,7 +238,7 @@ function DoctorAccordion({
         type="button"
         onClick={onToggle}
         aria-expanded={isOpen}
-        className="flex w-full items-center gap-3 p-4 text-right transition-colors hover:bg-ink/[0.02]"
+        className="flex w-full items-center gap-3 p-4 text-right transition-colors hover:bg-ink/[0.02] dark:hover:bg-white/[0.03]"
       >
         <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-sm font-black transition-all duration-300 ${
           isOpen
@@ -231,13 +264,15 @@ function DoctorAccordion({
         isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
       }`}>
         <div className="overflow-hidden">
-          <div className="border-t border-line/60 bg-paper/40 px-4 py-3">
+          <div className="border-t border-line/60 bg-paper/40 px-4 py-3 dark:bg-white/[0.02]">
             <ul className="space-y-1.5">
               {doctor.notes.map((note) => (
                 <LectureItem
                   key={note.id}
                   note={note}
                   subjectName={doctor.subjectName}
+                  reportCount={reportCounts[note.id] ?? 0}
+                  onReport={() => onReport(note)}
                 />
               ))}
             </ul>
@@ -249,7 +284,17 @@ function DoctorAccordion({
 }
 
 // ==================== Lecture Item ====================
-function LectureItem({ note, subjectName }: { note: LectureNote; subjectName: string }) {
+function LectureItem({
+  note,
+  subjectName,
+  reportCount,
+  onReport,
+}: {
+  note: LectureNote;
+  subjectName: string;
+  reportCount: number;
+  onReport: () => void;
+}) {
   const { isBookmarked, toggle } = useBookmarks();
   const { addView } = useRecentViews();
   const bookmarked = isBookmarked(note.id);
@@ -257,21 +302,22 @@ function LectureItem({ note, subjectName }: { note: LectureNote; subjectName: st
   const hasLecture = note.lecture_number != null;
   const isTelegram = note.file_path.includes('t.me');
   const noteTags = Array.isArray(note.tags) ? note.tags : [];
+  const hasWarning = reportCount >= 3;
 
   function handleOpen() {
-    // تسجيل الزيارة
     addView({
       id: note.id,
       title: note.title,
       subject_name: subjectName,
       file_path: note.file_path,
     });
+    trackView(note.id);
   }
 
   return (
     <li>
       <div className="group flex items-start gap-2 rounded-xl border border-transparent p-3 transition-all duration-200 hover:border-teal/20 hover:bg-white hover:shadow-[0_2px_8px_rgba(14,74,74,0.06)] dark:hover:bg-paper">
-        {/* المحتوى القابل للنقر */}
+        {/* المحتوى */}
         <a
           href={note.file_path}
           target="_blank"
@@ -295,6 +341,19 @@ function LectureItem({ note, subjectName }: { note: LectureNote; subjectName: st
                   {note.title}
                 </span>
                 <TrackBadge track={note.track} />
+                {note.year != null && (
+                  <span className="rounded-md bg-ink/5 px-1.5 py-0.5 font-mono text-[10px] font-bold text-ink/50 dark:bg-white/10">
+                    {note.year}
+                  </span>
+                )}
+                {hasWarning && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-md bg-red-100 px-1.5 py-0.5 text-[10px] font-black text-red-700 dark:bg-red-950/50 dark:text-red-300"
+                    title={`${reportCount} بلاغ`}
+                  >
+                    🚩 {reportCount}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -321,20 +380,31 @@ function LectureItem({ note, subjectName }: { note: LectureNote; subjectName: st
           )}
         </a>
 
-        {/* زر المفضلة */}
-        <button
-          type="button"
-          onClick={() => toggle(note.id)}
-          aria-label={bookmarked ? 'إزالة من المفضلة' : 'حفظ في المفضلة'}
-          title={bookmarked ? 'إزالة من المفضلة' : 'حفظ في المفضلة'}
-          className={`mt-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition-all duration-200 active:scale-95 ${
-            bookmarked
-              ? 'bg-amber/20 text-amber-700'
-              : 'text-ink/30 hover:bg-ink/5 hover:text-ink/60'
-          }`}
-        >
-          <IconBookmark filled={bookmarked} />
-        </button>
+        {/* الأزرار */}
+        <div className="flex flex-shrink-0 flex-col gap-1">
+          <button
+            type="button"
+            onClick={() => toggle(note.id)}
+            aria-label={bookmarked ? 'إزالة من المفضلة' : 'حفظ في المفضلة'}
+            title={bookmarked ? 'إزالة من المفضلة' : 'حفظ في المفضلة'}
+            className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200 active:scale-95 ${
+              bookmarked
+                ? 'bg-amber/20 text-amber-700'
+                : 'text-ink/30 hover:bg-ink/5 hover:text-ink/60'
+            }`}
+          >
+            <IconBookmark filled={bookmarked} />
+          </button>
+          <button
+            type="button"
+            onClick={onReport}
+            aria-label="بلّغ عن مشكلة"
+            title="بلّغ عن مشكلة"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-ink/20 transition-all duration-200 hover:bg-amber/10 hover:text-amber-700 active:scale-95 dark:hover:text-amber-400"
+          >
+            <IconFlag />
+          </button>
+        </div>
       </div>
     </li>
   );
@@ -346,11 +416,15 @@ function SubjectFolder({
   isOpen,
   onToggle,
   forceOpen,
+  reportCounts,
+  onReport,
 }: {
   subject: SubjectWithNotes;
   isOpen: boolean;
   onToggle: () => void;
   forceOpen: boolean;
+  reportCounts: Record<string, number>;
+  onReport: (note: LectureNote) => void;
 }) {
   const notesCount = subject.lecture_notes.length;
   const open = isOpen || forceOpen;
@@ -374,7 +448,7 @@ function SubjectFolder({
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        className="flex w-full items-center gap-3 p-5 text-right transition-colors hover:bg-ink/[0.02]"
+        className="flex w-full items-center gap-3 p-5 text-right transition-colors hover:bg-ink/[0.02] dark:hover:bg-white/[0.03]"
       >
         <span className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl transition-all duration-300 ${
           open ? 'bg-teal text-white shadow-[0_4px_14px_rgba(14,74,74,0.30)]' : 'bg-teal/8 text-teal'
@@ -386,8 +460,8 @@ function SubjectFolder({
           <h2 className="truncate text-lg font-extrabold text-ink sm:text-xl">{subject.name}</h2>
           <p className="mt-0.5 text-xs font-bold text-ink/50">
             {notesCount === 0
-              ? 'لا توجد ملازم حاليا'
-              : `${notesCount} ملزمة · ${doctorGroups.length} ${doctorGroups.length === 1 ? 'دكتور' : 'دكاترة'}`}
+              ? 'لا توجد ملفات حالياً'
+              : `${notesCount} ${notesCount === 1 ? 'ملزمة' : 'ملازم'} · ${doctorGroups.length} ${doctorGroups.length === 1 ? 'دكتور' : 'دكاترة'}`}
           </p>
         </div>
 
@@ -398,9 +472,9 @@ function SubjectFolder({
         open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
       }`}>
         <div className="overflow-hidden">
-          <div className="space-y-2 border-t border-line/60 bg-paper/40 px-4 py-4">
+          <div className="space-y-2 border-t border-line/60 bg-paper/40 px-4 py-4 dark:bg-white/[0.02]">
             {notesCount === 0 ? (
-              <p className="py-2 text-center text-sm text-ink/40">لا توجد ملازم لهذه المادة حاليا.</p>
+              <p className="py-2 text-center text-sm text-ink/40">لا توجد ملفات حالياً.</p>
             ) : (
               doctorGroups.map((doc, idx) => (
                 <DoctorAccordion
@@ -408,6 +482,8 @@ function SubjectFolder({
                   doctor={doc}
                   isOpen={expandedDoctors[doc.name] ?? idx === 0}
                   onToggle={() => toggleDoctor(doc.name)}
+                  reportCounts={reportCounts}
+                  onReport={onReport}
                 />
               ))
             )}
@@ -427,10 +503,13 @@ export default function LawazemPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [reportCounts, setReportCounts] = useState<Record<string, number>>({});
+  const [reportingNote, setReportingNote] = useState<LectureNote | null>(null);
 
   const deferredSearch = useDeferredValue(searchTerm);
   const term = deferredSearch.trim().toLowerCase();
 
+  // ===== تحميل البيانات =====
   useEffect(() => {
     if (!stage) return;
     let cancelled = false;
@@ -448,18 +527,54 @@ export default function LawazemPage() {
       if (fetchError) {
         setError(fetchError.message);
         setSubjects([]);
-      } else {
-        setSubjects((data ?? []) as SubjectWithNotes[]);
+        setLoading(false);
+        return;
       }
+
+      const list = (data ?? []) as SubjectWithNotes[];
+      setSubjects(list);
       setLoading(false);
+
+      const allIds: string[] = [];
+      for (const s of list) {
+        for (const n of s.lecture_notes) allIds.push(n.id);
+      }
+
+      if (allIds.length > 0) {
+        try {
+          const res = await postJson<{ counts: Record<string, number> }>(
+            '/api/reports',
+            { action: 'counts', lecture_note_ids: allIds }
+          );
+          if (!cancelled) setReportCounts(res.counts ?? {});
+        } catch {
+          /* فشل صامت */
+        }
+      }
     }
     loadData();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [stage]);
 
-  // ===== كل الوسوم المتاحة =====
+  // ===== فلترة =====
+  const filteredSubjects = useMemo(() => {
+    return subjects.map((s) => ({
+      ...s,
+      lecture_notes: s.lecture_notes.filter((n) => {
+        const noteTags = Array.isArray(n.tags) ? n.tags : [];
+        if (selectedTag && !noteTags.includes(selectedTag)) return false;
+        if (term) {
+          const inTitle = n.title.toLowerCase().includes(term);
+          const inDoctor = n.professor_name?.toLowerCase().includes(term) ?? false;
+          const inTrack = n.track?.toLowerCase().includes(term) ?? false;
+          const inTags = noteTags.some((t) => t.toLowerCase().includes(term));
+          if (!inTitle && !inDoctor && !inTrack && !inTags) return false;
+        }
+        return true;
+      }),
+    }));
+  }, [subjects, term, selectedTag]);
+
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();
     for (const s of subjects) {
@@ -471,30 +586,6 @@ export default function LawazemPage() {
     }
     return Array.from(tagSet).sort((a, b) => a.localeCompare(b, 'ar'));
   }, [subjects]);
-
-  // ===== فلترة (بحث + وسم) =====
-  const filteredSubjects = useMemo(() => {
-    return subjects.map((s) => ({
-      ...s,
-      lecture_notes: s.lecture_notes.filter((n) => {
-        const noteTags = Array.isArray(n.tags) ? n.tags : [];
-
-        // فلترة بالوسم
-        if (selectedTag && !noteTags.includes(selectedTag)) return false;
-
-        // فلترة بالبحث
-        if (term) {
-          const inTitle = n.title.toLowerCase().includes(term);
-          const inDoctor = n.professor_name?.toLowerCase().includes(term) ?? false;
-          const inTrack = n.track?.toLowerCase().includes(term) ?? false;
-          const inTags = noteTags.some((t) => t.toLowerCase().includes(term));
-          if (!inTitle && !inDoctor && !inTrack && !inTags) return false;
-        }
-
-        return true;
-      }),
-    }));
-  }, [subjects, term, selectedTag]);
 
   const totalNotes = useMemo(
     () => subjects.reduce((sum, s) => sum + s.lecture_notes.length, 0),
@@ -524,11 +615,11 @@ export default function LawazemPage() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
+    <main className="mx-auto max-w-3xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10">
       <BackLink />
 
       <div className="mt-6 animate-slide-up">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
           {stage}
         </span>
@@ -541,7 +632,6 @@ export default function LawazemPage() {
         )}
       </div>
 
-      {/* البحث */}
       {totalNotes > 0 && (
         <div className="relative mt-6 animate-slide-up" style={{ animationDelay: '100ms' }}>
           <IconSearch />
@@ -556,12 +646,8 @@ export default function LawazemPage() {
         </div>
       )}
 
-      {/* فلترة بالوسوم */}
       {allTags.length > 0 && (
-        <div
-          className="mt-4 mb-8 flex flex-wrap items-center gap-1.5 animate-slide-up"
-          style={{ animationDelay: '150ms' }}
-        >
+        <div className="mt-4 mb-8 flex flex-wrap items-center gap-1.5 animate-slide-up" style={{ animationDelay: '150ms' }}>
           <span className="text-xs font-bold text-ink/50">تصفية:</span>
           <button
             type="button"
@@ -598,7 +684,7 @@ export default function LawazemPage() {
       {loading && <Skeleton />}
 
       {!loading && error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 animate-slide-up dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 animate-slide-up dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
           <p className="font-bold">خطأ في الاتصال بقاعدة البيانات</p>
           <p className="mt-1 text-red-600/80">{error}</p>
         </div>
@@ -607,14 +693,14 @@ export default function LawazemPage() {
       {!loading && !error && subjects.length === 0 && (
         <div className="rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up dark:bg-paper/80">
           <IconEmpty />
-          <p className="mt-4 font-bold text-ink/70">لا توجد مواد مضافة لمرحلتك لسا.</p>
+          <p className="mt-4 font-bold text-ink/70">لا توجد مواد مضافة لمرحلتك حالياً.</p>
         </div>
       )}
 
       {!loading && !error && subjects.length > 0 && (term || selectedTag) && visibleCount === 0 && (
         <div className="rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up dark:bg-paper/80">
           <IconSearch />
-          <p className="mt-4 font-bold text-ink/70">لا نتائج مطابقة</p>
+          <p className="mt-4 font-bold text-ink/70">لا توجد نتائج مطابقة</p>
           <p className="mt-1 text-sm text-ink/50">
             {selectedTag ? `الوسم: #${selectedTag}` : `البحث: «${searchTerm}»`}
           </p>
@@ -632,12 +718,28 @@ export default function LawazemPage() {
                   isOpen={!!expanded[s.id]}
                   onToggle={() => toggle(s.id)}
                   forceOpen={forceOpenIds.has(s.id)}
+                  reportCounts={reportCounts}
+                  onReport={(note) => setReportingNote(note)}
                 />
               </div>
             );
           })}
         </div>
       )}
+
+      {/* Report Modal */}
+      <ReportModal
+        note={reportingNote}
+        onClose={() => setReportingNote(null)}
+        onReported={() => {
+          if (reportingNote) {
+            setReportCounts((prev) => ({
+              ...prev,
+              [reportingNote.id]: (prev[reportingNote.id] ?? 0) + 1,
+            }));
+          }
+        }}
+      />
     </main>
   );
 }

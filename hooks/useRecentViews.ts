@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 const STORAGE_KEY = 'lawazem_recent_views';
+const STATS_KEY = 'lawazem_study_stats';
 const MAX_ITEMS = 6;
 
 export interface RecentView {
@@ -14,11 +15,102 @@ export interface RecentView {
   viewed_at: number;
 }
 
+// ==================== Study Stats ====================
+export interface SubjectStat {
+  views: number;
+  lastViewed: number;
+}
+
+export interface StudyStats {
+  totalViews: number;
+  firstVisit: number;
+  subjects: Record<string, SubjectStat>;
+  hourly: number[]; // 24 خانات
+  daily: Record<string, number>; // "YYYY-MM-DD": عدد الزيارات
+}
+
+export function emptyStats(): StudyStats {
+  return {
+    totalViews: 0,
+    firstVisit: Date.now(),
+    subjects: {},
+    hourly: Array(24).fill(0),
+    daily: {},
+  };
+}
+
+export function getTodayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate()
+  ).padStart(2, '0')}`;
+}
+
+export function loadStats(): StudyStats {
+  try {
+    const saved = localStorage.getItem(STATS_KEY);
+    if (!saved) return emptyStats();
+    const parsed = JSON.parse(saved);
+    if (parsed && typeof parsed === 'object') {
+      return {
+        totalViews: Number(parsed.totalViews) || 0,
+        firstVisit: Number(parsed.firstVisit) || Date.now(),
+        subjects:
+          parsed.subjects && typeof parsed.subjects === 'object'
+            ? parsed.subjects
+            : {},
+        hourly:
+          Array.isArray(parsed.hourly) && parsed.hourly.length === 24
+            ? parsed.hourly.map((n: unknown) => Number(n) || 0)
+            : Array(24).fill(0),
+        daily:
+          parsed.daily && typeof parsed.daily === 'object' ? parsed.daily : {},
+      };
+    }
+  } catch {
+    /* تجاهل */
+  }
+  return emptyStats();
+}
+
+function saveStats(stats: StudyStats) {
+  try {
+    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+  } catch {
+    /* تجاهل */
+  }
+}
+
+function recordStat(view: Omit<RecentView, 'viewed_at'>) {
+  const stats = loadStats();
+  const now = Date.now();
+  const hour = new Date().getHours();
+  const today = getTodayStr();
+
+  stats.totalViews += 1;
+  if (!stats.firstVisit) stats.firstVisit = now;
+
+  // المادة
+  const subj = stats.subjects[view.subject_name] ?? { views: 0, lastViewed: 0 };
+  subj.views += 1;
+  subj.lastViewed = now;
+  stats.subjects[view.subject_name] = subj;
+
+  // الساعة
+  stats.hourly[hour] = (stats.hourly[hour] ?? 0) + 1;
+
+  // اليوم
+  stats.daily[today] = (stats.daily[today] ?? 0) + 1;
+
+  saveStats(stats);
+}
+
+// ==================== Hook ====================
 export function useRecentViews() {
   const [recent, setRecent] = useState<RecentView[]>([]);
   const [mounted, setMounted] = useState(false);
 
-  // ===== تحميل المحفوظ =====
+  // تحميل المحفوظ
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -34,30 +126,33 @@ export function useRecentViews() {
     setMounted(true);
   }, []);
 
-  // ===== إضافة زيارة جديدة =====
-  const addView = useCallback(
-    (view: Omit<RecentView, 'viewed_at'>) => {
-      setRecent((prev) => {
-        // إزالة الزيارة احاليابقة لنفس الملزمة (لتحديث وقتها)
-        const filtered = prev.filter((v) => v.id !== view.id);
-        // إضافة في المقدمة + تحديد الحد الأقصى
-        const next = [
-          { ...view, viewed_at: Date.now() },
-          ...filtered,
-        ].slice(0, MAX_ITEMS);
+  // إضافة زيارة جديدة
+  const addView = useCallback((view: Omit<RecentView, 'viewed_at'>) => {
+    setRecent((prev) => {
+      // إزالة الزيارة السابقة لنفس الملزمة (لتحديث وقتها)
+      const filtered = prev.filter((v) => v.id !== view.id);
+      const next = [{ ...view, viewed_at: Date.now() }, ...filtered].slice(
+        0,
+        MAX_ITEMS
+      );
 
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-        } catch {
-          /* تجاهل */
-        }
-        return next;
-      });
-    },
-    []
-  );
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        /* تجاهل */
+      }
+      return next;
+    });
 
-  // ===== مسح الكل =====
+    // سجّل الإحصائيات (fire and forget)
+    try {
+      recordStat(view);
+    } catch {
+      /* تجاهل */
+    }
+  }, []);
+
+  // مسح الكل
   const clearAll = useCallback(() => {
     setRecent([]);
     try {
@@ -70,7 +165,7 @@ export function useRecentViews() {
   return { recent, addView, clearAll, mounted };
 }
 
-// ===== تنسيق الوقت النسبي =====
+// ==================== تنسيق الوقت النسبي ====================
 export function formatRelativeTime(timestamp: number): string {
   const diff = Date.now() - timestamp;
   const seconds = Math.floor(diff / 1000);

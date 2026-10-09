@@ -10,12 +10,19 @@ function parseLectureNumber(value: unknown): number | null {
   return Math.floor(n);
 }
 
+function parseYear(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  if (n < 1990 || n > 2100) return null;
+  return Math.floor(n);
+}
+
 function parseTrack(value: unknown): Track | null {
   if (value === 'نظري' || value === 'عملي') return value;
   return null;
 }
 
-// ✅ جديد: تحويل الوسوم القادمة من الـclient
 function parseTags(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   const cleaned = value
@@ -23,7 +30,7 @@ function parseTags(value: unknown): string[] {
     .map((t) => t.trim())
     .filter((t) => t.length > 0 && t.length <= 50)
     .slice(0, 10);
-  return Array.from(new Set(cleaned)); // إزالة المكرر
+  return Array.from(new Set(cleaned));
 }
 
 export async function POST(request: Request) {
@@ -41,6 +48,7 @@ export async function POST(request: Request) {
   const action = typeof body.action === 'string' ? body.action : '';
 
   switch (action) {
+    // ==================== list ====================
     case 'list': {
       const { data, error } = await supabaseAdmin
         .from('lecture_notes')
@@ -54,13 +62,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ materials: data ?? [] });
     }
 
+    // ==================== add ====================
     case 'add': {
       const subject_id = safeString(body.subject_id, 100);
       const title = safeString(body.title, 300);
       const professor_name = safeOptionalString(body.professor_name, 200);
       const lecture_number = parseLectureNumber(body.lecture_number);
       const track = parseTrack(body.track);
-      const tags = parseTags(body.tags);           // ✅ جديد
+      const tags = parseTags(body.tags);
+      const year = parseYear(body.year);                    // ← جديد
       const file_path = safeString(body.file_path, 2000);
 
       if (!subject_id) return jsonError('اختر المادة');
@@ -74,7 +84,8 @@ export async function POST(request: Request) {
         professor_name,
         lecture_number,
         track,
-        tags,                                       // ✅ جديد
+        tags,
+        year,                                                // ← جديد
         file_path,
         status: 'approved',
       });
@@ -86,6 +97,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true });
     }
 
+    // ==================== edit ====================
     case 'edit': {
       const id = safeString(body.id, 100);
       const subject_id = safeString(body.subject_id, 100);
@@ -93,7 +105,8 @@ export async function POST(request: Request) {
       const professor_name = safeOptionalString(body.professor_name, 200);
       const lecture_number = parseLectureNumber(body.lecture_number);
       const track = parseTrack(body.track);
-      const tags = parseTags(body.tags);           // ✅ جديد
+      const tags = parseTags(body.tags);
+      const year = parseYear(body.year);                    // ← جديد
       const file_path = safeString(body.file_path, 2000);
 
       if (!id) return jsonError('id مطلوب');
@@ -110,7 +123,8 @@ export async function POST(request: Request) {
           professor_name,
           lecture_number,
           track,
-          tags,                                     // ✅ جديد
+          tags,
+          year,                                              // ← جديد
           file_path,
         })
         .eq('id', id);
@@ -122,6 +136,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true });
     }
 
+    // ==================== delete ====================
     case 'delete': {
       const id = safeString(body.id, 100);
       if (!id) return jsonError('id مطلوب');
@@ -134,6 +149,83 @@ export async function POST(request: Request) {
       if (error) {
         console.error('lecture-notes delete error:', error.message);
         return jsonError('فشل حذف الملزمة', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // ==================== reports_list (جديد) ====================
+    case 'reports_list': {
+      const { data, error } = await supabaseAdmin
+        .from('lecture_note_reports')
+        .select(`
+          id,
+          lecture_note_id,
+          reason,
+          note,
+          created_at,
+          resolved_at,
+          resolved_action,
+          lecture_notes(
+            id,
+            title,
+            subject_id,
+            professor_name,
+            year,
+            file_path,
+            subjects(name)
+          )
+        `)
+        .is('resolved_at', null)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('reports_list error:', error.message);
+        return jsonError('فشل تحميل البلاغات', 500);
+      }
+      return NextResponse.json({ reports: data ?? [] });
+    }
+
+    // ==================== report_resolve (جديد) ====================
+    case 'report_resolve': {
+      const id = safeString(body.id, 100);
+      const resolved_action = body.resolved_action === 'deleted' ? 'deleted' : 'ignored';
+
+      if (!id) return jsonError('id مطلوب');
+
+      const { error } = await supabaseAdmin
+        .from('lecture_note_reports')
+        .update({
+          resolved_at: new Date().toISOString(),
+          resolved_action,
+        })
+        .eq('id', id);
+
+      if (error) {
+        console.error('report_resolve error:', error.message);
+        return jsonError('فشل معالجة البلاغ', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // ==================== reports_resolve_all_for_note (جديد) ====================
+    case 'reports_resolve_all_for_note': {
+      const lecture_note_id = safeString(body.lecture_note_id, 100);
+      const resolved_action = body.resolved_action === 'deleted' ? 'deleted' : 'ignored';
+
+      if (!lecture_note_id) return jsonError('lecture_note_id مطلوب');
+
+      const { error } = await supabaseAdmin
+        .from('lecture_note_reports')
+        .update({
+          resolved_at: new Date().toISOString(),
+          resolved_action,
+        })
+        .eq('lecture_note_id', lecture_note_id)
+        .is('resolved_at', null);
+
+      if (error) {
+        console.error('reports_resolve_all_for_note error:', error.message);
+        return jsonError('فشل معالجة البلاغات', 500);
       }
       return NextResponse.json({ success: true });
     }

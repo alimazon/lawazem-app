@@ -21,11 +21,33 @@ export interface LectureNote {
   professor_name: string | null;
   lecture_number: number | null;
   track: Track | null;
-  tags: string[];                  // ✅ جديد
+  tags: string[];
+  year: number | null;                 // ← جديد
   file_path: string;
   status?: string;
   created_at?: string;
   subjects?: { name: string } | null;
+}
+
+export type ReportReason = 'dead_link' | 'outdated';
+
+export interface LectureNoteReport {
+  id: string;
+  lecture_note_id: string;
+  reason: ReportReason;
+  note: string | null;
+  created_at: string;
+  resolved_at: string | null;
+  resolved_action: 'deleted' | 'ignored' | null;
+  lecture_notes?: {
+    id: string;
+    title: string;
+    subject_id: string;
+    professor_name: string | null;
+    year: number | null;
+    file_path: string;
+    subjects?: { name: string } | null;
+  } | null;
 }
 
 export interface FileEntry {
@@ -53,7 +75,7 @@ export interface ChannelContent {
   description: string | null;
   due_date: string | null;
   track: Track | null;
-  tags: string[];                  // ✅ جديد
+  tags: string[];
   file_urls: FileEntry[];
   folder: string | null;
   pinned: boolean;

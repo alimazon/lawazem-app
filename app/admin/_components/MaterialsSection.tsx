@@ -19,6 +19,7 @@ interface MaterialForm {
   professor_name: string;
   lecture_number: string;
   track: Track | '';
+  year: string;                    // ← جديد
   file_path: string;
   tags: string[];
 }
@@ -30,6 +31,7 @@ function emptyForm(): MaterialForm {
     professor_name: '',
     lecture_number: '',
     track: '',
+    year: '',                      // ← جديد
     file_path: '',
     tags: [],
   };
@@ -42,6 +44,7 @@ function formFromNote(n: LectureNote): MaterialForm {
     professor_name: n.professor_name ?? '',
     lecture_number: n.lecture_number != null ? String(n.lecture_number) : '',
     track: n.track ?? '',
+    year: n.year != null ? String(n.year) : '',   // ← جديد
     file_path: n.file_path,
     tags: Array.isArray(n.tags) ? n.tags : [],
   };
@@ -228,7 +231,7 @@ export function MaterialsSection({ password }: Props) {
     return map;
   }, [subjects]);
 
-  // ===== رفع ملف للمادة والدكتور الحاليين =====
+  // ===== رفع ملف =====
   async function uploadFile(file: File, form: MaterialForm): Promise<string> {
     const subjectName = subjectNameById.get(form.subject_id) || 'general';
     const subjectSlug = slugify(subjectName);
@@ -239,7 +242,6 @@ export function MaterialsSection({ password }: Props) {
     return uploadToStorage('lecture-notes', filePath, file);
   }
 
-  // ===== رفع في نموذج الإضافة =====
   async function handleNewUpload(file: File) {
     setUploadingNew(true);
     try {
@@ -253,7 +255,6 @@ export function MaterialsSection({ password }: Props) {
     }
   }
 
-  // ===== رفع في نموذج التعديل =====
   async function handleEditUpload(file: File) {
     setUploadingEdit(true);
     try {
@@ -280,6 +281,7 @@ export function MaterialsSection({ password }: Props) {
         professor_name: newForm.professor_name.trim() || null,
         lecture_number: newForm.lecture_number ? Number(newForm.lecture_number) : null,
         track: newForm.track,
+        year: newForm.year ? Number(newForm.year) : null,   // ← جديد
         file_path: newForm.file_path.trim(),
         tags: newForm.tags,
       });
@@ -315,6 +317,7 @@ export function MaterialsSection({ password }: Props) {
         professor_name: editForm.professor_name.trim() || null,
         lecture_number: editForm.lecture_number ? Number(editForm.lecture_number) : null,
         track: editForm.track,
+        year: editForm.year ? Number(editForm.year) : null, // ← جديد
         file_path: editForm.file_path.trim(),
         tags: editForm.tags,
       });
@@ -410,6 +413,16 @@ export function MaterialsSection({ password }: Props) {
             value={newForm.lecture_number}
             onChange={(e) => setNewForm({ ...newForm, lecture_number: e.target.value })}
             placeholder="رقم المحاضرة"
+            className="w-32"
+          />
+          <Input
+            type="number"
+            inputMode="numeric"
+            min={1990}
+            max={2100}
+            value={newForm.year}
+            onChange={(e) => setNewForm({ ...newForm, year: e.target.value })}
+            placeholder="سنة الملزمة"
             className="w-32"
           />
         </div>
@@ -532,9 +545,18 @@ export function MaterialsSection({ password }: Props) {
                         placeholder="رقم المحاضرة"
                         className="w-32"
                       />
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min={1990}
+                        max={2100}
+                        value={editForm.year}
+                        onChange={(e) => setEditForm({ ...editForm, year: e.target.value })}
+                        placeholder="سنة الملزمة"
+                        className="w-32"
+                      />
                     </div>
 
-                    {/* الملف في التعديل */}
                     <div className="space-y-2 rounded-2xl border border-dashed border-line bg-paper/40 p-4 dark:bg-white/[0.03]">
                       <p className="text-sm font-bold text-ink/70">ملف الملزمة</p>
                       {editForm.file_path ? (
@@ -595,6 +617,11 @@ export function MaterialsSection({ password }: Props) {
                         {m.track && (
                           <span className="rounded-full bg-amber/15 px-2 py-0.5 font-mono text-xs text-amber-800 dark:bg-amber/25 dark:text-amber-300">
                             {m.track}
+                          </span>
+                        )}
+                        {m.year != null && (
+                          <span className="rounded-md bg-ink/5 px-1.5 py-0.5 font-mono text-[10px] font-bold text-ink/50 dark:bg-white/10">
+                            {m.year}
                           </span>
                         )}
                       </div>

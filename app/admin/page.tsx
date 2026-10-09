@@ -9,14 +9,16 @@ import { SubjectsSection } from './_components/SubjectsSection';
 import { MaterialsSection } from './_components/MaterialsSection';
 import { ChannelsSection } from './_components/ChannelsSection';
 import { SchedulesSection } from './_components/SchedulesSection';
+import { ReportsSection } from './_components/ReportsSection';
 
-type Tab = 'subjects' | 'materials' | 'channels' | 'schedules';
+type Tab = 'subjects' | 'materials' | 'channels' | 'schedules' | 'reports';
 
 const TABS: ReadonlyArray<{ id: Tab; label: string; icon: React.ReactNode }> = [
   { id: 'subjects', label: 'المواد', icon: <IconBook /> },
   { id: 'materials', label: 'الملازم', icon: <IconDoc /> },
   { id: 'channels', label: 'القنوات', icon: <IconChat /> },
   { id: 'schedules', label: 'الجدول', icon: <IconCalendar /> },
+  { id: 'reports', label: 'البلاغات', icon: <IconReport /> },   // ← جديد
 ];
 
 // ==================== Icons ====================
@@ -45,6 +47,13 @@ function IconCalendar() {
   return (
     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  );
+}
+function IconReport() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
     </svg>
   );
 }
@@ -183,6 +192,7 @@ export default function AdminPage() {
         {tab === 'materials' && <MaterialsSection password={password} />}
         {tab === 'channels' && <ChannelsSection password={password} />}
         {tab === 'schedules' && <SchedulesSection password={password} />}
+        {tab === 'reports' && <ReportsSection password={password} />}
       </div>
     </main>
   );

@@ -52,8 +52,8 @@ const BASE_ITEMS: NavItem[] = [
     ),
   },
   {
-    href: '/channels',
-    label: 'القنوات',
+    href: '/dictionary',
+    label: 'القاموس',
     icon: (
       <svg
         className="h-[18px] w-[18px]"
@@ -65,7 +65,27 @@ const BASE_ITEMS: NavItem[] = [
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
-          d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+          d="M4.8 2.3A.3.3 0 105 2H4a2 2 0 00-2 2v5a6 6 0 006 6v0a6 6 0 006-6V4a2 2 0 00-2-2h-1a.2.2 0 10.3.3M8 15v1a6 6 0 006 6v0a6 6 0 006-6v-4"
+        />
+        <circle cx="20" cy="10" r="2" />
+      </svg>
+    ),
+  },
+  {
+    href: '/translate',
+    label: 'المترجم',
+    icon: (
+      <svg
+        className="h-[18px] w-[18px]"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
         />
       </svg>
     ),

@@ -25,6 +25,22 @@ const COMPONENTS: readonly ComponentDef[] = [
   { key: 'finalPractical', label: 'الفاينل (عملي)', defaultMax: 20 },
 ] as const;
 
+// أهداف النجاح / التقدير
+interface TargetDef {
+  value: number;
+  label: string;
+  short: string;
+}
+
+const TARGETS: readonly TargetDef[] = [
+  { value: 50, label: 'النجاح', short: 'نجاح' },
+  { value: 60, label: 'جيد', short: 'جيد' },
+  { value: 70, label: 'جيد جداً', short: 'جيد جداً' },
+  { value: 80, label: 'امتياز', short: 'امتياز' },
+] as const;
+
+const TARGET_KEY_PREFIX = 'gpa_target_';
+
 // ==================== Types ====================
 interface ComponentData {
   max: string;
@@ -32,8 +48,22 @@ interface ComponentData {
 }
 type SubjectScores = Record<string, ComponentData>;
 type AllScores = Record<string, SubjectScores>;
+
 interface SubjectWithPercentage extends Subject {
   percentage: number | null;
+  targetAnalysis: TargetAnalysis;
+}
+
+interface TargetAnalysis {
+  currentScore: number;
+  totalMax: number;
+  remainingMax: number;
+  targetScore: number;
+  needFromRemaining: number;
+  achieved: boolean;
+  impossible: boolean;
+  noData: boolean;
+  allEntered: boolean;
 }
 
 // ==================== Helpers ====================
@@ -73,6 +103,73 @@ function calculatePercentage(subjectScores: SubjectScores | undefined): number |
   return (totalScore / totalMax) * 100;
 }
 
+// ✅ تحليل الوضع بالنسبة للهدف
+function analyzeForTarget(
+  subjectScores: SubjectScores | undefined,
+  targetPercent: number
+): TargetAnalysis {
+  const base: TargetAnalysis = {
+    currentScore: 0,
+    totalMax: 0,
+    remainingMax: 0,
+    targetScore: 0,
+    needFromRemaining: 0,
+    achieved: false,
+    impossible: false,
+    noData: true,
+    allEntered: false,
+  };
+
+  if (!subjectScores) return base;
+
+  let currentScore = 0;
+  let totalMax = 0;
+  let remainingMax = 0;
+  let enteredCount = 0;
+
+  for (const c of COMPONENTS) {
+    const comp = subjectScores[c.key];
+    if (!comp) continue;
+    const maxNum = Number(comp.max);
+    if (Number.isNaN(maxNum) || maxNum <= 0) continue;
+
+    totalMax += maxNum;
+
+    if (comp.score === '') {
+      remainingMax += maxNum;
+    } else {
+      const scoreNum = Number(comp.score);
+      if (Number.isNaN(scoreNum) || scoreNum < 0 || scoreNum > maxNum) {
+        remainingMax += maxNum;
+        continue;
+      }
+      currentScore += scoreNum;
+      enteredCount++;
+    }
+  }
+
+  if (totalMax === 0) return base;
+
+  const targetScore = (targetPercent / 100) * totalMax;
+  const needFromRemaining = targetScore - currentScore;
+  const achieved = needFromRemaining <= 0;
+  const impossible = !achieved && needFromRemaining > remainingMax;
+  const noData = enteredCount === 0;
+  const allEntered = remainingMax === 0;
+
+  return {
+    currentScore,
+    totalMax,
+    remainingMax,
+    targetScore,
+    needFromRemaining,
+    achieved,
+    impossible,
+    noData,
+    allEntered,
+  };
+}
+
 // ==================== Icons ====================
 function IconArrowLeft() {
   return (
@@ -92,6 +189,36 @@ function IconChart() {
   return (
     <svg className="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+    </svg>
+  );
+}
+function IconTarget() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="6" />
+      <circle cx="12" cy="12" r="2" />
+    </svg>
+  );
+}
+function IconCheck() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+  );
+}
+function IconWarning() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    </svg>
+  );
+}
+function IconTrendingUp() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
     </svg>
   );
 }
@@ -127,6 +254,180 @@ function getScoreColor(pct: number): string {
   return 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300';
 }
 
+// ==================== Target Selector ====================
+function TargetSelector({
+  target,
+  onChange,
+}: {
+  target: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-line bg-white/80 p-4 dark:bg-paper/80">
+      <div className="mb-3 flex items-center gap-2">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal/10 text-teal dark:bg-teal/20">
+          <IconTarget />
+        </span>
+        <div>
+          <p className="text-sm font-bold text-ink">هدفي في كل مادة</p>
+          <p className="text-[11px] text-ink/50">اختر هدفك، وسنخبرك بكم تحتاج في المتبقي</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-4 gap-1.5">
+        {TARGETS.map((t) => {
+          const active = target === t.value;
+          return (
+            <button
+              key={t.value}
+              type="button"
+              onClick={() => onChange(t.value)}
+              className={`rounded-xl border px-2 py-2.5 text-center transition-all duration-200 active:scale-95 ${
+                active
+                  ? 'border-teal bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)]'
+                  : 'border-line bg-white text-ink/70 hover:border-teal/40 dark:bg-white/[0.04]'
+              }`}
+            >
+              <p className={`font-mono text-lg font-black leading-none ${active ? '' : 'text-ink'}`}>
+                {t.value}
+                <span className="text-xs">%</span>
+              </p>
+              <p className={`mt-0.5 text-[10px] font-bold ${active ? 'text-white/90' : 'text-ink/50'}`}>
+                {t.short}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ==================== Target Analysis Card ====================
+function TargetAnalysisCard({
+  analysis,
+  target,
+  subjectName,
+}: {
+  analysis: TargetAnalysis;
+  target: number;
+  subjectName: string;
+}) {
+  // لا درجات مُدخلة
+  if (analysis.noData) {
+    return (
+      <div className="rounded-2xl border border-line bg-paper/60 p-4 text-center dark:bg-white/[0.03]">
+        <p className="text-sm text-ink/50">أدخل أي درجة لتظهر لك التوقعات</p>
+      </div>
+    );
+  }
+
+  // حقق الهدف
+  if (analysis.achieved) {
+    return (
+      <div className="rounded-2xl border border-teal/30 bg-teal/[0.04] p-4 dark:border-teal/40 dark:bg-teal/10">
+        <div className="flex items-start gap-3">
+          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-teal text-white">
+            <IconCheck />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-black text-teal">🎉 ضمنت {target}% في {subjectName}</p>
+            <p className="mt-0.5 text-xs text-ink/60">
+              حتى لو جبت صفر في المتبقي، لسا محقق هدفك.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // مستحيل
+  if (analysis.impossible) {
+    return (
+      <div className="rounded-2xl border border-red-300 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/40">
+        <div className="flex items-start gap-3">
+          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-red-500 text-white">
+            <IconWarning />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-black text-red-700 dark:text-red-300">
+              صعب تحقيق {target}% في {subjectName}
+            </p>
+            <p className="mt-0.5 text-xs text-ink/60">
+              تحتاج {analysis.needFromRemaining.toFixed(1)} درجة، والحد الأقصى المتبقي {analysis.remainingMax} فقط.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // تحتاج نقاط
+  return (
+    <div className="rounded-2xl border border-amber/30 bg-amber/8 p-4 dark:border-amber/40 dark:bg-amber/15">
+      <div className="flex items-start gap-3">
+        <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-amber text-ink">
+          <IconTrendingUp />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-black text-ink">
+            تحتاج <span className="text-lg text-amber-800 dark:text-amber-300">{analysis.needFromRemaining.toFixed(1)}</span> درجة
+          </p>
+          <p className="mt-0.5 text-xs text-ink/60">
+            من أصل <strong>{analysis.remainingMax}</strong> متبقية لتحقق هدف {target}% في {subjectName}
+          </p>
+
+          {/* Progress bar */}
+          <div className="mt-3">
+            <div className="mb-1 flex items-center justify-between text-[10px] font-bold text-ink/50">
+              <span>حالياً: {analysis.currentScore.toFixed(1)}</span>
+              <span>الهدف: {analysis.targetScore.toFixed(1)}</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-ink/8 dark:bg-white/10">
+              <div
+                className="h-full rounded-full bg-gradient-to-l from-amber to-amber-soft transition-all duration-500"
+                style={{
+                  width: `${Math.min(100, (analysis.currentScore / analysis.targetScore) * 100)}%`,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==================== Status Chip (للـheader) ====================
+function StatusChip({ analysis, target }: { analysis: TargetAnalysis; target: number }) {
+  if (analysis.noData) return null;
+
+  if (analysis.achieved) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-teal/15 px-2 py-0.5 text-[10px] font-black text-teal dark:bg-teal/25">
+        <IconCheck />
+        ضمنت {target}%
+      </span>
+    );
+  }
+
+  if (analysis.impossible) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-black text-red-700 dark:bg-red-950/50 dark:text-red-300">
+        <IconWarning />
+        {target}% صعب
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-amber/20 px-2 py-0.5 text-[10px] font-black text-amber-800 dark:bg-amber/30 dark:text-amber-300">
+      <IconTrendingUp />
+      تحتاج {analysis.needFromRemaining.toFixed(1)} لـ{target}%
+    </span>
+  );
+}
+
 // ==================== Page ====================
 export default function GpaPage() {
   const { stage, ready } = useStudentStage();
@@ -137,9 +438,12 @@ export default function GpaPage() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [target, setTarget] = useState<number>(50);
 
   const storageKey = stage ? `gpa_scores_${stage}` : '';
+  const targetKey = stage ? `${TARGET_KEY_PREFIX}${stage}` : '';
 
+  // ===== تحميل =====
   useEffect(() => {
     if (!stage) return;
     let cancelled = false;
@@ -147,6 +451,13 @@ export default function GpaPage() {
     async function loadData() {
       setLoading(true);
       setError('');
+
+      // تحميل الهدف
+      const savedTarget = Number(localStorage.getItem(`${TARGET_KEY_PREFIX}${stage}`));
+      if (!Number.isNaN(savedTarget) && TARGETS.some((t) => t.value === savedTarget)) {
+        setTarget(savedTarget);
+      }
+
       const { data, error: fetchError } = await supabase
         .from('subjects')
         .select('id, name, stage, units')
@@ -178,6 +489,16 @@ export default function GpaPage() {
     if (!storageKey) return;
     try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch {}
   }, [storageKey]);
+
+  const persistTarget = useCallback((value: number) => {
+    if (!targetKey) return;
+    try { localStorage.setItem(targetKey, String(value)); } catch {}
+  }, [targetKey]);
+
+  const handleTargetChange = useCallback((value: number) => {
+    setTarget(value);
+    persistTarget(value);
+  }, [persistTarget]);
 
   const updateComponent = useCallback(
     (subjectId: string, componentKey: string, field: 'max' | 'score', value: string) => {
@@ -215,9 +536,15 @@ export default function GpaPage() {
     persistScores(cleared);
   }, [confirm, subjects, persistScores]);
 
+  // ===== الحسابات =====
   const subjectsWithPercentage: SubjectWithPercentage[] = useMemo(
-    () => subjects.map((s) => ({ ...s, percentage: calculatePercentage(scores[s.id]) })),
-    [subjects, scores]
+    () =>
+      subjects.map((s) => ({
+        ...s,
+        percentage: calculatePercentage(scores[s.id]),
+        targetAnalysis: analyzeForTarget(scores[s.id], target),
+      })),
+    [subjects, scores, target]
   );
 
   const entered = useMemo(
@@ -249,7 +576,7 @@ export default function GpaPage() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
+    <main className="mx-auto max-w-2xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10">
       <BackLink />
 
       <div className="mt-6 animate-slide-up">
@@ -259,7 +586,7 @@ export default function GpaPage() {
         </span>
         <h1 className="mt-3 text-3xl font-black leading-tight text-ink sm:text-4xl">المعدل</h1>
         <p className="mt-2 text-sm leading-relaxed text-ink/55">
-          افتح كل مادة وأدخل درجاتك أولاً بأول على مدار السنة. يمكنك تعديل «من كم» لكل محطة إذا كانت تختلف بكل مادة. الدرجات تُحفظ في متصفحك فقط.
+          افتح كل مادة وأدخل درجاتك. سنحسب معدلك، وسنخبرك بكم تحتاج في المتبقي لتحقيق هدفك.
         </p>
       </div>
 
@@ -283,6 +610,11 @@ export default function GpaPage() {
 
       {!loading && !error && subjects.length > 0 && (
         <>
+          {/* ===== الهدف ===== */}
+          <div className="mt-6 animate-slide-up" style={{ animationDelay: '80ms' }}>
+            <TargetSelector target={target} onChange={handleTargetChange} />
+          </div>
+
           {/* شريط التقدم */}
           {stats.enteredCount > 0 && !stats.allFilled && (
             <div className="mt-6 animate-slide-up">
@@ -318,11 +650,17 @@ export default function GpaPage() {
                     aria-expanded={isOpen}
                     className="flex w-full items-center justify-between gap-3 p-4 text-right transition-colors hover:bg-ink/[0.02] dark:hover:bg-white/[0.03]"
                   >
-                    <div className="min-w-0">
-                      <span className="font-bold text-ink">{s.name}</span>
-                      {s.units != null && (
-                        <span className="mr-2 text-xs text-ink/40">({s.units} وحدة)</span>
-                      )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-bold text-ink">{s.name}</span>
+                        {s.units != null && (
+                          <span className="text-xs text-ink/40">({s.units} وحدة)</span>
+                        )}
+                      </div>
+                      {/* Status Chip */}
+                      <div className="mt-1">
+                        <StatusChip analysis={s.targetAnalysis} target={target} />
+                      </div>
                     </div>
                     <div className="flex flex-shrink-0 items-center gap-2">
                       {s.percentage !== null ? (
@@ -330,46 +668,56 @@ export default function GpaPage() {
                           {s.percentage.toFixed(1)}%
                         </span>
                       ) : (
-                        <span className="text-sm text-ink/40">لا توجد درجات</span>
+                        <span className="text-sm text-ink/40">—</span>
                       )}
                       <IconChevron open={isOpen} />
                     </div>
                   </button>
 
                   {isOpen && (
-                    <div className="space-y-3 border-t border-line/60 bg-paper/40 p-4 dark:bg-white/[0.03]">
-                      {COMPONENTS.map((c) => {
-                        const comp = subjectScores?.[c.key] ?? { max: '', score: '' };
-                        return (
-                          <div key={c.key} className="flex flex-wrap items-center justify-between gap-3">
-                            <label htmlFor={`${s.id}-${c.key}-score`} className="w-28 text-sm font-medium text-ink/70">
-                              {c.label}
-                            </label>
-                            <div className="flex items-center gap-2">
-                              <Input
-                                id={`${s.id}-${c.key}-score`}
-                                type="number"
-                                inputMode="decimal"
-                                min={0}
-                                value={comp.score}
-                                onChange={(e) => updateComponent(s.id, c.key, 'score', e.target.value)}
-                                placeholder="درجتك"
-                                className="w-20 text-center"
-                              />
-                              <span className="text-sm text-ink/40">من</span>
-                              <Input
-                                type="number"
-                                inputMode="decimal"
-                                min={0}
-                                value={comp.max}
-                                onChange={(e) => updateComponent(s.id, c.key, 'max', e.target.value)}
-                                aria-label={`الدرجة العظمى لـ${c.label}`}
-                                className="w-16 text-center"
-                              />
+                    <div className="space-y-4 border-t border-line/60 bg-paper/40 p-4 dark:bg-white/[0.03]">
+                      {/* Target Analysis Card */}
+                      <TargetAnalysisCard
+                        analysis={s.targetAnalysis}
+                        target={target}
+                        subjectName={s.name}
+                      />
+
+                      {/* Components */}
+                      <div className="space-y-3">
+                        {COMPONENTS.map((c) => {
+                          const comp = subjectScores?.[c.key] ?? { max: '', score: '' };
+                          return (
+                            <div key={c.key} className="flex flex-wrap items-center justify-between gap-3">
+                              <label htmlFor={`${s.id}-${c.key}-score`} className="w-28 text-sm font-medium text-ink/70">
+                                {c.label}
+                              </label>
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  id={`${s.id}-${c.key}-score`}
+                                  type="number"
+                                  inputMode="decimal"
+                                  min={0}
+                                  value={comp.score}
+                                  onChange={(e) => updateComponent(s.id, c.key, 'score', e.target.value)}
+                                  placeholder="درجتك"
+                                  className="w-20 text-center"
+                                />
+                                <span className="text-sm text-ink/40">من</span>
+                                <Input
+                                  type="number"
+                                  inputMode="decimal"
+                                  min={0}
+                                  value={comp.max}
+                                  onChange={(e) => updateComponent(s.id, c.key, 'max', e.target.value)}
+                                  aria-label={`الدرجة العظمى لـ${c.label}`}
+                                  className="w-16 text-center"
+                                />
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -387,6 +735,10 @@ export default function GpaPage() {
                 <p className="mt-2 bg-gradient-to-l from-teal to-teal-light bg-clip-text text-5xl font-black text-transparent">
                   {stats.average.toFixed(2)}
                 </p>
+                <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/60 px-3 py-1 text-xs font-bold text-ink/60 dark:bg-white/10">
+                  <IconTarget />
+                  هدفك: {target}% في كل مادة
+                </div>
               </>
             ) : (
               <p className="text-sm text-ink/50">أدخل درجاتك ليظهر معدلك.</p>

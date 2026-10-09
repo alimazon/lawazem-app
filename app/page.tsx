@@ -6,6 +6,10 @@ import Link from 'next/link';
 import { STAGES, STORAGE_KEYS } from '@/lib/constants';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
 import { RecentViewsCard } from '@/components/RecentViewsCard';
+import { ContinueCard } from '@/components/ContinueCard';
+import { LiveFeed } from '@/components/LiveFeed';
+import { DailyCompanion } from '@/components/DailyCompanion';
+import { TrendingNotes } from '@/components/TrendingNotes';
 import type { Stage } from '@/lib/types';
 
 // ==================== Icons ====================
@@ -51,6 +55,13 @@ function IconSwap() {
     </svg>
   );
 }
+function IconActivity() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 12h4l3-9 4 18 3-9h4" />
+    </svg>
+  );
+}
 function IconArrowLeft() {
   return (
     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -80,7 +91,7 @@ interface Section {
   href: string;
   icon: React.ReactNode;
   accent: 'teal' | 'amber';
-  requiresStage?: Stage;   // ✅ إذا موجود، تفتح فقط لهذي المرحلة
+  requiresStage?: Stage;
 }
 
 const SECTIONS: Section[] = [
@@ -89,6 +100,7 @@ const SECTIONS: Section[] = [
   { title: 'الجدول', description: 'جدول المحاضرات الأسبوعي لمرحلتك', href: '/schedule', icon: <IconCalendar />, accent: 'amber' },
   { title: 'جات الدراسة', description: 'برومبت ذكي يدرس معك بالـAI', href: '/study-prompt', icon: <IconSparkles />, accent: 'amber' },
   { title: 'المعدل', description: 'احفظ درجاتك واحسب معدلك الموزون حسب وحدات موادك', href: '/gpa', icon: <IconChart />, accent: 'teal' },
+  { title: 'صحتك الدراسية', description: 'تحليل شخصي لعادات مذاكرتك — قوة وضعف وأنماط', href: '/study-health', icon: <IconActivity />, accent: 'teal' },
   {
     title: 'تبديل الكروبات',
     description: 'تبديل كروبات العملي — متاح للمرحلة الثانية فقط',
@@ -135,11 +147,8 @@ function SectionCard({
 }) {
   const isTeal = section.accent === 'teal';
   const accentText = isTeal ? 'text-teal' : 'text-amber-700 dark:text-amber-300';
-
-  // ===== مقفل؟ =====
   const isLocked = !!section.requiresStage && section.requiresStage !== currentStage;
 
-  // ===== مقفل =====
   if (isLocked) {
     return (
       <div
@@ -167,7 +176,6 @@ function SectionCard({
     );
   }
 
-  // ===== مفتوح =====
   const gradient = isTeal
     ? 'from-teal/8 to-teal/4 group-hover:from-teal/12 group-hover:to-teal/6'
     : 'from-amber/12 to-amber/6 group-hover:from-amber/18 group-hover:to-amber/10';
@@ -250,7 +258,7 @@ export default function HomePage() {
           </p>
         </main>
       ) : (
-        <main className="relative mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
+        <main className="relative mx-auto max-w-5xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10">
           <div className="flex flex-wrap items-end justify-between gap-3 animate-slide-up">
             <div>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal backdrop-blur-sm dark:border-teal/30 dark:bg-teal/15">
@@ -268,13 +276,35 @@ export default function HomePage() {
             </button>
           </div>
 
+          {/* ✨ ماذا أفعل الآن؟ */}
+          <div className="mt-6">
+            <DailyCompanion />
+          </div>
+
+          {/* تابع من حيث توقفت */}
+          <div className="mt-4">
+            <ContinueCard />
+          </div>
+
+          {/* شبكة الأقسام */}
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {SECTIONS.map((sec, i) => (
               <SectionCard key={sec.href} section={sec} index={i} currentStage={stage} />
             ))}
           </div>
 
+          {/* آخر التحديثات */}
           <div className="mt-8">
+            <LiveFeed stage={stage} />
+          </div>
+
+          {/* الأكثر إقبالاً هذا الأسبوع */}
+          <div className="mt-6">
+            <TrendingNotes stage={stage} />
+          </div>
+
+          {/* آخر ما زرته */}
+          <div className="mt-6">
             <RecentViewsCard />
           </div>
 

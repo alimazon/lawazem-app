@@ -1,15 +1,36 @@
 // app/layout.tsx
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { ToastProvider } from '@/components/ui/Toast';
 import { ConfirmProvider } from '@/components/ui/ConfirmDialog';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { NavBar } from '@/components/NavBar';
-import { MobileBottomNav } from '@/components/MobileBottomNav';  // ✅ جديد
+import { MobileBottomNav } from '@/components/MobileBottomNav';
+import { PWARegister } from '@/components/PWARegister';
 
 export const metadata: Metadata = {
   title: 'لوازم — كلية طب جامعة العميد',
-  description: 'منصة تعاونية لملازم ومصادر وجميع احتياجات طلاب كلية الطب جامعة العميد',
+  description:
+    'منصة تعاونية لملازم ومصادر وجميع احتياجات طلاب كلية الطب جامعة العميد',
+  applicationName: 'لوازم',
+  appleWebApp: {
+    capable: true,
+    title: 'لوازم',
+    statusBarStyle: 'default',
+  },
+  formatDetection: {
+    telephone: false,
+  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#F7F6F2' },
+    { media: '(prefers-color-scheme: dark)', color: '#131918' },
+  ],
 };
 
 const THEME_INIT_SCRIPT = `
@@ -26,7 +47,11 @@ const THEME_INIT_SCRIPT = `
 })();
 `;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
       <head>
@@ -37,11 +62,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ToastProvider>
             <ConfirmProvider>
               <NavBar />
-              {/* ✅ جديد: padding-bottom على الجوال لإفراغ مساحة للشريط */}
-              <main className="pb-20 md:pb-0">
-                {children}
-              </main>
+              <main className="pb-20 md:pb-0">{children}</main>
               <MobileBottomNav />
+              <PWARegister />
             </ConfirmProvider>
           </ToastProvider>
         </ThemeProvider>

@@ -14,8 +14,8 @@ import { useStudentStage } from '@/hooks/useStudentStage';
 const GROUPS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] as const;
 type Group = (typeof GROUPS)[number];
 
-const OWNERS_KEY = 'my_group_swap_owners';        // { [requestId]: owner_secret }
-const USERNAME_KEY = 'my_group_swap_username';    // آخر يوزر استخدمه الطالب
+const OWNERS_KEY = 'my_group_swap_owners';
+const USERNAME_KEY = 'my_group_swap_username';
 
 // ==================== Types ====================
 interface SwapRequest {
@@ -287,13 +287,11 @@ function RequestCard({
 
             {/* ===== الانتقال بين الكروبات ===== */}
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              {/* "من" الحالي */}
               <div className="flex items-center gap-1.5">
                 <span className="text-[11px] font-bold text-ink/50">من</span>
                 <GroupBadge group={request.current_group} variant="current" />
               </div>
 
-              {/* السهم يشير يساراً (RTL) */}
               <svg
                 className="h-4 w-4 flex-shrink-0 text-ink/40"
                 fill="none"
@@ -309,7 +307,6 @@ function RequestCard({
                 />
               </svg>
 
-              {/* "إلى" المطلوب */}
               <div className="flex items-center gap-1.5">
                 <span className="text-[11px] font-bold text-ink/50">إلى</span>
                 <GroupBadge group={request.target_group} variant="target" />
@@ -397,7 +394,6 @@ export default function GroupSwapPage() {
   const [loading, setLoading] = useState(true);
   const [owners, setOwners] = useState<OwnerMap>({});
   const [savedUsername, setSavedUsername] = useState('');
-  const [mounted, setMounted] = useState(false);
 
   const [form, setForm] = useState<FormState>(emptyForm());
   const [submitting, setSubmitting] = useState(false);
@@ -410,7 +406,6 @@ export default function GroupSwapPage() {
   useEffect(() => {
     setOwners(loadOwners());
     setSavedUsername(loadUsername());
-    setMounted(true);
   }, []);
 
   // ===== تحميل الطلبات =====
@@ -435,13 +430,11 @@ export default function GroupSwapPage() {
     }
   }, [stage, loadRequests]);
 
-  // ===== طلبي (اكتشاف) =====
+  // ===== طلبي =====
   const myRequest = useMemo(() => {
-    // أولوية 1: owner_secret معروف
     const byOwner = requests.find((r) => owners[r.id] !== undefined);
     if (byOwner) return byOwner;
 
-    // أولوية 2: اليوزر المحفوظ
     if (savedUsername) {
       const normalized = normalizeUsername(savedUsername);
       const byUsername = requests.find(
@@ -521,7 +514,6 @@ export default function GroupSwapPage() {
 
     const normalizedUsername = normalizeUsername(form.telegram_username);
 
-    // فحص إضافي: هل يوجد طلب مفتوح بنفس اليوزر في القائمة؟
     const existingByUsername = requests.find(
       (r) => normalizeUsername(r.telegram_username) === normalizedUsername
     );
@@ -543,7 +535,6 @@ export default function GroupSwapPage() {
         notes: form.notes.trim() || null,
       });
 
-      // حفظ owner_secret + اليوزر
       const nextOwners = { ...owners, [data.id]: data.owner_secret };
       setOwners(nextOwners);
       saveOwners(nextOwners);
@@ -565,7 +556,6 @@ export default function GroupSwapPage() {
     const owner_secret = owners[request.id] ?? '';
 
     if (!owner_secret) {
-      // لا يوجد owner_secret — نطلب تأكيد باليوزر
       const ok = await confirm(
         `سيتم حذف الطلب الخاص بـ @${request.telegram_username}. هل أنت متأكد أنه طلبك؟`,
         { variant: 'danger', confirmLabel: 'نعم، احذف' }
@@ -605,7 +595,6 @@ export default function GroupSwapPage() {
       }
     }
 
-    // تحديث الحالة
     const nextOwners = { ...owners };
     delete nextOwners[request.id];
     setOwners(nextOwners);
@@ -786,7 +775,7 @@ export default function GroupSwapPage() {
                 type="text"
                 value={form.telegram_username}
                 onChange={(e) => setForm({ ...form, telegram_username: e.target.value })}
-                placeholder="مثلاً: E_W_9"
+                placeholder="مثلاً: ali_2004"
                 maxLength={100}
                 required
               />

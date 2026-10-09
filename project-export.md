@@ -102,7 +102,7 @@ function CopyButton({ value }: { value: string }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast.show('فشل النسخ — انسخ يدويًا', 'error');
+      toast.show('فشل النسخ — يرجى النسخ يدوياً', 'error');
     }
   }
   return (
@@ -125,7 +125,13 @@ function PasswordField({
         maxLength={200}
         className="min-w-[160px] flex-1 font-mono"
       />
-      <Button type="button" variant="outline" size="sm" onClick={() => onChange(generateChannelPassword())} icon={<IconSparkles />}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => onChange(generateChannelPassword())}
+        icon={<IconSparkles />}
+      >
         توليد
       </Button>
       {value && <CopyButton value={value} />}
@@ -202,7 +208,7 @@ export function ChannelsSection({ password }: Props) {
   }
 
   async function handleDelete(c: Channel) {
-    const ok = await confirm(`حذف القناة «${c.name}» نهائي. متأكد؟`, { variant: 'danger', confirmLabel: 'احذف' });
+    const ok = await confirm(`حذف القناة «${c.name}» نهائياً. هل أنت متأكد؟`, { variant: 'danger', confirmLabel: 'حذف' });
     if (!ok) return;
     try {
       await postJson('/api/admin/channels', { password, action: 'delete', id: c.id });
@@ -217,7 +223,7 @@ export function ChannelsSection({ password }: Props) {
     <section>
       <form
         onSubmit={handleAdd}
-        className="mb-5 space-y-3 rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm"
+        className="mb-5 space-y-3 rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm dark:bg-paper/80"
       >
         <div className="flex flex-wrap gap-2">
           <Input
@@ -251,7 +257,7 @@ export function ChannelsSection({ password }: Props) {
           type="url"
           value={newForm.telegram_link}
           onChange={(e) => setNewForm({ ...newForm, telegram_link: e.target.value })}
-          placeholder="رابط تليكرام (https://t.me/channelname)"
+          placeholder="رابط تلغرام (https://t.me/channelname)"
           required
           maxLength={500}
         />
@@ -268,18 +274,21 @@ export function ChannelsSection({ password }: Props) {
           {[0, 1, 2].map((i) => <div key={i} className="h-28 skeleton-shimmer rounded-2xl" />)}
         </div>
       ) : channels.length === 0 ? (
-        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center backdrop-blur-sm">
+        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center backdrop-blur-sm dark:bg-paper/80">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-teal/8 text-teal">
             <IconChat />
           </div>
-          <p className="mt-4 font-bold text-ink/70">لا يوجد قنوات مضافة حاليا.</p>
+          <p className="mt-4 font-bold text-ink/70">لا توجد قنوات مضافة حالياً.</p>
         </div>
       ) : (
         <div className="space-y-2">
           {channels.map((c) => {
             const isEditing = editingId === c.id;
             return (
-              <div key={c.id} className="rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 hover:border-teal/20">
+              <div
+                key={c.id}
+                className="rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 hover:border-teal/20 dark:bg-paper/80 dark:hover:shadow-[0_4px_16px_rgba(0,0,0,0.30)]"
+              >
                 {isEditing ? (
                   <div className="space-y-2">
                     <div className="flex flex-wrap gap-2">
@@ -311,7 +320,7 @@ export function ChannelsSection({ password }: Props) {
                       type="url"
                       value={editForm.telegram_link}
                       onChange={(e) => setEditForm({ ...editForm, telegram_link: e.target.value })}
-                      placeholder="رابط تليكرام"
+                      placeholder="رابط تلغرام"
                       maxLength={500}
                     />
                     <PasswordField
@@ -329,9 +338,13 @@ export function ChannelsSection({ password }: Props) {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-baseline gap-2">
                         <span className="font-bold text-ink">{c.name}</span>
-                        <span className="rounded-full bg-teal/8 px-2 py-0.5 font-mono text-xs text-teal/70">{c.stage}</span>
+                        <span className="rounded-full bg-teal/8 px-2 py-0.5 font-mono text-xs text-teal/70 dark:bg-teal/15 dark:text-teal">
+                          {c.stage}
+                        </span>
                       </div>
-                      {c.description && <p className="mt-1 text-sm text-ink/55">{c.description}</p>}
+                      {c.description && (
+                        <p className="mt-1 text-sm text-ink/55">{c.description}</p>
+                      )}
                       <a
                         href={c.telegram_link}
                         target="_blank"
@@ -342,15 +355,19 @@ export function ChannelsSection({ password }: Props) {
                       </a>
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                         <span className="font-bold text-ink/50">كلمة المرور:</span>
-                        <code className="rounded-md bg-ink/5 px-2 py-0.5 font-mono text-ink/80">
+                        <code className="rounded-md bg-ink/5 px-2 py-0.5 font-mono text-ink/80 dark:bg-white/10 dark:text-ink/90">
                           {c.channel_password || 'غير محددة'}
                         </code>
                         {c.channel_password && <CopyButton value={c.channel_password} />}
                       </div>
                     </div>
                     <div className="flex flex-shrink-0 gap-1.5">
-                      <Button size="sm" variant="secondary" onClick={() => startEdit(c)} icon={<IconEdit />}>تعديل</Button>
-                      <Button size="sm" variant="danger" onClick={() => handleDelete(c)} icon={<IconTrash />}>حذف</Button>
+                      <Button size="sm" variant="secondary" onClick={() => startEdit(c)} icon={<IconEdit />}>
+                        تعديل
+                      </Button>
+                      <Button size="sm" variant="danger" onClick={() => handleDelete(c)} icon={<IconTrash />}>
+                        حذف
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -373,10 +390,12 @@ export function ChannelsSection({ password }: Props) {
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Field';
+import { TagInput } from '@/components/ui/TagInput';
+import { DropZone } from '@/components/ui/DropZone';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
-import { postJson } from '@/lib/api-client';
-import type { LectureNote, Subject } from '@/lib/types';
+import { postJson, uploadToStorage } from '@/lib/api-client';
+import type { LectureNote, Subject, Track } from '@/lib/types';
 
 interface Props { password: string }
 
@@ -385,25 +404,72 @@ interface MaterialForm {
   title: string;
   professor_name: string;
   lecture_number: string;
+  track: Track | '';
+  year: string;                    // ← جديد
   file_path: string;
+  tags: string[];
 }
 
 function emptyForm(): MaterialForm {
-  return { subject_id: '', title: '', professor_name: '', lecture_number: '', file_path: '' };
+  return {
+    subject_id: '',
+    title: '',
+    professor_name: '',
+    lecture_number: '',
+    track: '',
+    year: '',                      // ← جديد
+    file_path: '',
+    tags: [],
+  };
 }
+
 function formFromNote(n: LectureNote): MaterialForm {
   return {
     subject_id: n.subject_id,
     title: n.title,
     professor_name: n.professor_name ?? '',
     lecture_number: n.lecture_number != null ? String(n.lecture_number) : '',
+    track: n.track ?? '',
+    year: n.year != null ? String(n.year) : '',   // ← جديد
     file_path: n.file_path,
+    tags: Array.isArray(n.tags) ? n.tags : [],
   };
 }
+
 function isFormValid(f: MaterialForm): boolean {
-  return f.subject_id.trim() !== '' && f.title.trim() !== '' && f.file_path.trim() !== '';
+  return (
+    f.subject_id.trim() !== '' &&
+    f.title.trim() !== '' &&
+    f.track !== '' &&
+    f.file_path.trim() !== ''
+  );
 }
 
+// ===== مساعدات بناء المسار =====
+function slugify(value: string): string {
+  if (!value) return 'general';
+  const slug = value.trim().replace(/\s+/g, '-').replace(/[^\w\u0600-\u06FF-]/g, '');
+  return slug || 'general';
+}
+
+function safeFileName(name: string): string {
+  return name.replace(/[^\w.\-]/g, '_');
+}
+
+const TAG_SUGGESTIONS = [
+  'نظري',
+  'عملي',
+  'محاضرة',
+  'ملخص',
+  'أساسيات',
+  'مراجعة',
+  'سلايدات',
+  'امتحان',
+  'واجب',
+  'فاينل',
+];
+
+// ==================== Icons ====================
 function IconDoc() {
   return (
     <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
@@ -432,6 +498,74 @@ function IconTrash() {
     </svg>
   );
 }
+function IconClose() {
+  return (
+    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  );
+}
+
+// ==================== Tags Preview ====================
+function TagsPreview({ tags }: { tags: string[] }) {
+  if (!tags || tags.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-wrap gap-1">
+      {tags.map((tag, i) => (
+        <span
+          key={i}
+          className="rounded-md bg-teal/8 px-1.5 py-0.5 text-[10px] font-bold text-teal/80 dark:bg-teal/15 dark:text-teal"
+        >
+          #{tag}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// ==================== File Path Preview ====================
+function FilePathPreview({
+  url,
+  onRemove,
+}: {
+  url: string;
+  onRemove: () => void;
+}) {
+  const fileName = url.split('/').pop() || url;
+  const isTelegram = url.includes('t.me');
+
+  return (
+    <div className="flex items-center gap-2 rounded-xl border border-teal/20 bg-teal/5 px-3 py-2.5 dark:border-teal/30 dark:bg-teal/15">
+      <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-teal text-white">
+        {isTelegram ? (
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+          </svg>
+        ) : (
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        )}
+      </span>
+
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-xs font-bold text-teal">
+          {isTelegram ? 'رابط تلغرام' : 'الملف جاهز'}
+        </p>
+        <p className="truncate font-mono text-[10px] text-teal/70">{fileName}</p>
+      </div>
+
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label="إزالة الرابط"
+        className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md text-teal/60 transition-colors hover:bg-teal/15 hover:text-teal"
+      >
+        <IconClose />
+      </button>
+    </div>
+  );
+}
 
 export function MaterialsSection({ password }: Props) {
   const toast = useToast();
@@ -443,11 +577,14 @@ export function MaterialsSection({ password }: Props) {
 
   const [newForm, setNewForm] = useState<MaterialForm>(emptyForm());
   const [adding, setAdding] = useState(false);
+  const [uploadingNew, setUploadingNew] = useState(false);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<MaterialForm>(emptyForm());
   const [saving, setSaving] = useState(false);
+  const [uploadingEdit, setUploadingEdit] = useState(false);
 
+  // ===== تحميل =====
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
@@ -463,11 +600,16 @@ export function MaterialsSection({ password }: Props) {
       });
     } catch (err) {
       toast.show(err instanceof Error ? err.message : 'فشل تحميل البيانات', 'error');
-      setSubjects([]); setMaterials([]);
-    } finally { setLoading(false); }
+      setSubjects([]);
+      setMaterials([]);
+    } finally {
+      setLoading(false);
+    }
   }, [password, toast]);
 
-  useEffect(() => { loadAll(); }, [loadAll]);
+  useEffect(() => {
+    loadAll();
+  }, [loadAll]);
 
   const subjectNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -475,6 +617,44 @@ export function MaterialsSection({ password }: Props) {
     return map;
   }, [subjects]);
 
+  // ===== رفع ملف =====
+  async function uploadFile(file: File, form: MaterialForm): Promise<string> {
+    const subjectName = subjectNameById.get(form.subject_id) || 'general';
+    const subjectSlug = slugify(subjectName);
+    const doctorSlug = form.professor_name.trim() ? slugify(form.professor_name) : 'no-doctor';
+    const fileName = `${Date.now()}-${safeFileName(file.name)}`;
+    const filePath = `${subjectSlug}/${doctorSlug}/${fileName}`;
+
+    return uploadToStorage('lecture-notes', filePath, file);
+  }
+
+  async function handleNewUpload(file: File) {
+    setUploadingNew(true);
+    try {
+      const url = await uploadFile(file, newForm);
+      setNewForm((prev) => ({ ...prev, file_path: url }));
+      toast.show('تم رفع الملف', 'success');
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل رفع الملف', 'error');
+    } finally {
+      setUploadingNew(false);
+    }
+  }
+
+  async function handleEditUpload(file: File) {
+    setUploadingEdit(true);
+    try {
+      const url = await uploadFile(file, editForm);
+      setEditForm((prev) => ({ ...prev, file_path: url }));
+      toast.show('تم رفع الملف', 'success');
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل رفع الملف', 'error');
+    } finally {
+      setUploadingEdit(false);
+    }
+  }
+
+  // ===== إضافة =====
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!isFormValid(newForm)) return;
@@ -486,7 +666,10 @@ export function MaterialsSection({ password }: Props) {
         title: newForm.title.trim(),
         professor_name: newForm.professor_name.trim() || null,
         lecture_number: newForm.lecture_number ? Number(newForm.lecture_number) : null,
+        track: newForm.track,
+        year: newForm.year ? Number(newForm.year) : null,   // ← جديد
         file_path: newForm.file_path.trim(),
+        tags: newForm.tags,
       });
       const keptSubject = newForm.subject_id;
       setNewForm({ ...emptyForm(), subject_id: keptSubject });
@@ -494,14 +677,19 @@ export function MaterialsSection({ password }: Props) {
       loadAll();
     } catch (err) {
       toast.show(err instanceof Error ? err.message : 'فشل الإضافة', 'error');
-    } finally { setAdding(false); }
+    } finally {
+      setAdding(false);
+    }
   }
 
+  // ===== تعديل =====
   function startEdit(n: LectureNote) {
-    setEditingId(n.id); setEditForm(formFromNote(n));
+    setEditingId(n.id);
+    setEditForm(formFromNote(n));
   }
   function cancelEdit() {
-    setEditingId(null); setEditForm(emptyForm());
+    setEditingId(null);
+    setEditForm(emptyForm());
   }
 
   async function saveEdit(id: string) {
@@ -514,18 +702,27 @@ export function MaterialsSection({ password }: Props) {
         title: editForm.title.trim(),
         professor_name: editForm.professor_name.trim() || null,
         lecture_number: editForm.lecture_number ? Number(editForm.lecture_number) : null,
+        track: editForm.track,
+        year: editForm.year ? Number(editForm.year) : null, // ← جديد
         file_path: editForm.file_path.trim(),
+        tags: editForm.tags,
       });
       cancelEdit();
       toast.show('تم الحفظ', 'success');
       loadAll();
     } catch (err) {
       toast.show(err instanceof Error ? err.message : 'فشل الحفظ', 'error');
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   }
 
+  // ===== حذف =====
   async function handleDelete(n: LectureNote) {
-    const ok = await confirm(`حذف الملزمة «${n.title}» نهائي. متأكد؟`, { variant: 'danger', confirmLabel: 'احذف' });
+    const ok = await confirm(`حذف الملزمة «${n.title}» نهائياً. هل أنت متأكد؟`, {
+      variant: 'danger',
+      confirmLabel: 'حذف',
+    });
     if (!ok) return;
     try {
       await postJson('/api/admin/lecture-notes', { password, action: 'delete', id: n.id });
@@ -539,15 +736,18 @@ export function MaterialsSection({ password }: Props) {
   return (
     <section>
       {subjects.length === 0 && !loading && (
-        <div className="mb-5 flex items-start gap-3 rounded-2xl border border-amber/30 bg-amber/8 p-4 text-sm">
+        <div className="mb-5 flex items-start gap-3 rounded-2xl border border-amber/30 bg-amber/8 p-4 text-sm dark:bg-amber/15">
           <span className="text-amber"><IconAlert /></span>
-          <p className="font-medium text-ink/70">أضف مادة أولًا من تبويب «المواد» حتى تكدر تضيف ملازم.</p>
+          <p className="font-medium text-ink/70">
+            أضف مادة أولاً من تبويب «المواد» حتى تستطيع إضافة الملازم.
+          </p>
         </div>
       )}
 
+      {/* ==================== نموذج الإضافة ==================== */}
       <form
         onSubmit={handleAdd}
-        className="mb-5 space-y-3 rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm"
+        className="mb-5 space-y-3 rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm dark:bg-paper/80"
       >
         <div className="flex flex-wrap gap-2">
           <Select
@@ -561,16 +761,28 @@ export function MaterialsSection({ password }: Props) {
             <option value="">اختر المادة</option>
             {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </Select>
+          <Select
+            value={newForm.track}
+            onChange={(e) => setNewForm({ ...newForm, track: e.target.value as Track })}
+            required
+            className="w-36"
+            aria-label="نظري أو عملي"
+          >
+            <option value="">نظري / عملي</option>
+            <option value="نظري">نظري</option>
+            <option value="عملي">عملي</option>
+          </Select>
           <Input
             type="text"
             value={newForm.title}
             onChange={(e) => setNewForm({ ...newForm, title: e.target.value })}
-            placeholder="اسم الملزمة/المحاضرة"
+            placeholder="اسم الملزمة / المحاضرة"
             required
             maxLength={300}
             className="min-w-[200px] flex-1"
           />
         </div>
+
         <div className="flex flex-wrap gap-2">
           <Input
             type="text"
@@ -589,39 +801,90 @@ export function MaterialsSection({ password }: Props) {
             placeholder="رقم المحاضرة"
             className="w-32"
           />
+          <Input
+            type="number"
+            inputMode="numeric"
+            min={1990}
+            max={2100}
+            value={newForm.year}
+            onChange={(e) => setNewForm({ ...newForm, year: e.target.value })}
+            placeholder="سنة الملزمة"
+            className="w-32"
+          />
         </div>
-        <Input
-          type="url"
-          value={newForm.file_path}
-          onChange={(e) => setNewForm({ ...newForm, file_path: e.target.value })}
-          placeholder="رابط الملف (من Supabase Storage)"
-          required
-          maxLength={2000}
-        />
-        <Button type="submit" loading={adding} disabled={!isFormValid(newForm) || subjects.length === 0}>
+
+        {/* ===== الملف: Drag & Drop أو رابط ===== */}
+        <div className="space-y-2 rounded-2xl border border-dashed border-line bg-paper/40 p-4 dark:bg-white/[0.03]">
+          <p className="text-sm font-bold text-ink/70">ملف الملزمة</p>
+
+          {newForm.file_path ? (
+            <FilePathPreview
+              url={newForm.file_path}
+              onRemove={() => setNewForm({ ...newForm, file_path: '' })}
+            />
+          ) : (
+            <>
+              <DropZone
+                onFileSelected={handleNewUpload}
+                uploading={uploadingNew}
+                maxSizeMB={50}
+              />
+              <p className="text-center text-xs text-ink/50">أو</p>
+              <Input
+                type="url"
+                value={newForm.file_path}
+                onChange={(e) => setNewForm({ ...newForm, file_path: e.target.value })}
+                placeholder="الصق رابط تلغرام أو Supabase يدوياً"
+                maxLength={2000}
+              />
+            </>
+          )}
+        </div>
+
+        {/* ===== الوسوم ===== */}
+        <div>
+          <label className="mb-2 block text-sm font-bold text-ink/70">الوسوم (Tags)</label>
+          <TagInput
+            tags={newForm.tags}
+            onChange={(tags) => setNewForm({ ...newForm, tags })}
+            suggestions={TAG_SUGGESTIONS}
+          />
+        </div>
+
+        <Button
+          type="submit"
+          loading={adding}
+          disabled={!isFormValid(newForm) || subjects.length === 0 || uploadingNew}
+        >
           إضافة ملزمة
         </Button>
       </form>
 
+      {/* ==================== قائمة الملازم ==================== */}
       {loading ? (
         <div className="space-y-2">
           {[0, 1, 2].map((i) => <div key={i} className="h-20 skeleton-shimmer rounded-2xl" />)}
         </div>
       ) : materials.length === 0 ? (
-        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center backdrop-blur-sm">
+        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center backdrop-blur-sm dark:bg-paper/80">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-teal/8 text-teal">
             <IconDoc />
           </div>
-          <p className="mt-4 font-bold text-ink/70">لا توجد ملازم مضافة حاليا.</p>
+          <p className="mt-4 font-bold text-ink/70">لا توجد ملازم مضافة حالياً.</p>
         </div>
       ) : (
         <div className="space-y-2">
           {materials.map((m) => {
             const isEditing = editingId === m.id;
+            const noteTags = Array.isArray(m.tags) ? m.tags : [];
+
             return (
-              <div key={m.id} className="rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 hover:border-teal/20">
+              <div
+                key={m.id}
+                className="rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 hover:border-teal/20 dark:bg-paper/80 dark:hover:shadow-[0_4px_16px_rgba(0,0,0,0.30)]"
+              >
                 {isEditing ? (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <div className="flex flex-wrap gap-2">
                       <Select
                         value={editForm.subject_id}
@@ -630,6 +893,16 @@ export function MaterialsSection({ password }: Props) {
                         aria-label="المادة"
                       >
                         {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </Select>
+                      <Select
+                        value={editForm.track}
+                        onChange={(e) => setEditForm({ ...editForm, track: e.target.value as Track })}
+                        className="w-36"
+                        aria-label="نظري أو عملي"
+                      >
+                        <option value="">نظري / عملي</option>
+                        <option value="نظري">نظري</option>
+                        <option value="عملي">عملي</option>
                       </Select>
                       <Input
                         type="text"
@@ -658,17 +931,65 @@ export function MaterialsSection({ password }: Props) {
                         placeholder="رقم المحاضرة"
                         className="w-32"
                       />
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min={1990}
+                        max={2100}
+                        value={editForm.year}
+                        onChange={(e) => setEditForm({ ...editForm, year: e.target.value })}
+                        placeholder="سنة الملزمة"
+                        className="w-32"
+                      />
                     </div>
-                    <Input
-                      type="url"
-                      value={editForm.file_path}
-                      onChange={(e) => setEditForm({ ...editForm, file_path: e.target.value })}
-                      placeholder="رابط الملف"
-                      maxLength={2000}
-                    />
+
+                    <div className="space-y-2 rounded-2xl border border-dashed border-line bg-paper/40 p-4 dark:bg-white/[0.03]">
+                      <p className="text-sm font-bold text-ink/70">ملف الملزمة</p>
+                      {editForm.file_path ? (
+                        <FilePathPreview
+                          url={editForm.file_path}
+                          onRemove={() => setEditForm({ ...editForm, file_path: '' })}
+                        />
+                      ) : (
+                        <>
+                          <DropZone
+                            onFileSelected={handleEditUpload}
+                            uploading={uploadingEdit}
+                            maxSizeMB={50}
+                          />
+                          <p className="text-center text-xs text-ink/50">أو</p>
+                          <Input
+                            type="url"
+                            value={editForm.file_path}
+                            onChange={(e) => setEditForm({ ...editForm, file_path: e.target.value })}
+                            placeholder="الصق رابط تلغرام أو Supabase يدوياً"
+                            maxLength={2000}
+                          />
+                        </>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-bold text-ink/70">الوسوم</label>
+                      <TagInput
+                        tags={editForm.tags}
+                        onChange={(tags) => setEditForm({ ...editForm, tags })}
+                        suggestions={TAG_SUGGESTIONS}
+                      />
+                    </div>
+
                     <div className="flex gap-2">
-                      <Button size="sm" onClick={() => saveEdit(m.id)} loading={saving} disabled={!isFormValid(editForm)}>حفظ</Button>
-                      <Button size="sm" variant="secondary" onClick={cancelEdit} disabled={saving}>إلغاء</Button>
+                      <Button
+                        size="sm"
+                        onClick={() => saveEdit(m.id)}
+                        loading={saving}
+                        disabled={!isFormValid(editForm) || uploadingEdit}
+                      >
+                        حفظ
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={cancelEdit} disabled={saving}>
+                        إلغاء
+                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -676,9 +997,19 @@ export function MaterialsSection({ password }: Props) {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-baseline gap-2">
                         <span className="font-bold text-ink">{m.title}</span>
-                        <span className="rounded-full bg-teal/8 px-2 py-0.5 font-mono text-xs text-teal/70">
+                        <span className="rounded-full bg-teal/8 px-2 py-0.5 font-mono text-xs text-teal/70 dark:bg-teal/15 dark:text-teal">
                           {m.subjects?.name ?? subjectNameById.get(m.subject_id) ?? '—'}
                         </span>
+                        {m.track && (
+                          <span className="rounded-full bg-amber/15 px-2 py-0.5 font-mono text-xs text-amber-800 dark:bg-amber/25 dark:text-amber-300">
+                            {m.track}
+                          </span>
+                        )}
+                        {m.year != null && (
+                          <span className="rounded-md bg-ink/5 px-1.5 py-0.5 font-mono text-[10px] font-bold text-ink/50 dark:bg-white/10">
+                            {m.year}
+                          </span>
+                        )}
                       </div>
                       {(m.professor_name || m.lecture_number != null) && (
                         <p className="mt-1 text-sm text-ink/50">
@@ -687,10 +1018,15 @@ export function MaterialsSection({ password }: Props) {
                           {m.lecture_number != null && `محاضرة ${m.lecture_number}`}
                         </p>
                       )}
+                      <TagsPreview tags={noteTags} />
                     </div>
                     <div className="flex flex-shrink-0 gap-1.5">
-                      <Button size="sm" variant="secondary" onClick={() => startEdit(m)} icon={<IconEdit />}>تعديل</Button>
-                      <Button size="sm" variant="danger" onClick={() => handleDelete(m)} icon={<IconTrash />}>حذف</Button>
+                      <Button size="sm" variant="secondary" onClick={() => startEdit(m)} icon={<IconEdit />}>
+                        تعديل
+                      </Button>
+                      <Button size="sm" variant="danger" onClick={() => handleDelete(m)} icon={<IconTrash />}>
+                        حذف
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -698,6 +1034,414 @@ export function MaterialsSection({ password }: Props) {
             );
           })}
         </div>
+      )}
+    </section>
+  );
+}
+```
+
+## app\admin\_components\ReportsSection.tsx
+
+```
+// app/admin/_components/ReportsSection.tsx
+'use client';
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { postJson } from '@/lib/api-client';
+import type { LectureNoteReport, ReportReason } from '@/lib/types';
+
+interface Props {
+  password: string;
+}
+
+// ==================== Icons ====================
+function IconReport() {
+  return (
+    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+    </svg>
+  );
+}
+function IconDeadLink() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+      <line x1="4" y1="4" x2="20" y2="20" strokeWidth={2.5} />
+    </svg>
+  );
+}
+function IconOutdated() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+function IconCheck() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+  );
+}
+function IconTrash() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  );
+}
+function IconExternal() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+    </svg>
+  );
+}
+function IconClock() {
+  return (
+    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+function IconDoctor() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    </svg>
+  );
+}
+function IconInbox() {
+  return (
+    <svg className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+    </svg>
+  );
+}
+
+// ==================== Helpers ====================
+function formatRelativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (minutes < 1) return 'الآن';
+  if (minutes < 60) return `قبل ${minutes} دقيقة`;
+  if (hours < 24) return `قبل ${hours} ساعة`;
+  if (days === 1) return 'أمس';
+  if (days < 7) return `قبل ${days} أيام`;
+  if (days < 30) return `قبل ${Math.floor(days / 7)} أسابيع`;
+  return `قبل ${Math.floor(days / 30)} شهر`;
+}
+
+function getReasonLabel(reason: ReportReason): string {
+  return reason === 'dead_link' ? 'الرابط لا يعمل' : 'الملزمة قديمة';
+}
+
+function getReasonStyles(reason: ReportReason): string {
+  return reason === 'dead_link'
+    ? 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300'
+    : 'bg-amber/20 text-amber-800 dark:bg-amber/25 dark:text-amber-300';
+}
+
+// ==================== Stat Card ====================
+function StatCard({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: number;
+  accent: 'red' | 'amber' | 'teal';
+}) {
+  const styles = {
+    red: 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300',
+    amber: 'bg-amber/15 text-amber-800 dark:bg-amber/25 dark:text-amber-300',
+    teal: 'bg-teal/8 text-teal dark:bg-teal/15 dark:text-teal',
+  }[accent];
+
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-line bg-white/70 px-4 py-3 dark:bg-paper/70">
+      <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl font-mono text-lg font-black ${styles}`}>
+        {value}
+      </span>
+      <p className="text-xs font-bold text-ink/60">{label}</p>
+    </div>
+  );
+}
+
+// ==================== Report Card ====================
+function ReportCard({
+  report,
+  password,
+  onResolved,
+}: {
+  report: LectureNoteReport;
+  password: string;
+  onResolved: () => void;
+}) {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const [busy, setBusy] = useState(false);
+
+  const note = report.lecture_notes;
+  const reason = report.reason;
+
+  async function handleIgnore() {
+    const ok = await confirm(
+      'سيتم تجاهل هذا البلاغ فقط. هل أنت متأكد؟',
+      { variant: 'primary', confirmLabel: 'تجاهل' }
+    );
+    if (!ok) return;
+
+    setBusy(true);
+    try {
+      await postJson('/api/admin/lecture-notes', {
+        password,
+        action: 'report_resolve',
+        id: report.id,
+        resolved_action: 'ignored',
+      });
+      toast.show('تم تجاهل البلاغ', 'success');
+      onResolved();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDeleteNote() {
+    if (!note) return;
+
+    const ok = await confirm(
+      `سيتم حذف الملزمة «${note.title}» نهائياً مع كل البلاغات المرتبطة بها. هل أنت متأكد؟`,
+      { variant: 'danger', confirmLabel: 'احذف الملزمة' }
+    );
+    if (!ok) return;
+
+    setBusy(true);
+    try {
+      // احذف الملزمة
+      await postJson('/api/admin/lecture-notes', {
+        password,
+        action: 'delete',
+        id: note.id,
+      });
+      // علّم كل البلاغات المرتبطة بأنها عولجت
+      await postJson('/api/admin/lecture-notes', {
+        password,
+        action: 'reports_resolve_all_for_note',
+        lecture_note_id: note.id,
+        resolved_action: 'deleted',
+      });
+      toast.show('تم حذف الملزمة ومعالجة البلاغات', 'success');
+      onResolved();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الحذف', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 hover:border-teal/20 dark:bg-paper/80">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          {/* Reason badge */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-black ${getReasonStyles(reason)}`}>
+              {reason === 'dead_link' ? <IconDeadLink /> : <IconOutdated />}
+              {getReasonLabel(reason)}
+            </span>
+            <span className="flex items-center gap-1 text-[11px] text-ink/40">
+              <IconClock />
+              {formatRelativeTime(report.created_at)}
+            </span>
+          </div>
+
+          {/* Note info */}
+          {note ? (
+            <div className="mt-3">
+              <h3 className="font-bold text-ink">{note.title}</h3>
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink/50">
+                <span className="rounded-md bg-teal/8 px-2 py-0.5 font-bold text-teal/80 dark:bg-teal/15">
+                  {note.subjects?.name ?? '—'}
+                </span>
+                {note.professor_name && (
+                  <span className="inline-flex items-center gap-1">
+                    <IconDoctor />
+                    د. {note.professor_name}
+                  </span>
+                )}
+                {note.year != null && (
+                  <span className="rounded-md bg-ink/5 px-1.5 py-0.5 font-mono text-[10px] font-bold text-ink/50 dark:bg-white/10">
+                    {note.year}
+                  </span>
+                )}
+              </div>
+
+              {/* File link */}
+              <a
+                href={note.file_path}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-teal hover:underline"
+              >
+                <IconExternal />
+                فتح الرابط
+              </a>
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-ink/50">الملزمة محذوفة</p>
+          )}
+
+          {/* Reporter note */}
+          {report.note && (
+            <p className="mt-2 rounded-lg bg-paper/60 px-3 py-2 text-xs leading-relaxed text-ink/70 dark:bg-white/[0.04]">
+              <span className="font-bold text-ink/50">ملاحظة المبلّغ: </span>
+              {report.note}
+            </p>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex flex-shrink-0 flex-col gap-1.5">
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={handleIgnore}
+            loading={busy}
+            icon={<IconCheck />}
+          >
+            تجاهل
+          </Button>
+          {note && (
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={handleDeleteNote}
+              loading={busy}
+              icon={<IconTrash />}
+            >
+              احذف الملزمة
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==================== Main Section ====================
+export function ReportsSection({ password }: Props) {
+  const toast = useToast();
+  const [reports, setReports] = useState<LectureNoteReport[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await postJson<{ reports: LectureNoteReport[] }>(
+        '/api/admin/lecture-notes',
+        { password, action: 'reports_list' }
+      );
+      setReports(data.reports ?? []);
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل تحميل البلاغات', 'error');
+      setReports([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [password, toast]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const stats = useMemo(() => {
+    let deadLinks = 0;
+    let outdated = 0;
+    for (const r of reports) {
+      if (r.reason === 'dead_link') deadLinks++;
+      else outdated++;
+    }
+    return { total: reports.length, deadLinks, outdated };
+  }, [reports]);
+
+  // تجميع البلاغات حسب الملزمة (لحساب الأكثر تكراراً)
+  const duplicateNoteIds = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const r of reports) {
+      counts.set(r.lecture_note_id, (counts.get(r.lecture_note_id) ?? 0) + 1);
+    }
+    return counts;
+  }, [reports]);
+
+  return (
+    <section>
+      {/* ==================== Description ==================== */}
+      <div className="mb-5 flex items-start gap-3 rounded-2xl border border-teal/20 bg-teal/[0.04] p-4 text-sm dark:border-teal/30 dark:bg-teal/10">
+        <span className="text-teal">
+          <IconReport />
+        </span>
+        <div>
+          <p className="font-bold text-ink">بلاغات الطلاب</p>
+          <p className="mt-0.5 text-ink/70">
+            راقب البلاغات الواردة عن الروابط الميتة أو الملازم القديمة. عند حذف ملزمة، تُعالج كل بلاغاتها تلقائياً.
+          </p>
+        </div>
+      </div>
+
+      {/* ==================== Stats ==================== */}
+      {!loading && reports.length > 0 && (
+        <div className="mb-5 grid grid-cols-3 gap-2">
+          <StatCard label="إجمالي" value={stats.total} accent="teal" />
+          <StatCard label="رابط ميت" value={stats.deadLinks} accent="red" />
+          <StatCard label="قديمة" value={stats.outdated} accent="amber" />
+        </div>
+      )}
+
+      {/* ==================== List ==================== */}
+      {loading ? (
+        <div className="space-y-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-32 skeleton-shimmer rounded-2xl" />
+          ))}
+        </div>
+      ) : reports.length === 0 ? (
+        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center backdrop-blur-sm dark:bg-paper/80">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-teal/8 text-teal/50 dark:bg-teal/15">
+            <IconInbox />
+          </div>
+          <p className="mt-4 font-bold text-ink/70">لا توجد بلاغات حالياً</p>
+          <p className="mt-1 text-sm text-ink/50">
+            عندما يُبلّغ طالب عن ملزمة، سيظهر البلاغ هنا
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {reports.map((r) => (
+            <ReportCard
+              key={r.id}
+              report={r}
+              password={password}
+              onResolved={load}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ملاحظة سفلية */}
+      {!loading && reports.length > 0 && (
+        <p className="mt-6 text-center text-[11px] text-ink/40">
+          البلاغات تظهر فقط عند وجود شكوى من طالب. إذا رأيت رقم 3 أو أكثر على ملزمة واحدة — فهذا يعني أنها الأكثر إشكالية.
+        </p>
       )}
     </section>
   );
@@ -780,7 +1524,7 @@ function StageCard({ stage, schedule, password, onUploaded }: StageCardProps) {
       return;
     }
     if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      toast.show(`حجم الصورة كبير جدًا (الحد ${MAX_FILE_SIZE_MB} ميجا).`, 'error');
+      toast.show(`حجم الصورة كبير جداً (بحد أقصى ${MAX_FILE_SIZE_MB} ميجا).`, 'error');
       return;
     }
 
@@ -813,7 +1557,7 @@ function StageCard({ stage, schedule, password, onUploaded }: StageCardProps) {
   function openFilePicker() { fileInputRef.current?.click(); }
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-line bg-white/80 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm transition-all duration-200 hover:border-teal/20">
+    <div className="overflow-hidden rounded-3xl border border-line bg-white/80 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm transition-all duration-200 hover:border-teal/20 dark:bg-paper/80 dark:hover:shadow-[0_4px_16px_rgba(0,0,0,0.30)]">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line/60 px-5 py-3">
         <div className="flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal/8 text-teal">
@@ -837,22 +1581,26 @@ function StageCard({ stage, schedule, password, onUploaded }: StageCardProps) {
             className="max-h-56 w-full rounded-2xl border border-line object-contain"
           />
         ) : currentImageUrl && imageError ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-center text-sm text-red-700">
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-center text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
             تعذّر تحميل الصورة الحالية.
-            <button type="button" onClick={openFilePicker} className="mr-2 font-bold underline">ارفع صورة جديدة</button>
+            <button type="button" onClick={openFilePicker} className="mr-2 font-bold underline">
+              رفع صورة جديدة
+            </button>
           </div>
         ) : (
           <button
             type="button"
             onClick={openFilePicker}
             disabled={uploading}
-            className="group flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line bg-paper/50 py-10 transition-all duration-200 hover:border-teal/40 hover:bg-teal/[0.03] disabled:opacity-60"
+            className="group flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line bg-paper/50 py-10 transition-all duration-200 hover:border-teal/40 hover:bg-teal/[0.03] disabled:opacity-60 dark:bg-white/[0.03] dark:hover:bg-teal/10"
           >
             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal/8 text-teal transition-all group-hover:bg-teal/15">
               <IconImage />
             </span>
-            <span className="text-sm font-bold text-ink/70">ارفع صورة الجدول</span>
-            <span className="text-xs text-ink/40">PNG / JPG / WebP — حتى {MAX_FILE_SIZE_MB} ميجا</span>
+            <span className="text-sm font-bold text-ink/70">رفع صورة الجدول</span>
+            <span className="text-xs text-ink/40">
+              PNG / JPG / WebP — بحد أقصى {MAX_FILE_SIZE_MB} ميجا
+            </span>
           </button>
         )}
 
@@ -866,7 +1614,7 @@ function StageCard({ stage, schedule, password, onUploaded }: StageCardProps) {
         />
 
         {uploading && (
-          <div className="mt-3 flex items-center gap-2 rounded-xl bg-teal/5 px-3 py-2 text-sm">
+          <div className="mt-3 flex items-center gap-2 rounded-xl bg-teal/5 px-3 py-2 text-sm dark:bg-teal/15">
             <svg className="h-4 w-4 animate-spin text-teal" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
               <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
@@ -901,10 +1649,10 @@ export function SchedulesSection({ password }: Props) {
 
   return (
     <section>
-      <div className="mb-5 flex items-start gap-3 rounded-2xl border border-teal/20 bg-teal/[0.04] p-4 text-sm">
+      <div className="mb-5 flex items-start gap-3 rounded-2xl border border-teal/20 bg-teal/[0.04] p-4 text-sm dark:border-teal/30 dark:bg-teal/10">
         <span className="text-teal"><IconCalendar /></span>
         <p className="font-medium text-ink/70">
-          ارفع صورة جدول المحاضرات لكل مرحلة، تظهر للطلاب مباشرة بصفحة «الجدول».
+          ارفع صورة جدول المحاضرات لكل مرحلة، وستظهر للطلاب مباشرة في صفحة «الجدول».
         </p>
       </div>
 
@@ -1025,7 +1773,7 @@ export function SubjectsSection({ password }: Props) {
   }
 
   async function handleDelete(s: Subject) {
-    const ok = await confirm(`حذف مادة «${s.name}» سيحذف كل الملازم والأسئلة المرتبطة بها نهائيًا. متأكد؟`, { variant: 'danger', confirmLabel: 'احذف' });
+    const ok = await confirm(`حذف مادة «${s.name}» سيحذف كل الملازم والأسئلة المرتبطة بها نهائيًا. هل أنت متأكد؟`, { variant: 'danger', confirmLabel: 'حذف' });
     if (!ok) return;
     try {
       await postJson('/api/admin/subjects', { password, action: 'delete', id: s.id });
@@ -1040,7 +1788,7 @@ export function SubjectsSection({ password }: Props) {
     <section>
       <form
         onSubmit={handleAdd}
-        className="mb-5 flex flex-wrap gap-2 rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm"
+        className="mb-5 flex flex-wrap gap-2 rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm dark:bg-paper/80"
       >
         <Input
           type="text"
@@ -1069,12 +1817,12 @@ export function SubjectsSection({ password }: Props) {
           {[0, 1, 2].map((i) => <div key={i} className="h-16 skeleton-shimmer rounded-2xl" />)}
         </div>
       ) : subjects.length === 0 ? (
-        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center backdrop-blur-sm">
+        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center backdrop-blur-sm dark:bg-paper/80">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-teal/8 text-teal">
             <IconBook />
           </div>
-          <p className="mt-4 font-bold text-ink/70">لا توجد مواد مضافة حاليا.</p>
-          <p className="mt-1 text-sm text-ink/50">أضف أول مادة من فوق</p>
+          <p className="mt-4 font-bold text-ink/70">لا توجد مواد مضافة حالياً.</p>
+          <p className="mt-1 text-sm text-ink/50">أضف أول مادة من الأعلى</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -1083,7 +1831,7 @@ export function SubjectsSection({ password }: Props) {
             return (
               <div
                 key={s.id}
-                className="group flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 hover:border-teal/20 hover:shadow-[0_4px_16px_rgba(14,74,74,0.06)]"
+                className="group flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 hover:border-teal/20 hover:shadow-[0_4px_16px_rgba(14,74,74,0.06)] dark:bg-paper/80 dark:hover:shadow-[0_4px_16px_rgba(0,0,0,0.30)]"
               >
                 {isEditing ? (
                   <>
@@ -1113,7 +1861,7 @@ export function SubjectsSection({ password }: Props) {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-baseline gap-2">
                         <span className="font-bold text-ink">{s.name}</span>
-                        <span className="rounded-full bg-teal/8 px-2 py-0.5 font-mono text-xs text-teal/70">{s.stage}</span>
+                        <span className="rounded-full bg-teal/8 px-2 py-0.5 font-mono text-xs text-teal/70 dark:bg-teal/15 dark:text-teal">{s.stage}</span>
                       </div>
                     </div>
                     <div className="flex flex-shrink-0 gap-1.5">
@@ -1218,14 +1966,16 @@ import { SubjectsSection } from './_components/SubjectsSection';
 import { MaterialsSection } from './_components/MaterialsSection';
 import { ChannelsSection } from './_components/ChannelsSection';
 import { SchedulesSection } from './_components/SchedulesSection';
+import { ReportsSection } from './_components/ReportsSection';
 
-type Tab = 'subjects' | 'materials' | 'channels' | 'schedules';
+type Tab = 'subjects' | 'materials' | 'channels' | 'schedules' | 'reports';
 
 const TABS: ReadonlyArray<{ id: Tab; label: string; icon: React.ReactNode }> = [
   { id: 'subjects', label: 'المواد', icon: <IconBook /> },
   { id: 'materials', label: 'الملازم', icon: <IconDoc /> },
   { id: 'channels', label: 'القنوات', icon: <IconChat /> },
   { id: 'schedules', label: 'الجدول', icon: <IconCalendar /> },
+  { id: 'reports', label: 'البلاغات', icon: <IconReport /> },   // ← جديد
 ];
 
 // ==================== Icons ====================
@@ -1254,6 +2004,13 @@ function IconCalendar() {
   return (
     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  );
+}
+function IconReport() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
     </svg>
   );
 }
@@ -1286,7 +2043,7 @@ function LoginScreen({
 
   return (
     <main className="relative mx-auto flex min-h-[calc(100vh-70px)] max-w-sm flex-col items-center justify-center px-6 py-16">
-      <div className="w-full rounded-3xl border border-line bg-white/80 p-8 shadow-[0_8px_30px_rgba(14,74,74,0.08)] backdrop-blur-sm animate-slide-up">
+      <div className="w-full rounded-3xl border border-line bg-white/80 p-8 shadow-[0_8px_30px_rgba(14,74,74,0.08)] backdrop-blur-sm animate-slide-up dark:bg-paper/80 dark:shadow-[0_8px_30px_rgba(0,0,0,0.40)]">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-teal/10 text-teal">
           <IconLock />
         </div>
@@ -1313,7 +2070,7 @@ function LoginScreen({
             className="text-center"
           />
           {error && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-center text-sm font-bold text-red-600" role="alert">
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-center text-sm font-bold text-red-600 dark:bg-red-950/40 dark:text-red-300" role="alert">
               {error}
             </p>
           )}
@@ -1340,14 +2097,14 @@ export default function AdminPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 animate-slide-up">
         <div>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
             مشرف
           </span>
           <h1 className="mt-3 text-3xl font-black text-ink sm:text-4xl">لوحة التحكم</h1>
         </div>
         <Button variant="secondary" size="sm" onClick={logout} icon={<IconLogout />}>
-          تسجيل خروج
+          تسجيل الخروج
         </Button>
       </div>
 
@@ -1355,7 +2112,7 @@ export default function AdminPage() {
       <div
         role="tablist"
         aria-label="أقسام لوحة التحكم"
-        className="mt-6 flex gap-1.5 overflow-x-auto rounded-2xl border border-line bg-white/60 p-1.5 backdrop-blur-sm [-ms-overflow-style:none] [scrollbar-width:none] sm:overflow-visible [&::-webkit-scrollbar]:hidden animate-slide-up"
+        className="mt-6 flex gap-1.5 overflow-x-auto rounded-2xl border border-line bg-white/60 p-1.5 backdrop-blur-sm [-ms-overflow-style:none] [scrollbar-width:none] sm:overflow-visible dark:bg-white/[0.04] [&::-webkit-scrollbar]:hidden animate-slide-up"
         style={{ animationDelay: '80ms' }}
       >
         {TABS.map((t) => {
@@ -1369,8 +2126,8 @@ export default function AdminPage() {
               onClick={() => setTab(t.id)}
               className={`flex flex-shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 ${
                 active
-                  ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)]'
-                  : 'text-ink/60 hover:bg-ink/5 hover:text-ink'
+                  ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.30)]'
+                  : 'text-ink/60 hover:bg-ink/5 hover:text-ink dark:hover:bg-white/5'
               }`}
             >
               {t.icon}
@@ -1392,6 +2149,7 @@ export default function AdminPage() {
         {tab === 'materials' && <MaterialsSection password={password} />}
         {tab === 'channels' && <ChannelsSection password={password} />}
         {tab === 'schedules' && <SchedulesSection password={password} />}
+        {tab === 'reports' && <ReportsSection password={password} />}
       </div>
     </main>
   );
@@ -1515,12 +2273,36 @@ export async function POST(request: Request) {
 // app/api/admin/lecture-notes/route.ts
 import { NextResponse } from 'next/server';
 import { adminGuard, jsonError, safeOptionalString, safeString } from '@/lib/api-server';
+import type { Track } from '@/lib/types';
 
 function parseLectureNumber(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return null;
   const n = Number(value);
   if (!Number.isFinite(n) || n < 0) return null;
   return Math.floor(n);
+}
+
+function parseYear(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  if (n < 1990 || n > 2100) return null;
+  return Math.floor(n);
+}
+
+function parseTrack(value: unknown): Track | null {
+  if (value === 'نظري' || value === 'عملي') return value;
+  return null;
+}
+
+function parseTags(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const cleaned = value
+    .filter((t): t is string => typeof t === 'string')
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0 && t.length <= 50)
+    .slice(0, 10);
+  return Array.from(new Set(cleaned));
 }
 
 export async function POST(request: Request) {
@@ -1538,6 +2320,7 @@ export async function POST(request: Request) {
   const action = typeof body.action === 'string' ? body.action : '';
 
   switch (action) {
+    // ==================== list ====================
     case 'list': {
       const { data, error } = await supabaseAdmin
         .from('lecture_notes')
@@ -1551,15 +2334,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ materials: data ?? [] });
     }
 
+    // ==================== add ====================
     case 'add': {
       const subject_id = safeString(body.subject_id, 100);
       const title = safeString(body.title, 300);
       const professor_name = safeOptionalString(body.professor_name, 200);
       const lecture_number = parseLectureNumber(body.lecture_number);
+      const track = parseTrack(body.track);
+      const tags = parseTags(body.tags);
+      const year = parseYear(body.year);                    // ← جديد
       const file_path = safeString(body.file_path, 2000);
 
       if (!subject_id) return jsonError('اختر المادة');
       if (!title) return jsonError('عنوان الملزمة مطلوب');
+      if (!track) return jsonError('اختر نظري أو عملي');
       if (!file_path) return jsonError('رابط الملف مطلوب');
 
       const { error } = await supabaseAdmin.from('lecture_notes').insert({
@@ -1567,6 +2355,9 @@ export async function POST(request: Request) {
         title,
         professor_name,
         lecture_number,
+        track,
+        tags,
+        year,                                                // ← جديد
         file_path,
         status: 'approved',
       });
@@ -1578,17 +2369,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true });
     }
 
+    // ==================== edit ====================
     case 'edit': {
       const id = safeString(body.id, 100);
       const subject_id = safeString(body.subject_id, 100);
       const title = safeString(body.title, 300);
       const professor_name = safeOptionalString(body.professor_name, 200);
       const lecture_number = parseLectureNumber(body.lecture_number);
+      const track = parseTrack(body.track);
+      const tags = parseTags(body.tags);
+      const year = parseYear(body.year);                    // ← جديد
       const file_path = safeString(body.file_path, 2000);
 
       if (!id) return jsonError('id مطلوب');
       if (!subject_id) return jsonError('اختر المادة');
       if (!title) return jsonError('عنوان الملزمة مطلوب');
+      if (!track) return jsonError('اختر نظري أو عملي');
       if (!file_path) return jsonError('رابط الملف مطلوب');
 
       const { error } = await supabaseAdmin
@@ -1598,6 +2394,9 @@ export async function POST(request: Request) {
           title,
           professor_name,
           lecture_number,
+          track,
+          tags,
+          year,                                              // ← جديد
           file_path,
         })
         .eq('id', id);
@@ -1609,6 +2408,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true });
     }
 
+    // ==================== delete ====================
     case 'delete': {
       const id = safeString(body.id, 100);
       if (!id) return jsonError('id مطلوب');
@@ -1621,6 +2421,83 @@ export async function POST(request: Request) {
       if (error) {
         console.error('lecture-notes delete error:', error.message);
         return jsonError('فشل حذف الملزمة', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // ==================== reports_list (جديد) ====================
+    case 'reports_list': {
+      const { data, error } = await supabaseAdmin
+        .from('lecture_note_reports')
+        .select(`
+          id,
+          lecture_note_id,
+          reason,
+          note,
+          created_at,
+          resolved_at,
+          resolved_action,
+          lecture_notes(
+            id,
+            title,
+            subject_id,
+            professor_name,
+            year,
+            file_path,
+            subjects(name)
+          )
+        `)
+        .is('resolved_at', null)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('reports_list error:', error.message);
+        return jsonError('فشل تحميل البلاغات', 500);
+      }
+      return NextResponse.json({ reports: data ?? [] });
+    }
+
+    // ==================== report_resolve (جديد) ====================
+    case 'report_resolve': {
+      const id = safeString(body.id, 100);
+      const resolved_action = body.resolved_action === 'deleted' ? 'deleted' : 'ignored';
+
+      if (!id) return jsonError('id مطلوب');
+
+      const { error } = await supabaseAdmin
+        .from('lecture_note_reports')
+        .update({
+          resolved_at: new Date().toISOString(),
+          resolved_action,
+        })
+        .eq('id', id);
+
+      if (error) {
+        console.error('report_resolve error:', error.message);
+        return jsonError('فشل معالجة البلاغ', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // ==================== reports_resolve_all_for_note (جديد) ====================
+    case 'reports_resolve_all_for_note': {
+      const lecture_note_id = safeString(body.lecture_note_id, 100);
+      const resolved_action = body.resolved_action === 'deleted' ? 'deleted' : 'ignored';
+
+      if (!lecture_note_id) return jsonError('lecture_note_id مطلوب');
+
+      const { error } = await supabaseAdmin
+        .from('lecture_note_reports')
+        .update({
+          resolved_at: new Date().toISOString(),
+          resolved_action,
+        })
+        .eq('lecture_note_id', lecture_note_id)
+        .is('resolved_at', null);
+
+      if (error) {
+        console.error('reports_resolve_all_for_note error:', error.message);
+        return jsonError('فشل معالجة البلاغات', 500);
       }
       return NextResponse.json({ success: true });
     }
@@ -2143,6 +3020,680 @@ export async function POST(request: Request) {
 }
 ```
 
+## app\api\dictionary\route.ts
+
+```
+// app/api/dictionary/route.ts
+import { NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { jsonError, safeString } from '@/lib/api-server';
+
+// ==================== Normalization ====================
+function normalizeTerm(term: string): string {
+  return term
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[^\w\u0600-\u06FF\s-]/g, '');
+}
+
+// ==================== Groq Prompt ====================
+function buildSystemPrompt(): string {
+  return `You are a medical terminology expert for second-year medical students at an Iraqi university. Students study in English but think and speak in Arabic.
+
+Your task: analyze a medical term and return ONLY a valid JSON object with this exact structure:
+
+{
+  "arabic_translation": "الترجمة العربية الدقيقة",
+  "meaning": "شرح مختصر بجملة واحدة بالعربية",
+  "root_breakdown": "تفكيك الكلمة (prefix + root + suffix) مع معنى كل جزء بالعربية",
+  "clinical_note": "ملاحظة سريرية مهمة بجملة واحدة — أو null إن لم تكن متأكداً",
+  "similar_terms": ["term1", "term2", "term3"]
+}
+
+STRICT RULES:
+1. Return ONLY the JSON object — no preamble, no markdown fences, no explanation.
+2. If the term is not a recognized medical term, return: {"error": "not_medical"}
+3. For clinical_note: if you are not 100% confident about the clinical fact, return null. Do NOT guess. Do NOT fabricate.
+4. Keep meaning and clinical_note short — one clear sentence each.
+5. similar_terms: 2-4 related terms that students often confuse with this one, or that are commonly studied alongside it. English terms only.
+6. root_breakdown: only if the term has Greek/Latin roots. Otherwise null.
+7. All Arabic text must be in Modern Standard Arabic (فصحى), clear for a 2nd-year student.`;
+}
+
+// ==================== Parse Groq Response ====================
+interface DictionaryResult {
+  arabic_translation: string;
+  meaning: string;
+  root_breakdown: string | null;
+  clinical_note: string | null;
+  similar_terms: string[];
+}
+
+function parseGroqResponse(raw: string): DictionaryResult | null {
+  try {
+    // تنظيف: إزالة أي markdown fences
+    let cleaned = raw.trim();
+    cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/i, '');
+    cleaned = cleaned.replace(/\s*```$/i, '');
+
+    const parsed = JSON.parse(cleaned);
+
+    if (parsed.error === 'not_medical') {
+      return null;
+    }
+
+    if (
+      typeof parsed.arabic_translation !== 'string' ||
+      typeof parsed.meaning !== 'string'
+    ) {
+      return null;
+    }
+
+    return {
+      arabic_translation: String(parsed.arabic_translation).slice(0, 300),
+      meaning: String(parsed.meaning).slice(0, 500),
+      root_breakdown:
+        typeof parsed.root_breakdown === 'string'
+          ? parsed.root_breakdown.slice(0, 500)
+          : null,
+      clinical_note:
+        typeof parsed.clinical_note === 'string'
+          ? parsed.clinical_note.slice(0, 500)
+          : null,
+      similar_terms: Array.isArray(parsed.similar_terms)
+        ? parsed.similar_terms
+            .filter((t: unknown): t is string => typeof t === 'string')
+            .map((t: string) => t.trim())
+            .filter((t: string) => t.length > 0 && t.length <= 60)
+            .slice(0, 4)
+        : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+// ==================== Route ====================
+export async function POST(request: Request) {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('الطلب غير صالح', 400);
+  }
+
+  const action = typeof body.action === 'string' ? body.action : 'lookup';
+
+  const supabaseAdmin = getSupabaseAdmin();
+
+  // ==================== popular (الأكثر بحثاً) ====================
+  if (action === 'popular') {
+    const { data, error } = await supabaseAdmin
+      .from('medical_terms_cache')
+      .select('term, arabic_translation, hit_count')
+      .order('hit_count', { ascending: false })
+      .limit(12);
+
+    if (error) {
+      console.error('dictionary popular error:', error.message);
+      return jsonError('فشل تحميل المصطلحات الشائعة', 500);
+    }
+    return NextResponse.json({ terms: data ?? [] });
+  }
+
+  // ==================== lookup (بحث) ====================
+  const term = safeString(body.term, 100);
+  if (!term || term.length < 2) {
+    return jsonError('أدخل مصطلحاً طبياً (حرفان على الأقل)');
+  }
+
+  const normalized = normalizeTerm(term);
+  if (!normalized) {
+    return jsonError('المصطلح غير صالح');
+  }
+
+  // 1. ابحث في الـcache
+  const { data: cached } = await supabaseAdmin
+    .from('medical_terms_cache')
+    .select('*')
+    .eq('term_normalized', normalized)
+    .maybeSingle();
+
+  if (cached) {
+    // زد العدّاد (fire and forget)
+    supabaseAdmin
+      .from('medical_terms_cache')
+      .update({ hit_count: (cached.hit_count ?? 0) + 1 })
+      .eq('id', cached.id)
+      .then(() => {});
+
+    return NextResponse.json({ result: cached, cached: true });
+  }
+
+  // 2. لو ما موجود — استخدم Groq
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    console.error('GROQ_API_KEY غير مُعد');
+    return jsonError('خدمة الذكاء الاصطناعي غير متوفرة', 500);
+  }
+
+  try {
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'openai/gpt-oss-120b',
+        messages: [
+          { role: 'system', content: buildSystemPrompt() },
+          { role: 'user', content: `Medical term: "${term}"` },
+        ],
+        temperature: 0.3,
+        max_tokens: 600,
+        response_format: { type: 'json_object' },
+      }),
+    });
+
+    if (!groqRes.ok) {
+      const errBody = await groqRes.text();
+      console.error('Groq error:', groqRes.status, errBody.slice(0, 500));
+      return jsonError('فشل الاتصال بخدمة الذكاء الاصطناعي', 502);
+    }
+
+    const data = (await groqRes.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) {
+      return jsonError('لم نصل رد من الذكاء الاصطناعي', 502);
+    }
+
+    const parsed = parseGroqResponse(content);
+    if (!parsed) {
+      return jsonError(
+        'لم نتعرف على هذا المصطلح. تأكد من كتابته بشكل صحيح.',
+        404
+      );
+    }
+
+    // 3. احفظ في الـcache
+    const { data: saved, error: saveError } = await supabaseAdmin
+      .from('medical_terms_cache')
+      .insert({
+        term: term.slice(0, 100),
+        term_normalized: normalized,
+        arabic_translation: parsed.arabic_translation,
+        meaning: parsed.meaning,
+        root_breakdown: parsed.root_breakdown,
+        clinical_note: parsed.clinical_note,
+        similar_terms: parsed.similar_terms,
+        hit_count: 1,
+      })
+      .select('*')
+      .single();
+
+    if (saveError) {
+      console.error('dictionary save error:', saveError.message);
+      // نرجع النتيجة حتى لو فشل الحفظ
+      return NextResponse.json({
+        result: {
+          term,
+          ...parsed,
+          hit_count: 1,
+        },
+        cached: false,
+      });
+    }
+
+    return NextResponse.json({ result: saved, cached: false });
+  } catch (err) {
+    console.error('dictionary error:', err);
+    return jsonError('فشل الاتصال بخدمة الذكاء الاصطناعي', 500);
+  }
+}
+```
+
+## app\api\feed\route.ts
+
+```
+// app/api/feed/route.ts
+import { NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { jsonError, safeString } from '@/lib/api-server';
+
+// ==================== Types ====================
+type FeedType = 'lecture_note' | 'channel' | 'subject' | 'channel_content';
+
+interface FeedItem {
+  id: string;
+  type: FeedType;
+  title: string;
+  context: string;
+  created_at: string;
+  link: string | null;
+}
+
+// ==================== Route ====================
+export async function POST(request: Request) {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('الطلب غير صالح', 400);
+  }
+
+  const stage = safeString(body.stage, 100);
+  if (!stage) return jsonError('المرحلة مطلوبة');
+
+  const supabaseAdmin = getSupabaseAdmin();
+  const items: FeedItem[] = [];
+
+  // ==================== 1. lecture_notes ====================
+  const { data: notes } = await supabaseAdmin
+    .from('lecture_notes')
+    .select('id, title, file_path, created_at, subjects!inner(name, stage)')
+    .eq('subjects.stage', stage)
+    .order('created_at', { ascending: false })
+    .limit(8);
+
+  if (notes) {
+    for (const n of notes as Array<{
+      id: string;
+      title: string;
+      file_path: string | null;
+      created_at: string;
+      subjects?: { name: string } | null;
+    }>) {
+      if (!n.created_at) continue;
+      items.push({
+        id: n.id,
+        type: 'lecture_note',
+        title: n.title,
+        context: n.subjects?.name ?? '',
+        created_at: n.created_at,
+        link: n.file_path ?? null,
+      });
+    }
+  }
+
+  // ==================== 2. channels ====================
+  const { data: channels } = await supabaseAdmin
+    .from('channels')
+    .select('id, name, description, telegram_link, created_at')
+    .eq('stage', stage)
+    .order('created_at', { ascending: false })
+    .limit(5);
+
+  if (channels) {
+    for (const c of channels as Array<{
+      id: string;
+      name: string;
+      description: string | null;
+      telegram_link: string | null;
+      created_at: string;
+    }>) {
+      if (!c.created_at) continue;
+      items.push({
+        id: c.id,
+        type: 'channel',
+        title: c.name,
+        context: c.description?.trim() || 'قناة جديدة',
+        created_at: c.created_at,
+        link: c.telegram_link ?? null,
+      });
+    }
+  }
+
+  // ==================== 3. subjects ====================
+  const { data: subjects } = await supabaseAdmin
+    .from('subjects')
+    .select('id, name, created_at')
+    .eq('stage', stage)
+    .order('created_at', { ascending: false })
+    .limit(3);
+
+  if (subjects) {
+    for (const s of subjects as Array<{
+      id: string;
+      name: string;
+      created_at: string | null;
+    }>) {
+      if (!s.created_at) continue;
+      items.push({
+        id: s.id,
+        type: 'subject',
+        title: s.name,
+        context: 'مادة جديدة',
+        created_at: s.created_at,
+        link: null,
+      });
+    }
+  }
+
+  // ==================== 4. channel_content ====================
+  const { data: content } = await supabaseAdmin
+    .from('channel_content')
+    .select('id, title, file_urls, created_at, channels!inner(name, stage)')
+    .eq('channels.stage', stage)
+    .order('created_at', { ascending: false })
+    .limit(5);
+
+  if (content) {
+    for (const c of content as Array<{
+      id: string;
+      title: string;
+      file_urls: unknown;
+      created_at: string;
+      channels?: { name: string } | null;
+    }>) {
+      if (!c.created_at) continue;
+      const files = Array.isArray(c.file_urls) ? c.file_urls : [];
+      const first = files[0] as { url?: unknown } | undefined;
+      const firstUrl = typeof first?.url === 'string' ? first.url : null;
+      items.push({
+        id: c.id,
+        type: 'channel_content',
+        title: c.title,
+        context: c.channels?.name ?? '',
+        created_at: c.created_at,
+        link: firstUrl,
+      });
+    }
+  }
+
+  // ==================== Merge & Sort ====================
+  items.sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+  const top = items.slice(0, 12);
+
+  return NextResponse.json({ items: top });
+}
+```
+
+## app\api\group-swap\route.ts
+
+```
+// app/api/group-swap/route.ts
+import { NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { jsonError, safeOptionalString, safeString } from '@/lib/api-server';
+
+const GROUPS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
+function parseGroup(v: unknown): string | null {
+  if (typeof v !== 'string') return null;
+  const upper = v.toUpperCase().trim();
+  return GROUPS.includes(upper) ? upper : null;
+}
+
+function normalizeUsername(u: string): string {
+  return u.trim().replace(/^@/, '').toLowerCase();
+}
+
+export async function POST(request: Request) {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('الطلب غير صالح', 400);
+  }
+
+  const action = typeof body.action === 'string' ? body.action : '';
+  const supabaseAdmin = getSupabaseAdmin();
+
+  switch (action) {
+    // ==================== list ====================
+    case 'list': {
+      const { data, error } = await supabaseAdmin
+        .from('group_swap_requests')
+        .select('id, student_name, telegram_username, current_group, target_group, notes, status, created_at')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('group-swap list error:', error.message);
+        return jsonError('فشل تحميل الطلبات', 500);
+      }
+      return NextResponse.json({ requests: data ?? [] });
+    }
+
+    // ==================== add ====================
+    case 'add': {
+      const student_name = safeString(body.student_name, 100);
+      const rawUsername = safeString(body.telegram_username, 100);
+      const telegram_username = normalizeUsername(rawUsername);
+      const current_group = parseGroup(body.current_group);
+      const target_group = parseGroup(body.target_group);
+      const notes = safeOptionalString(body.notes, 300);
+
+      if (!student_name) return jsonError('الاسم مطلوب');
+      if (!telegram_username) return jsonError('يوزر التليكرام مطلوب');
+      if (!current_group) return jsonError('اختر الكروب الحالي');
+      if (!target_group) return jsonError('اختر الكروب المطلوب');
+      if (current_group === target_group) {
+        return jsonError('الكروب الحالي والكروب المطلوب متطابقان');
+      }
+
+      // ✅ منع التكرار: نفس اليوزر عنده طلب مفتوح
+      const { data: existing } = await supabaseAdmin
+        .from('group_swap_requests')
+        .select('id')
+        .ilike('telegram_username', telegram_username)
+        .eq('status', 'pending')
+        .maybeSingle();
+
+      if (existing) {
+        return jsonError(
+          'لديك طلب مفتوح بالفعل بهذا اليوزر. يجب حذفه أولاً قبل إنشاء طلب جديد.'
+        );
+      }
+
+      const owner_secret = crypto.randomUUID();
+
+      const { data, error } = await supabaseAdmin
+        .from('group_swap_requests')
+        .insert({
+          student_name,
+          telegram_username,
+          current_group,
+          target_group,
+          notes,
+          owner_secret,
+        })
+        .select('id')
+        .single();
+
+      if (error) {
+        console.error('group-swap add error:', error.message);
+        return jsonError('فشل إضافة الطلب', 500);
+      }
+
+      return NextResponse.json({
+        success: true,
+        id: data.id,
+        owner_secret,
+      });
+    }
+
+    // ==================== delete ====================
+    case 'delete': {
+      const id = safeString(body.id, 100);
+      const owner_secret = safeString(body.owner_secret, 100);
+      const rawUsername = safeString(body.telegram_username, 100);
+      const telegram_username = rawUsername ? normalizeUsername(rawUsername) : '';
+
+      if (!id) return jsonError('id مطلوب');
+
+      const { data: existing, error: fetchError } = await supabaseAdmin
+        .from('group_swap_requests')
+        .select('owner_secret, telegram_username')
+        .eq('id', id)
+        .maybeSingle<{ owner_secret: string; telegram_username: string }>();
+
+      if (fetchError || !existing) {
+        return jsonError('الطلب غير موجود', 404);
+      }
+
+      // ✅ تحقق: إما owner_secret صحيح، أو telegram_username مطابق
+      const isValidSecret = !!owner_secret && existing.owner_secret === owner_secret;
+      const isValidUsername =
+        !!telegram_username &&
+        normalizeUsername(existing.telegram_username) === telegram_username;
+
+      if (!isValidSecret && !isValidUsername) {
+        return jsonError('غير مصرح بحذف هذا الطلب', 403);
+      }
+
+      const { error } = await supabaseAdmin
+        .from('group_swap_requests')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('group-swap delete error:', error.message);
+        return jsonError('فشل حذف الطلب', 500);
+      }
+
+      return NextResponse.json({ success: true });
+    }
+
+    default:
+      return jsonError('إجراء غير معروف');
+  }
+}
+```
+
+## app\api\reports\route.ts
+
+```
+// app/api/reports/route.ts
+import { NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { jsonError, safeOptionalString, safeString } from '@/lib/api-server';
+
+// ==================== Helpers ====================
+function parseReason(v: unknown): 'dead_link' | 'outdated' | null {
+  if (v === 'dead_link' || v === 'outdated') return v;
+  return null;
+}
+
+// hash خفيف للحد من البلاغات المكرّرة من نفس الجهاز
+function hashReporter(payload: string): string {
+  let hash = 0;
+  for (let i = 0; i < payload.length; i++) {
+    hash = (hash << 5) - hash + payload.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(36);
+}
+
+// ==================== Route ====================
+export async function POST(request: Request) {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('الطلب غير صالح', 400);
+  }
+
+  const action = typeof body.action === 'string' ? body.action : '';
+  const supabaseAdmin = getSupabaseAdmin();
+
+  switch (action) {
+    // ==================== create (public) ====================
+    case 'create': {
+      const lecture_note_id = safeString(body.lecture_note_id, 100);
+      const reason = parseReason(body.reason);
+      const note = safeOptionalString(body.note, 300);
+      const fingerprint = safeString(body.fingerprint, 200);
+
+      if (!lecture_note_id) return jsonError('لم يُحدد المصدر');
+      if (!reason) return jsonError('اختر سبباً صالحاً');
+
+      // تحقق من وجود الملزمة
+      const { data: noteExists } = await supabaseAdmin
+        .from('lecture_notes')
+        .select('id')
+        .eq('id', lecture_note_id)
+        .maybeSingle();
+
+      if (!noteExists) return jsonError('الملزمة غير موجودة', 404);
+
+      const reporter_hash = fingerprint ? hashReporter(fingerprint) : null;
+
+      // منع التكرار: نفس الجهاز + نفس الملزمة + نفس السبب (خلال 24 ساعة)
+      if (reporter_hash) {
+        const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { data: recent } = await supabaseAdmin
+          .from('lecture_note_reports')
+          .select('id')
+          .eq('lecture_note_id', lecture_note_id)
+          .eq('reason', reason)
+          .eq('reporter_hash', reporter_hash)
+          .gte('created_at', cutoff)
+          .maybeSingle();
+
+        if (recent) {
+          return NextResponse.json({ success: true, duplicate: true });
+        }
+      }
+
+      const { error } = await supabaseAdmin
+        .from('lecture_note_reports')
+        .insert({
+          lecture_note_id,
+          reason,
+          note,
+          reporter_hash,
+        });
+
+      if (error) {
+        console.error('report create error:', error.message);
+        return jsonError('فشل إرسال البلاغ', 500);
+      }
+
+      return NextResponse.json({ success: true, duplicate: false });
+    }
+
+    // ==================== counts (public) ====================
+    // يرجع عدد البلاغات لكل ملزمة (للاستخدام في الشارات)
+    case 'counts': {
+      const ids = Array.isArray(body.lecture_note_ids)
+        ? body.lecture_note_ids.filter((id): id is string => typeof id === 'string').slice(0, 200)
+        : [];
+
+      if (ids.length === 0) {
+        return NextResponse.json({ counts: {} });
+      }
+
+      const { data, error } = await supabaseAdmin
+        .from('lecture_note_report_counts')
+        .select('lecture_note_id, unresolved_count')
+        .in('lecture_note_id', ids);
+
+      if (error) {
+        console.error('report counts error:', error.message);
+        return jsonError('فشل تحميل البلاغات', 500);
+      }
+
+      const counts: Record<string, number> = {};
+      for (const row of data ?? []) {
+        counts[row.lecture_note_id] = row.unresolved_count;
+      }
+
+      return NextResponse.json({ counts });
+    }
+
+    default:
+      return jsonError('إجراء غير معروف');
+  }
+}
+```
+
 ## app\api\study-prompt\route.ts
 
 ```
@@ -2282,6 +3833,145 @@ Requested formats: ${formats.join('، ')}`;
 }
 ```
 
+## app\apple-icon.png
+
+```
+�PNG
+
+   IHDR   �   �   =�2  ~caBX  ~jumb   jumdc2pa  �  � 8�qc2pa   Xjumb   Gjumdc2ma  �  � 8�qurn:c2pa:c502b5dc-3dc4-409e-80ab-8386caf10c6f   �jumb   )jumdc2as  �  � 8�qc2pa.assertions    �jumb   Djumdcbor  �  � 8�qc2pa.ingredient.v3    c2sh�a0��mΏ.4���   lcbor�idc:formatiimage/pngjinstanceIDx,xmp:iid:28e91330-02ab-43db-9813-dc4fc4a58ae2lrelationshiphparentOf  �jumb   Ajumdcbor  �  � 8�qc2pa.actions.v2    c2sh�Z<K��	}W9 ��  �cbor�gactions��factionkc2pa.openedjparameters�kingredients��curlx-self#jumbf=c2pa.assertions/c2pa.ingredient.v3dhashX ����1������G8�!دV�����"~V�factionxcom.anthropic.claude.providedjparameters�xcom.anthropic.origin-confidencegunknownkdescriptionxfClaude provided this file at the request of a user and may have created or modified the file contents.msoftwareAgent�dnamefClauderallActionsIncluded�   �jumb   @jumdcbor  �  � 8�qc2pa.hash.data    c2shH1-xrЈ����Ry�   �cbor�calgfsha256cpadM             dhashX ��Q����'zL�DF�vv�nD�
+i�-/��dnamenjumbf manifestjexclusions��estart!flength�  >jumb   'jumdc2cl  �  � 8�qc2pa.claim.v2   cbor�calgfsha256isignaturexMself#jumbf=/c2pa/urn:c2pa:c502b5dc-3dc4-409e-80ab-8386caf10c6f/c2pa.signaturejinstanceIDx,xmp:iid:272e99b5-4291-47f0-947b-a39764af8bf5rcreated_assertions��curlx-self#jumbf=c2pa.assertions/c2pa.ingredient.v3dhashX ����1������G8�!دV�����"~V�curlx*self#jumbf=c2pa.assertions/c2pa.actions.v2dhashX ������Q��@D���_�:�Rty�curlx)self#jumbf=c2pa.assertions/c2pa.hash.datadhashX ��s ��:o�i[m9f:Uc/�&hw"��tclaim_generator_info�dnameoAnthropic Filesgversione1.0.0kspecVersione2.4.0  8jumb   (jumdc2cs  �  � 8�qc2pa.signature   cbor҄Y�&!Y
+0�0���@�
+��9о���B=gU 0
+*�H�=0I10U
+Anthropic, PBC1.0,U%Anthropic Content Credentials Root CA0260807184356Z280806194356Z0D10U
+Anthropic, PBC1)0'U Anthropic Claude Content Signing0Y0*�H�=*�H�=B �z
+k�P�4�B�9[D���ײ�J�з�+3wdw���<Et(�.:}}?�4U��}�J�7���X0V0U��0U%0
++��^0U�0 0U#0��Q��Nd[#���Ϛ>���\�0
+*�H�=g 0d01s�z��U��F�=���lNf���O@e�?<E���$���@��U�0p_\��a�bJ�/���P�(��2_��=�Z��,Ï:2��x�S�TQ�G	�cpadY�                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              �X@���a���L�������`d9fqqK�Ϙ�� ׍��~>-�_~�M,'��i#� �R���?�b8��}��  j(IDATx��}{�E���Tu��I2If����$�ٗ�]_h�?t�ou���꺻�!�E��\^���Mvݕ奌���?T\AWv7�� !�@d2�IfnwW�����;3y��ȜO&3�޾����:�=�:LȄLȄLȄLȄLȄLȄLȄLȄLȄLȄLȄLȄLȄ�g�2!2!2!2!2!��&��!#b������N����9��5��2�#c����<��c�}B�t&d����h� ��A��(?�r��w�v�H�L7�0�� �P��LP�}��)��Y���	}��N@���P�ex��Y5z�CB?��u �&{|��,g@0�	��m������t �Y�Þ �˞��%0C~p���m�;.Q�6���O���!��V���*����g�' �{��o����U�쿮*�/!�0�f>��`�&���z�S������{)��5N���
+��0�ޝ�a�Ԭqݣ�W�B[�fh~1=�d4�`(\i;4��� X�Y=�;4���{�{k׮͍��i�"�iO���2��e�f^�� `���JL�A�@��8�Q�¾#`��("0k0���xp��?4�͏�+��' �,�=�B+��R;6Q�!ě  �S� "bh�� ���1ܛ�b0,�1��V�I������v��V�=+�L zW���Y�3 �>���Hq�,�@,���DV$ �=5ؚ9x��5 J"��o��<���W�K`���G7�ϟ5�X}C�|�͏8��3U%_I$�f(0���+Hd�2�ß��L�fX�M 4sN$f� ��Ҕ<�h�0��}Uk06���<k�ߞF
+5M��g������Yox�J�ۉ���i��9GD� �`�$��0��..!�@L�i����:'@��l��N9����ד�<����0���!9�d����X����^���� �^C%��E[ɷ�0��j]K���\LzxNb�& 0��ɜ��r�(a��b�n��y��`�v���6r���R���>�W�_!��:�A	�zrl� d�m�m�3����p(/.Ȱ�Y3X`w� �[o�"�����!����?HPn�v�t>�]r壏~��t��eZ��d���5�ܬO� ���SȘa?������B��V�&�̚�L�yX}hpÿ�|:?�]�j�1��ԇk��ӕ�0�km>m��g4�L��I�O� �` ��"Hfr''�s@���0`6/�  g<�S��9NhA�8O�������O���`m�y������l�|��U����&�QZyX�͞���?v! >!��y
+� 
+�U"@ �eeG	��a�3�����{O���zb�&�H"h�GB�g�7�@ 5�Q���v����~6z<��GM�������e�T��	�N�2������~r;��8��ۄWZ����1�.��	���:'�0F|Ѷ�~hh̛cݺ0d���M_v ?��th���K�-���I:O��C���$��:MI�,` ��B
+\����c����3�Q�Y�'�{��9jk�P���f�2����X2�`�zk0~�V�>�Ow_��=ïk�Y�)-�A� � ΉY�����0Ma�������y*88���`��cj!%v F�!a6T��D�D���Dk����O�^���Be@�U��u�.�N���q�j� |����S���Dl|�����/���F!�(\t��� 8�ZF�� ��ǹ���m��� C�mLx�
+1  �7�G�7����GX��|���l��)������\Y=�S�r��� �Ӥt��pe"A`h�Lf�|(��S�g��>g,����=����v����O��	�  �ФAq̬�R/��M7L�r��e�����C����lw=�=-��*�i�ް�H\I"z��#9 A- &\�Ab�'
+x�Ї�M%����@[ �[�қVC20�C\�~�����H*"�D���h.Ǧ[v�c`u�������C	�-*�$��n�N�&	��P�%Ӛh �a!�V)�Ȝ�i���Єe��=c�tc�y�7O\��6IL�j���G����>�B�dpP,�V�MB,|��a\���T�ɡX�UR��4��c�sǭΦ�:��S��6:�I	�*8�F]�!��V
+xi�6����c��ts12-��!S���2؀��v� ��~����X����zʹY�P �M�j�־=��߸r(6�ij����f�>�P4l���TH�Ea����n��ҋB3�z2���k�2M}�-�ſ*(`
+\�({D��8�[lGk02X%Bku�f���}P{YZ����we�i[ݬ��N���f\A��13�`�T�NX�0D�3��z(��F�&Xk�N��)%��s�|{�LHnȍ7���v�0 �Zk{rff(�8a�7�Ĳ�n��|{��{2r�:��]H��dNm)+\&���u�� ݣ���-(�l4x�iB���aWp��#1��ʎ��㙋�q�=�Q�"y	f&�.�Q�E&$_d6��P`@���s�Z������'�p����R�2wq�	�L?��9��
+���PF�`� ��>��pNr�-�@��blY[��&.�G�=".�-�֬<�����K�f��`f�� �����P�l��C���$����ׄm�����I0�6���|�C�����~�>CB�d�3b��D&��|�YPɳ@d��E�
+�0�
+��5ù%<�?
+�W��*�1%C�� ���AB�a�Ş~�A1ش;�W�b�uW�(! �"�����up�|��!���3�CЭmOC�5d������\*�������D�
+~�n�f��ɨ/�N�p�Q���1�t{F@P|/t�q�x�o%i�YS.���K�gG}v ���~耠���\K�I�:��f>wh�M?��l�>��[�! ��ǐ�+O�u��A�yr6t�1�X����e#�k��=�C؊�HA<�@�S�@�[�Yv���Ixf!D��@}�uͲ�+{V
+��$%#�����g�};g��G�t���n��[� ��[�0tM �.;�����'m� ��f
+�`�V��TC~��cF��ف�h9���wQh�2-	�v����kXJZ�D,���&@9�hlnN�ڞ���l�E����)�$A�`�ߎ�Ȕ*���!#�%;k���}6t=g��x�8n}[{��Jd���(�EA-�������&��
+']�+h���ȡ�϶
+Cs���.$or�].Gq�
+n a�٣�I�4 `Y�u�=M"���c��w����}��;�r0=7��1 �j_�����ڷ?�/ � `�QT6��+ǛE�
+A�� ��d=4�
+bRD�<KG�AҢ:���:t�ўaSy�!Z����6����|��u��.[*�]?���\ &�Ulm��!*�%����l�u��5����3��1~Z�&�>B_O�9���'�S�2��`�!�Oi�$Hx�ʭ��`��!:A W9��Yy=�����7��k2s��j.ZMp�c=Łs��9 ��s8�T����؉�D	�U�,��/��,?�������;�f �c�	ݱ֯7_^����m=��.zv�B�ף�*O?�v��O��u�� "�^#;�͐��r�����9��M�'�j��������Waʛ��O�	4}28K�<P������2��w�T������wv&p�zTO�.ǐB�y��V`(����K�"K�ȷ��^�ı�ס!�Rr��P�6�r�٧M�����R@ǌ<q���[�|�ŽGn�+�!� �6%则X�srh{�,�O!f:�m/>jx�>B�`�PV2#H�,�`�9���V+��qF�Zӎ�QI�%,��]G�Wx�p��� E*j��6���捡ї8�`ﱲ���=0?�ݽT��1���D,,}2=�w�y�C�����f�*ĩ04��m�1sFe������	GBf�#�Eo��3�B�ԁ�g��p:�v/����,��&p�K�@���1���QNDa�Hy;�D�׼�����A����wf�X�u�z���'�CM�K�I�R�,%�Ə�`��I�5���e.�S���fP�4��|mmH��
+����dw'��ⳓ������0[��)B�$�w9�]NE�g�J�\�S�z�6���4 `���1a;l�3[0	� 6�X�i���3�C�r�"��|��7�[~
+)�`��Yi�\Ov0F��_`��si��#��dA�<�o���թBt̑��3H�t��f�����Q���N;�n"xY��(����G�
+ʂV���͞���+��q�.Gm;l���QB,г�o>�y��q�o=�F�3��0y���ڣ��:�_�u��<#RY�%/��f�*3�}��NES�� �n�n�����L!���*���L)��#:���"�fx �8,wP��+9���v����0��8��.�J��\������`e.�m�`���(�Y�My;>�z]`��<z��Q�{F�`���Ҵ�f��A�ρ�]�y
+֊���<b��M��H�?�iR�ʡ�p��pm~
+���)��Iȳ,�
+jΧ��	G� �.th�IPn�w#.�S����ϰ����-
+�������6d.a����V�.q��ٺ ��Z�HHP�����1��E{H7�P(�p���p��f�Nxk''�g��?b0�ҩ�l�-�O_�`�S�yA��ͻ5�w�?�"t� ft!yN7�{3BZ) ����  �Z׍@ƣmDQoÙ]v�=Cٱ�4�kuȫ�{@�֩h�����<�)R1a�5.���?p�7oF��`.j �7��!#�r,��g]6u�^ŉ���H�"Gp��G�,1E�,�����>�/{��^;�Z�-�4*t"hR�2�� $H3�ѝLb14_/9�P �<���L?v��9��Pp��v`���[߸|���£�:�<s/�/0�D%fҟ���b��sQ���]R��v*����5��}j1�:�q}�i�j�&���\V͔���ƧM�� -Tm�>5�?ð�U=�4�Ӑ0�(%���$�r+���ft� �: �u J�)�#����$�oC����X��n|�Ǣ��9���t)=�
+�ޝ� 1�$f����㘷8Ɣ�͡ժ��أ�0|��ű�%��0M��I�f��"��e�Bp�LHM�\�XDx��d{6*?b���^��_�wf��tSs��4��!Ⱥ�C����AB+=�=Q�@�*GOG��V ���W���N�E�U��p4��ɂ6�E'p����.��bxM��rH_�.7w  )Y���{�P�%�r�Fw7{0��� ��R��)%�ܢh� 0m�>�k�c�:MM�
+AV�Z��䞔9�Q|<�蹈Z����ey����BS��D��H1����ՄI�Hm�sș�F��:�иn��C�Jt�R�F;�;���s��\x�]i<P���\����s@��4i&2�G�A,$�7p�5_��%�e4���%�j�������лMc�
+w|M 7h���'��G���L W�*# 2�Z�B���>4*_�R��\�Y��`���i;��
+Z��xXz�(���a,{�4�ߖ~��I&B�5�刎;$D�#2o�2%h�6s��-miYP�wn��8q��{D.L}n�"�d6�X��[|�5@ H�"�;���:,\R�p�Bww�M,Z�<�d�Q��S�е�=��ɴ���� q;�<����%�B)T���t�`*lp�չ�\�=��(Zr҃A�DЩ&:b�9�i��f��?�oP��V����#����S��s�T�$���(���Q��u�n�x#/�5}t��n�Oo����XF�bR�������ن����3gJ4yۅ/��\ ��{��˷z d���N3�� 2��uٔS^��'x�m��g	z8MIrD�
+���
+��8(���Ӧ�9x��ɢY���RX��f�&�|%�!�i�R�	q�$�4X�"	�D?F~� t3�S:�GuBL���hF
+�d�����c ̊�̽� �a����x6�U���aV�x����1H>Lm�­w}�&���6�ыb�n�q�9Y[��'d�:�G�J��5 �q=c��ˣ�f��1]'1b`m>u�Yo�,~JR��:M�X�V,�,	��K#WU�Kk0�:$��AT ��S��vE3��;�A�R��qR�?9�p(���a䛷�F�$�f�)����9LPW�Ȁ�H�d�������?6G�(z��M�~�A�b�
+� �� pb�;'QI4��F���w����w�� ��}挧�a��f�l���:��!�N�	-���q@]z2C�����G@�1oq4m�/t.A�u���)�h�F�od�c���2�;
+��{��v7e��l�Q^6��)֒_�}w�щ�i' �$�4�H��W�!���܏�z"81_�#ș���M��j]�p��p+̹ w���)�+,�wQLvt�0�E���E�l�*i��-��6�$��5�m�6p���c��
+��3��+ �J��%�ti3Y����⫘х,�, �5�+��J/
+�����G��h��'�$�癆V H�H xo	��8����Y�ʃ�u�=3�:i����Tp��,����iV�h�##�gw���&Jb�'�"��&��D�� �fphgь.�����yF��br�]�%j�����0HS2������Aʎ>YP��"�R07	�hR�R�(��^?p�u���<��L3f�$ +�6�������f�U'�A@k���g˖]Q��*��N�ͧ��?��u�d
+v���T��)�n��Ž�?!,!�2�Go޲��S������	@0X�p����� ��a��M���!�IP�в7��L%n{o{>*��g&��P������ 49f�-��L(\,(�vV8�3HS��7T�=�'��܁y�c � . � �uj4����$��6T-g֒�6V�C/'z ]'��W��N9�d0}��#�UY|%O�t
+Z��~.�t�2ÜO�'�P߳�,8�F��Jp���'W&�3# �����y�L���،?A�z�
+(N��o�V�f)�#���Mi�  �[�0��L�Sg0mIMu��3�LU��
+�f�,e�e�,���R0c���u������I�u�@�Uoz|��G0oq����)�Z%tuI4��'<�&/�r���Rf]� �k#,4c�y�]{����C�5�H 
+�#"1U�f
+���ngU�� c����p�`
+�T�i�f�Ɂ�jX8Od�����&�&�c�Ԅ0-am�{� BH��@2�ڱ�G���nf�@{��d�l�H��ބ����� �A�]S�<
+����X�XÏ�fʀ���jA�h%k��s��R�*��L� �B�GJ��s�N�pq=g$"K%����~���2�qr_�j z#,]:2�_�����[���H!����A�I�������F�h������ a���8#�͸�E�A�#
+wX�A�r.1� �A5Q9�XT��OX4���%�`�o�S�0�'�`)����sIV$�{���	��D���O�����m�A"6�ԝ�1��	y��`[!��2k�g!̠'���@׶HH��C��j�qhr(��/��s��4��1����{�?�P��= �p̦��Ȥe_����Z�Ӑ�Ee�;#��
+][���w7P:8��^K7֮U�Ο�Mu��51y�l^��HN�8���<vM���yMn?/؅�8\�#Ŵ3���8��(f��T�s�1C�JG�L�p!�6ˏ P�1�F3E��� h��a��?��0 �y��	G��Yr�ah&T�io��5��"Qܼ�f��!.d�����ޖJ;��)H���i�s��ĪPm��	�)�J��_��E�o0�\ڬ\�rA3�7h!�B��"��]$$\>��K��hFYD�K@7�l����PoQ�Vvq_䡱也�:��T���N� $	�3ER=ɻ^����f!��#�+0|+�@�H���%h�6{(���'�A=�(X円D�|�S@���!fv�c	(s>=<�����r���8�����H���ykt����q<��H�y�)X� �F�-�	�cέQ��q��qۯ��1.�j��|ci3��ko���&L�<˴��`@k���X`�T�3�{�E����o^�z]C����!�D3|a�Z�9G���+4���\h hf(�QY0��l+m�L��Ԣ�qB#ty�J3����ʕ7XєI�6#ߺ,5�ʀ:�[w�G2 ���i��s
+Ĕ:W���<B���BOj7�5X)�<k�!gX1Xi�<�"�o�g������ڎ���K�=
+�Q��X,{ ��H�,���$�Ww[0wt�-`�X�\��(�.���J�Z��NZ�L$]���8��$cS	c�Ӄ,��Ў�ReܲI��'�ٵ�@�OY�&h��ʅv.��W6 ����Jn���v�O��&%�s��H*q�p:��|��c~V�	����2�'�"�HFz� v��P��Ѡ͌!���m∩�M�����?�10}����ѧ��6e��,��aThe�T��7�P�D3塛�;����"[�L`�/�r!�D�z����_]��-��㳞��K�Ӷ�u]|�:���Y� �� \�`��t����MW�@�;��؇Ha��n1 ����7�u��eLv�v�3���ف�ԓ�-�����w�b��w!9��ϰ���r&���G�fh�Ɋ���(�Ȁ�����h�D�s��a��<�ڼ�ǂw�F�'t����&�?��yxp'�a�������+��!�]��6���@J!j���ď<ɢ=*&92�P����)9Q[���q�u�w��d*���)�/9���핗r���Hb]Ќ�
+fYf��T�/�C�ɱK@�b
+�ר�E��[����I�9�*�d8˅�|U�@6�K��gxyv���<a�R@��7���j�M�������8g��(ǂ��$Ĥ6P[�3 DVM�٣[�X��mm�u#�� �h��YE�| rR;��<��o�n���:26�����a�af"�U :&�u�Ba�`�|`��hOX�O��I�����~�_(�1�����:\��֑|>�#)�"o��kM�N�
+�����U�1���hl�O`�д��|�����]d"��'B�m��=��@eE����S��:*f>����@bp,
+�X�#ï{G@�%qj����!���i^��AHN�!ꞎ���C�E�(N0�ˇ �v��v����poo�֗� �VA/��ض^��Es��2�o�5�Ƣ�ʥ_=##q$�=�n�z���j�p>B�Q� f���F�o.��˨�i/�f=�2�Q��¼y�����̒/ GD""B�c8�D��3X��v�b�x�Y ���%LU��,�1�87�+��?N��'���Z��JyƤ��vy�z&
+)"�ڴ�m$lD�qGC�UP�� 1���	�Co@~�f�Jb����rc�"�Ayn<��F-ہ��.:@����1�z�9G������TJ`޲�P�J4��E+�>�{L|T^����x%�fG��8xx,��5 ��l4�i���죗���|�Ƽ���}7|���m"і0$�II��x�<��� ���>[����Za`�8(r�<�b�`k�1L�)Qy刻��!�o��y�����蚊褣Qy���Yf�l� �#���D&ܭ�
+��V��nE�@gק8�"��Z�����'n}Y�y�$�����[���!4���+��$�'�*�V�f8�B��d�q�N��3��P�r���y:��޿5��*��~�j-��[�q�5pHQ1#'�Z�N�ּ7�L�L�C��~�Ha��-����`�ɓ=�c� �3��$����: lb�9�s�#O� �m0B�����A��AP=8��_�"���Y����E��Y{�X�LdGԄ��HD����{�;�K��Qyo}+a��.���9I.F�g�;���E)� ��a�H�J*"J�hh����r`oW��{װ�P�Ւ��o<2p�uK �U ~E'���5��X��rx�@J Z��Q����r.-�vy�B��%CH�_��
+�@�}�w��\!~�c�A�-Kb����#��(��+-9�Lvn)M���m��O�d1���y�ctw3�hK@�s2yъ�Qi��Y
+!��W,�K�4�wR�`��/�,�i����F�A��q�G���z��+�~�Ǖ��!���q�@O��K�f����j�R]��3���/
+��c(�7����ji>���ݝ�}[D�O��Ć+����"R
+4��g���xKK'.�u��׾���BI�Y?�#�|��Ĕ����o�F#��x#'�eHӔ�$S@ִ"��|ο*�M_�T<T{�q�ʾi�z��7���W~w��#G��<���ȶ���1=��&�����`!�e�#�}�����`aH��Zo�x�Ύ�IbW��O�h1a�.�z�H*ȷl7E��ZC�teA�1x��w��R���E�,�b?lP֖�A첨H&$��r�_ߊ��G���Q��q�eG0�ϲIFq&��,_vgw��}���H*9�ĶU�l�V\<ò��g�B��6 �����[�V�~s�ӏ�s��2MQF����i�5�.(-m��c��ڍN�N�9��#�%۪e���"о>��#G0��I����)���82
+m���b�$d}��O����Ϋ�ی����z�u�o�D1�#9ŷ L;at�D��u�>�-\���g0/�E�KL/��3�o���bw]��$�|�i�P�0������x��̘�nS�ǜn��� ���x����E:p�5RǤ�h�"�E̔�2��
+* �5�Mw.��?8�`Ai�}[V%{����y=���T�7��Tc�#� % �_�"r�j�h�W�cinA�yZ����"�a��x��� ��>B�\���H-�\��\GJy.{���K�$��E���N����k�3% H��ꉗ�ٵG��>+�6�  X�r�\(�_#P�%�����~�lN*�f���$&H(k�6e��eza^�«aK���xtj��m,�!��7��#�,�8��
+����0�4��@"��|��D�mv�N�=�k={_��/��;���~t���h�J��N��Ej�˦��Щ�(P�܆��E@��ߎ;"T�E�������{�*Nv�q�����_���#�s�Fc�/�`��tw3�B�ZO0{Ie��[���/g�_b� d�,����X1�(՜`�4�W�{v�w��)�w`xb�uq
+V{���d����+)�@#w=hV��`��k�V�㩔U�S�Q`�R��`��4������b*r�d)�]x��^��xY�(��!&�ΡI�k&z�����h���̿�:F���Z���K%P�Q�8�Ka���S�<~����p���&��DT�QGڸ�4��q�l#ޏ�rF\��N��o�M��ܱ��}�������+`ټ�aju�ͫf���v�������[PqN?s����U�U��>u2ף����� @�8R�o�r߼f@�V���{v>��ɚ�����A�� ���H	!�����I_��/k��5.1�R, P�j 8�K�M�T��}�m�_F����A2bm3��UXR!@�+�m� �K�a*�?���+~�"Gi�bZf�R0��v��;L�(ȼ�H��?�HD�b��l G5��u�o\k��/�/$���;��]�s��
+y�{��R����x�ϰ��(�R[k�(A#ϛ���Jۏ�g��1 �E)���<S�Z�Ǟ2�1ܥ�pIe�����]�Q�\Y�)�Kȶ�YJ����~���l�}����\� 
+���@`�'�ƭ��� F�Џ?e�����_�:kP0{������ ˟��f B�BC��j!��"��h�s��e���
+%�,y䗯:^s���X�n����M�qA�*c�+,�gE{��e�˯DcQ���d��*\G�w)�Y#0{ae஫~\9f��9�b�ǈ��V�Q6��֧0�H�Q���xBmā�D�5�'�u��\:` x�l�D�jP��F���{�M�Uξ���("o6�_
+[��S@A��(�z��S���U��r}�G�M�"��,C�3��գ�o㊄3r �X� �F�L���$?�.���ʅ��.mbk�O"��@Lw�.�'�s����)m/d�jP�D�L9C��#�@ȥͰ���.��a�����?�RETv� ��OL�W���m�ٽ���QWɎ#�y7��u�1�͍º"��-Գ�I���u�"̠V͏�Э���ߺ�T��Z�\�Z��6�v��^p��~Kh,��3/{)l�9M�9��f���Y纒�=�2�q���ʥM4)\v�Z0�z����~l��o��$y����03)ì������<,SJ�w�0SV������&�`����`�������>#Fn�D{�.z5���4x�l��/�\4�4��v��h)��	��N�|F�E�w(�)�� �ƺ�����,?4�le��Yf�e���b��̚L4I�o�+{��NE�1�M3	�f�(â�ۆ�?��ZO���6����B$ ��U�QiSK��cl�[��:t����';��|4/ ��wm�� ���"�,C�㻡�; !]�����䘞02��-�?����ٔNj�59���k�M�=�?�` ����A��4���n�9@�l$�̢8X��FCL%AlTw�3γq�Ƽ��ɥ_]ʫ�ɱ���l�JF�D���QИ����yx���I�F�"�f"�ج�f3�:p�����,�j�Υ;lQ���h}ƍȊ����
+���G����j�������x-5M�2�F� &W+���{v���V��ĵ�C�����06�d�wך�+{Xi4g�� ��0meҬ�p`�J��.*f�*$��4e��yR�r|�WoI.�|��2.�@U�Z%�q��ǘ�8��F}|�"��D"����Ja��gĳ�f�{�9��
+9����Ii+8���v�]��v9�p��pV�/����7�p�*?!�\��mW�x;��T~��O��8�
+O@��~"�+�Y����^F��\�G����V��Gj��זAx�DZ�#�������gⲕ��*��z�L�$� 8�_��~�Z-��㫟�v�7ϡ$�+�HTb����5�JMv 3�G��۾� �"���`q4��i�^�t-�Ў ܁gDm��<;>ZĻ��v!J�>q�QIg �pa������ʓ��k
+1�([
+�طH�̙G��� �
+��5N��7	"�8K3@w!�|^u�񥗡�����T ۉ���1~�j-����wtΘ��3�@�`ʊg�T�m
+�ż:r��BI��^��W0��x1���O����
+�����0 V�D���r�jh�C���U���)���UȎ��{�~5�{@7���u1U&7S�>H2�`���+)�)NCÄ�)NGR&�:�o�KV^
+L���ߎ�2b+�Ԋ)���|^H��<z����o��Y�T^AwB�{[�( i5�%��. Xi1�0�.2,P�g��v��Zd��pʒ��a`Z�59�hc�'���:�Z/���%%�l{�WjX�&ڥ�Gs皳�9�8�Zzw�d�L����~�T��	�IQ�� �HjGp".��BDPyƚ%��Gw$���.�j��ʖ�ƆN���l��W�i'�RE�E�H���S9�H�-.��r�o�f�:��&�y<Zg�"W�)q����@D�X�!0�c+�z�]tNI�)  �$�k�����梮�8�g*�?v���uG=�b��7\R�����y ��S9��{rR�m��٧λJ]��W̬��	�FC�r1c<Z`K!`ΚM�bnɛ�E+��z��f��(ŦM�f�Q����c���Sϛ4<t������,�6q� 	Z脩!��V��0����1�B����<�:��i������"pSK�QC$�����羪����Tp�����DS���&��@��:(
+�3��`Q��MX�hq�"{���u�3���5O�����I��1k����L�EB����� ��1+�A�L%�[�����Ko��ՙw�U{G{B��Rش��Z���\s����q�a-�&|�֝����x���0�5tT�(�	v���}�X#�V3:C���ኊ�-Y�$*1�S�W^��{ݧ�n��X���wo��Z�(w3A�TT��Pn��m�(Gu_r�p6.���Ї��������͘��� P�<�|��+IcEIAkE�ٕ�u�����%��:�BB
+�<M����_C��򆤾���K��4�lX` ���J5C�� k0�w헸��Zҷ���<����
+'k�9~�4T0��dTfZ��=[��=8�P �w1SS�!������\}f/1��p�ڳi����F
+.���M�<��+#���ص����vm��Ep��_] ��c�Y�뉪��'/��㯔i�I�s�`(�!���b��9�&#�<��jy�,Z~�GQ�G`��&�2f�Ow}f;��+C뮺o�}ߪi)��"~"JL����V��vӮEdi��{h'�m�/���\x��*H� @�H�=Ԟ�z۽מ�����Tpl��G)��3�}}b`0�?m���	��S@���Dz��=�A��{��i�X!N��X�~C�@��s/I��3E��@RI,���f���x�~f��c@B�Ț)k=M�O���>��M^v�\4#(ז-��TkɎ�~�#z)I�� !�H�X�-d%a�9�]^=��h�����C�����
+$"q���G�4��o��%l�M�X�Eq���82���d���rIL"��zF�e5*n��(���2
+޳ic��o.���ԍ�o��Q�����ίߐ��?t��N^A����� �qSL��o����ԏ$�����(:c����S_^���34)��$6m�Q���~��PX��2r�u����t%z/�x(��VN����;���Wk�K'��+�y��Y�M�1��h�!��D�r������/�n�ܜ��VՀ-���~1f-��֕��K��ՅKc/��/2F���n�%X1\��5��,B�>�n�d4��R�FC�|9w��ۦb����}���Z=Yw���?�/�4�/4���'`H��� B��@�1f2B�e�u'�U�,.���EW��ҥM����� @�f���[K����I�/�R~�lj���r%�Afq�f��;�4k�}C�~^��nk₉�B�h�9���)S��s�ͨ�̟ow��������X}N���U�q	s�
+�`�g�yV� 
+o�cK�B*��Q���j0�=��e��;�WN���Ob���݌�Ζs�)t?�X���}�_wo�|�I�)�Bܖ�-va����>��Z[	"��ɿR?�^�'<܆�B�_�����j,\Ri�����w���X��Y�G���� ��O��� 4kVeC�l��&�����4�(�A�f$������׭~����n%wٓ9/O��/�y�c���72p��孌�T�u����9&�Ʀ�����\�>���~�}6
+U����}˗p�1V�ΰ}{�u�ʨ�2��f�ףM����k�;ՋD���E#(�C+��l�íP�<
+�mI�aSE��+�Ţ�c���+�FcQ����NM�c����d���o��������4$�5���R\����6�ˍ]
+�f�6�Ճ�@$4 @rR?�����|/8'¼�񨭉��2 ��]�������(�O����O�D�w��\�#ı&�
+� �������*����Wt�a�sR4�d�"�$�32���?z���?�����V��~C���Ƣ���Uq�q�zu���#4�c#m��Tk)kdwq.|fC[1S�dA�ӑ�A�8��'/��kS1+�6Q�D�}4J�9n]�%w_�m���?�&����$1�Mh���Si{b��oNIĬM�~�m�	SD���$�d�s^3p�uf��xU��Y`�h��ri3����F*�����D�r�j2� kM�A1qn3L�[��,%1��d+�LZ.�:"F5�`˾kh�Ak���lA64��is���� �Vg�eS9d]���������;OGּ��(�(�A����Ek킮�c�k""	�欕�q�#��C^t��EcQ��y>o��s�0���%����x�9��3If��Hn���Vv]V��}���/7� R`�$�R��;������>�5k0�V�-�#�E��W̒���My��̓9K�ͽtu�k<��x:�qXD&[<�W�R8�8�O��w܋��QhT�(r�c O��N�g��嵽?�4wџb���T�Y3Z[�A�~C�K?�_�䭢��&�}�T*f�f_ ��_�������Uw��di��|���-t�_�'.=�E)0���f<os�j=������o]D���@��!+����
+��g� "�׼�T '�"��/�d����	f/�`hyF(՚Ă5�Ei�����TE�,N�)��I�=�c`�W��5�o�`�{ȻG�71��;�*'B���L;>f8��ֺ�1�4���|j������6ǚ5���1.�ūb�Y��SO_*�ӯ"�%E2"�v�I`��J�;[��$�E�u�9*����i��O�|z����j���3�j-���!_�])!��HH)�ܒg;�Ld��Eі@��E�����t�܎�A��I� <���E�4L�*/��2�n��L�͔E�+I
+�S��)n7�Jg��CLO�8�nN�Мw#�o�Z��g��S��
+.,l�=	"	�gкC���)�y�����ڵ9zz�(��F�\������e�?Wd�k��n$IB��� ����*k�*�`A���&@�h�ߦK��m\��S�X���_������K�Ւ��}���ޫ?$:��Б�6C�Hb�8�I�4rI�"�8�ݫH|�O;��O���5A�N�᮲;�Z%�VM��\ڔ��_=Gw(}����9E�W��� ���q+Z���n%��WP�F�� �d��k{
+�p@D�[�l{�利t��.X%�w$D����9t ACk��BD�b��w�yۊ��%O�|�v��E�{�>(��x�*R�s�W��u�"�8��tdY��#����^t^���|��`� �T�@��O�^q��� �XQ�M[ը(�\(,�/Q������u��;N����rh<�u86�k�d�cD�?�&�3>�۷޺r���ڡ,�����ű���k��(M�,���]�(O�36�f��N�}�na��/���0��~��M��si7��n%��n@��	i\��~���#ψTLZ|��e�_N���t�k~ �� ��:�ƍ@�����/��ė\q���\I^Nͦf����� `z]i.M��*�4G2���X�������/H�.�C����
+�ovE����Ph_c�޾��[ ��﬷MypkG�W @wT��w�߆�E�w�0�܎�9:6�se6�d�>g$��k՜ėu,_������b�6+���;ʹ{5�_��mO�E�ؐ�_��Sx6c�ψ�c m4�$�+c���L�����A �n�$䟢�o�v��V�uv,���`����%?f_�^�%+�lٹ���f҇�@�ɜ53�$l�MHv��u�__¸�$k��j�8~]��ˣ���\���˱rQ�����q)7��~������^ �[����'�gƄy�D��$B��X�Ƹ��[��MV.mb��(��f�>	�N4G�,(�Z���=g���D��f&br�"�zv���эR�~�|УJ<�@��AF�ŕrpdOt '���m#B�q5�<Z?O	w�t��ɒy����������к���u0`y͌bZ��clF�ūb��3�-�,�h��?Oq�d)CQ�R�0��ω%��0�;�4c�*I>M�s�Z^����7�,��55*������0G`ޜ�����`�Y�����bxv���$4�6�.���<�TQ��&38(v�C���kOְ���ڸ�JË��ΕWx4��W��T��O�@OP��w(����`�&�7�<J�ߘM))��0"|D�]�@�GR��,��y�o�����ua��kֈ1���^B�ޖ}j�:�k�+�H�!r��$&�k����@q�}�!�A!OS$ы���.���f��u�U�g�>�Gd�����`�����i�1�L躱(�\r�_��~�d��[��Z6�
+���0 �ѵ�Ƒ�].��kv#H�_���@r�����=�G��@C�� i���W��l4�y�.#D�y��`�����|��ߌ�ks����PL8G����3E��s/��L_A�ZKq[L̹�Oh7�	�Y�{�uq�S�D�BDȳ�<�>M]�����+�FϢ�W�ւ�L����B��d~�2A��K�m�/� /�ru�ϱ��$ ���^��2�e@����h]�ǭ'��h���"�>r�|�>�m(GQ��P
+y;�G@�FuQ������D"H�i�|��2�4�����ȟ+���S��G�{�i���&6l>|����jy���z����S���W�,{?=�8I ����k?�9����s�D0��@*�8�/Р�ɋW~�_z�R��)B��e�n��>&��{�i�����(m���wf����*���s�"�k
+mj9�;Q9m?� ���c���Mv������ۈD��M� �E&/ �5�/��x�)t2j0 �����.�H���^C�� g_X�^�֑ ��*M60|�������_fX�:�]�#_�a����˰dIg�����_��T�]$�1��`��B���Y�׀ iM~+`fC�����9��:��G�;/�K}�I�3���١ �[�6$��$f�Ph4FfT�+�U_H��j&�#I�A�s��٣�����A��P,����4to/c��؝o��鴯��~˼��2�� ��F��2�������@ �|�ןˈV���م +����'5H'�u���bP&�]$���s�}��8���ܾb��"4�v��\y.G�����p�D��Qɥ|��O
+$L�s�b�
+�A"!f�o�9�����Oq�u,��~����e`r���ie�5���<N�9Ir�y|�Ӏ�|����팁��E�g��Hޕ��w���� ]4�Fh,J��v��h��̉]���5B
+���TBvF)re���0�?KE��;9���$��8�B? ���<��oL_x�,Dd�Lv�[���ݥ���&���d|��o��g ��;l򅷔r�H�4Yv���"?�H��:1g,�tZ	d����ch���6���N�8�%�t��|c���inkn�?��a-^O���"Q�R����/���x
+����c�.V��O݇�5�" ��?�7�5>����Z����̪K���� i�J	�l5`�7��O�<#�X��AJXC��f���u8��|	��'���?2�D/7M�[S%�;�e,�K�#�� ķ(�X6������$6t
+�ܯKK ���X��o9ƥH��Q$�I�6Ӻ
+A�A��3��pYV $�D@g�\?��G@�)1b[�	V'2��8B�&WB
+ᙼ�UK07�p6��hR��6��P�����)��*%�˨�h�̪K!�<2�$)���+M,�Xe/�����P�3,�ӑ�e��B��C�OK �V��ǯ�R�f��4�?����@	�X�6�n�!�X�I�����7 �*yn��gWA�r��gX�*ƪU�^��_��C��T}��D��"rgp�[<� �Pf���%+ͮ�73(�3�H�|�,�k�ײ��5�x0g��I$Qܚs~�m�O��-�Q ��~�������f�7�./�0.�s	]�Z�s��nf@����g(��"[G���k��4Ds�ʙ��(�CY��z�G��n�X�Rk����@�*f5�W5����@�@��G�֗w\{ߏ��񻞏��6�e��G�m- 㷾�6�z=i~�ԅ�{�P�,���$��L�X�fZ-�X L{%1���u�i@��:'��PY�rk0Iv�	"���Yv;�z�l233sNI%&V�\��/|����?ԏ+*��rtm�ݺ�J����[�@8K2@���DX��|����E�����)�ݞ��S�@���ݼ�"���
+��������: ��^�_���NSb�r�s�'SO}���f�B_O�^�ѫ��lj�����7�m/�<_	�D3�~0�`��4	+E��L>v)���S!��o�$�%L�DPڬњH3A)����
+BH�q�4�����O-������Fb�@�����5�Ⱥ�[�cr��01A�*��Xߋ��;��OD�!��Q�飻�*3�8��p���o��������~͞�c�d5fP�+�J��UJPȳ�v�^�éշ��zR,X�G-��M�+VT���T�y"ӯ'�#H*	4��a����6���&V�܃��L����}��q���ݬ�J3Xl-��J�"o�ß\r6�?�z�][��(����4&�C��Tڊ�5"�ž,@Zh����sߦ+m��~іI�����iw����|9Δc7��
+X$�y��7}?�t���@Hp��d�[�.fE1C1�)X��#͵�gՖc���[������	�ܴUa�K�TT�������Z��$)#��-���{�Yf)��d&���w�Rh�p��14M���B0	b��� �J{��y7�_��-]�z=F�� 0Sn�q�Ls?{R�������um��h�bI�թ3n��U1ݦ�_�b��~��8a��~���px�]�d�yZeo�`��Hlp�Se`]n�u������I-a�'Aq��TlL������] C	0$Ce@���)���ɔ�o})�zR�]�Ћ�9!�7�X��2������yo���ד���mR1	�l�	Nl�#�K��<���s��l&`ad:&M EI[Qs�Bެ�D�#����@ �o����_�w������	��n���/׿����k�h���N�ܹ�z=Q�{k����gߥJ[lg�Z�r|���3�K��r��-��[��4���G@=���MW�Q�"f}!�R�	��.kf� e[sFAK�l�T@���G~2u���M}��u��'�c[%�ZVtlޜ�^��xU�^�������b�D�D`���eQ���\x#ܮQ�1\Ԅs-MAaw<kb 2�8Ko�f�R���.��&����k �A�έ��l��sN�|�����O� N��u�M{E�x��xI�� "4�O�<� ��xL�U���e�}L_p��(m.3��3��R`�&�����А��r��>�:�k��qs���p�ۈ�v@<�Ҕ�I=��p8|Yh(+E�� �G����S�o_��+�X�8�cw�>x��������)������8N`��<gtZ�qG ZیU��[���[TX��43(� �Շ�l�Yh|�7X���-���Nm\=̏m��6r�`es������ƭ�SF��7���IP�nе�e�����TB\�e�lªUQ�Ę[��s����k�^C�G��Z���a��K���2Y�5	ԣ���}-X��Y��DT�=�7 �\�+i��"�v�L �4eΪH��L=�M+&��;���[��[W����Oa�r�%+*����B?��|9<�C,��C�q�&hg,
+���[�����4�4�J�����k��^�ūb,^c�ܸ��m���~a����?��S��u=��Vّ�" tt�~�X�p������j��MBJ��v��J�	�\Υ��c+�~����)�ē&K�6`��˗�*��<]K?�F���Q� У����7�����O�P 274�s&�;W�W��_�\^: s� �ϣ���O9�Mgn����WNM��cl�#G��`F�O}�e4���9*��"]�ݾ�n/�0;�8�A�fgS�=7) "F:�J7�_�6>�}�XQA�m�xbr/$��_52����?�SN��n� � � 2�p�֢o��vn;���9b(h�qE �o����j��L����(��	��z���׈��{"!���R��>�
+�1�2�� 6��z���<��M��įS/D[B$���H@��~TXp��a��L�ӔH�"�n�:��Wu��c�ד�MkZ��lɼdE%k������W��;/�UfHb���&]�/B�m43��$EqB�@����-y���7���-�^H���@UN�U�v4o�<��6M��X&��ƛZ#��g��-���rC�A`�$#��-�i��b�\GA��\��U٧��5�u���{���`ȁ �^Б�#@���x�PJ/g���Y6AI&S+�Lsӹ�xS���&��98ˠ���O��|�io{֭ΰ�����@���٪P�'����U_��hg�2n^EL[���\�D,#	��)���
+f�qS�,Jb�+1�ڂ���Mx�K�+VTP���u_��|C���}=�����'���?��U¤2b���s�;�ߥ��)w��(D��n�Ǥ�HA�8����ٻf�k�er�q�V�&��ܜCAdk��܎���� �O~�$�O�Lp��R\�< ��������>��H("3"���H�O������G�"]`T� 0W؊K������)�Bf,�A�h���=3��`����+4~����å�|�������d��c��om���z��_�[�,�(@��S/N؇�d[��w<�7�ZOp��g����#�\ڔ���4G�|Nwd��&O����8���2����bժ7��e�g�W�~�d�V9��^�r~�[`�d���b�>a�%OD�6���n]<�4�٢�x�"�,I�|�k�p�;�p�I&���VͶA0c�%�fdz����MP�2�$��s-B�}[��M�D�42 �1�ӣ&��;��\�/aQ � Ioe:c�H%�b}���m�&�o�П��g8�?�G�2���2T*޹�<o����s��z��r@a��T���:N�����(D2�u����"�	.�b��ٚ��{9���8N��Sg�^�������1���}��)v�F��U ��e�7�	�]�Y�*ƌ�f���/{!ѷ:������������� H�>6��Y��K�k��%0�Dx�!��PQ[R�H��>�z=Bg��ƍ�{� ?��'Ѕ{b�e�֒����j�T3�T@��`V)[mm�eh&`V��P��?�9s�������I��>���q ��N'4�Ծ[�::a�V�~����M���`��v\�I��t��͟����Jh�RB�`� DA�I����D�ւX'��}�ޝ�ݰ&Q[{���U���ދE7����Gcj�ḫe<0t�����T�^���
+�S�s�m��������^E�aW6�vJa$�0������S����U{%M��[� j5�	Y�2J����1�arE�վo)E�XHp���{� �1�-��w~����,�$ؼi��`Jn�*�MF&���n�
+Z3���*�c�Ȏ��O.�N��b1��q��ޭ�Fn�j4<�r��v>&�샸`��h衛n�H�Xk}-(�"b@QPآp���8߽-kd	���6l�s�o:[����}}4f$��a�jw��f���[���9������_���@���]m�-,d13�ͺ@���ލhL��]���O.���M5�]��Z~�[�0��ُ��^ 0mv�Z��
+)N֜ed<�T��W������ւ�ޢ��"BSVmҒ���>�j���*i��(Ur�B{�ĭ�6A@�)o� ��S�N30l��ue� 6C�}�O� �"�������.[���==ir��7(�"�t���%����������3�Dܟk`>k�#O;kF3�+�5��u�*����:O@�Y��ٯ'�U2@ŉ�x��貁�/X���d`^��R�u��)�74�0�Oh�d�[�@���=S�X!X��	 ���i���熚��0����2!&��_��y7�����Cz����g5����u6I�����yк���YfC~�v�(�+��y�A���Ĥ�J�4�/d}q�ٷ`mc���C[J���{�	�Z�y��A�����M� ���?�.� +�)� cPx��7|�G�4��A̪��5����~���>������5ev�JZ].H��9�3�%[�ە����];E�T�c���A2� ��?"�R�GR?5����ɑjけc��B�_1�W�Qf&Pv�pA���w����[�	E��@�	J�=�}�&̟ۿ���E�g{�� �������I�i�kK���4:�,�]rr�%���`i�{�ݱvyv�b@�`��Y� �s�D�B��B�.Q/� 6ܢ���@05CpP��U$A�����9O�s�}���n@��}FA}� �U<���w����;g�yn��K zt� � �rw[��e�R�h\��Ih2�n 2
+�6�P��܂���H� �V�s1:⡼7$_�̬��綟���[omb��9kor��^0?�ZxWr��v�*�/3�o�#��Y͵8�����j(|�;HD1��q�|w֞���� 1�0+����R�Vd�f��In�"Cԭjw~7�p�� ����⯶o�������X���lh��$�����ɡ
+h`�;/\�h�R��깜b��;ITb�r��`c "�y�^�7�1�q�	ILR0	AĮ|9��d�7��v�O�s�Ʈ�&g$��,�ID	��)%����M?@�� }�u3�,M��p�CVe@e����Hc��j-�����c�XD
+BFF���mlHA��D,)(�g��ֳN_��f�p|n7\wd]�"R�� !5��?_�z��6�ZK�W�� ���n�`~�)�a3Hu@;�0�<̾�Y���+\CC�x��$+1HHjW�'��:a�$xv���Id�Z�kbBY%� ���eO����,!����p㲾-[4�-���3��� ;9T�B'�����	=!}@=�?}�tJ�k��'Ŭ�Ă��v�H�E�Ԅ�6cܱ��u|�*4.B
+B������"Y�F��п�������iOh�|�F�8\�>�{��p̆��a)�:�ǒ�l���cf�^�ϒ/�zD��v5�+�l�2�e��"ي�ƀ����p�I��.LP+AQ� -�x����G���x@v�
+����΀ލ+ow簋�-��n�X��c`&h��RZ.�f
+����Wq�K9l��,&�c����Kb����?p��Q��U�k�[
+�N�Y����f����O��_D�nu>��狘j�w����3�OAսb٪����YN�j�A3A��|=#}��n�>��=�h0���֠҄89�=V�j/��Z��-���m�����HE�{l�I��~�2|�LL% ־Ԃqo�D2"�!�o���~뎇��8�-��^�V�jf����?H�ޔ�U��xt��$M�5x�s�)H}���	c�Ԓal�2�D6rb$��G 2y�H�H�Y��"����7��uǍ�a�GT�R�z��m�=��QC�>�Vͼ��ԁb���X�x�۶w�R"�(���$ Y�� R̤�RjWǉ��H��5I N@r+��4b1����V�;n����l��!8���I9�h���!�"�I'�5C����~> ��R���ևM�ۛ���	���{�b?��x�4�i4�Ɠ	@���>�=9�b�o�z]L����琯 �_�s�h:C�t��~����	�W����z3�Z���S8����L z��\z$jP�J��^3��N��r� q���mq�U `|�<�<�@���`& =���A��6t
+�^`��Y��h���k�H:Gm1E`v$q�����I�|��P,4shJO�Q��@�:�5S��	Jɮ ������`{������YC�ʁ��Nj�Y�=&����M�A��y$H���~�`E��z��I���}�λ���*������}����O�kpTm���Xr8V�"�x<���;*��r��ͱ�+�v!���=�����(;��h�V����xw����w8�3�w�7@:Zn�i��C��!9� �'9�{�P�5sm��)�YK������p2�{v9\9�x��`�O�Jjwͽ��{so���ϔP�߭mݯ6�p�7��V�    IEND�B`�
+```
+
 ## app\channel-portal\_components\ContentSection.tsx
 
 ```
@@ -2293,7 +3983,7 @@ import { Button } from '@/components/ui/Button';
 import { Checkbox, Input, Select, Textarea } from '@/components/ui/Field';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
-import { buildStoragePath, postJson, uploadToStorage } from '@/lib/api-client';
+import { buildStoragePath, postJson } from '@/lib/api-client';
 import { CONTENT_TYPES, CONTENT_TYPE_LABELS, STORAGE_BUCKETS } from '@/lib/constants';
 import type { ChannelContent, ContentType, FileEntry } from '@/lib/types';
 
@@ -2302,7 +3992,10 @@ const ACCEPTED_FILE_TYPES = '.pdf,.doc,.docx,.ppt,.pptx,image/*,audio/*,video/*'
 const MAX_FILE_SIZE_MB = 20;
 
 // ==================== Types ====================
-interface Props { channelId: string; password: string }
+interface Props {
+  channelId: string;
+  password: string;
+}
 
 interface ContentForm {
   content_type: ContentType;
@@ -2314,7 +4007,9 @@ interface ContentForm {
   files: FileEntry[];
 }
 
-function emptyFileEntry(): FileEntry { return { label: null, url: '' }; }
+function emptyFileEntry(): FileEntry {
+  return { label: null, url: '' };
+}
 
 function emptyForm(): ContentForm {
   return {
@@ -2352,6 +4047,72 @@ function cleanFileEntries(files: FileEntry[]): FileEntry[] {
   return files
     .map((f) => ({ url: f.url.trim(), label: f.label?.trim() || null }))
     .filter((f) => f.url !== '');
+}
+
+// ==================== Due Date Helpers ====================
+type DueKind = 'expired' | 'today' | 'tomorrow' | 'soon' | 'normal';
+
+interface DueInfo {
+  kind: DueKind;
+  label: string;
+  diff: number;
+}
+
+function getDueInfo(dateStr: string | null): DueInfo | null {
+  if (!dateStr) return null;
+  const due = new Date(dateStr);
+  if (Number.isNaN(due.getTime())) return null;
+
+  due.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const diff = Math.round((due.getTime() - today.getTime()) / 86400000);
+
+  if (diff < 0) return { kind: 'expired', label: 'انتهى الموعد', diff };
+  if (diff === 0) return { kind: 'today', label: 'التسليم اليوم', diff };
+  if (diff === 1) return { kind: 'tomorrow', label: 'التسليم غداً', diff };
+  if (diff <= 3) return { kind: 'soon', label: `بعد ${diff} أيام`, diff };
+  return { kind: 'normal', label: dateStr, diff };
+}
+
+function getDueBadgeClass(kind: DueKind): string {
+  switch (kind) {
+    case 'expired':
+      return 'bg-ink/5 text-ink/40 line-through';
+    case 'today':
+      return 'bg-red-500 text-white';
+    case 'tomorrow':
+      return 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300';
+    case 'soon':
+      return 'bg-amber/20 text-amber-800 dark:bg-amber/25 dark:text-amber-300';
+    case 'normal':
+    default:
+      return 'bg-ink/5 text-ink/60';
+  }
+}
+
+function isUpcoming(dateStr: string | null): boolean {
+  const info = getDueInfo(dateStr);
+  if (!info) return false;
+  return info.kind === 'today' || info.kind === 'tomorrow' || info.kind === 'soon';
+}
+
+// ==================== File Type Detection ====================
+function detectFileLabel(url: string): string | null {
+  const lower = url.toLowerCase();
+  if (lower.includes('t.me')) return 'تلغرام';
+  if (lower.includes('drive.google.com')) return 'Google Drive';
+  if (lower.includes('dropbox.com')) return 'Dropbox';
+  if (lower.includes('youtube.com') || lower.includes('youtu.be')) return 'يوتيوب';
+  if (lower.includes('onedrive') || lower.includes('1drv.ms')) return 'OneDrive';
+  if (lower.endsWith('.pdf')) return 'PDF';
+  if (lower.match(/\.(doc|docx)$/)) return 'Word';
+  if (lower.match(/\.(ppt|pptx)$/)) return 'PowerPoint';
+  if (lower.match(/\.(png|jpg|jpeg|webp|gif)$/)) return 'صورة';
+  if (lower.match(/\.(mp3|wav|m4a)$/)) return 'صوت';
+  if (lower.match(/\.(mp4|mov|avi|webm)$/)) return 'فيديو';
+  return null;
 }
 
 // ==================== Icons ====================
@@ -2411,6 +4172,112 @@ function IconEmpty() {
     </svg>
   );
 }
+function IconCopy() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+    </svg>
+  );
+}
+function IconCheckSquare() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+    </svg>
+  );
+}
+function IconStats() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+    </svg>
+  );
+}
+function IconWarning() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    </svg>
+  );
+}
+function IconFolderStack() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+    </svg>
+  );
+}
+function IconClose() {
+  return (
+    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  );
+}
+
+// ==================== Stats Bar ====================
+function StatCard({
+  icon,
+  label,
+  value,
+  accent,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  accent: 'teal' | 'amber' | 'red' | 'ink';
+}) {
+  const styles = {
+    teal: 'bg-teal/8 text-teal',
+    amber: 'bg-amber/15 text-amber-700 dark:text-amber-300',
+    red: 'bg-red-100 text-red-600 dark:bg-red-950/40 dark:text-red-300',
+    ink: 'bg-ink/5 text-ink/60',
+  }[accent];
+
+  return (
+    <div className="flex items-center gap-2.5 rounded-2xl border border-line bg-white/70 px-3 py-2.5 dark:bg-paper/70">
+      <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${styles}`}>
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <p className="text-lg font-black leading-none text-ink">{value}</p>
+        <p className="mt-0.5 truncate text-[11px] font-bold text-ink/50">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function StatsBar({ items }: { items: ChannelContent[] }) {
+  const stats = useMemo(() => {
+    let pinned = 0;
+    let upcoming = 0;
+    const folders = new Set<string>();
+
+    for (const item of items) {
+      if (item.pinned) pinned++;
+      if (item.due_date && isUpcoming(item.due_date)) upcoming++;
+      if (item.folder) folders.add(item.folder);
+    }
+
+    return {
+      total: items.length,
+      pinned,
+      upcoming,
+      folders: folders.size,
+    };
+  }, [items]);
+
+  if (items.length === 0) return null;
+
+  return (
+    <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <StatCard icon={<IconStats />} label="منشور" value={stats.total} accent="teal" />
+      <StatCard icon={<IconPin filled />} label="مثبّت" value={stats.pinned} accent="amber" />
+      <StatCard icon={<IconWarning />} label="موعد قريب" value={stats.upcoming} accent="red" />
+      <StatCard icon={<IconFolderStack />} label="مجلد" value={stats.folders} accent="ink" />
+    </div>
+  );
+}
 
 // ==================== File Entries Editor ====================
 interface FileEntriesEditorProps {
@@ -2427,34 +4294,47 @@ function FileEntriesEditor({ files, onChange, channelId, disabled }: FileEntries
   function updateSlot(index: number, patch: Partial<FileEntry>) {
     onChange(files.map((f, i) => (i === index ? { ...f, ...patch } : f)));
   }
-  function addSlot() { onChange([...files, emptyFileEntry()]); }
-  function removeSlot(index: number) { onChange(files.filter((_, i) => i !== index)); }
+  function addSlot() {
+    onChange([...files, emptyFileEntry()]);
+  }
+  function removeSlot(index: number) {
+    onChange(files.filter((_, i) => i !== index));
+  }
 
   async function handleUpload(index: number, file: File) {
     if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      toast.show(`حجم الملف كبير جدًا (الحد ${MAX_FILE_SIZE_MB} ميجا).`, 'error');
+      toast.show(`حجم الملف كبير جداً (بحد أقصى ${MAX_FILE_SIZE_MB} ميجا).`, 'error');
       return;
     }
     setUploadingIndex(index);
     try {
       const filePath = buildStoragePath(channelId, file.name);
-      const publicUrl = await uploadToStorage(STORAGE_BUCKETS.channelFiles, filePath, file);
-      updateSlot(index, { url: publicUrl, label: files[index]?.label || file.name });
+      const { supabase } = await import('@/lib/supabaseClient');
+      const { error: uploadError } = await supabase.storage
+        .from(STORAGE_BUCKETS.channelFiles)
+        .upload(filePath, file);
+      if (uploadError) throw new Error(uploadError.message);
+      const { data } = supabase.storage
+        .from(STORAGE_BUCKETS.channelFiles)
+        .getPublicUrl(filePath);
+      updateSlot(index, { url: data.publicUrl, label: files[index]?.label || file.name });
       toast.show('تم رفع الملف', 'success');
     } catch (err) {
       toast.show(err instanceof Error ? err.message : 'فشل رفع الملف', 'error');
-    } finally { setUploadingIndex(null); }
+    } finally {
+      setUploadingIndex(null);
+    }
   }
 
   return (
-    <div className="space-y-3 rounded-2xl border border-dashed border-line bg-paper/40 p-4">
+    <div className="space-y-3 rounded-2xl border border-dashed border-line bg-paper/40 p-4 dark:bg-paper-deep/40">
       <p className="flex items-center gap-1.5 text-sm font-bold text-ink/70">
         <IconUpload />
         الملفات والروابط
       </p>
 
       {files.map((f, i) => (
-        <div key={i} className="space-y-2 rounded-xl border border-line bg-white p-3">
+        <div key={i} className="space-y-2 rounded-xl border border-line bg-white p-3 dark:bg-paper">
           <div className="flex gap-2">
             <Input
               type="text"
@@ -2466,7 +4346,13 @@ function FileEntriesEditor({ files, onChange, channelId, disabled }: FileEntries
               className="min-w-0 flex-1 text-sm"
             />
             {files.length > 1 && (
-              <Button type="button" variant="danger" size="sm" onClick={() => removeSlot(i)} disabled={disabled}>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                onClick={() => removeSlot(i)}
+                disabled={disabled}
+              >
                 حذف
               </Button>
             )}
@@ -2501,13 +4387,23 @@ function FileEntriesEditor({ files, onChange, channelId, disabled }: FileEntries
             <Input
               type="url"
               value={f.url}
-              onChange={(e) => updateSlot(i, { url: e.target.value })}
-              placeholder="أو الصق رابط بديل"
+              onChange={(e) => {
+                const url = e.target.value;
+                const auto = detectFileLabel(url);
+                updateSlot(i, { url, label: files[i]?.label || auto || undefined });
+              }}
+              placeholder="أو الصق رابطاً (تلغرام، Drive، ...)"
               maxLength={2000}
               disabled={disabled}
               className="w-full pr-9 text-sm"
             />
           </div>
+
+          {detectFileLabel(f.url) && (
+            <p className="text-[10px] font-bold text-ink/40">
+              النوع المكتشف: {detectFileLabel(f.url)}
+            </p>
+          )}
         </div>
       ))}
 
@@ -2517,7 +4413,7 @@ function FileEntriesEditor({ files, onChange, channelId, disabled }: FileEntries
         disabled={disabled}
         className="text-sm font-bold text-teal transition-all hover:gap-2 hover:underline disabled:opacity-50"
       >
-        + إضافة ملف/رابط
+        + إضافة ملف / رابط
       </button>
     </div>
   );
@@ -2525,12 +4421,19 @@ function FileEntriesEditor({ files, onChange, channelId, disabled }: FileEntries
 
 // ==================== Filters Bar ====================
 function FiltersBar({
-  search, onSearchChange, typeFilter, onTypeFilterChange,
+  search,
+  onSearchChange,
+  typeFilter,
+  onTypeFilterChange,
+  statusFilter,
+  onStatusFilterChange,
 }: {
   search: string;
   onSearchChange: (v: string) => void;
   typeFilter: 'all' | ContentType;
   onTypeFilterChange: (v: 'all' | ContentType) => void;
+  statusFilter: 'all' | 'pinned' | 'upcoming' | 'expired';
+  onStatusFilterChange: (v: 'all' | 'pinned' | 'upcoming' | 'expired') => void;
 }) {
   return (
     <div className="mb-4 flex flex-wrap gap-2">
@@ -2547,7 +4450,7 @@ function FiltersBar({
       <Select
         value={typeFilter}
         onChange={(e) => onTypeFilterChange(e.target.value as 'all' | ContentType)}
-        className="w-44"
+        className="w-40"
         aria-label="فلترة حسب النوع"
       >
         <option value="all">كل الأنواع</option>
@@ -2555,11 +4458,89 @@ function FiltersBar({
           <option key={t} value={t}>{CONTENT_TYPE_LABELS[t]}</option>
         ))}
       </Select>
+      <Select
+        value={statusFilter}
+        onChange={(e) =>
+          onStatusFilterChange(
+            e.target.value as 'all' | 'pinned' | 'upcoming' | 'expired'
+          )
+        }
+        className="w-40"
+        aria-label="فلترة حسب الحالة"
+      >
+        <option value="all">كل الحالات</option>
+        <option value="pinned">المثبتة فقط</option>
+        <option value="upcoming">مواعيد قريبة</option>
+        <option value="expired">مواعيد منتهية</option>
+      </Select>
     </div>
   );
 }
 
-// ==================== Content Item Card ====================
+// ==================== Bulk Actions Bar ====================
+function BulkActionsBar({
+  selectedCount,
+  operating,
+  onPin,
+  onUnpin,
+  onDelete,
+  onCancel,
+}: {
+  selectedCount: number;
+  operating: boolean;
+  onPin: () => void;
+  onUnpin: () => void;
+  onDelete: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="sticky bottom-4 z-30 mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-teal/30 bg-teal/95 px-4 py-3 text-white shadow-[0_12px_30px_rgba(14,74,74,0.25)] backdrop-blur-xl dark:bg-teal/80">
+      <div className="flex items-center gap-2">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-xs font-black">
+          {selectedCount}
+        </span>
+        <span className="text-sm font-bold">محدد</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={onPin}
+          disabled={operating}
+          className="rounded-lg bg-white/15 px-3 py-1.5 text-xs font-bold transition-all hover:bg-white/25 active:scale-95 disabled:opacity-50"
+        >
+          تثبيت
+        </button>
+        <button
+          type="button"
+          onClick={onUnpin}
+          disabled={operating}
+          className="rounded-lg bg-white/15 px-3 py-1.5 text-xs font-bold transition-all hover:bg-white/25 active:scale-95 disabled:opacity-50"
+        >
+          إلغاء التثبيت
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={operating}
+          className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-bold transition-all hover:bg-red-600 active:scale-95 disabled:opacity-50"
+        >
+          حذف
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={operating}
+          aria-label="إلغاء التحديد"
+          className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/15 transition-all hover:bg-white/25 active:scale-95 disabled:opacity-50"
+        >
+          <IconClose />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ==================== Item Card ====================
 interface ItemCardProps {
   item: ChannelContent;
   isEditing: boolean;
@@ -2567,28 +4548,54 @@ interface ItemCardProps {
   onEditFormChange: (form: ContentForm) => void;
   channelId: string;
   saving: boolean;
+  folderSuggestions: string[];
+  selectionMode: boolean;
+  isSelected: boolean;
+  onToggleSelect: () => void;
   onStartEdit: () => void;
   onCancelEdit: () => void;
   onSave: () => void;
+  onDuplicate: () => void;
   onTogglePin: () => void;
   onDelete: () => void;
 }
 
 function ItemCard({
-  item, isEditing, editForm, onEditFormChange, channelId, saving,
-  onStartEdit, onCancelEdit, onSave, onTogglePin, onDelete,
+  item,
+  isEditing,
+  editForm,
+  onEditFormChange,
+  channelId,
+  saving,
+  folderSuggestions,
+  selectionMode,
+  isSelected,
+  onToggleSelect,
+  onStartEdit,
+  onCancelEdit,
+  onSave,
+  onDuplicate,
+  onTogglePin,
+  onDelete,
 }: ItemCardProps) {
+  const dueInfo = item.due_date ? getDueInfo(item.due_date) : null;
+  const folderListId = `folder-options-${item.id}`;
+
   if (isEditing) {
     return (
-      <div className="space-y-3 rounded-2xl border border-teal/30 bg-white p-4 shadow-[0_2px_8px_rgba(14,74,74,0.06)]">
+      <div className="space-y-3 rounded-2xl border border-teal/30 bg-white p-4 shadow-[0_2px_8px_rgba(14,74,74,0.06)] dark:bg-paper">
         <div className="flex flex-wrap gap-2">
           <Select
             value={editForm.content_type}
-            onChange={(e) => onEditFormChange({ ...editForm, content_type: e.target.value as ContentType })}
+            onChange={(e) =>
+              onEditFormChange({ ...editForm, content_type: e.target.value as ContentType })
+            }
             className="w-36"
             aria-label="نوع المحتوى"
           >
-            {CONTENT_TYPES.map((t) => <option key={t} value={t}>{CONTENT_TYPE_LABELS[t]}</option>)}
+            {CONTENT_TYPES.map((t) => (
+              <option key={t} value={t}>{CONTENT_TYPE_LABELS[t]}</option>
+            ))}
           </Select>
           <Input
             type="text"
@@ -2607,13 +4614,21 @@ function ItemCard({
           />
         </div>
 
-        <Input
-          type="text"
-          value={editForm.folder}
-          onChange={(e) => onEditFormChange({ ...editForm, folder: e.target.value })}
-          placeholder="اسم المجلد (اختياري)"
-          maxLength={200}
-        />
+        <div>
+          <Input
+            type="text"
+            value={editForm.folder}
+            onChange={(e) => onEditFormChange({ ...editForm, folder: e.target.value })}
+            placeholder="اسم المجلد (اختياري)"
+            maxLength={200}
+            list={folderListId}
+          />
+          <datalist id={folderListId}>
+            {folderSuggestions.map((f) => (
+              <option key={f} value={f} />
+            ))}
+          </datalist>
+        </div>
 
         <Textarea
           value={editForm.description}
@@ -2630,83 +4645,140 @@ function ItemCard({
           disabled={saving}
         />
 
-        <Checkbox checked={editForm.pinned} onChange={(v) => onEditFormChange({ ...editForm, pinned: v })}>
-          تثبيت هذا المنشور بأعلى القناة
+        <Checkbox
+          checked={editForm.pinned}
+          onChange={(v) => onEditFormChange({ ...editForm, pinned: v })}
+        >
+          تثبيت هذا المنشور في أعلى القناة
         </Checkbox>
 
         <div className="flex gap-2">
-          <Button size="sm" onClick={onSave} loading={saving} disabled={!isFormValid(editForm)}>حفظ</Button>
-          <Button size="sm" variant="secondary" onClick={onCancelEdit} disabled={saving}>إلغاء</Button>
+          <Button size="sm" onClick={onSave} loading={saving} disabled={!isFormValid(editForm)}>
+            حفظ
+          </Button>
+          <Button size="sm" variant="secondary" onClick={onCancelEdit} disabled={saving}>
+            إلغاء
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="group rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 hover:border-teal/20 hover:shadow-[0_4px_16px_rgba(14,74,74,0.06)]">
+    <div
+      className={`group relative rounded-2xl border bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 dark:bg-paper/80 ${
+        isSelected
+          ? 'border-teal bg-teal/5 dark:bg-teal/10'
+          : 'border-line hover:border-teal/20 hover:shadow-[0_4px_16px_rgba(14,74,74,0.06)]'
+      }`}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-teal/10 px-2.5 py-0.5 text-xs font-bold text-teal">
-              {CONTENT_TYPE_LABELS[item.content_type]}
-            </span>
-            {item.folder && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber/15 px-2.5 py-0.5 text-xs font-bold text-amber-800">
-                <IconFolder />
-                {item.folder}
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          {selectionMode && (
+            <button
+              type="button"
+              onClick={onToggleSelect}
+              aria-label={isSelected ? 'إلغاء التحديد' : 'تحديد'}
+              className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border-2 transition-all active:scale-90 ${
+                isSelected
+                  ? 'border-teal bg-teal text-white'
+                  : 'border-line bg-white hover:border-teal/40 dark:bg-paper'
+              }`}
+            >
+              {isSelected && (
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </button>
+          )}
+
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-teal/10 px-2.5 py-0.5 text-xs font-bold text-teal">
+                {CONTENT_TYPE_LABELS[item.content_type]}
               </span>
-            )}
-            {item.pinned && (
-              <span className="rounded-full bg-teal px-2.5 py-0.5 text-xs font-bold text-white">مثبّت</span>
-            )}
-            <span className="font-bold text-ink">{item.title}</span>
-          </div>
-
-          {item.due_date && (
-            <p className="mt-1.5 text-sm font-bold text-amber-700">
-              تاريخ التسليم: {item.due_date}
-            </p>
-          )}
-
-          {item.description && (
-            <p className="mt-1 text-sm leading-relaxed text-ink/60">{item.description}</p>
-          )}
-
-          {item.file_urls && item.file_urls.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {item.file_urls.map((f, i) => (
-                <a
-                  key={i}
-                  href={f.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-teal/20 bg-teal/5 px-2.5 py-1 text-xs font-bold text-teal transition-all duration-200 hover:border-teal/40 hover:bg-teal/10"
+              {item.folder && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber/15 px-2.5 py-0.5 text-xs font-bold text-amber-800 dark:text-amber-300">
+                  <IconFolder />
+                  {item.folder}
+                </span>
+              )}
+              {item.pinned && (
+                <span className="rounded-full bg-teal px-2.5 py-0.5 text-xs font-bold text-white">
+                  مثبّت
+                </span>
+              )}
+              {dueInfo && (
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${getDueBadgeClass(
+                    dueInfo.kind
+                  )}`}
                 >
-                  <IconLink />
-                  {f.label || `ملف ${i + 1}`}
-                </a>
-              ))}
+                  {dueInfo.kind === 'today' && (
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+                  )}
+                  {dueInfo.kind === 'normal' ? `التسليم: ${dueInfo.label}` : dueInfo.label}
+                </span>
+              )}
+              <span className="font-bold text-ink">{item.title}</span>
             </div>
-          )}
+
+            {item.description && (
+              <p className="mt-1 text-sm leading-relaxed text-ink/60">{item.description}</p>
+            )}
+
+            {item.file_urls && item.file_urls.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {item.file_urls.map((f, i) => (
+                  <a
+                    key={i}
+                    href={f.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-teal/20 bg-teal/5 px-2.5 py-1 text-xs font-bold text-teal transition-all duration-200 hover:border-teal/40 hover:bg-teal/10"
+                  >
+                    <IconLink />
+                    {f.label || `ملف ${i + 1}`}
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="flex flex-shrink-0 gap-1.5">
-          <button
-            type="button"
-            onClick={onTogglePin}
-            title={item.pinned ? 'إلغاء التثبيت' : 'تثبيت'}
-            aria-label={item.pinned ? 'إلغاء التثبيت' : 'تثبيت'}
-            className={`flex h-9 w-9 items-center justify-center rounded-lg border transition-all duration-200 active:scale-95 ${
-              item.pinned
-                ? 'border-teal bg-teal/10 text-teal'
-                : 'border-line text-ink/50 hover:border-ink/20 hover:bg-ink/5 hover:text-ink'
-            }`}
-          >
-            <IconPin filled={item.pinned} />
-          </button>
-          <Button size="sm" variant="secondary" onClick={onStartEdit} icon={<IconEdit />}>تعديل</Button>
-          <Button size="sm" variant="danger" onClick={onDelete} icon={<IconTrash />}>حذف</Button>
-        </div>
+        {!selectionMode && (
+          <div className="flex flex-shrink-0 gap-1.5">
+            <button
+              type="button"
+              onClick={onDuplicate}
+              title="نسخ المنشور"
+              aria-label="نسخ المنشور"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-line text-ink/50 transition-all duration-200 hover:border-teal/30 hover:bg-teal/5 hover:text-teal active:scale-95"
+            >
+              <IconCopy />
+            </button>
+            <button
+              type="button"
+              onClick={onTogglePin}
+              title={item.pinned ? 'إلغاء التثبيت' : 'تثبيت'}
+              aria-label={item.pinned ? 'إلغاء التثبيت' : 'تثبيت'}
+              className={`flex h-9 w-9 items-center justify-center rounded-lg border transition-all duration-200 active:scale-95 ${
+                item.pinned
+                  ? 'border-teal bg-teal/10 text-teal'
+                  : 'border-line text-ink/50 hover:border-ink/20 hover:bg-ink/5 hover:text-ink'
+              }`}
+            >
+              <IconPin filled={item.pinned} />
+            </button>
+            <Button size="sm" variant="secondary" onClick={onStartEdit} icon={<IconEdit />}>
+              تعديل
+            </Button>
+            <Button size="sm" variant="danger" onClick={onDelete} icon={<IconTrash />}>
+              حذف
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -2719,36 +4791,63 @@ export function ContentSection({ channelId, password }: Props) {
 
   const [items, setItems] = useState<ChannelContent[]>([]);
   const [loading, setLoading] = useState(true);
+
   const [newForm, setNewForm] = useState<ContentForm>(emptyForm());
   const [adding, setAdding] = useState(false);
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<ContentForm>(emptyForm());
   const [saving, setSaving] = useState(false);
+
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | ContentType>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pinned' | 'upcoming' | 'expired'>('all');
 
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkOperating, setBulkOperating] = useState(false);
+
+  // ===== تحميل =====
   const loadItems = useCallback(async () => {
     setLoading(true);
     try {
       const data = await postJson<{ items: ChannelContent[] }>('/api/channel/content', {
-        action: 'list', channel_id: channelId, password,
+        action: 'list',
+        channel_id: channelId,
+        password,
       });
       setItems(data.items ?? []);
     } catch (err) {
       toast.show(err instanceof Error ? err.message : 'فشل تحميل المحتوى', 'error');
       setItems([]);
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   }, [channelId, password, toast]);
 
-  useEffect(() => { loadItems(); }, [loadItems]);
+  useEffect(() => {
+    loadItems();
+  }, [loadItems]);
 
+  // ===== قائمة المجلدات الفريدة (للاقتراحات) =====
+  const folderSuggestions = useMemo(() => {
+    const set = new Set<string>();
+    for (const item of items) {
+      if (item.folder && item.folder.trim()) set.add(item.folder.trim());
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'ar'));
+  }, [items]);
+
+  // ===== إضافة =====
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!isFormValid(newForm)) return;
     setAdding(true);
     try {
       await postJson('/api/channel/content', {
-        action: 'add', channel_id: channelId, password,
+        action: 'add',
+        channel_id: channelId,
+        password,
         content_type: newForm.content_type,
         title: newForm.title.trim(),
         folder: newForm.folder.trim() || null,
@@ -2762,9 +4861,12 @@ export function ContentSection({ channelId, password }: Props) {
       loadItems();
     } catch (err) {
       toast.show(err instanceof Error ? err.message : 'فشل الإضافة', 'error');
-    } finally { setAdding(false); }
+    } finally {
+      setAdding(false);
+    }
   }
 
+  // ===== تعديل =====
   function startEdit(item: ChannelContent) {
     setEditingId(item.id);
     setEditForm(formFromItem(item));
@@ -2779,7 +4881,10 @@ export function ContentSection({ channelId, password }: Props) {
     setSaving(true);
     try {
       await postJson('/api/channel/content', {
-        action: 'edit', channel_id: channelId, password, id,
+        action: 'edit',
+        channel_id: channelId,
+        password,
+        id,
         content_type: editForm.content_type,
         title: editForm.title.trim(),
         folder: editForm.folder.trim() || null,
@@ -2793,15 +4898,37 @@ export function ContentSection({ channelId, password }: Props) {
       loadItems();
     } catch (err) {
       toast.show(err instanceof Error ? err.message : 'فشل الحفظ', 'error');
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   }
 
+  // ===== نسخ =====
+  async function handleDuplicate(item: ChannelContent) {
+    try {
+      await postJson('/api/channel/content', {
+        action: 'duplicate',
+        channel_id: channelId,
+        password,
+        id: item.id,
+      });
+      toast.show('تم نسخ المنشور', 'success');
+      loadItems();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل النسخ', 'error');
+    }
+  }
+
+  // ===== تثبيت =====
   async function togglePin(item: ChannelContent) {
     const nextPinned = !item.pinned;
     setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, pinned: nextPinned } : i)));
     try {
       await postJson('/api/channel/content', {
-        action: 'toggle_pin', channel_id: channelId, password, id: item.id,
+        action: 'toggle_pin',
+        channel_id: channelId,
+        password,
+        id: item.id,
       });
     } catch (err) {
       setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, pinned: item.pinned } : i)));
@@ -2809,12 +4936,19 @@ export function ContentSection({ channelId, password }: Props) {
     }
   }
 
+  // ===== حذف =====
   async function handleDelete(item: ChannelContent) {
-    const ok = await confirm(`حذف «${item.title}» نهائي. متأكد؟`, { variant: 'danger', confirmLabel: 'احذف' });
+    const ok = await confirm(`حذف «${item.title}» نهائياً. هل أنت متأكد؟`, {
+      variant: 'danger',
+      confirmLabel: 'حذف',
+    });
     if (!ok) return;
     try {
       await postJson('/api/channel/content', {
-        action: 'delete', channel_id: channelId, password, id: item.id,
+        action: 'delete',
+        channel_id: channelId,
+        password,
+        id: item.id,
       });
       toast.show('تم الحذف', 'success');
       loadItems();
@@ -2823,20 +4957,103 @@ export function ContentSection({ channelId, password }: Props) {
     }
   }
 
+  // ===== التحديد المتعدد =====
+  function toggleSelectionMode() {
+    setSelectionMode((prev) => {
+      if (prev) setSelectedIds(new Set());
+      return !prev;
+    });
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  // ===== العمليات الجماعية =====
+  async function bulkDelete() {
+    if (selectedIds.size === 0) return;
+    const ok = await confirm(
+      `حذف ${selectedIds.size} ${selectedIds.size === 1 ? 'منشور' : 'منشورات'} نهائياً. هل أنت متأكد؟`,
+      { variant: 'danger', confirmLabel: 'حذف' }
+    );
+    if (!ok) return;
+
+    setBulkOperating(true);
+    try {
+      await postJson('/api/channel/content', {
+        action: 'bulk_delete',
+        channel_id: channelId,
+        password,
+        ids: Array.from(selectedIds),
+      });
+      toast.show(`تم حذف ${selectedIds.size} منشور`, 'success');
+      setSelectedIds(new Set());
+      setSelectionMode(false);
+      loadItems();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الحذف', 'error');
+    } finally {
+      setBulkOperating(false);
+    }
+  }
+
+  async function bulkPin(pinned: boolean) {
+    if (selectedIds.size === 0) return;
+    setBulkOperating(true);
+    try {
+      await postJson('/api/channel/content', {
+        action: 'bulk_pin',
+        channel_id: channelId,
+        password,
+        ids: Array.from(selectedIds),
+        pinned,
+      });
+      toast.show(
+        pinned ? `تم تثبيت ${selectedIds.size} منشور` : `تم إلغاء تثبيت ${selectedIds.size} منشور`,
+        'success'
+      );
+      setSelectedIds(new Set());
+      setSelectionMode(false);
+      loadItems();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل التحديث', 'error');
+    } finally {
+      setBulkOperating(false);
+    }
+  }
+
+  // ===== الفلترة =====
   const filteredItems = useMemo(() => {
     const term = search.trim().toLowerCase();
     return items
       .filter((i) => typeFilter === 'all' || i.content_type === typeFilter)
+      .filter((i) => {
+        if (statusFilter === 'pinned') return i.pinned;
+        if (statusFilter === 'upcoming') return i.due_date ? isUpcoming(i.due_date) : false;
+        if (statusFilter === 'expired') {
+          const info = i.due_date ? getDueInfo(i.due_date) : null;
+          return info?.kind === 'expired';
+        }
+        return true;
+      })
       .filter((i) => (term ? i.title.toLowerCase().includes(term) : true))
       .sort((a, b) => Number(b.pinned) - Number(a.pinned));
-  }, [items, search, typeFilter]);
+  }, [items, search, typeFilter, statusFilter]);
 
   return (
     <section>
-      {/* Add Form */}
+      {/* شريط الإحصائيات */}
+      <StatsBar items={items} />
+
+      {/* نموذج الإضافة */}
       <form
         onSubmit={handleAdd}
-        className="mb-6 space-y-3 rounded-3xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm"
+        className="mb-6 space-y-3 rounded-3xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm dark:bg-paper/80"
       >
         <div className="flex flex-wrap gap-2">
           <Select
@@ -2845,7 +5062,9 @@ export function ContentSection({ channelId, password }: Props) {
             className="w-36"
             aria-label="نوع المحتوى"
           >
-            {CONTENT_TYPES.map((t) => <option key={t} value={t}>{CONTENT_TYPE_LABELS[t]}</option>)}
+            {CONTENT_TYPES.map((t) => (
+              <option key={t} value={t}>{CONTENT_TYPE_LABELS[t]}</option>
+            ))}
           </Select>
           <Input
             type="text"
@@ -2865,13 +5084,21 @@ export function ContentSection({ channelId, password }: Props) {
           />
         </div>
 
-        <Input
-          type="text"
-          value={newForm.folder}
-          onChange={(e) => setNewForm({ ...newForm, folder: e.target.value })}
-          placeholder="اسم المجلد (اختياري)"
-          maxLength={200}
-        />
+        <div>
+          <Input
+            type="text"
+            value={newForm.folder}
+            onChange={(e) => setNewForm({ ...newForm, folder: e.target.value })}
+            placeholder="اسم المجلد (اختياري) — أو اختر من الموجود"
+            maxLength={200}
+            list="folder-suggestions-new"
+          />
+          <datalist id="folder-suggestions-new">
+            {folderSuggestions.map((f) => (
+              <option key={f} value={f} />
+            ))}
+          </datalist>
+        </div>
 
         <Textarea
           value={newForm.description}
@@ -2888,38 +5115,71 @@ export function ContentSection({ channelId, password }: Props) {
           disabled={adding}
         />
 
-        <Checkbox checked={newForm.pinned} onChange={(v) => setNewForm({ ...newForm, pinned: v })}>
-          تثبيت هذا المنشور بأعلى القناة
+        <Checkbox
+          checked={newForm.pinned}
+          onChange={(v) => setNewForm({ ...newForm, pinned: v })}
+        >
+          تثبيت هذا المنشور في أعلى القناة
         </Checkbox>
 
-        <Button type="submit" loading={adding} disabled={!isFormValid(newForm)}>إضافة</Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="submit" loading={adding} disabled={!isFormValid(newForm)}>
+            إضافة
+          </Button>
+        </div>
       </form>
 
+      {/* أدوات القائمة */}
       {items.length > 0 && (
-        <FiltersBar
-          search={search}
-          onSearchChange={setSearch}
-          typeFilter={typeFilter}
-          onTypeFilterChange={setTypeFilter}
-        />
+        <>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="text-xs font-bold text-ink/50">
+              {filteredItems.length} من {items.length} منشور
+            </div>
+            <button
+              type="button"
+              onClick={toggleSelectionMode}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-all active:scale-95 ${
+                selectionMode
+                  ? 'border-teal bg-teal text-white'
+                  : 'border-line bg-white text-ink/70 hover:border-teal/30 hover:text-teal dark:bg-paper'
+              }`}
+            >
+              <IconCheckSquare />
+              {selectionMode ? 'إلغاء التحديد' : 'تحديد متعدد'}
+            </button>
+          </div>
+
+          <FiltersBar
+            search={search}
+            onSearchChange={setSearch}
+            typeFilter={typeFilter}
+            onTypeFilterChange={setTypeFilter}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+          />
+        </>
       )}
 
+      {/* القائمة */}
       {loading ? (
         <div className="space-y-2">
-          {[0, 1, 2].map((i) => <div key={i} className="h-24 skeleton-shimmer rounded-2xl" />)}
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-24 skeleton-shimmer rounded-2xl" />
+          ))}
         </div>
       ) : items.length === 0 ? (
-        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center backdrop-blur-sm">
+        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center backdrop-blur-sm dark:bg-paper/80">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-teal/8 text-teal">
             <IconEmpty />
           </div>
-          <p className="mt-4 font-bold text-ink/70">لا يوجد محتوى مضاف حاليا.</p>
-          <p className="mt-1 text-sm text-ink/50">أضف أول منشور من فوق</p>
+          <p className="mt-4 font-bold text-ink/70">لا يوجد محتوى مضاف حالياً.</p>
+          <p className="mt-1 text-sm text-ink/50">أضف أول منشور من الأعلى</p>
         </div>
       ) : filteredItems.length === 0 ? (
-        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center backdrop-blur-sm">
+        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center backdrop-blur-sm dark:bg-paper/80">
           <IconSearch />
-          <p className="mt-4 font-bold text-ink/70">لا نتائج مطابقة</p>
+          <p className="mt-4 font-bold text-ink/70">لا توجد نتائج مطابقة</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -2932,14 +5192,34 @@ export function ContentSection({ channelId, password }: Props) {
               onEditFormChange={setEditForm}
               channelId={channelId}
               saving={saving}
+              folderSuggestions={folderSuggestions}
+              selectionMode={selectionMode}
+              isSelected={selectedIds.has(item.id)}
+              onToggleSelect={() => toggleSelect(item.id)}
               onStartEdit={() => startEdit(item)}
               onCancelEdit={cancelEdit}
               onSave={() => saveEdit(item.id)}
+              onDuplicate={() => handleDuplicate(item)}
               onTogglePin={() => togglePin(item)}
               onDelete={() => handleDelete(item)}
             />
           ))}
         </div>
+      )}
+
+      {/* شريط العمليات الجماعية */}
+      {selectionMode && selectedIds.size > 0 && (
+        <BulkActionsBar
+          selectedCount={selectedIds.size}
+          operating={bulkOperating}
+          onPin={() => bulkPin(true)}
+          onUnpin={() => bulkPin(false)}
+          onDelete={bulkDelete}
+          onCancel={() => {
+            setSelectedIds(new Set());
+            setSelectionMode(false);
+          }}
+        />
       )}
     </section>
   );
@@ -3038,7 +5318,7 @@ function ChannelInfoForm({
       return;
     }
     if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
-      toast.show(`حجم الصورة كبير جدًا (الحد ${MAX_IMAGE_SIZE_MB} ميجا).`, 'error');
+      toast.show(`حجم الصورة كبير جداً (بحد أقصى ${MAX_IMAGE_SIZE_MB} ميجا).`, 'error');
       return;
     }
 
@@ -3049,10 +5329,12 @@ function ChannelInfoForm({
       const publicUrl = await uploadToStorage(STORAGE_BUCKETS.channelImages, filePath, file, { upsert: true });
       setImageUrl(publicUrl);
       setImageError(false);
-      toast.show('تم رفع الصورة — لا تنسى الحفظ', 'success');
+      toast.show('تم رفع الصورة — لا تنسَ الحفظ', 'success');
     } catch (err) {
       toast.show(err instanceof Error ? err.message : 'فشل رفع الصورة', 'error');
-    } finally { setUploadingImage(false); }
+    } finally {
+      setUploadingImage(false);
+    }
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -3074,23 +5356,25 @@ function ChannelInfoForm({
       toast.show('تم حفظ بيانات القناة', 'success');
     } catch (err) {
       toast.show(err instanceof Error ? err.message : 'فشل الحفظ', 'error');
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   }
 
   function openFilePicker() { fileInputRef.current?.click(); }
 
   return (
     <section>
-      <div className="mb-4 flex items-start gap-3 rounded-2xl border border-teal/20 bg-teal/[0.04] p-4 text-sm">
+      <div className="mb-4 flex items-start gap-3 rounded-2xl border border-teal/20 bg-teal/[0.04] p-4 text-sm dark:border-teal/30 dark:bg-teal/10">
         <span className="text-teal"><IconInfo /></span>
         <p className="font-medium text-ink/70">
-          الاسم والمرحلة ورابط تليكرام يديرها المشرف. تكدر تعدّل الصورة والوصف بس.
+          الاسم والمرحلة ورابط تلغرام يديرها المشرف. يمكنك تعديل الصورة والوصف فقط.
         </p>
       </div>
 
       <form
         onSubmit={handleSave}
-        className="space-y-5 rounded-3xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm"
+        className="space-y-5 rounded-3xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm dark:bg-paper/80"
       >
         {/* الصورة */}
         <div>
@@ -3112,10 +5396,10 @@ function ChannelInfoForm({
               </Button>
             </div>
           ) : imageError ? (
-            <div className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <div className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
               تعذّر تحميل الصورة الحالية.
               <button type="button" onClick={openFilePicker} className="mr-2 font-bold underline">
-                ارفع صورة جديدة
+                رفع صورة جديدة
               </button>
             </div>
           ) : (
@@ -3123,12 +5407,12 @@ function ChannelInfoForm({
               type="button"
               onClick={openFilePicker}
               disabled={uploadingImage}
-              className="group mb-3 flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line bg-paper/50 py-6 transition-all duration-200 hover:border-teal/40 hover:bg-teal/[0.03] disabled:opacity-60"
+              className="group mb-3 flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line bg-paper/50 py-6 transition-all duration-200 hover:border-teal/40 hover:bg-teal/[0.03] disabled:opacity-60 dark:bg-white/[0.03] dark:hover:bg-teal/10"
             >
               <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal/8 text-teal transition-all group-hover:bg-teal/15">
                 <IconImage />
               </span>
-              <span className="text-sm font-bold text-ink/70">ارفع صورة للقناة</span>
+              <span className="text-sm font-bold text-ink/70">رفع صورة للقناة</span>
             </button>
           )}
 
@@ -3142,7 +5426,7 @@ function ChannelInfoForm({
           />
 
           {uploadingImage && (
-            <div className="mb-2 flex items-center gap-2 rounded-xl bg-teal/5 px-3 py-2 text-sm font-bold text-teal">
+            <div className="mb-2 flex items-center gap-2 rounded-xl bg-teal/5 px-3 py-2 text-sm font-bold text-teal dark:bg-teal/15">
               <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
                 <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
@@ -3152,7 +5436,7 @@ function ChannelInfoForm({
           )}
 
           <p className="text-xs text-ink/40">
-            PNG / JPG / WebP / GIF — الحد {MAX_IMAGE_SIZE_MB} ميجا
+            PNG / JPG / WebP / GIF — بحد أقصى {MAX_IMAGE_SIZE_MB} ميجا
           </p>
         </div>
 
@@ -3177,9 +5461,9 @@ function ChannelInfoForm({
             حفظ
           </Button>
           {dirty && !saving && (
-            <span className="flex items-center gap-1 text-xs font-bold text-amber-700">
+            <span className="flex items-center gap-1 text-xs font-bold text-amber-700 dark:text-amber-400">
               <span className="h-2 w-2 animate-pulse rounded-full bg-amber" />
-              فيه تغييرات ما محفوظة
+              توجد تغييرات غير محفوظة
             </span>
           )}
         </div>
@@ -3221,21 +5505,23 @@ function ChangePasswordForm({
       toast.show('تم تغيير كلمة المرور', 'success');
     } catch (err) {
       toast.show(err instanceof Error ? err.message : 'فشل التغيير', 'error');
-    } finally { setChanging(false); }
+    } finally {
+      setChanging(false);
+    }
   }
 
   return (
     <section>
-      <div className="mb-4 flex items-start gap-3 rounded-2xl border border-amber/30 bg-amber/8 p-4 text-sm">
+      <div className="mb-4 flex items-start gap-3 rounded-2xl border border-amber/30 bg-amber/8 p-4 text-sm dark:bg-amber/10">
         <span className="text-amber"><IconLock /></span>
         <p className="font-medium text-ink/70">
-          بعد التغيير . تأكد إنك تحفظ الرمز الجديد بمكان آمن.
+          بعد التغيير، لن تعمل كلمة المرور القديمة. تأكد من حفظ الجديدة في مكان آمن.
         </p>
       </div>
 
       <form
         onSubmit={handleChange}
-        className="space-y-4 rounded-3xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm"
+        className="space-y-4 rounded-3xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm dark:bg-paper/80"
       >
         <div>
           <label htmlFor="new-password" className="mb-2 block text-sm font-bold text-ink/70">
@@ -3269,7 +5555,7 @@ function ChangePasswordForm({
             aria-invalid={mismatch || undefined}
           />
           {mismatch && (
-            <p className="mt-1.5 text-xs font-bold text-red-600" role="alert">
+            <p className="mt-1.5 text-xs font-bold text-red-600 dark:text-red-400" role="alert">
               كلمتا المرور غير متطابقتين.
             </p>
           )}
@@ -3517,13 +5803,13 @@ function LoginScreen({
 
   return (
     <main className="relative mx-auto flex min-h-[calc(100vh-70px)] max-w-sm flex-col items-center justify-center px-6 py-16">
-      <div className="w-full rounded-3xl border border-line bg-white/80 p-8 shadow-[0_8px_30px_rgba(14,74,74,0.08)] backdrop-blur-sm animate-slide-up">
+      <div className="w-full rounded-3xl border border-line bg-white/80 p-8 shadow-[0_8px_30px_rgba(14,74,74,0.08)] backdrop-blur-sm animate-slide-up dark:bg-paper/80 dark:shadow-[0_8px_30px_rgba(0,0,0,0.40)]">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-teal/10 text-teal">
           <IconLock />
         </div>
         <h1 className="mt-5 text-center text-2xl font-black text-ink">دخول صاحب القناة</h1>
         <p className="mt-2 text-center text-sm text-ink/55">
-          اختر قناتك وأدخل كلمة المرور اللي انطاك ياها الادمن
+          اختر قناتك وأدخل كلمة المرور التي أعطاك إياها المشرف
         </p>
 
         <form
@@ -3557,7 +5843,7 @@ function LoginScreen({
           />
 
           {error && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-center text-sm font-bold text-red-600" role="alert">
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-center text-sm font-bold text-red-600 dark:bg-red-950/40 dark:text-red-300" role="alert">
               {error}
             </p>
           )}
@@ -3606,7 +5892,7 @@ export default function ChannelPortalPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 animate-slide-up">
         <div className="min-w-0">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
             {channelInfo.stage}
           </span>
@@ -3614,14 +5900,14 @@ export default function ChannelPortalPage() {
             قناة: {channelInfo.name}
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-ink/5 px-2.5 py-1 text-xs font-bold text-ink/60">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-ink/5 px-2.5 py-1 text-xs font-bold text-ink/60 dark:bg-white/10 dark:text-ink/70">
               <IconEye />
               {channelInfo.views ?? 0} زيارة
             </span>
           </div>
         </div>
         <Button variant="secondary" size="sm" onClick={logout} icon={<IconLogout />}>
-          تسجيل خروج
+          تسجيل الخروج
         </Button>
       </div>
 
@@ -3629,7 +5915,7 @@ export default function ChannelPortalPage() {
       <div
         role="tablist"
         aria-label="أقسام بوابة القناة"
-        className="mt-6 flex gap-1.5 overflow-x-auto rounded-2xl border border-line bg-white/60 p-1.5 backdrop-blur-sm [-ms-overflow-style:none] [scrollbar-width:none] sm:overflow-visible [&::-webkit-scrollbar]:hidden animate-slide-up"
+        className="mt-6 flex gap-1.5 overflow-x-auto rounded-2xl border border-line bg-white/60 p-1.5 backdrop-blur-sm [-ms-overflow-style:none] [scrollbar-width:none] sm:overflow-visible dark:bg-white/[0.04] [&::-webkit-scrollbar]:hidden animate-slide-up"
         style={{ animationDelay: '80ms' }}
       >
         {TABS.map((t) => {
@@ -3643,8 +5929,8 @@ export default function ChannelPortalPage() {
               onClick={() => setTab(t.id)}
               className={`flex flex-shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 ${
                 active
-                  ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)]'
-                  : 'text-ink/60 hover:bg-ink/5 hover:text-ink'
+                  ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] dark:bg-teal dark:shadow-[0_2px_8px_rgba(0,0,0,0.30)]'
+                  : 'text-ink/60 hover:bg-ink/5 hover:text-ink dark:text-ink/60 dark:hover:bg-white/5 dark:hover:text-ink'
               }`}
             >
               {t.icon}
@@ -3736,7 +6022,7 @@ function IconSearch() {
 function IconTelegram() {
   return (
     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
     </svg>
   );
 }
@@ -3750,11 +6036,11 @@ function getDueInfo(dueDateStr: string): DueInfo {
   due.setHours(0, 0, 0, 0);
   const diffDays = Math.round((due.getTime() - today.getTime()) / 86400000);
 
-  if (Number.isNaN(diffDays)) return { text: `تسليم: ${dueDateStr}`, className: 'bg-amber/20 text-amber-800' };
+  if (Number.isNaN(diffDays)) return { text: `تسليم: ${dueDateStr}`, className: 'bg-amber/20 text-amber-800 dark:bg-amber/25 dark:text-amber-300' };
   if (diffDays < 0) return { text: 'انتهى الموعد', className: 'bg-ink/10 text-ink/50' };
-  if (diffDays === 0) return { text: 'تسليم اليوم!', className: 'bg-red-100 text-red-700 ring-1 ring-red-200' };
-  if (diffDays <= 3) return { text: `تسليم: ${dueDateStr} (بعد ${diffDays} يوم)`, className: 'bg-red-100 text-red-700' };
-  return { text: `تسليم: ${dueDateStr}`, className: 'bg-amber/20 text-amber-800' };
+  if (diffDays === 0) return { text: 'التسليم اليوم!', className: 'bg-red-100 text-red-700 ring-1 ring-red-200 dark:bg-red-950/50 dark:text-red-300 dark:ring-red-900/50' };
+  if (diffDays <= 3) return { text: `تسليم: ${dueDateStr} (بعد ${diffDays} يوم)`, className: 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300' };
+  return { text: `تسليم: ${dueDateStr}`, className: 'bg-amber/20 text-amber-800 dark:bg-amber/25 dark:text-amber-300' };
 }
 
 // ==================== File Links ====================
@@ -3768,7 +6054,7 @@ function FileLinks({ files }: { files: FileEntry[] }) {
           href={f.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-teal/20 bg-teal/5 px-3 py-1.5 text-xs font-bold text-teal transition-all duration-200 hover:border-teal/40 hover:bg-teal/10 active:scale-95"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-teal/20 bg-teal/5 px-3 py-1.5 text-xs font-bold text-teal transition-all duration-200 hover:border-teal/40 hover:bg-teal/10 active:scale-95 dark:border-teal/30 dark:bg-teal/10 dark:hover:bg-teal/15"
         >
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -3784,7 +6070,7 @@ function FileLinks({ files }: { files: FileEntry[] }) {
 function ContentItem({ item }: { item: ChannelContent }) {
   const dueInfo = item.due_date ? getDueInfo(item.due_date) : null;
   return (
-    <div className="group rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-300 hover:border-teal/20 hover:shadow-[0_4px_16px_rgba(14,74,74,0.06)]">
+    <div className="group rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-300 hover:border-teal/20 hover:shadow-[0_4px_16px_rgba(14,74,74,0.06)] dark:bg-paper/80 dark:hover:shadow-[0_4px_16px_rgba(0,0,0,0.30)]">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="font-bold text-ink">{item.title}</span>
         {dueInfo && (
@@ -3812,7 +6098,7 @@ function Skeleton() {
       </div>
       <div className="space-y-3">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="rounded-2xl border border-line bg-white/80 p-4">
+          <div key={i} className="rounded-2xl border border-line bg-white/80 p-4 dark:bg-paper/80">
             <div className="h-4 w-2/3 skeleton-shimmer rounded" />
             <div className="mt-2 h-3 w-full skeleton-shimmer rounded" />
           </div>
@@ -3824,7 +6110,7 @@ function Skeleton() {
 
 function EmptyState({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mt-8 rounded-3xl border border-line bg-white/80 p-10 text-center text-sm font-medium text-ink/60 backdrop-blur-sm animate-slide-up">
+    <div className="mt-8 rounded-3xl border border-line bg-white/80 p-10 text-center text-sm font-medium text-ink/60 backdrop-blur-sm animate-slide-up dark:bg-paper/80">
       {children}
     </div>
   );
@@ -3868,7 +6154,7 @@ export default function ChannelPage() {
       if (cancelled) return;
 
       if (channelRes.error || !channelRes.data) {
-        setError('ما لقينا هاي القناة.');
+        setError('لم نجد هذه القناة.');
         setLoading(false);
         return;
       }
@@ -3921,9 +6207,9 @@ export default function ChannelPage() {
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
         <Link href="/channels" className="group inline-flex items-center gap-1.5 text-sm font-bold text-teal/70 transition-colors hover:text-teal">
           <span className="transition-transform duration-200 group-hover:translate-x-1"><IconArrowLeft /></span>
-          رجوع للقنوات
+          رجوع إلى القنوات
         </Link>
-        <h1 className="mt-6 text-2xl font-extrabold text-ink">{error || 'ما لقينا هاي القناة.'}</h1>
+        <h1 className="mt-6 text-2xl font-extrabold text-ink">{error || 'لم نجد هذه القناة.'}</h1>
       </main>
     );
   }
@@ -3945,7 +6231,7 @@ export default function ChannelPage() {
     <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <Link href="/channels" className="group inline-flex items-center gap-1.5 text-sm font-bold text-teal/70 transition-colors hover:text-teal">
         <span className="transition-transform duration-200 group-hover:translate-x-1"><IconArrowLeft /></span>
-        رجوع للقنوات
+        رجوع إلى القنوات
       </Link>
 
       {/* Header */}
@@ -3954,16 +6240,16 @@ export default function ChannelPage() {
           <img
             src={channel.image_url}
             alt={channel.name}
-            className="h-20 w-20 flex-shrink-0 rounded-2xl border border-line/60 object-cover shadow-[0_4px_14px_rgba(26,33,31,0.10)]"
+            className="h-20 w-20 flex-shrink-0 rounded-2xl border border-line/60 object-cover shadow-[0_4px_14px_rgba(26,33,31,0.10)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.40)]"
           />
         ) : (
-          <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal to-teal-light text-2xl font-black text-white shadow-[0_4px_14px_rgba(14,74,74,0.24)]">
+          <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal to-teal-light text-2xl font-black text-white shadow-[0_4px_14px_rgba(14,74,74,0.24)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.40)]">
             {channel.name.trim().slice(0, 2)}
           </div>
         )}
         <div className="min-w-0">
           <h1 className="truncate text-2xl font-black text-ink sm:text-3xl">{channel.name}</h1>
-          <span className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-2.5 py-0.5 font-mono text-xs uppercase tracking-widest text-teal">
+          <span className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-2.5 py-0.5 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
             {channel.stage}
           </span>
         </div>
@@ -3979,11 +6265,11 @@ export default function ChannelPage() {
         href={channel.telegram_link}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-5 inline-flex items-center gap-2 rounded-xl bg-teal px-5 py-2.5 text-sm font-bold text-white shadow-[0_2px_10px_rgba(14,74,74,0.28)] transition-all duration-200 hover:bg-teal-light hover:shadow-[0_4px_16px_rgba(14,74,74,0.34)] active:scale-95 animate-slide-up"
+        className="mt-5 inline-flex items-center gap-2 rounded-xl bg-teal px-5 py-2.5 text-sm font-bold text-white shadow-[0_2px_10px_rgba(14,74,74,0.28)] transition-all duration-200 hover:bg-teal-light hover:shadow-[0_4px_16px_rgba(14,74,74,0.34)] active:scale-95 animate-slide-up dark:shadow-[0_2px_10px_rgba(0,0,0,0.30)]"
         style={{ animationDelay: '120ms' }}
       >
         <IconTelegram />
-        فتح القناة بتليكرام
+        فتح القناة على تلغرام
       </a>
 
       {/* Search */}
@@ -4041,8 +6327,8 @@ export default function ChannelPage() {
         )
       )}
 
-      {!hasItems && <EmptyState>لا يوجد محتوى مضاف لهذه القناة حاليا.</EmptyState>}
-      {hasItems && !hasResults && <EmptyState>لا نتائج مطابقة لبحثك &laquo;{searchTerm}&raquo;.</EmptyState>}
+      {!hasItems && <EmptyState>لا يوجد محتوى مضاف لهذه القناة حالياً.</EmptyState>}
+      {hasItems && !hasResults && <EmptyState>لا توجد نتائج مطابقة لبحثك &laquo;{searchTerm}&raquo;.</EmptyState>}
     </main>
   );
 }
@@ -4093,14 +6379,14 @@ function ChannelAvatar({ name, imageUrl }: { name: string; imageUrl: string | nu
       <img
         src={imageUrl}
         alt={name}
-        className="h-12 w-12 flex-shrink-0 rounded-xl border border-line/60 object-cover shadow-[0_2px_6px_rgba(26,33,31,0.06)]"
+        className="h-12 w-12 flex-shrink-0 rounded-xl border border-line/60 object-cover shadow-[0_2px_6px_rgba(26,33,31,0.06)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.30)]"
         loading="lazy"
       />
     );
   }
   const initials = name.trim().slice(0, 2);
   return (
-    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal to-teal-light text-base font-black text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)]">
+    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal to-teal-light text-base font-black text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.30)]">
       {initials}
     </div>
   );
@@ -4111,7 +6397,10 @@ function Skeleton() {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="rounded-2xl border border-line bg-white/80 p-5 backdrop-blur-sm">
+        <div
+          key={i}
+          className="rounded-2xl border border-line bg-white/80 p-5 backdrop-blur-sm dark:bg-paper/80"
+        >
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-xl skeleton-shimmer" />
             <div className="h-4 w-24 skeleton-shimmer rounded" />
@@ -4128,7 +6417,7 @@ function BackLink() {
   return (
     <Link href="/" className="group inline-flex items-center gap-1.5 text-sm font-bold text-teal/70 transition-colors hover:text-teal">
       <span className="transition-transform duration-200 group-hover:translate-x-1"><IconArrowLeft /></span>
-      رجوع للوحة الأقسام
+      رجوع إلى لوحة الأقسام
     </Link>
   );
 }
@@ -4188,7 +6477,7 @@ export default function ChannelsPage() {
       <BackLink />
 
       <div className="mt-6 animate-slide-up">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
           {stage}
         </span>
@@ -4217,26 +6506,26 @@ export default function ChannelsPage() {
       {loading && <Skeleton />}
 
       {!loading && error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 animate-slide-up">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 animate-slide-up dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
           <p className="font-bold">خطأ في الاتصال بقاعدة البيانات</p>
-          <p className="mt-1 text-red-600/80">{error}</p>
+          <p className="mt-1 text-red-600/80 dark:text-red-300/80">{error}</p>
         </div>
       )}
 
       {!loading && !error && channels.length === 0 && (
-        <div className="rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up">
+        <div className="rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up dark:bg-paper/80">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-teal/8 text-teal">
             <IconChat />
           </div>
-          <p className="mt-4 font-bold text-ink/70">لا توجد قنوات مضافة لمرحلتك حاليا.</p>
-          <p className="mt-1 text-sm text-ink/50">تفقدها لاحقًا</p>
+          <p className="mt-4 font-bold text-ink/70">لا توجد قنوات مضافة لمرحلتك حالياً.</p>
+          <p className="mt-1 text-sm text-ink/50">يرجى العودة لاحقاً</p>
         </div>
       )}
 
       {!loading && !error && channels.length > 0 && visibleChannels.length === 0 && (
-        <div className="rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up">
+        <div className="rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up dark:bg-paper/80">
           <IconSearch />
-          <p className="mt-4 font-bold text-ink/70">لا نتائج مطابقة</p>
+          <p className="mt-4 font-bold text-ink/70">لا توجد نتائج مطابقة</p>
           <p className="mt-1 text-sm text-ink/50">&laquo;{searchTerm}&raquo;</p>
         </div>
       )}
@@ -4248,7 +6537,7 @@ export default function ChannelsPage() {
               key={c.id}
               href={`/channels/${c.id}`}
               style={{ animationDelay: `${idx * 50}ms` }}
-              className="group relative overflow-hidden rounded-2xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-teal/30 hover:shadow-[0_12px_30px_rgba(14,74,74,0.10)] active:scale-[0.99] animate-slide-up"
+              className="group relative overflow-hidden rounded-2xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-teal/30 hover:shadow-[0_12px_30px_rgba(14,74,74,0.10)] active:scale-[0.99] animate-slide-up dark:bg-paper/80 dark:hover:shadow-[0_12px_30px_rgba(0,0,0,0.40)]"
             >
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-bl from-teal/0 via-teal/0 to-teal/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
@@ -4276,25 +6565,548 @@ export default function ChannelsPage() {
 }
 ```
 
+## app\dictionary\page.tsx
+
+```
+// app/dictionary/page.tsx
+'use client';
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import { useToast } from '@/components/ui/Toast';
+import { postJson } from '@/lib/api-client';
+
+// ==================== Types ====================
+interface DictionaryResult {
+  id?: string;
+  term: string;
+  arabic_translation: string;
+  meaning: string;
+  root_breakdown: string | null;
+  clinical_note: string | null;
+  similar_terms: string[];
+  hit_count: number;
+}
+
+interface PopularTerm {
+  term: string;
+  arabic_translation: string;
+  hit_count: number;
+}
+
+const RECENT_KEY = 'dictionary_recent_terms';
+const MAX_RECENT = 8;
+
+// ==================== Icons ====================
+function IconSearch() {
+  return (
+    <svg className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
+    </svg>
+  );
+}
+function IconArrowLeft() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+    </svg>
+  );
+}
+function IconStethoscope() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.8 2.3A.3.3 0 105 2H4a2 2 0 00-2 2v5a6 6 0 006 6v0a6 6 0 006-6V4a2 2 0 00-2-2h-1a.2.2 0 10.3.3M8 15v1a6 6 0 006 6v0a6 6 0 006-6v-4" />
+      <circle cx="20" cy="10" r="2" />
+    </svg>
+  );
+}
+function IconBook() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+    </svg>
+  );
+}
+function IconSparkles() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+    </svg>
+  );
+}
+function IconTrending() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+    </svg>
+  );
+}
+function IconClock() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+function IconCopy() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+    </svg>
+  );
+}
+function IconCheck() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+  );
+}
+function IconWarning() {
+  return (
+    <svg className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    </svg>
+  );
+}
+
+// ==================== Recent Storage ====================
+function loadRecent(): string[] {
+  try {
+    const saved = localStorage.getItem(RECENT_KEY);
+    if (!saved) return [];
+    const parsed = JSON.parse(saved);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((t): t is string => typeof t === 'string').slice(0, MAX_RECENT);
+    }
+  } catch {}
+  return [];
+}
+
+function saveRecent(term: string) {
+  try {
+    const current = loadRecent().filter((t) => t.toLowerCase() !== term.toLowerCase());
+    const next = [term, ...current].slice(0, MAX_RECENT);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+  } catch {}
+}
+
+// ==================== Result Card ====================
+function ResultCard({ result }: { result: DictionaryResult }) {
+  const toast = useToast();
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      const text = [
+        `📖 ${result.term}`,
+        `🇮🇶 ${result.arabic_translation}`,
+        `📝 ${result.meaning}`,
+        result.root_breakdown ? `🧬 ${result.root_breakdown}` : '',
+        result.clinical_note ? `🩺 ${result.clinical_note}` : '',
+        result.similar_terms.length > 0
+          ? `🔗 مشابهة: ${result.similar_terms.join(' · ')}`
+          : '',
+      ]
+        .filter(Boolean)
+        .join('\n');
+
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.show('تم نسخ المصطلح', 'success');
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.show('فشل النسخ', 'error');
+    }
+  }
+
+  return (
+    <div className="rounded-3xl border border-line bg-white/80 shadow-[0_2px_12px_rgba(26,33,31,0.06)] backdrop-blur-sm dark:bg-paper/80 dark:shadow-[0_2px_12px_rgba(0,0,0,0.30)] animate-slide-up">
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line/60 px-6 py-5">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-teal/10 text-teal dark:bg-teal/20">
+              <IconStethoscope />
+            </span>
+            <h2 className="text-2xl font-black text-ink">{result.term}</h2>
+          </div>
+          <p className="mt-2 text-lg font-bold text-teal">{result.arabic_translation}</p>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleCopy}
+          aria-label="نسخ المصطلح"
+          className="flex h-9 items-center gap-1.5 rounded-lg border border-line bg-white px-3 text-xs font-bold text-ink/60 transition-all hover:border-teal/30 hover:text-teal active:scale-95 dark:bg-white/[0.06]"
+        >
+          {copied ? <IconCheck /> : <IconCopy />}
+          {copied ? 'تم' : 'نسخ'}
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="space-y-5 p-6">
+        <div>
+          <div className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/50">
+            <IconBook />
+            المعنى
+          </div>
+          <p className="text-sm leading-relaxed text-ink/80">{result.meaning}</p>
+        </div>
+
+        {result.root_breakdown && (
+          <div>
+            <div className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/50">
+              <IconSparkles />
+              تفكيك الكلمة
+            </div>
+            <p className="text-sm leading-relaxed text-ink/80">{result.root_breakdown}</p>
+          </div>
+        )}
+
+        {result.clinical_note && (
+          <div className="rounded-2xl border border-amber/30 bg-amber/8 p-4 dark:bg-amber/15">
+            <div className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+              <IconStethoscope />
+              ملاحظة سريرية
+            </div>
+            <p className="text-sm leading-relaxed text-ink/80">{result.clinical_note}</p>
+          </div>
+        )}
+
+        {result.similar_terms.length > 0 && (
+          <div>
+            <div className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/50">
+              <IconSparkles />
+              مصطلحات مشابهة
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {result.similar_terms.map((t, i) => (
+                <span
+                  key={i}
+                  className="rounded-full bg-ink/5 px-3 py-1 text-xs font-bold text-ink/70 dark:bg-white/10"
+                >
+                  {t}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-2 border-t border-line/40 pt-3 text-[11px] text-ink/40">
+          <IconTrending />
+          <span>بُحث عنه {result.hit_count} {result.hit_count === 1 ? 'مرة' : 'مرات'}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==================== Page ====================
+export default function DictionaryPage() {
+  const toast = useToast();
+  const [term, setTerm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<DictionaryResult | null>(null);
+  const [popular, setPopular] = useState<PopularTerm[]>([]);
+  const [recent, setRecent] = useState<string[]>([]);
+  const [mounted, setMounted] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setRecent(loadRecent());
+    setMounted(true);
+
+    async function loadPopular() {
+      try {
+        const data = await postJson<{ terms: PopularTerm[] }>('/api/dictionary', {
+          action: 'popular',
+        });
+        setPopular(data.terms ?? []);
+      } catch {
+        /* تجاهل */
+      }
+    }
+    loadPopular();
+  }, []);
+
+  const handleLookup = useCallback(
+    async (searchTerm: string) => {
+      const trimmed = searchTerm.trim();
+      if (!trimmed || trimmed.length < 2) {
+        toast.show('أدخل مصطلحاً طبياً (حرفان على الأقل)', 'error');
+        return;
+      }
+
+      setLoading(true);
+      setResult(null);
+
+      try {
+        const data = await postJson<{ result: DictionaryResult; cached: boolean }>(
+          '/api/dictionary',
+          { action: 'lookup', term: trimmed }
+        );
+        setResult(data.result);
+
+        saveRecent(trimmed);
+        setRecent(loadRecent());
+      } catch (err) {
+        toast.show(err instanceof Error ? err.message : 'فشل البحث', 'error');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [toast]
+  );
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    handleLookup(term);
+  }
+
+  function quickSearch(t: string) {
+    setTerm(t);
+    handleLookup(t);
+    inputRef.current?.blur();
+  }
+
+  if (!mounted) {
+    return (
+      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
+        <div className="h-32 skeleton-shimmer rounded-3xl" />
+      </main>
+    );
+  }
+
+  return (
+    <main className="mx-auto max-w-3xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10">
+      <Link
+        href="/"
+        className="group inline-flex items-center gap-1.5 text-sm font-bold text-teal/70 transition-colors hover:text-teal"
+      >
+        <span className="transition-transform duration-200 group-hover:translate-x-1">
+          <IconArrowLeft />
+        </span>
+        رجوع إلى لوحة الأقسام
+      </Link>
+
+      <div className="mt-6 animate-slide-up">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
+          أداة طبية
+        </span>
+        <h1 className="mt-3 flex items-center gap-2 text-3xl font-black leading-tight text-ink sm:text-4xl">
+          <IconStethoscope />
+          قاموس المصطلحات الطبية
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-ink/55">
+          اكتب أي مصطلح طبي بالعربية أو الإنجليزية، وسنشرحه لك بمستوى طالب الطب:
+          المعنى، تفكيك الكلمة، ملاحظة سريرية، ومصطلحات مشابهة.
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="mt-6 animate-slide-up" style={{ animationDelay: '80ms' }}>
+        <div className="relative">
+          <IconSearch />
+          <input
+            ref={inputRef}
+            type="text"
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            placeholder="مثال: Dyspnea, Myocardial, ضيق النفس..."
+            maxLength={100}
+            autoComplete="off"
+            className="w-full rounded-2xl border-2 border-line bg-white py-4 pr-12 pl-32 text-base text-ink placeholder:text-ink/35 transition-all duration-200 focus:border-teal focus:bg-white focus:outline-none focus:shadow-[0_0_0_4px_rgba(14,74,74,0.10)] dark:bg-white/[0.06] dark:focus:bg-white/[0.08] dark:focus:shadow-[0_0_0_4px_rgba(77,184,184,0.15)]"
+            dir="auto"
+          />
+          <button
+            type="submit"
+            disabled={loading || term.trim().length < 2}
+            className="absolute left-2 top-1/2 flex h-12 -translate-y-1/2 items-center gap-1.5 rounded-xl bg-teal px-5 text-sm font-bold text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] transition-all duration-200 hover:bg-teal-light active:scale-95 disabled:opacity-40 disabled:active:scale-100"
+          >
+            {loading ? (
+              <>
+                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+                  <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+                جاري البحث
+              </>
+            ) : (
+              <>
+                <IconSearch />
+                ابحث
+              </>
+            )}
+          </button>
+        </div>
+      </form>
+
+      {loading && (
+        <div className="mt-6 space-y-3 rounded-3xl border border-line bg-white/80 p-6 dark:bg-paper/80">
+          <div className="h-8 w-40 skeleton-shimmer rounded" />
+          <div className="h-6 w-32 skeleton-shimmer rounded" />
+          <div className="mt-4 h-4 w-full skeleton-shimmer rounded" />
+          <div className="h-4 w-3/4 skeleton-shimmer rounded" />
+        </div>
+      )}
+
+      {result && !loading && (
+        <div className="mt-6">
+          <ResultCard result={result} />
+        </div>
+      )}
+
+      {recent.length > 0 && !result && !loading && (
+        <div className="mt-6 animate-slide-up" style={{ animationDelay: '120ms' }}>
+          <div className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/50">
+            <IconClock />
+            آخر ما بحثت عنه
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {recent.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => quickSearch(t)}
+                className="rounded-full border border-line bg-white px-3 py-1.5 text-sm font-bold text-ink/70 transition-all hover:border-teal/40 hover:bg-teal/5 hover:text-teal active:scale-95 dark:bg-white/[0.06]"
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {popular.length > 0 && !result && !loading && (
+        <div className="mt-8 animate-slide-up" style={{ animationDelay: '160ms' }}>
+          <div className="mb-3 flex items-center gap-1.5 text-sm font-bold text-ink">
+            <IconTrending />
+            الأكثر بحثاً على المنصة
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {popular.map((t) => (
+              <button
+                key={t.term}
+                type="button"
+                onClick={() => quickSearch(t.term)}
+                className="group flex items-center justify-between gap-3 rounded-2xl border border-line bg-white/80 px-4 py-3 text-right transition-all duration-200 hover:-translate-y-0.5 hover:border-teal/30 hover:shadow-[0_4px_16px_rgba(14,74,74,0.08)] active:scale-[0.98] dark:bg-paper/80"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-ink transition-colors group-hover:text-teal">
+                    {t.term}
+                  </p>
+                  <p className="mt-0.5 truncate text-xs text-ink/50">{t.arabic_translation}</p>
+                </div>
+                <span className="flex-shrink-0 rounded-full bg-ink/5 px-2 py-0.5 text-[10px] font-bold text-ink/50 dark:bg-white/10">
+                  {t.hit_count}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-10 flex items-start gap-2 rounded-2xl border border-amber/30 bg-amber/8 p-4 text-xs text-ink/70 dark:bg-amber/15">
+        <span className="text-amber">
+          <IconWarning />
+        </span>
+        <p className="leading-relaxed">
+          <strong>ملاحظة:</strong> هذا القاموس مساعد دراسي وليس مرجعاً طبياً. 
+          الملاحظات السريرية اختيارية، ولا يُنصح بالاعتماد عليه وحده في قرارات سريرية حقيقية.
+        </p>
+      </div>
+    </main>
+  );
+}
+```
+
 ## app\globals.css
 
 ```
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap');
 @import "tailwindcss";
 
-/* ==================== Design Tokens ==================== */
-@theme {
-  --color-paper: #F7F6F2;
-  --color-paper-deep: #EFEDE7;
-  --color-ink: #1A211F;
-  --color-ink-soft: #2C3532;
-  --color-teal: #0E4A4A;
-  --color-teal-light: #1A6E6E;
-  --color-teal-glow: #2A8888;
-  --color-amber: #E0A63A;
-  --color-amber-soft: #F0C769;
-  --color-line: #E4E0D6;
-  --color-line-soft: #EFECE4;
+/* ==================== Dark Mode Variant ==================== */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ==================== Light Theme (Root) ==================== */
+:root {
+  /* ألوان الخلفية */
+  --paper: #F7F6F2;
+  --paper-deep: #EFEDE7;
+
+  /* ألوان النص */
+  --ink: #1A211F;
+  --ink-soft: #2C3532;
+
+  /* الألوان الأساسية */
+  --teal: #0E4A4A;
+  --teal-light: #1A6E6E;
+  --teal-glow: #2A8888;
+  --amber: #E0A63A;
+  --amber-soft: #F0C769;
+
+  /* الحدود */
+  --line: #E4E0D6;
+  --line-soft: #EFECE4;
+
+  /* الظلال الديناميكية (متغيرات) */
+  --shadow-xs: 0 1px 2px rgba(26, 33, 31, 0.04);
+  --shadow-sm: 0 1px 3px rgba(26, 33, 31, 0.05), 0 1px 2px rgba(26, 33, 31, 0.03);
+  --shadow-md: 0 4px 16px rgba(26, 33, 31, 0.06);
+  --shadow-lg: 0 12px 30px rgba(14, 74, 74, 0.10);
+  --shadow-xl: 0 24px 60px rgba(26, 33, 31, 0.30);
+
+  /* لون الرابط الخارجي */
+  --link-color: #0E4A4A;
+}
+
+/* ==================== Dark Theme ==================== */
+.dark {
+  /* ألوان الخلفية — أغمق قليلاً وأدفأ */
+  --paper: #131918;
+  --paper-deep: #0B0F0E;
+
+  /* ألوان النص — أفتح قليلاً لراحة أكبر */
+  --ink: #ECEFEE;
+  --ink-soft: #B5BEBC;
+
+  /* الألوان الأساسية — أفتح في الوضع الليلي */
+  --teal: #4DB8B8;
+  --teal-light: #62CBCB;
+  --teal-glow: #7DDBDB;
+  --amber: #F2C770;
+  --amber-soft: #FFD88A;
+
+  /* الحدود — أوضح قليلاً */
+  --line: #2C3635;
+  --line-soft: #222B2A;
+
+  /* الظلال — أضعف بكثير (الظلال السوداء على أسود غير مرئية) */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.30);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.40);
+  --shadow-lg: 0 12px 30px rgba(0, 0, 0, 0.45);
+  --shadow-xl: 0 24px 60px rgba(0, 0, 0, 0.60);
+
+  --link-color: #4DB8B8;
+}
+
+/* ==================== Tailwind Theme ==================== */
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-deep: var(--paper-deep);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-teal: var(--teal);
+  --color-teal-light: var(--teal-light);
+  --color-teal-glow: var(--teal-glow);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
 
   --font-display: "Cairo", system-ui, sans-serif;
   --font-body: "Tajawal", system-ui, sans-serif;
@@ -4305,6 +7117,7 @@ export default function ChannelsPage() {
   --animate-shimmer: shimmer 1.6s ease-in-out infinite;
 }
 
+/* ==================== Keyframes ==================== */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -4323,14 +7136,22 @@ export default function ChannelsPage() {
 }
 
 /* ==================== Base ==================== */
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
 
 body {
-  background-color: var(--color-paper);
-  color: var(--color-ink);
+  background-color: var(--paper);
+  color: var(--ink);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 h1, h2, h3, h4 {
@@ -4339,8 +7160,21 @@ h1, h2, h3, h4 {
   letter-spacing: -0.015em;
 }
 
+/* التمرير السلس عند تبديل الثيم */
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+button, a, input, select, textarea {
+  transition-property: background-color, border-color, color, opacity, transform, box-shadow;
+}
+
 :focus-visible {
-  outline: 2px solid var(--color-teal);
+  outline: 2px solid var(--teal);
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -4349,14 +7183,15 @@ h1, h2, h3, h4 {
 @utility skeleton-shimmer {
   background: linear-gradient(
     90deg,
-    rgba(26, 33, 31, 0.06) 0%,
-    rgba(26, 33, 31, 0.10) 50%,
-    rgba(26, 33, 31, 0.06) 100%
+    color-mix(in srgb, var(--ink) 6%, transparent) 0%,
+    color-mix(in srgb, var(--ink) 12%, transparent) 50%,
+    color-mix(in srgb, var(--ink) 6%, transparent) 100%
   );
   background-size: 200% 100%;
   animation: shimmer 1.6s ease-in-out infinite;
 }
 
+/* ==================== Reduced Motion ==================== */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -4364,6 +7199,37 @@ h1, h2, h3, h4 {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+/* ==================== Native Form Elements Theming ==================== */
+/* إصلاح خلفية القوائم المنسدلة في الوضع الليلي */
+select,
+option,
+textarea,
+input {
+  color-scheme: light;
+}
+
+html.dark select,
+html.dark option,
+html.dark textarea,
+html.dark input {
+  color-scheme: dark;
+}
+
+/* إصلاح صريح لخيارات القائمة المنسدلة */
+select option {
+  background-color: #F7F6F2;
+  color: #1A211F;
+}
+
+html.dark select option {
+  background-color: #131918;
+  color: #ECEFEE;
+}
+
+html.dark select optgroup {
+  background-color: #131918;
+  color: #ECEFEE;
 }
 ```
 
@@ -4397,6 +7263,22 @@ const COMPONENTS: readonly ComponentDef[] = [
   { key: 'finalPractical', label: 'الفاينل (عملي)', defaultMax: 20 },
 ] as const;
 
+// أهداف النجاح / التقدير
+interface TargetDef {
+  value: number;
+  label: string;
+  short: string;
+}
+
+const TARGETS: readonly TargetDef[] = [
+  { value: 50, label: 'النجاح', short: 'نجاح' },
+  { value: 60, label: 'جيد', short: 'جيد' },
+  { value: 70, label: 'جيد جداً', short: 'جيد جداً' },
+  { value: 80, label: 'امتياز', short: 'امتياز' },
+] as const;
+
+const TARGET_KEY_PREFIX = 'gpa_target_';
+
 // ==================== Types ====================
 interface ComponentData {
   max: string;
@@ -4404,8 +7286,22 @@ interface ComponentData {
 }
 type SubjectScores = Record<string, ComponentData>;
 type AllScores = Record<string, SubjectScores>;
+
 interface SubjectWithPercentage extends Subject {
   percentage: number | null;
+  targetAnalysis: TargetAnalysis;
+}
+
+interface TargetAnalysis {
+  currentScore: number;
+  totalMax: number;
+  remainingMax: number;
+  targetScore: number;
+  needFromRemaining: number;
+  achieved: boolean;
+  impossible: boolean;
+  noData: boolean;
+  allEntered: boolean;
 }
 
 // ==================== Helpers ====================
@@ -4445,6 +7341,73 @@ function calculatePercentage(subjectScores: SubjectScores | undefined): number |
   return (totalScore / totalMax) * 100;
 }
 
+// ✅ تحليل الوضع بالنسبة للهدف
+function analyzeForTarget(
+  subjectScores: SubjectScores | undefined,
+  targetPercent: number
+): TargetAnalysis {
+  const base: TargetAnalysis = {
+    currentScore: 0,
+    totalMax: 0,
+    remainingMax: 0,
+    targetScore: 0,
+    needFromRemaining: 0,
+    achieved: false,
+    impossible: false,
+    noData: true,
+    allEntered: false,
+  };
+
+  if (!subjectScores) return base;
+
+  let currentScore = 0;
+  let totalMax = 0;
+  let remainingMax = 0;
+  let enteredCount = 0;
+
+  for (const c of COMPONENTS) {
+    const comp = subjectScores[c.key];
+    if (!comp) continue;
+    const maxNum = Number(comp.max);
+    if (Number.isNaN(maxNum) || maxNum <= 0) continue;
+
+    totalMax += maxNum;
+
+    if (comp.score === '') {
+      remainingMax += maxNum;
+    } else {
+      const scoreNum = Number(comp.score);
+      if (Number.isNaN(scoreNum) || scoreNum < 0 || scoreNum > maxNum) {
+        remainingMax += maxNum;
+        continue;
+      }
+      currentScore += scoreNum;
+      enteredCount++;
+    }
+  }
+
+  if (totalMax === 0) return base;
+
+  const targetScore = (targetPercent / 100) * totalMax;
+  const needFromRemaining = targetScore - currentScore;
+  const achieved = needFromRemaining <= 0;
+  const impossible = !achieved && needFromRemaining > remainingMax;
+  const noData = enteredCount === 0;
+  const allEntered = remainingMax === 0;
+
+  return {
+    currentScore,
+    totalMax,
+    remainingMax,
+    targetScore,
+    needFromRemaining,
+    achieved,
+    impossible,
+    noData,
+    allEntered,
+  };
+}
+
 // ==================== Icons ====================
 function IconArrowLeft() {
   return (
@@ -4467,13 +7430,43 @@ function IconChart() {
     </svg>
   );
 }
+function IconTarget() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="6" />
+      <circle cx="12" cy="12" r="2" />
+    </svg>
+  );
+}
+function IconCheck() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+  );
+}
+function IconWarning() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    </svg>
+  );
+}
+function IconTrendingUp() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+    </svg>
+  );
+}
 
 // ==================== Skeleton ====================
 function Skeleton() {
   return (
     <div className="mt-6 space-y-2">
       {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="flex items-center justify-between rounded-2xl border border-line bg-white/80 p-4 backdrop-blur-sm">
+        <div key={i} className="flex items-center justify-between rounded-2xl border border-line bg-white/80 p-4 backdrop-blur-sm dark:bg-paper/80">
           <div className="h-4 w-40 skeleton-shimmer rounded" />
           <div className="h-6 w-16 skeleton-shimmer rounded-full" />
         </div>
@@ -4486,17 +7479,191 @@ function BackLink() {
   return (
     <Link href="/" className="group inline-flex items-center gap-1.5 text-sm font-bold text-teal/70 transition-colors hover:text-teal">
       <span className="transition-transform duration-200 group-hover:translate-x-1"><IconArrowLeft /></span>
-      رجوع للوحة الأقسام
+      رجوع إلى لوحة الأقسام
     </Link>
   );
 }
 
 // ==================== Score Color ====================
 function getScoreColor(pct: number): string {
-  if (pct >= 85) return 'bg-teal/10 text-teal';
-  if (pct >= 70) return 'bg-teal/8 text-teal-light';
-  if (pct >= 50) return 'bg-amber/15 text-amber-800';
-  return 'bg-red-100 text-red-700';
+  if (pct >= 85) return 'bg-teal/10 text-teal dark:bg-teal/20 dark:text-teal';
+  if (pct >= 70) return 'bg-teal/8 text-teal-light dark:bg-teal/15 dark:text-teal';
+  if (pct >= 50) return 'bg-amber/15 text-amber-800 dark:bg-amber/25 dark:text-amber-300';
+  return 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300';
+}
+
+// ==================== Target Selector ====================
+function TargetSelector({
+  target,
+  onChange,
+}: {
+  target: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-line bg-white/80 p-4 dark:bg-paper/80">
+      <div className="mb-3 flex items-center gap-2">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal/10 text-teal dark:bg-teal/20">
+          <IconTarget />
+        </span>
+        <div>
+          <p className="text-sm font-bold text-ink">هدفي في كل مادة</p>
+          <p className="text-[11px] text-ink/50">اختر هدفك، وسنخبرك بكم تحتاج في المتبقي</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-4 gap-1.5">
+        {TARGETS.map((t) => {
+          const active = target === t.value;
+          return (
+            <button
+              key={t.value}
+              type="button"
+              onClick={() => onChange(t.value)}
+              className={`rounded-xl border px-2 py-2.5 text-center transition-all duration-200 active:scale-95 ${
+                active
+                  ? 'border-teal bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)]'
+                  : 'border-line bg-white text-ink/70 hover:border-teal/40 dark:bg-white/[0.04]'
+              }`}
+            >
+              <p className={`font-mono text-lg font-black leading-none ${active ? '' : 'text-ink'}`}>
+                {t.value}
+                <span className="text-xs">%</span>
+              </p>
+              <p className={`mt-0.5 text-[10px] font-bold ${active ? 'text-white/90' : 'text-ink/50'}`}>
+                {t.short}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ==================== Target Analysis Card ====================
+function TargetAnalysisCard({
+  analysis,
+  target,
+  subjectName,
+}: {
+  analysis: TargetAnalysis;
+  target: number;
+  subjectName: string;
+}) {
+  // لا درجات مُدخلة
+  if (analysis.noData) {
+    return (
+      <div className="rounded-2xl border border-line bg-paper/60 p-4 text-center dark:bg-white/[0.03]">
+        <p className="text-sm text-ink/50">أدخل أي درجة لتظهر لك التوقعات</p>
+      </div>
+    );
+  }
+
+  // حقق الهدف
+  if (analysis.achieved) {
+    return (
+      <div className="rounded-2xl border border-teal/30 bg-teal/[0.04] p-4 dark:border-teal/40 dark:bg-teal/10">
+        <div className="flex items-start gap-3">
+          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-teal text-white">
+            <IconCheck />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-black text-teal">🎉 ضمنت {target}% في {subjectName}</p>
+            <p className="mt-0.5 text-xs text-ink/60">
+              حتى لو جبت صفر في المتبقي، لسا محقق هدفك.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // مستحيل
+  if (analysis.impossible) {
+    return (
+      <div className="rounded-2xl border border-red-300 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/40">
+        <div className="flex items-start gap-3">
+          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-red-500 text-white">
+            <IconWarning />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-black text-red-700 dark:text-red-300">
+              صعب تحقيق {target}% في {subjectName}
+            </p>
+            <p className="mt-0.5 text-xs text-ink/60">
+              تحتاج {analysis.needFromRemaining.toFixed(1)} درجة، والحد الأقصى المتبقي {analysis.remainingMax} فقط.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // تحتاج نقاط
+  return (
+    <div className="rounded-2xl border border-amber/30 bg-amber/8 p-4 dark:border-amber/40 dark:bg-amber/15">
+      <div className="flex items-start gap-3">
+        <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-amber text-ink">
+          <IconTrendingUp />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-black text-ink">
+            تحتاج <span className="text-lg text-amber-800 dark:text-amber-300">{analysis.needFromRemaining.toFixed(1)}</span> درجة
+          </p>
+          <p className="mt-0.5 text-xs text-ink/60">
+            من أصل <strong>{analysis.remainingMax}</strong> متبقية لتحقق هدف {target}% في {subjectName}
+          </p>
+
+          {/* Progress bar */}
+          <div className="mt-3">
+            <div className="mb-1 flex items-center justify-between text-[10px] font-bold text-ink/50">
+              <span>حالياً: {analysis.currentScore.toFixed(1)}</span>
+              <span>الهدف: {analysis.targetScore.toFixed(1)}</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-ink/8 dark:bg-white/10">
+              <div
+                className="h-full rounded-full bg-gradient-to-l from-amber to-amber-soft transition-all duration-500"
+                style={{
+                  width: `${Math.min(100, (analysis.currentScore / analysis.targetScore) * 100)}%`,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==================== Status Chip (للـheader) ====================
+function StatusChip({ analysis, target }: { analysis: TargetAnalysis; target: number }) {
+  if (analysis.noData) return null;
+
+  if (analysis.achieved) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-teal/15 px-2 py-0.5 text-[10px] font-black text-teal dark:bg-teal/25">
+        <IconCheck />
+        ضمنت {target}%
+      </span>
+    );
+  }
+
+  if (analysis.impossible) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-black text-red-700 dark:bg-red-950/50 dark:text-red-300">
+        <IconWarning />
+        {target}% صعب
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-amber/20 px-2 py-0.5 text-[10px] font-black text-amber-800 dark:bg-amber/30 dark:text-amber-300">
+      <IconTrendingUp />
+      تحتاج {analysis.needFromRemaining.toFixed(1)} لـ{target}%
+    </span>
+  );
 }
 
 // ==================== Page ====================
@@ -4509,9 +7676,12 @@ export default function GpaPage() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [target, setTarget] = useState<number>(50);
 
   const storageKey = stage ? `gpa_scores_${stage}` : '';
+  const targetKey = stage ? `${TARGET_KEY_PREFIX}${stage}` : '';
 
+  // ===== تحميل =====
   useEffect(() => {
     if (!stage) return;
     let cancelled = false;
@@ -4519,6 +7689,13 @@ export default function GpaPage() {
     async function loadData() {
       setLoading(true);
       setError('');
+
+      // تحميل الهدف
+      const savedTarget = Number(localStorage.getItem(`${TARGET_KEY_PREFIX}${stage}`));
+      if (!Number.isNaN(savedTarget) && TARGETS.some((t) => t.value === savedTarget)) {
+        setTarget(savedTarget);
+      }
+
       const { data, error: fetchError } = await supabase
         .from('subjects')
         .select('id, name, stage, units')
@@ -4551,6 +7728,16 @@ export default function GpaPage() {
     try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch {}
   }, [storageKey]);
 
+  const persistTarget = useCallback((value: number) => {
+    if (!targetKey) return;
+    try { localStorage.setItem(targetKey, String(value)); } catch {}
+  }, [targetKey]);
+
+  const handleTargetChange = useCallback((value: number) => {
+    setTarget(value);
+    persistTarget(value);
+  }, [persistTarget]);
+
   const updateComponent = useCallback(
     (subjectId: string, componentKey: string, field: 'max' | 'score', value: string) => {
       setScores((prev) => {
@@ -4577,8 +7764,8 @@ export default function GpaPage() {
 
   const resetScores = useCallback(async () => {
     const ok = await confirm(
-      'حذف كل الدرجات المدخلة لهذه المرحلة. متأكد؟',
-      { variant: 'danger', confirmLabel: 'احذف' }
+      'حذف كل الدرجات المدخلة لهذه المرحلة. هل أنت متأكد؟',
+      { variant: 'danger', confirmLabel: 'حذف' }
     );
     if (!ok) return;
     const cleared: AllScores = {};
@@ -4587,9 +7774,15 @@ export default function GpaPage() {
     persistScores(cleared);
   }, [confirm, subjects, persistScores]);
 
+  // ===== الحسابات =====
   const subjectsWithPercentage: SubjectWithPercentage[] = useMemo(
-    () => subjects.map((s) => ({ ...s, percentage: calculatePercentage(scores[s.id]) })),
-    [subjects, scores]
+    () =>
+      subjects.map((s) => ({
+        ...s,
+        percentage: calculatePercentage(scores[s.id]),
+        targetAnalysis: analyzeForTarget(scores[s.id], target),
+      })),
+    [subjects, scores, target]
   );
 
   const entered = useMemo(
@@ -4621,40 +7814,45 @@ export default function GpaPage() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
+    <main className="mx-auto max-w-2xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10">
       <BackLink />
 
       <div className="mt-6 animate-slide-up">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
           {stage}
         </span>
         <h1 className="mt-3 text-3xl font-black leading-tight text-ink sm:text-4xl">المعدل</h1>
         <p className="mt-2 text-sm leading-relaxed text-ink/55">
-          افتح كل مادة وأدخل درجاتك أول بأول على مدار السنة. تكدر تعدّل &laquo;من كم&raquo; لكل محطة إذا كانت تختلف بمادتك. الدرجات تنحفظ بمتصفحك بس.
+          افتح كل مادة وأدخل درجاتك. سنحسب معدلك، وسنخبرك بكم تحتاج في المتبقي لتحقيق هدفك.
         </p>
       </div>
 
       {loading && <Skeleton />}
 
       {!loading && error && (
-        <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 animate-slide-up">
+        <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 animate-slide-up dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
           <p className="font-bold">خطأ في الاتصال بقاعدة البيانات</p>
-          <p className="mt-1 text-red-600/80">{error}</p>
+          <p className="mt-1 text-red-600/80 dark:text-red-300/80">{error}</p>
         </div>
       )}
 
       {!loading && !error && subjects.length === 0 && (
-        <div className="mt-6 rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-teal/8 text-teal">
+        <div className="mt-6 rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up dark:bg-paper/80">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-teal/8 text-teal dark:bg-teal/15">
             <IconChart />
           </div>
-          <p className="mt-4 font-bold text-ink/70">لا يوجد مواد مضافة لمرحلتك حاليا.</p>
+          <p className="mt-4 font-bold text-ink/70">لا توجد مواد مضافة لمرحلتك حالياً.</p>
         </div>
       )}
 
       {!loading && !error && subjects.length > 0 && (
         <>
+          {/* ===== الهدف ===== */}
+          <div className="mt-6 animate-slide-up" style={{ animationDelay: '80ms' }}>
+            <TargetSelector target={target} onChange={handleTargetChange} />
+          </div>
+
           {/* شريط التقدم */}
           {stats.enteredCount > 0 && !stats.allFilled && (
             <div className="mt-6 animate-slide-up">
@@ -4662,8 +7860,11 @@ export default function GpaPage() {
                 <span>التقدم</span>
                 <span>{stats.enteredCount} من {subjects.length} مادة</span>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-ink/8">
-                <div className="h-full rounded-full bg-gradient-to-l from-teal to-teal-light transition-all duration-500" style={{ width: `${stats.progress}%` }} />
+              <div className="h-2 overflow-hidden rounded-full bg-ink/8 dark:bg-white/10">
+                <div
+                  className="h-full rounded-full bg-gradient-to-l from-teal to-teal-light transition-all duration-500"
+                  style={{ width: `${stats.progress}%` }}
+                />
               </div>
             </div>
           )}
@@ -4679,19 +7880,25 @@ export default function GpaPage() {
                 <div
                   key={s.id}
                   style={{ animationDelay: `${idx * 40}ms` }}
-                  className="overflow-hidden rounded-2xl border border-line bg-white/80 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 animate-slide-up"
+                  className="overflow-hidden rounded-2xl border border-line bg-white/80 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 animate-slide-up dark:bg-paper/80"
                 >
                   <button
                     type="button"
                     onClick={() => toggleExpand(s.id)}
                     aria-expanded={isOpen}
-                    className="flex w-full items-center justify-between gap-3 p-4 text-right transition-colors hover:bg-ink/[0.02]"
+                    className="flex w-full items-center justify-between gap-3 p-4 text-right transition-colors hover:bg-ink/[0.02] dark:hover:bg-white/[0.03]"
                   >
-                    <div className="min-w-0">
-                      <span className="font-bold text-ink">{s.name}</span>
-                      {s.units != null && (
-                        <span className="mr-2 text-xs text-ink/40">({s.units} وحدة)</span>
-                      )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-bold text-ink">{s.name}</span>
+                        {s.units != null && (
+                          <span className="text-xs text-ink/40">({s.units} وحدة)</span>
+                        )}
+                      </div>
+                      {/* Status Chip */}
+                      <div className="mt-1">
+                        <StatusChip analysis={s.targetAnalysis} target={target} />
+                      </div>
                     </div>
                     <div className="flex flex-shrink-0 items-center gap-2">
                       {s.percentage !== null ? (
@@ -4699,46 +7906,56 @@ export default function GpaPage() {
                           {s.percentage.toFixed(1)}%
                         </span>
                       ) : (
-                        <span className="text-sm text-ink/40">لا توجد درجات</span>
+                        <span className="text-sm text-ink/40">—</span>
                       )}
                       <IconChevron open={isOpen} />
                     </div>
                   </button>
 
                   {isOpen && (
-                    <div className="space-y-3 border-t border-line/60 bg-paper/40 p-4">
-                      {COMPONENTS.map((c) => {
-                        const comp = subjectScores?.[c.key] ?? { max: '', score: '' };
-                        return (
-                          <div key={c.key} className="flex flex-wrap items-center justify-between gap-3">
-                            <label htmlFor={`${s.id}-${c.key}-score`} className="w-28 text-sm font-medium text-ink/70">
-                              {c.label}
-                            </label>
-                            <div className="flex items-center gap-2">
-                              <Input
-                                id={`${s.id}-${c.key}-score`}
-                                type="number"
-                                inputMode="decimal"
-                                min={0}
-                                value={comp.score}
-                                onChange={(e) => updateComponent(s.id, c.key, 'score', e.target.value)}
-                                placeholder="درجتك"
-                                className="w-20 text-center"
-                              />
-                              <span className="text-sm text-ink/40">من</span>
-                              <Input
-                                type="number"
-                                inputMode="decimal"
-                                min={0}
-                                value={comp.max}
-                                onChange={(e) => updateComponent(s.id, c.key, 'max', e.target.value)}
-                                aria-label={`الدرجة العظمى لـ${c.label}`}
-                                className="w-16 text-center"
-                              />
+                    <div className="space-y-4 border-t border-line/60 bg-paper/40 p-4 dark:bg-white/[0.03]">
+                      {/* Target Analysis Card */}
+                      <TargetAnalysisCard
+                        analysis={s.targetAnalysis}
+                        target={target}
+                        subjectName={s.name}
+                      />
+
+                      {/* Components */}
+                      <div className="space-y-3">
+                        {COMPONENTS.map((c) => {
+                          const comp = subjectScores?.[c.key] ?? { max: '', score: '' };
+                          return (
+                            <div key={c.key} className="flex flex-wrap items-center justify-between gap-3">
+                              <label htmlFor={`${s.id}-${c.key}-score`} className="w-28 text-sm font-medium text-ink/70">
+                                {c.label}
+                              </label>
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  id={`${s.id}-${c.key}-score`}
+                                  type="number"
+                                  inputMode="decimal"
+                                  min={0}
+                                  value={comp.score}
+                                  onChange={(e) => updateComponent(s.id, c.key, 'score', e.target.value)}
+                                  placeholder="درجتك"
+                                  className="w-20 text-center"
+                                />
+                                <span className="text-sm text-ink/40">من</span>
+                                <Input
+                                  type="number"
+                                  inputMode="decimal"
+                                  min={0}
+                                  value={comp.max}
+                                  onChange={(e) => updateComponent(s.id, c.key, 'max', e.target.value)}
+                                  aria-label={`الدرجة العظمى لـ${c.label}`}
+                                  className="w-16 text-center"
+                                />
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -4747,7 +7964,7 @@ export default function GpaPage() {
           </div>
 
           {/* المعدل */}
-          <div className="mt-6 overflow-hidden rounded-3xl border border-line bg-gradient-to-bl from-teal/5 via-teal/3 to-amber/5 p-6 text-center shadow-[0_4px_16px_rgba(14,74,74,0.06)] animate-slide-up">
+          <div className="mt-6 overflow-hidden rounded-3xl border border-line bg-gradient-to-bl from-teal/5 via-teal/3 to-amber/5 p-6 text-center shadow-[0_4px_16px_rgba(14,74,74,0.06)] animate-slide-up dark:from-teal/10 dark:via-teal/5 dark:to-amber/10 dark:shadow-[0_4px_16px_rgba(0,0,0,0.30)]">
             {stats.average !== null ? (
               <>
                 <p className="text-sm font-bold text-ink/60">
@@ -4756,14 +7973,18 @@ export default function GpaPage() {
                 <p className="mt-2 bg-gradient-to-l from-teal to-teal-light bg-clip-text text-5xl font-black text-transparent">
                   {stats.average.toFixed(2)}
                 </p>
+                <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/60 px-3 py-1 text-xs font-bold text-ink/60 dark:bg-white/10">
+                  <IconTarget />
+                  هدفك: {target}% في كل مادة
+                </div>
               </>
             ) : (
-              <p className="text-sm text-ink/50">أدخل درجاتك حتى يظهر معدلك.</p>
+              <p className="text-sm text-ink/50">أدخل درجاتك ليظهر معدلك.</p>
             )}
           </div>
 
           <div className="mt-4 text-center">
-            <Button variant="ghost" size="sm" onClick={resetScores} className="text-red-600 hover:bg-red-50">
+            <Button variant="ghost" size="sm" onClick={resetScores} className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40">
               مسح كل الدرجات
             </Button>
           </div>
@@ -4772,6 +7993,1663 @@ export default function GpaPage() {
     </main>
   );
 }
+```
+
+## app\group-swap\page.tsx
+
+```
+// app/group-swap/page.tsx
+'use client';
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/Button';
+import { Input, Select, Textarea } from '@/components/ui/Field';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { postJson } from '@/lib/api-client';
+import { useStudentStage } from '@/hooks/useStudentStage';
+
+// ==================== Constants ====================
+const GROUPS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] as const;
+type Group = (typeof GROUPS)[number];
+
+const OWNERS_KEY = 'my_group_swap_owners';
+const USERNAME_KEY = 'my_group_swap_username';
+
+// ==================== Types ====================
+interface SwapRequest {
+  id: string;
+  student_name: string;
+  telegram_username: string;
+  current_group: Group;
+  target_group: Group;
+  notes: string | null;
+  status: string;
+  created_at: string;
+}
+
+type OwnerMap = Record<string, string>;
+
+interface FormState {
+  student_name: string;
+  telegram_username: string;
+  current_group: Group | '';
+  target_group: Group | '';
+  notes: string;
+}
+
+function emptyForm(): FormState {
+  return {
+    student_name: '',
+    telegram_username: '',
+    current_group: '',
+    target_group: '',
+    notes: '',
+  };
+}
+
+// ==================== Icons ====================
+function IconArrowLeft() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+    </svg>
+  );
+}
+function IconSwap() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+    </svg>
+  );
+}
+function IconSearch() {
+  return (
+    <svg className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
+    </svg>
+  );
+}
+function IconTelegram() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+    </svg>
+  );
+}
+function IconCopy() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+    </svg>
+  );
+}
+function IconCheck() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+  );
+}
+function IconTrash() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  );
+}
+function IconSparkles() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+    </svg>
+  );
+}
+function IconClock() {
+  return (
+    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+function IconWarning() {
+  return (
+    <svg className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    </svg>
+  );
+}
+function IconInfo() {
+  return (
+    <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
+// ==================== Helpers ====================
+function formatRelativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (seconds < 60) return 'الآن';
+  if (minutes < 60) return `قبل ${minutes} دقيقة`;
+  if (hours < 24) return `قبل ${hours} ساعة`;
+  if (days === 1) return 'أمس';
+  if (days < 7) return `قبل ${days} أيام`;
+  if (days < 30) return `قبل ${Math.floor(days / 7)} أسابيع`;
+  return `قبل ${Math.floor(days / 30)} شهر`;
+}
+
+function normalizeUsername(u: string): string {
+  return u.trim().replace(/^@/, '').toLowerCase();
+}
+
+function loadOwners(): OwnerMap {
+  try {
+    const saved = localStorage.getItem(OWNERS_KEY);
+    if (!saved) return {};
+    const parsed = JSON.parse(saved);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as OwnerMap;
+    }
+  } catch {}
+  return {};
+}
+
+function saveOwners(owners: OwnerMap) {
+  try {
+    localStorage.setItem(OWNERS_KEY, JSON.stringify(owners));
+  } catch {}
+}
+
+function loadUsername(): string {
+  try {
+    return localStorage.getItem(USERNAME_KEY) ?? '';
+  } catch {}
+  return '';
+}
+
+function saveUsername(username: string) {
+  try {
+    localStorage.setItem(USERNAME_KEY, username);
+  } catch {}
+}
+
+function clearUsername() {
+  try {
+    localStorage.removeItem(USERNAME_KEY);
+  } catch {}
+}
+
+// ==================== Group Badge ====================
+function GroupBadge({ group, variant }: { group: Group; variant: 'current' | 'target' }) {
+  const base = 'inline-flex h-9 w-9 items-center justify-center rounded-lg font-mono text-base font-black';
+  if (variant === 'current') {
+    return <span className={`${base} bg-ink/8 text-ink/70 dark:bg-white/10 dark:text-ink/80`}>{group}</span>;
+  }
+  return <span className={`${base} bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)]`}>{group}</span>;
+}
+
+// ==================== Copy Username Button ====================
+function CopyUsernameButton({ username }: { username: string }) {
+  const [copied, setCopied] = useState(false);
+  const toast = useToast();
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(`@${username}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.show('فشل النسخ — يرجى النسخ يدوياً', 'error');
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      aria-label="نسخ اليوزر"
+      className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 text-[11px] font-bold text-ink/60 transition-all hover:border-teal/30 hover:text-teal active:scale-95 dark:bg-white/[0.06] dark:hover:bg-teal/10"
+    >
+      {copied ? <IconCheck /> : <IconCopy />}
+      {copied ? 'تم' : 'نسخ'}
+    </button>
+  );
+}
+
+// ==================== Request Card ====================
+function RequestCard({
+  request,
+  isOwn,
+  matchCount,
+  onDelete,
+  showActions = true,
+}: {
+  request: SwapRequest;
+  isOwn: boolean;
+  matchCount: number;
+  onDelete: () => void;
+  showActions?: boolean;
+}) {
+  const telegramUrl = `https://t.me/${request.telegram_username}`;
+  const initial = request.student_name.trim().charAt(0);
+
+  return (
+    <div
+      className={`rounded-2xl border bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 dark:bg-paper/80 ${
+        isOwn
+          ? 'border-teal/40 shadow-[0_4px_16px_rgba(14,74,74,0.10)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.30)]'
+          : 'border-line hover:border-teal/20'
+      }`}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          {/* Avatar */}
+          <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal to-teal-light text-base font-black text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.30)]">
+            {initial}
+          </span>
+
+          <div className="min-w-0 flex-1">
+            {/* الاسم + Badges */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-bold text-ink">{request.student_name}</span>
+              {isOwn && (
+                <span className="rounded-full bg-teal/15 px-2 py-0.5 text-[10px] font-black text-teal dark:bg-teal/25">
+                  طلبك
+                </span>
+              )}
+              {matchCount > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber/20 px-2 py-0.5 text-[10px] font-black text-amber-800 dark:bg-amber/30 dark:text-amber-300">
+                  <IconSparkles />
+                  {matchCount} {matchCount === 1 ? 'تطابق مثالي' : 'تطابقات مثالية'}
+                </span>
+              )}
+            </div>
+
+            {/* اليوزر */}
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
+              <a
+                href={telegramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-mono text-teal hover:underline"
+              >
+                <IconTelegram />@{request.telegram_username}
+              </a>
+              <CopyUsernameButton username={request.telegram_username} />
+            </div>
+
+            {/* ===== الانتقال بين الكروبات ===== */}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-bold text-ink/50">من</span>
+                <GroupBadge group={request.current_group} variant="current" />
+              </div>
+
+              <svg
+                className="h-4 w-4 flex-shrink-0 text-ink/40"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M10 5l-7 7m0 0l7 7m-7-7h18"
+                />
+              </svg>
+
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-bold text-ink/50">إلى</span>
+                <GroupBadge group={request.target_group} variant="target" />
+              </div>
+            </div>
+
+            {/* ملاحظات */}
+            {request.notes && (
+              <p className="mt-2 rounded-lg bg-paper/60 px-2.5 py-1.5 text-xs leading-relaxed text-ink/60 dark:bg-white/[0.04]">
+                {request.notes}
+              </p>
+            )}
+
+            {/* الوقت */}
+            <div className="mt-2 flex items-center gap-1 text-[11px] text-ink/40">
+              <IconClock />
+              {formatRelativeTime(request.created_at)}
+            </div>
+          </div>
+        </div>
+
+        {/* أزرار الإجراءات */}
+        {showActions && (
+          <div className="flex flex-shrink-0 gap-1.5">
+            {!isOwn && (
+              <a
+                href={telegramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-teal/30 bg-teal/5 px-3 text-xs font-bold text-teal transition-all hover:border-teal/50 hover:bg-teal/10 active:scale-95 dark:border-teal/40 dark:bg-teal/10 dark:hover:bg-teal/15"
+              >
+                <IconTelegram />
+                <span className="hidden sm:inline">تواصل</span>
+              </a>
+            )}
+            {isOwn && (
+              <button
+                type="button"
+                onClick={onDelete}
+                aria-label="حذف الطلب"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-red-200 px-3 text-xs font-bold text-red-600 transition-all hover:bg-red-50 active:scale-95 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/40"
+              >
+                <IconTrash />
+                حذف طلبي
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ==================== Stats Card ====================
+function StatCard({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: number;
+  accent: 'teal' | 'amber';
+}) {
+  const styles =
+    accent === 'teal'
+      ? 'bg-teal/8 text-teal dark:bg-teal/15 dark:text-teal'
+      : 'bg-amber/15 text-amber-800 dark:bg-amber/25 dark:text-amber-300';
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-line bg-white/70 px-4 py-3 dark:bg-paper/70">
+      <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl font-mono text-lg font-black ${styles}`}>
+        {value}
+      </span>
+      <p className="text-xs font-bold text-ink/60">{label}</p>
+    </div>
+  );
+}
+
+// ==================== Page ====================
+export default function GroupSwapPage() {
+  const { stage, ready } = useStudentStage();
+  const toast = useToast();
+  const confirm = useConfirm();
+
+  const [requests, setRequests] = useState<SwapRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [owners, setOwners] = useState<OwnerMap>({});
+  const [savedUsername, setSavedUsername] = useState('');
+
+  const [form, setForm] = useState<FormState>(emptyForm());
+  const [submitting, setSubmitting] = useState(false);
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterCurrent, setFilterCurrent] = useState<Group | 'all'>('all');
+  const [filterTarget, setFilterTarget] = useState<Group | 'all'>('all');
+
+  // ===== تحميل localStorage =====
+  useEffect(() => {
+    setOwners(loadOwners());
+    setSavedUsername(loadUsername());
+  }, []);
+
+  // ===== تحميل الطلبات =====
+  const loadRequests = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await postJson<{ requests: SwapRequest[] }>('/api/group-swap', {
+        action: 'list',
+      });
+      setRequests(data.requests ?? []);
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل تحميل الطلبات', 'error');
+      setRequests([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    if (stage === 'المرحلة الثانية') {
+      loadRequests();
+    }
+  }, [stage, loadRequests]);
+
+  // ===== طلبي =====
+  const myRequest = useMemo(() => {
+    const byOwner = requests.find((r) => owners[r.id] !== undefined);
+    if (byOwner) return byOwner;
+
+    if (savedUsername) {
+      const normalized = normalizeUsername(savedUsername);
+      const byUsername = requests.find(
+        (r) => normalizeUsername(r.telegram_username) === normalized
+      );
+      if (byUsername) return byUsername;
+    }
+
+    return null;
+  }, [requests, owners, savedUsername]);
+
+  // ===== التطابقات المثالية =====
+  const perfectMatches = useMemo(() => {
+    if (!myRequest) return [];
+    return requests.filter(
+      (r) =>
+        r.id !== myRequest.id &&
+        r.current_group === myRequest.target_group &&
+        r.target_group === myRequest.current_group
+    );
+  }, [requests, myRequest]);
+
+  // ===== عدد التطابقات =====
+  const matchCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const r of requests) {
+      const count = requests.filter(
+        (o) =>
+          o.id !== r.id &&
+          o.current_group === r.target_group &&
+          o.target_group === r.current_group
+      ).length;
+      map.set(r.id, count);
+    }
+    return map;
+  }, [requests]);
+
+  // ===== إحصائيات =====
+  const stats = useMemo(() => {
+    return {
+      total: requests.length,
+      perfectPairs: Math.floor(
+        requests.filter((r) => (matchCounts.get(r.id) ?? 0) > 0).length / 2
+      ),
+    };
+  }, [requests, matchCounts]);
+
+  // ===== الفلترة =====
+  const filteredRequests = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    return requests
+      .filter((r) => filterCurrent === 'all' || r.current_group === filterCurrent)
+      .filter((r) => filterTarget === 'all' || r.target_group === filterTarget)
+      .filter(
+        (r) =>
+          !term ||
+          r.student_name.toLowerCase().includes(term) ||
+          r.telegram_username.toLowerCase().includes(term)
+      );
+  }, [requests, searchTerm, filterCurrent, filterTarget]);
+
+  // ===== إضافة طلب =====
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (myRequest) {
+      toast.show('لديك طلب مفتوح بالفعل. احذفه أولاً.', 'error');
+      return;
+    }
+    if (!form.student_name.trim()) return toast.show('أدخل اسمك', 'error');
+    if (!form.telegram_username.trim()) return toast.show('أدخل يوزر التليكرام', 'error');
+    if (!form.current_group) return toast.show('اختر كروبك الحالي', 'error');
+    if (!form.target_group) return toast.show('اختر الكروب المطلوب', 'error');
+    if (form.current_group === form.target_group) {
+      return toast.show('الكروب الحالي والمطلوب متطابقان', 'error');
+    }
+
+    const normalizedUsername = normalizeUsername(form.telegram_username);
+
+    const existingByUsername = requests.find(
+      (r) => normalizeUsername(r.telegram_username) === normalizedUsername
+    );
+    if (existingByUsername) {
+      toast.show('لديك طلب مفتوح بهذا اليوزر. احذفه أولاً.', 'error');
+      saveUsername(normalizedUsername);
+      setSavedUsername(normalizedUsername);
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const data = await postJson<{ id: string; owner_secret: string }>('/api/group-swap', {
+        action: 'add',
+        student_name: form.student_name.trim(),
+        telegram_username: normalizedUsername,
+        current_group: form.current_group,
+        target_group: form.target_group,
+        notes: form.notes.trim() || null,
+      });
+
+      const nextOwners = { ...owners, [data.id]: data.owner_secret };
+      setOwners(nextOwners);
+      saveOwners(nextOwners);
+      saveUsername(normalizedUsername);
+      setSavedUsername(normalizedUsername);
+
+      setForm(emptyForm());
+      toast.show('تم نشر طلبك', 'success');
+      loadRequests();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الإضافة', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // ===== حذف طلب =====
+  async function handleDelete(request: SwapRequest) {
+    const owner_secret = owners[request.id] ?? '';
+
+    if (!owner_secret) {
+      const ok = await confirm(
+        `سيتم حذف الطلب الخاص بـ @${request.telegram_username}. هل أنت متأكد أنه طلبك؟`,
+        { variant: 'danger', confirmLabel: 'نعم، احذف' }
+      );
+      if (!ok) return;
+
+      try {
+        await postJson('/api/group-swap', {
+          action: 'delete',
+          id: request.id,
+          owner_secret: '',
+          telegram_username: request.telegram_username,
+        });
+      } catch (err) {
+        toast.show(
+          err instanceof Error ? err.message : 'لا يمكنك حذف هذا الطلب',
+          'error'
+        );
+        return;
+      }
+    } else {
+      const ok = await confirm('سيتم حذف طلبك نهائياً. هل أنت متأكد؟', {
+        variant: 'danger',
+        confirmLabel: 'حذف',
+      });
+      if (!ok) return;
+
+      try {
+        await postJson('/api/group-swap', {
+          action: 'delete',
+          id: request.id,
+          owner_secret,
+        });
+      } catch (err) {
+        toast.show(err instanceof Error ? err.message : 'فشل الحذف', 'error');
+        return;
+      }
+    }
+
+    const nextOwners = { ...owners };
+    delete nextOwners[request.id];
+    setOwners(nextOwners);
+    saveOwners(nextOwners);
+    clearUsername();
+    setSavedUsername('');
+
+    toast.show('تم حذف طلبك', 'success');
+    loadRequests();
+  }
+
+  // ==================== Render Guards ====================
+  if (!ready) {
+    return (
+      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
+        <div className="space-y-4">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-32 skeleton-shimmer rounded-2xl" />
+          ))}
+        </div>
+      </main>
+    );
+  }
+
+  if (stage !== 'المرحلة الثانية') {
+    return (
+      <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
+        <Link
+          href="/"
+          className="group inline-flex items-center gap-1.5 text-sm font-bold text-teal/70 transition-colors hover:text-teal"
+        >
+          <span className="transition-transform duration-200 group-hover:translate-x-1">
+            <IconArrowLeft />
+          </span>
+          رجوع إلى لوحة الأقسام
+        </Link>
+
+        <div className="mt-8 rounded-3xl border border-amber/30 bg-amber/8 p-8 text-center dark:bg-amber/15">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber/20 text-amber-700 dark:text-amber-300">
+            <IconWarning />
+          </div>
+          <h1 className="mt-4 text-xl font-black text-ink">قسم مؤقت — المرحلة الثانية</h1>
+          <p className="mt-2 text-sm text-ink/60">
+            هذا القسم مخصص لطلاب المرحلة الثانية فقط لتبديل كروبات العملي.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="mx-auto max-w-3xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10">
+      <Link
+        href="/"
+        className="group inline-flex items-center gap-1.5 text-sm font-bold text-teal/70 transition-colors hover:text-teal"
+      >
+        <span className="transition-transform duration-200 group-hover:translate-x-1">
+          <IconArrowLeft />
+        </span>
+        رجوع إلى لوحة الأقسام
+      </Link>
+
+      {/* ==================== Header ==================== */}
+      <div className="mt-6 animate-slide-up">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
+            المرحلة الثانية
+          </span>
+          <span className="rounded-full bg-amber/20 px-3 py-1 text-[10px] font-black text-amber-800 dark:bg-amber/30 dark:text-amber-300">
+            مؤقت
+          </span>
+        </div>
+        <h1 className="mt-3 flex items-center gap-2 text-3xl font-black leading-tight text-ink sm:text-4xl">
+          <IconSwap />
+          تبديل كروبات العملي
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-ink/55">
+          ابحث عن بديل قبل الانتقال! انشر طلبك مع اسمك ويوزر تليكرام وكروبك الحالي، وسنخبرك تلقائياً إذا وجدنا تطابقاً مثاليًا.
+        </p>
+      </div>
+
+      {/* ==================== Stats ==================== */}
+      {!loading && requests.length > 0 && (
+        <div className="mt-6 grid grid-cols-2 gap-2 animate-slide-up" style={{ animationDelay: '80ms' }}>
+          <StatCard label="طلب مفتوح" value={stats.total} accent="teal" />
+          <StatCard label="تطابق مثالي متوفر" value={stats.perfectPairs} accent="amber" />
+        </div>
+      )}
+
+      {/* ==================== My Request ==================== */}
+      {myRequest && (
+        <div className="mt-6 rounded-3xl border-2 border-teal/40 bg-gradient-to-bl from-teal/8 via-teal/4 to-transparent p-5 animate-slide-up dark:border-teal/50 dark:from-teal/15">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal text-white shadow-[0_4px_14px_rgba(14,74,74,0.30)]">
+              <IconInfo />
+            </span>
+            <div>
+              <h2 className="text-base font-black text-ink">طلبك الحالي</h2>
+              <p className="text-xs text-ink/60">
+                يمكنك نشر طلب واحد فقط. لحذفه، اضغط زر «حذف طلبي».
+              </p>
+            </div>
+          </div>
+          <RequestCard
+            request={myRequest}
+            isOwn={true}
+            matchCount={matchCounts.get(myRequest.id) ?? 0}
+            onDelete={() => handleDelete(myRequest)}
+          />
+        </div>
+      )}
+
+      {/* ==================== Perfect Matches ==================== */}
+      {myRequest && perfectMatches.length > 0 && (
+        <div className="mt-6 rounded-3xl border-2 border-amber/50 bg-gradient-to-bl from-amber/10 via-amber/5 to-transparent p-5 animate-slide-up dark:border-amber/40 dark:from-amber/20">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber text-ink shadow-[0_4px_14px_rgba(224,166,58,0.30)]">
+              <IconSparkles />
+            </span>
+            <div>
+              <h2 className="text-base font-black text-ink">
+                🎉 {perfectMatches.length === 1 ? 'تطابق مثالي!' : `${perfectMatches.length} تطابقات مثالية!`}
+              </h2>
+              <p className="text-xs text-ink/60">هؤلاء الأشخاص في الكروب الذي تريده، ويريدون كروبك الحالي</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {perfectMatches.map((r) => (
+              <RequestCard
+                key={r.id}
+                request={r}
+                isOwn={false}
+                matchCount={matchCounts.get(r.id) ?? 0}
+                onDelete={() => {}}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ==================== Form ==================== */}
+      {!myRequest && (
+        <form
+          onSubmit={handleAdd}
+          className="mt-6 space-y-4 rounded-3xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm animate-slide-up dark:bg-paper/80"
+          style={{ animationDelay: '120ms' }}
+        >
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-black text-ink">انشر طلبك</h2>
+            <span className="rounded-full bg-teal/10 px-2.5 py-0.5 text-[10px] font-black text-teal dark:bg-teal/20">
+              طلب واحد فقط
+            </span>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="gs-name" className="mb-2 block text-sm font-bold text-ink/70">
+                اسمك الكامل
+              </label>
+              <Input
+                id="gs-name"
+                type="text"
+                value={form.student_name}
+                onChange={(e) => setForm({ ...form, student_name: e.target.value })}
+                placeholder="مثلاً: علي مازن"
+                maxLength={100}
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="gs-telegram" className="mb-2 block text-sm font-bold text-ink/70">
+                يوزر تيليكرام
+              </label>
+              <Input
+                id="gs-telegram"
+                type="text"
+                value={form.telegram_username}
+                onChange={(e) => setForm({ ...form, telegram_username: e.target.value })}
+                placeholder="مثلاً: ali_2004"
+                maxLength={100}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="gs-current" className="mb-2 block text-sm font-bold text-ink/70">
+                كروبك الحالي
+              </label>
+              <Select
+                id="gs-current"
+                value={form.current_group}
+                onChange={(e) => setForm({ ...form, current_group: e.target.value as Group })}
+                required
+                className="w-full"
+              >
+                <option value="">اختر الكروب</option>
+                {GROUPS.map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </Select>
+            </div>
+
+            <div>
+              <label htmlFor="gs-target" className="mb-2 block text-sm font-bold text-ink/70">
+                الكروب الذي تريده
+              </label>
+              <Select
+                id="gs-target"
+                value={form.target_group}
+                onChange={(e) => setForm({ ...form, target_group: e.target.value as Group })}
+                required
+                className="w-full"
+              >
+                <option value="">اختر الكروب</option>
+                {GROUPS.map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="gs-notes" className="mb-2 block text-sm font-bold text-ink/70">
+              ملاحظات (اختياري)
+            </label>
+            <Textarea
+              id="gs-notes"
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              placeholder="أي تفاصيل إضافية تريد ذكرها..."
+              rows={2}
+              maxLength={300}
+            />
+          </div>
+
+          <Button
+            type="submit"
+            size="lg"
+            loading={submitting}
+            className="w-full"
+            icon={<IconSwap />}
+          >
+            نشر الطلب
+          </Button>
+
+          <div className="flex items-start gap-2 rounded-xl border border-amber/30 bg-amber/8 p-3 text-xs text-ink/70 dark:bg-amber/15">
+            <span className="text-amber">
+              <IconWarning />
+            </span>
+            <p>
+              يمكنك نشر <strong>طلب واحد فقط</strong>. إذا نشرت بالخطأ، يجب حذفه أولاً قبل نشر طلب جديد.
+            </p>
+          </div>
+        </form>
+      )}
+
+      {/* ==================== Filters ==================== */}
+      {requests.length > 0 && (
+        <div className="mt-6 space-y-3 animate-slide-up" style={{ animationDelay: '160ms' }}>
+          <div className="relative">
+            <IconSearch />
+            <Input
+              type="text"
+              placeholder="ابحث بالاسم أو اليوزر..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pr-11"
+              aria-label="بحث"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Select
+              value={filterCurrent}
+              onChange={(e) => setFilterCurrent(e.target.value as Group | 'all')}
+              className="w-40"
+              aria-label="فلترة حسب الكروب الحالي"
+            >
+              <option value="all">كل الكروبات الحالية</option>
+              {GROUPS.map((g) => (
+                <option key={g} value={g}>الكروب {g}</option>
+              ))}
+            </Select>
+
+            <Select
+              value={filterTarget}
+              onChange={(e) => setFilterTarget(e.target.value as Group | 'all')}
+              className="w-40"
+              aria-label="فلترة حسب الكروب المطلوب"
+            >
+              <option value="all">كل الكروبات المطلوبة</option>
+              {GROUPS.map((g) => (
+                <option key={g} value={g}>يريد الكروب {g}</option>
+              ))}
+            </Select>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== List ==================== */}
+      <div className="mt-6">
+        {loading ? (
+          <div className="space-y-2">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-32 skeleton-shimmer rounded-2xl" />
+            ))}
+          </div>
+        ) : requests.length === 0 ? (
+          <div className="rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm dark:bg-paper/80">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-teal/8 text-teal dark:bg-teal/15">
+              <IconSwap />
+            </div>
+            <p className="mt-4 font-bold text-ink/70">لا توجد طلبات تبديل حالياً.</p>
+            <p className="mt-1 text-sm text-ink/50">كن أول من ينشر طلباً!</p>
+          </div>
+        ) : filteredRequests.length === 0 ? (
+          <div className="rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm dark:bg-paper/80">
+            <IconSearch />
+            <p className="mt-4 font-bold text-ink/70">لا توجد نتائج مطابقة</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filteredRequests.map((r) => (
+              <RequestCard
+                key={r.id}
+                request={r}
+                isOwn={
+                  owners[r.id] !== undefined ||
+                  (!!savedUsername &&
+                    r.telegram_username.toLowerCase() === normalizeUsername(savedUsername))
+                }
+                matchCount={matchCounts.get(r.id) ?? 0}
+                onDelete={() => handleDelete(r)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ==================== Note ==================== */}
+      <p className="mt-8 text-center text-[11px] text-ink/40">
+        ⚠️ هذا القسم مؤقت لطلاب المرحلة الثانية. تأكد من التنسيق مع الطرف الآخر قبل التبديل الرسمي مع الإدارة.
+      </p>
+    </main>
+  );
+}
+```
+
+## app\icon.png
+
+```
+�PNG
+
+   IHDR         �x��  ~caBX  ~jumb   jumdc2pa  �  � 8�qc2pa   Xjumb   Gjumdc2ma  �  � 8�qurn:c2pa:d0fe5ef7-df5c-4265-b868-b6377b347e6b   �jumb   )jumdc2as  �  � 8�qc2pa.assertions    �jumb   Djumdcbor  �  � 8�qc2pa.ingredient.v3    c2shA�\q�9�nA�6�a]   lcbor�idc:formatiimage/pngjinstanceIDx,xmp:iid:64ff6a17-261e-4c28-9f89-630bbf37d15clrelationshiphparentOf  �jumb   Ajumdcbor  �  � 8�qc2pa.actions.v2    c2sh�x	C����7� ����  �cbor�gactions��factionkc2pa.openedjparameters�kingredients��curlx-self#jumbf=c2pa.assertions/c2pa.ingredient.v3dhashX 湝�fD3�+�6f&��qF~(�F�C�;��)��factionxcom.anthropic.claude.providedjparameters�xcom.anthropic.origin-confidencegunknownkdescriptionxfClaude provided this file at the request of a user and may have created or modified the file contents.msoftwareAgent�dnamefClauderallActionsIncluded�   �jumb   @jumdcbor  �  � 8�qc2pa.hash.data    c2sh�@͢�ٶsM�D��   �cbor�calgfsha256cpadM             dhashX D]�Gj���b�N��h���J~qT{D�i��&dnamenjumbf manifestjexclusions��estart!flength�  >jumb   'jumdc2cl  �  � 8�qc2pa.claim.v2   cbor�calgfsha256isignaturexMself#jumbf=/c2pa/urn:c2pa:d0fe5ef7-df5c-4265-b868-b6377b347e6b/c2pa.signaturejinstanceIDx,xmp:iid:4b851767-784b-4f93-a3e4-8f958d832b2crcreated_assertions��curlx-self#jumbf=c2pa.assertions/c2pa.ingredient.v3dhashX 湝�fD3�+�6f&��qF~(�F�C�;��)��curlx*self#jumbf=c2pa.assertions/c2pa.actions.v2dhashX �C����e��&i튼���in_;��Ep!�N�curlx)self#jumbf=c2pa.assertions/c2pa.hash.datadhashX �U[LH˷�A[�+�+ޒ�ǽ�Ü����3�æ�tclaim_generator_info�dnameoAnthropic Filesgversione1.0.0kspecVersione2.4.0  8jumb   (jumdc2cs  �  � 8�qc2pa.signature   cbor҄Y�&!Y
+0�0���@�
+��9о���B=gU 0
+*�H�=0I10U
+Anthropic, PBC1.0,U%Anthropic Content Credentials Root CA0260807184356Z280806194356Z0D10U
+Anthropic, PBC1)0'U Anthropic Claude Content Signing0Y0*�H�=*�H�=B �z
+k�P�4�B�9[D���ײ�J�з�+3wdw���<Et(�.:}}?�4U��}�J�7���X0V0U��0U%0
++��^0U�0 0U#0��Q��Nd[#���Ϛ>���\�0
+*�H�=g 0d01s�z��U��F�=���lNf���O@e�?<E���$���@��U�0p_\��a�bJ�/���P�(��2_��=�Z��,Ï:2��x�S�TQ�G	�cpadY�                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              �X@}����2L,�jCN
+�I	�%�F
+�C�z�o��V���
+�pƜq[���'�U���t$�?�m����.�   IDATx���{�]�U���}�}�-[�e˖-+vr��	�iII�!/�CR @�SR�|)M�Y��R(��
+��������V�-m�#4B�'������{�ٳ~̬�5���/]IW�|�s�޳�g}֚53@AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA�e��(((((((((((((((((((((((��(�Wh�gAAAAAAAAAAAAAA�sE�/(((((�BP�~AAAAA��B
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6�~W̥�@AA��@�� [ PPPPPP�	PrAAAAAAAAAAAAAAAAAAAAA�e�>72΂���N�U �M��@AAAAAA��(�zAA�EG� \(����������������E�/(((((�°�R�B
+
+
+
+
+
+�c��E�\P�U ��\pPPPPPPp����K�q>��,�E��z�D�|�JE��������\8���@|���2��]PPPP�F���" C.�����͗�c5h�u2.����K�q������Ǘ��J�׋��������b���������i��#���#��~�7�<��w�����"�
+<�`A��w|R��B廒g���Qya�ri/������BA�
+(����`5�����>ו�Z���g�b%�����k��JXm����<ʋPPp��|�����7j��<tYNVK
+
+�x@A����D��G{��r.gI�X
+
+
+�K����+��`�X�	��*(�h(����[�]�¿��`
+((�|QrAA��Q� 
+
+�,\L��f5�_�S�b((x�bܚ��k�����z�Z�^�A6/C/((p8mu-K�$PP�b((ج؈���K�_/��Zַ�Pϟ}��IA�y��Z�Ͽ�ev˭i�S_+X�PP�b((�Xȅ?u�[�Y���sVz�JG���@�h����ǯ�\�1�"_�\�(�����|�F��k��.��:.(@! ��T@9�v����2�҆�� \<�$��8����R��K�lJPP�9p��QJ�}���|!Q�
+6%�V��ic'�q��q�@�u}�hX��|���+��*.D�`S�R3も�	{�y�Kxw��H��⼰�8�i�k]f��X._�� ��6�Yi���Nh��� ]o]������n��e
+��`�XI����j���3ӑ�{֐�{V��y[ֲA�f�E�\6(����е�︹다����ED����9��|[��p���4. 4�^��i��زe�����[O|����e�i"q;b0+�����9A\P��@A�����Y�~]�)�\�>J�1 G�<�̠zv;*	�<�@�VS�j��7����	Fo���Ƙ�ŇO '  �h��'M�,�p�6�Ǯ^�1�<>͏�:5��I�eG4�Y�Y��`:��I���S�D! �G>��4�����������t�����0��Z�_��w�hpVg���G���z�g���	�3����о}7�㽧y�3���[;�{Z𜝥Ys'��@�оmN��rs��~�s�����B
+ˋ!�(��(������v	<�E� ffk��6����ok��{G �ȑ#��>�۲�eb��z7�����-5�v4f;�f�zh�&c�ܰ!";b��YP�te�SM5xbiD�v��3{Ν<s��{�0׸<0a��v����X`�bu$�B	ʋ�2���M�B 
+
+V�喚���۟	��Vaaa�G�^>t&x��m���n�'��o[=�,�g�5 ���� o���`����[b�Â�l�����Dx�=	�Ib�>I������ON.�|�c��W/�q�Kv��ŉ�P���F�K�Y@��G! ��J�"�>w��W�.�WM<��'N ���N^��W����Ģ�B��$��6d�&f&@��ncP[fXf��"��D bS��@� ��L���2p��~�G���D��ɩӏE2p� ���6��l�ڸ� !�+4�R�BP�)��M�B 
+
+R�f=�r��[������� ��y�׏F�1̗��+Le����'ФU�pԀ�l��QY�%Cpj?�A 7y�~v�3��M�ACDDd`�2�-2�1C� ��G����j>����o	 p��N���Ml��~����V�B 
+65
+((X���/��� �p�s^����L�z/Fo���������� ,3Yr:;` �	{g��w ����v�Ad&b�L��!��`�� ��@O3��4���>U��3�>5�335p;0?7B� ���|�#�Ǹ�	(�T(��`<�m+{	�� g�!��3�暙�����ۖ��W1U�gK/6�n*�6��Ep� �C�;�����Rqt)b�@`fTD�{�� ���?k�� &Be���;� �=SӇ���}�׿�:v�L��e����F��j�r�@s��B 
+6
+((��z��7� ���`f���� ��/x�X\��L��@4;j�"�N���/y#8-��@���[Rl@^�'B��q��g�B��`��#v�4��x�1*��~�G���d�k��?>?w��N�$?ޠ�9��j[I`��2T@��B! ��$�Ƭ48��q����r�ҹm��z�m��0�� ��03��8�� d����{R @
+�ty@$T�O�C0@Q|��#� ���8��Ȅ3,��3��1�>U��%������_Vw6��A�դ��� :lA���&�
+
+6.��=�g>^a~����-���m}s|#Y �
+���V W�'�[R �.u�"E i�?
+\Lf\���]�̆�-( #&XULTр��3KͿ����=>?w�����'8.��^���(���
+
+.*
+(x�c���E\�ׅY�$��h߾����<�꡵�V��Bl'�� 45�ș��D�DL�`�(���S��'ٻ�&~}dv��"�<�	��qB, �� ���0�Z&0�� ���q����=�>��p�p�8ït�X�Cq,��(�� �%�������`����\3}`���L����>ca�3?�8/�,6%�Cq�0v"�)�EL� `H4zV�|Q�j�زx��@����<���-[�i@�'�#��h��Ƕ�����C\��L���`n�q��Nw�����M��5��[p9��Z��� g��![o�٧�F��1ۯ"�I/����*Xb�s�cY�'3�ګ?Z ����^��M���=���e���3<0&�䚳;X*��+�#ˏ��G�য়���=�V���� �?༏�P(���ƥ� ,;#YPp	qH�|����m��,0g�~�U�S�o�}Y~�^�# �DƯ·|���b���/E���c�(��ܯ����LW?��ϔzN��w�$ŗC(��D�mMH=����-��S����� �k�>�v6!	�l�)(Hp!��e;�\n� ��8�� �F���b�t߫�2o�_Jd��yX�����+]>�n��d(��;U�3����'[&��@tt��@�Y �u ��@GB��4$�5���Y4������#��0ff{��JƉG���M
+.����{�J�������2\.����S=8�h���/@�~���k+2{�`���i�nG8�z0�Gs�Ҵu���Y�9�"W���{1`�XlD��V"�d/���gqL���A1,-�A�I� ����v�?iF���7����;��|���SB˺"�$ց2�lj\(�Fn(V����nd��G�7��M5��Ń�x볟��F���V�ɀ�6#b�+�\FD�ׯ{��z��\<���ν���>5�������:+i�+p�)2��k_	\���F��pC��mc����ҟ<�S��Y��5y��c��b��ؖ� �-.8)(�[�����i�s	.(�rp��
+�F��>�x�G�];O=��*��7��0`-l3$b�ʸm{��T�8�����E~��[F!>��I8�Z�'�o�Y��e�K�xdo�#O[.�<�3]��*��5ê2W�?,n{��G����~i��^�Oc;��B~9rPPp��RLti��piQ�h�؀wC�=�C8�G=<p�@�}�k����'�y3m��ȸ�{��^����~!nV��J%m0�y#~w�C���L�L���~����F��̤5\���/7��Ƃ�1��k�_�wM�>�������?;�/� ssveAQ, el+ش�,���"�hc�����
+�c���><��7#7�`�#�֎�L�D>��ᙺcGS-'K)j�a?+Z��8^L_Yu������ZJ<�
+�-���o@��}���F�k�){���b�+�p�Wq|����3`�������s5>���A��8����U��hl��pyȅ�|���ܷ�놯����oz3�*��������$�9+-������?��?)���M���9�=H��G5?��g���[�O� ��	e �	����A��p�1S�^����d3/2�N[ӷ,�vx�x�#8�a��nc���Ч�K�Ntb#	���qvm5�\Xt�V�նՅ�f�k�J��_���	`n0��c�Mox�hb�A&�M �Ecl ����\��J��ʊ���,[A�'����Y���d�#���{>�8�?�Qp3�$��X�5��$��e7K(������0��6��[n~�w_u�%�8~|fz�A�a.)r+h~�������v����%�J�]u>����mV��skx7��!����!����7�j����v�����}���mykk�6���ڜ���Kz�߸�N�8n1}X��k}>�d�FXb�a�Y��<�
+S (��CP�<qp�a� =�vt��	�Zk�-M��6�~������[&���t��o_���f�<h�x�`�pk��d�E�o����Tz.��*ލ|���5,Ux胋x��ԎS�MCoe����;d�Ȉ�n@l���� HW�		���0G� ��g�3 A��@�����=(��{
+$�0v�`Iˁ.SK����n��HLT�?�{�Ta �0�dL��Z���W?7��ӿ��c�3�[1�v��5�$`S �.���
+քKA ��.��X�f����m���3��??��$������,-��!~=��ZXk�iDd+�m��Ô<R����p���9 �\�q�����obM[�1b�O����<��� �Fn��"o !�:b�n����U���Z�#��,��4��w'x�O��o���WM`���e�E����rV����Jx/6e����JZ�j�{�0k4�8��������"��v����3z������!���� ��' !.��Z��'��cu�����M2� ��.`�P�S�һr�0������m��J4�&*<�	�I�l(���8/��� k��Sj,b��7������[����>��gq��i,����y�m,G�u�+�,�@��t�K���J����Z���ݣ��8r�������^���o#����0[c�MRw$���ݹ���q���^E���!�:ZQ["!�w)�Nz%w�"�=�M#Ҵ�#5�z�� ��`�� p�"bn��2�TT��I����ʾ��O�֟���I4K���h!R�M�.���EԵB
+
+V����.֪�?�q>����{8���[`��u����;˯2d&��b�5b��[s�O?��^��<��M^����Psj�'e�ڝ �秶��g�}���'�y�&*�ީ�m����Y��b��
+xO�'���5`����d�l����24�Sk�ݧ?����gvffq��wL'ȗ�j��
+
+VD! �eb�������߷��E��OK�߳��̠Ll1C����kv��h�Z�Sth9�)M^m���3ǈ��0U�5o�%>������l��C�1D熠�K��	¾1h�� �c��_@���7�'����˄��Xn�����O�֧��)<z���[���k'��ȅ8:������������`�P@�s	�6�޿;�9J�1��þGzx��� `�-��*���,�W�k�%p�~#�0��e5��SX 
+I@��6�UV���D��Ҥ� H�aVA �8�Å�ʒ��#��_�&(���J����D����)p�ߞ&\
+���nٱG	��v �TL�=���G ������%������;Dh��w��q�X
+V�B 
+�� �X?|�:g����/x��s�웪^�f�j�6Me������]�;BE���BRjz�j�	� .�X� x�YՖL'�;�Q�$����hP��-�е� ��L>��
+�ɮ*\���+6�@���R& İ��c��򃦱����>���8�}wN������=�E ��Y-�Ǒ�"�V�B 
+.w\�>���K��b ������fDo��^	2[����/b�
+a/�l�8x����YD���Ӗ�6P�s��d�%Bډv��tx
+�L�Q�O����#"K�Z ?����٢~�"�9jǿ�����>���}�K[��RÆ�z�|�G�����o��V��$f�1�!�&�&%�(8oPp�c��01���'��G��|��
+���Tw�17{�~��L� D�⼧��Q�� 9��3��|R��'י3I慹�>�t��v�Ó"!"W�)=$��w�>Q�-Q��*v@��qJ0;�/�G 2Ґ�d��b���6�����/?���>}�m_��ɛp�{��)�Kft�C6.��+ � \���>�8r��_�����Y ����/ac�Zs}��x��6T�"6�[߿l�����l��;�iэĜ�z�g �BYE -��I�z��!��	<����FtjlOt<.YP���(!��e-N�L��q%ԁϗ��  ��D5���~�G��>��_��⻧�=t�}tߢ;S@�N��+��MldW 
+(�P8�Ar�x���^ أg��q��}pq���ݽI{��򷑡�T�T͈������A^�_M1Ez��R�t������J���+>��[S�3ZTv:����/���;q�ѭe')$$��jI�E� ���]�(]R�< �!� �*�Mq\l�07D`L�#b����ĩ����c�-f�ڂ��\���~(��|}��w���� \(\��g�k �����q����|��^Ҍ��U�u��y� 4q� n䗱{�cqc6e�;��r��t�9^	t �+?��-sv���������s�����v���\�%�DB �:�"9y
+a� ���H-aWA�,�~�*�~
+�ޟ #.n�C�+��,�� j��,������q�>Kx�K�V�xl�`^ͻPH@��(ใ���>n�s�>,˶r�_�=Za���- G�n�y���cX�%dM�%k"���6A�զk�͚p�ߕ'���	��^��N���<M�] �΂� $BQ�# �낤�^;��TA+F;"��	n{b�2�+I�u܆�M �ä!�d�P���5��������o�o��yxn �Y�����w5��s��{����G���-J.K<�_����k�Qrbv����}���s�׽��7�����`��M{7�����o2/�#M�Dsb���>=J$����@��H5��t��G��M�X!R�:�2)tb���x�����t��dZA���%�p?�"�H"e2Q�˽b�]�X�xX��5�Q�Lw���e�z��fb0�"1o����L��m�|�7]s�_O����cf��ߵq�X��[m���JϮ$��p���xa�����ۢKuͯ�]�?3w�0-�^��g���y���� �B�K�%Tbp�M�X���X�v�8�LO�	����W�������z��<!6� ��v��]AHH�G��r���	�2���*��� y��*H�&lm�g�M|a|ʭ��J�8�ʊ*�0�@��b5�n"E ���hȢ�1Ƙ�g�'��"���Oz��l����Z±̬r~�!�eg1��ǐ�u���(X3ƽ��X���i&���fg��F�|��Ae^�0�N�_�`Kl@��P�e�H�VZEP��Lj�V�)�n���:r��J,N���d:"͑~���'Ѯ��ZO	Yery�v��"�t��O��e>��?j}M���D�' �9�;m0qy�kt|j	��@` ��Ck�KT�{a���۷���w�P�?���-��wMa�Q�^��@[���t��]/�f��������{��
+'N���- ������h��D�`�c�f	`��� v���l9�?B�	+JoVL"r�ka��� D�"��q%n�N��Gg7Ry��D	G��x� Ի�9����Ch  �*]�7� $���:W�s>�Cd,�Բ|p8��JA} �3�;�J��;� ��UU�΅������>9�9���18Mx�!���e��e)�@\N� �rz�u������k$G	��1;g�'������:��;�v���[�_H0��\�~�k�ϟ�9�h.wKʺ��]����l�{�x���  ��r��N a�f=:�<���Ps�u�o�<�<��&dT/���m��GU�@��� 	K�ö�d��@�c�B�l��ٹx����\�&-�i��7G���s=�� �L�����w����G��B 6'V�"fjc~��K���1��0l  �n��͘�73�o"�u�fƀ�� 2 b�D J�E��d��A��[+��������^�%�.! �����I��p��N�#lg���x��cYX- �CI6B/��~�I�*���	�*N� ��Z�&I�skG��� 3 ��X���O[��}�7NG�Q/����Z�J���ZHu! W 
+؜�z�J�e.�2���\��b�3f+�|���'�W����F��+���0a�$,��!��^�C�k��0�J���{b%G��[BƉ a  q����������s\\~�%�	<�Σ �h�+�Mʯ��sH�w�K�Y�b����]��y��#&�"&��S�ZՍO8K����-�4�s<�mI.,�'5�ed�en��T��e~�o�6�>���	`����Vї�5��+� \>�" �ut|��B��6���p���=��_�`����B��-0�F݈��x��˱�Cs�(GAs�>,��B�����=������fBq�F=q5@&DC�:}B��UE������r��5�I!�n�HB��A����J\�� U�]�8L����~�[�ե�o�/�^/�J����5���� ��=A���{�����{�P����;n�M5�4^<���:b�C���}���
+\����������=^���8r����Ѿ}wN/MN����w �*��,07 ��˃�J8�Oe�B�D����^���?�g���Wϳ�˦��F�s�dG������,e��Vk���0A
+K���t.�! ��<M�kwVo��p�d�^�=@�˰o��< 8�xeA��y��8��-��V���v�TE�7���S���`q�x`wuU�@ט�\؂+� lti�����z��̀з������C����! 욙����n����F@�h � WN��Y��O�ĺ��v�'�-&zo�aB LP���-��i�rp��`:]��Ʌ'�> �.�-͢y���x:.��2�V5�$Rr�ګ���/�/���T����]#m��g�ڒba��E�?�"��!sajG�EڃS{��W_3L����#����?:��}f0��g>�p�H�3g'N\�)�q K6��Qp�P��A[�kc�gXM���VlP�ʅ~��/Gf����_1;�̣�2��W^�����1��{	���]pEN�2�.��S��`�����믋��{J�k���1�N��&���0�H���~Y�'���._���r@�+D�ʍO/����LvG�Rh[4D���Qt&�����K��u���m�D�DCX�M]�֎g���o��}��%�
+��k���]����q(� @! �ki�\�/��W�6
+з�Aq��v&�;*A`���G[��	����$�en�@T3q&���3A�8a��� D��x@�X�	�4���DPksuײ D���L	�֦?�dJ��5Y�ɯ��Z/���w�єo�$D�+ �A"/�ԧ�U�"���1#�D�2#�C��<A*�;
+d� ��Q��bf��;=�S'bQH��RðC2�$���?����Ǐ�03���I��an����r�ڱѤ�+����%�W�����>O��j@��{�8~��y�^\�̰���� ؞c�@ �({��K�T*� m�uW)܎��#��%,W�i��U��b%a�����*C�1gY��G�2���T�ߝ��u��,lj�I
+�����HYZ)!}�+1�ؐ?���y���q��W$喼�|��`���َ�di@���l�{��Gv�u�����������߭2Ú��X}C\�(���F��>���D�N�33�_��==����_�ﭫ�-C��3�	� ?(ǒ���Z<�o�2؂8�3����^��ve�g���*_3	)b���.����dzߥ�h���ez�O�T�C��!7&�S+GG�i�$;R�B�<)��C(1�e=�CJB�(�����z���[�BL�p0˨T#�L�B\���37��ҀP?��Q��w���`_�CSpOծ�5[ tQ��/X� ��Ruŷ�4���[��c�u�-��8�g�0�
+ܷ4??7�y��������?eL����瘹!�������= �cF)�o��_�`%���P>� ��v�5H����C��[��{!�h[O�wŭ����ǯ4��yBmk���wEy$�pV/��X��밚$��o���9U��H�/^�鄘}�#~9�0�$����<3�����&n�6k�w��{ǡ�}ݞ��i<p�f�_W9+׺�fg��
+Jg����+}m�m��qqh��JDc�0��YO�=���G ?>���٩�O.�-���T�*B5a�Y �U����`���h��g@�7�5�L������H���(�*D(=D�����;DU�2�{G�@X�ēG�n�<6�<�����*T�ЪMw���d�́"�H��n0�e�A�zLW/�]câ	�U�ԐH�\�g,Ǜ@���Std6���I��#�1�p�޿���}�;�֘���c�}�e� @! ��ӕ�]���p��וFW^ƅ� }%��G��� '	�{ssͮ�w�ӻ�a�Ĩ��C���/e�w�K�\�(�����Z�fJ5�v�uk����rWV��퐛���/��HEz=�*�c�@z];��x4Y�����R5�j$|�v�A���k�"��CJ@�А�E����<�;��������_��W��������	#"3	�#K��?un��/��`v���'-�����K�X�K V�lr�1�T`9�# ���|t=p���? ��2nm��z�-W�a�' ���nx��nLf7u��`^����z�?"�6�SҘ�'��jn����ז���|vF�^4�ʑj�n�Z�q^{��À�� @�w-�%*�!n���%nՍ�I��@I�$�@�\<�	�� H�dnu�T�P+>Y��_��	�I�д0��oT!r0|C Z�\yHl*TU�Z�s�3��|��~�1>���a���[f���d~��ׂB �#(`�q��#4�q�~g.�/�ֿf�28x�bn���ůܲxz뛘����"f��l�	2N�('8�#3)��ĕy�(��%��R�{�{Awl���^�Z �i����:@����L�h�Z�F����H ��!!/8�"!
+�q��$4�5�	�r�$�/[\��	����ci_�\���O�T��6]��X��2Ŵ�d�c�C\�����Mqc��1��SU}��8|w��,07�P�E �ˊ��8>��� �"��E�h�^���w������^�xf��X�3�z�mlB�M�[r�*a�#��0s_ep����,Zg���5�̣���g�h��|<�q�����z�(�iQj�F�]��ZߏdI�2�}�YKx�dR>�F$�C;�q�P��q���l5�V�9��ڎ26Bɟ�����d� Z��*O��c��
+�I��%0[������̎��[p�+�q��!fPa�؂gհ���}ǻƆqJ�Z�-��(������Jq-�"_$% �%��w��Ư�Eu�k�V��27 ���q~h��d�$Q��\ߠI�U!���P�[�ESN��b�Us�:t��<X�����z��a����-�P��V���.�Iψ4*V��K���r��&M>�ǩ���%��E÷�*���R���xC`M:vVR$O�h]����'6q���X�.;l1���l��)~�y�=���Obv���ǚe3�v�� �x��w}��+�&F! �E �s�b� ��� ����>���;x@� ������l^;�Ƣ�Q�(�e{��h�.�qG��2R ��	��� 	8��7�Jw�aT�DF�,r�;�r��V���d��p�e��eR脈1u���*��Y� ��9�y�*��A��,�,�\��L�Z�wv�}1�˭���n �{�"�62f0��}#���⃿����
+�0w6�1p9a�Q�~N ��O
+6)����F1��@���Y8��f��׾���g ��Dfg�r��}�5�q�֦wrz��z���(�%�3c���N��_�:U�pl.��iM�$��N��v/�E����:�A?�*�2ȭ��  ����sq?�,�r�Oxa�mZ���%����H�8���ii�n�<M������y�m��������*�I�������07�«z��m�u������'� p�R�X�6S��]D�`�b�+�#�Ǚ�6f?hp��8fw���\��ZطVU}���:U&�Э�tR�<*�+HOw�� �%s��K�\�䉖��i�Zs&pS��e�CbΎ$&j�m�>
+ZшW�Z^��o莢�L����A���vLIu%I���
+�.&=$h�@��I)R@�J�T$^i�������x.�&��Ʉ���hFb����a�b��_����}�w @�p�h��k�)B�2�&8�ǵIp��.gs��Co;��Jk�[��@d������0BG��}�]7 ����" D0�Cڬ��'i�<��%��4�\��s� H�\��IÉ|X� y�x������X/y��W&���R�K�\�R�1�"(eݿ�^=��7�Aצ�1��Pu�[D��dd�{�ҭ�$�� ��!͟��+���B"*C,&!.U&V�� 22�D�,�>s������:1�0[�����%lzl"�P����;���ggCA�Qk��(����/�o��3��v4p҈{��Ѐ�]���۶�w|�[ �7���;��;���a��4��y�k�=Z"R���
+��<' z�`TO�LR?�ydr���;5[�L�ڊyGk��]��QFHT��v��R�n�tN>��_2G̬��M7�?ژ�ٞ�5��ʠ�mq`��*G5%�311�w�"B%I�?`�Uuߢ9Y�Bz)�o��Y���1|!�JcS!�6�p(8����m�6>R������W-Mo#S�-L�lLvHl*Fc���y�It5� j���"�:9��H BS�G���v�~� :J�1�h¹��7��uB�J!�%nn!I��I ����!�vW�|T�9��Y�^漧�D�]ѹP� ż%�U�!?�QS[�� t�K�m�1=�6�H� V퀚���!�,���X9���˖@#M0�+�G��;�g~����8p�� pOs�^������	ps��O��ڗ�pI��|N+���ĉ�U/|���m���C�b�^Ɩf����5ڔ� F	5��&���!�"�hg��P0��S�h��!�~�S^�9q �KΈQ�5�!� �Yv9I.�,�lW�h������.�3�!~e�Zm�MH�Z�,����P��$^�p��4W�:ؓ!���m��w�,��Ъ��ջG��i+��F�EɈ2e�%�r?%{�
+�&��	}�[Dğ:D��0�`��#&�E��_.ڭ?��_�r�������E��	��բ�̓\���3��4�#G*���s&I�v<�k��YZ�i2շ��6�%�L�Iz3���1%�g)f�&�nPe��S���8�*9�iw3�p�[zOA�~j��A8�z�S������S���rNi	#҂D���q�XΟ�%N�ʕ�nL�i����:rs��UJ��_Z��
+�4�dՆ
+�7���k�����EI�����)T�5�Vٚ�y��;��ނa�}�n{���y�_OsC��z8|w�L��������4���bu�c��w�����?;k�'��x`��w�{��'�
+�K��g�h �Dd*ev�&�t�((���l<�)G!�C7�*�t�_Z]j���G%O�q�zH�Aks#l���k�H�H��̖zH��#Φ$�q�u8:*��$���H���Apt�e�E�+&2	��5/��"#h�����
+�NO�T�!�䃳�ҷD�'+tX�N�3{��� �b�g��E4�4~�E���o�X��&&"a������Ԝd�?W�&~��O���p���X��й�
+�	����w��x�2l�E@! �6!�C}�V8���6͞��~��i��	o2����.���VN|��� ���BϨ����W5Ni9@A]�pWϲט���� �ڞdES�|י���o	Ћ�����PL��Q'�nH��rƛ:���9��U���o`^Y��m�K�j_3��$}E"R֧����,?�7 �%�B�B�O!)-ɵ/�:v�U�9��+��w�X~ ~q��h��E��2U0d�߫j��~���8�7��	�c���R`-B��M�B .?�# k	�A�s���!���}��as�����@/o�V�Ai�Xk��Վ��$F���� �ֹ6���� ��=���8X��َd����C��ҭ�B[RO�IX����i��XC��h��$�X �F�1��'$! ��D��H�D�ؕQ9����L�lR�"�E�;�a�v�5y9�(��X�d�Eɋ�z��N ��v�r��U�0�0,�r��Z��Y�B^�> f���`M��=#C��R5���3��q�H����΍plC�j� E�oBp�a\�%��*�o@>�����MA��y��^B5��Ao��6�d���n��h+60�	�`q�]R"�l�KQ�����,�g�!��l]m�V'�c "_�hC��Y\��>s�E����Z�	��T��9D����&Ոq�O�1�(�]y�u����,:���Q�y5�����}�1��u<�ż���ĳ#c����iQ[��H];�P������P�jC-:$��`k �@�@D�����~��g�C�^��/o6p߀�@׸����A!k@! �t�ƽd����o078�����#����z!��X2�`8H�`g?hgj�hDA�*�|*��y�,�h�����H����_ �" m+��G%���iƓ�)	Ht�$/��Yߏ]"P�FCE��D||�D�kٕ@V��TI-�C۲��<l��D�L�7�i�U���������Ϡ��/EJ |����2�$�f*JO[�a�(���=��o?M�phD�
+���NLd�uL�*�L͖��N��?���y��c����ebC�C�;�w�?�pyc܋��o4��0�
+{NZ?>�~��"6�e���-�.˼d\��$���v��E���n��g�H���.��/���(S�S�3�H]~���2[��<��y>��%f��i=;^�?�|�x�Y;�����<)"�e.G-��'r��M񻆶��]�T�c*nJ	@<P(�	�S@Q�O�T����%Ҙl�X���H���G���i%�J�X�3�JMY��G����}��k  f�W3�Dga�0�,<�q-��8r�Ǐ��ՄRY���N�
+���E�e��	B�Rv����w���5���{��[_�*��y2��Ykw�6�0��P� ���8O�8�%m��j�����ҳ�����ՔF TS���q/$D(R^��T���߁/)�z�qϧlX$JI����],�B����Ng��j��b����HJn��q�.qI�-)@l�)k������:尕�t%����=��n$��k�g��r%^2iZ�5pR!�lT�,��:�6s{03�]�Gl�fv4IT�������C�y��n7��E ��ll�W��Ơ1=��R������
+��^"����>���}K�ffo�����,��T���2�%"�ɠ��� �̤i��wb�r�Q:Ъb��d'�`7夤B(�s!)a5v�Q
+I���:0bī��T����~,��R*oD�f�<�P[ҙ`�v�FA?��	� �]��e�x`�d[�4}�/iR��H=��q�G�=�]����KG9:ˠ���!d�bE������@�d?�ShB�:4�8ȟĨ ���7��^\��������׽Ǐ5��af��{7JHwP����+
+�1
+6km��G	���{x�r����ާ�
+˃�Y�W�6�f	 `��A��Q�13�ʢ�9�3�{2�I��	q>X{����y�:Vٟ�C�6��Y�a���<�<�ی�T�2�/,኱��"��ie[K^Ig��>����Oc4�4�G}��+��%�����tD��,]��D��n"��:Oq٤*�*t�t��3���B^))�z6]/خ2�-�/9\���CoE��	���e)�;҉ �� F`�?1�Oo�z�ۏ���9�U���?]0��*�n�6h��ւB ։ˉ \��_��a�C�pǍ�~����4�M���6�#`���~�cH���PBpW���9m�5[P#^����O�l=�#��8*�L��M ��ok�2v��7=p&����LB��=�4V���Z�!M&��yB�)J�Q�T��B�DH�,��z� ǅ����%{�&{�ye8�"�x]2˪��W(d��QS;@�u�$��Ac/J��R�4\^BŴt�Ǌ�w��c�r<� ��4UزŐ�`�d����p��}�?=��8C�GG-&�<6Z�\`�9������?��۞G*���"��w�c_a��͖_IdvX��eԐ3T�܉�`��i++���8��! U�jY\��/�O֚��5Pz����Z:l$J4���b�<%ȑO�G	�νH;?��	��/�Qm�h�j7;m�VBZv@�G��1�! J�U�_�Pm��6�ъ�U� x�@��Z�<�$}�i���ZpI��b��2��Ǹ�@$1O�N�I��y�$Ump����j�_|a����&� �@Vx K0�&��,��kF��g>��F��3#�1a���/�����+E6l(.'p������'�5���1N�����o�}3@�6��0�Ae`*7$�8� Y�%Y�5�h�WSZZ%�%aH���K�ĵ���>%�;*V��۴fY�r���F�M+�4�@��gI�LJ�H���Ÿz ɗb�.NfEh ��e7�I�扂Z9���&G��%�,O �6
+_�� �&e��kݹ_|\�G-���.�	�i�e�j�DUu\��� H\R��a!�GŒ���^��@C0[�	��v�����W}�?�ĉ�s�p��QgRa|��rp,$eC��u*e�턙yp�}K�\s���Y�n~��z'Sukc�1/1q�0U�UӀ�w\p� ��C;c4Z�!Zih�>�
+�
+.���/��xRg�~�=��JGɯ��<j'5_��^2�'ڢ���(^�1 �*u5t9"�i��o�%�TM���3�5Е4~}L�Z<���st�$F+��l�*GJ*�8m!!����E�N<�����/e�
+�����f-�(�j������_:�p3]IBED}0���U�p�{��gn�gS�^�'�:���0k�\\����(7�m��__��q�e5��c��}K ��y��?;j^g��7�0ܐ� �S��é�[��v����n�2�h�ֹ��בk}WW�8�Ey�5�Ld��ݚ���l��&̤�y`-��iD�k	:�P:��Z�/E�6A�h�ʱP��� �3���H��L��;�1bR����vkPqE2�-y^�QϬ��T���Xv]�y7��;j��֮�:jYH�bJk1���6a��$DЇWDOq;��X��Ѱ��M2j䤼�^�� �Ő����)�]��_k�Sg�F��07� �{8|8q�PUȲ�+�ܸ�GE�]j���<zع����˅�D`��n�8q�Ү��;;���ܼ��z_Ơ���XK�I����"kUZV������_z@Fx��$^g�8\J����L� �|�(2/�8-�j����YY�%�B���o(��Z(��$")�69�ݸj�1��ɾ�����B���ȟL3���9�-�(�#�*u�?�_]y���RU�rֻ
+��DKԆ_4&�|"'>*�R�ȇR�ʀ02].!UR^!w�ِ�7�Lc^c�m����۾�W���o?��+���2S�el.XV��7.u'�����Mc�X- 0{;�O��|~�5;������3�_MD7�l�&������,��=��h{�_Ui�1�HI�)-MbN��;A;O��RO� |����D<�dA�U/1cUF���V6$
+��4�,���#UbQu���Y�c E²E!��~�HPJ�
+(�϶�vR��"	�	@��襋�Eg��x���M�-����`!'YN��<��[he))��d��@��#O7�W��F�����J�<&{�M"{L�*CXH� 0���fn����*����'��av���I��g	l��Wp�p��K�T2u��}��6� G`�8��b�.��χ�&�}oe��A��c2���+�x,c���kε	��v��[J�)Ԉ���y��>[��og1�G��U	�0]��W>�QY�:C�{���)��PB҂�% aj#' R�T�i����cb��(Ѽ��	�	�����,t )O�k���f>��6#Ҽ/.�T�V��eGně
+�&  i�)2A����˔ƣ�p�H�n=ƪ j�(������ �*��k$ �Y3GI��a�!3�D4����<�����`v/cnζ*�lp98jl��y�i�+	�y
+���p�Q�����}_3��O�V��~��-̢�����0�VY���"%a� �$����2��`F�]��L��#N��?�`QQ�>�WB����lR��)��BجpNU�eyS�0�����ݎ�B{��O[�i�p���U�ثuWW2���:Jf�N��.�.��]�����{�EI�H�W��>�VB�/儯[�U�$^Rŋ�Z�?tiU�T\��*�!ނ��r!�p|ZCY��D�6�L2�"�h0/��햏�	���UO��� Pׂ�ժ7"�.-?�����:�d��׏��7�� ���w޸H��Vt���k�s��3�����vA#-<�(�d�c j�H��V�aٕ^�/p��?�jqTz���F$�s�[��~F;(��IOR�\��G4�`}US b���Ȱ����C��'�U
+!�����E��$D&�@��4x�*דe�Y��R�cpY�헠�K�̆�2�M��<���X�}<y���Đ���n�p�_O�AZ5�!}�C��T:��	�1P�q�������'I�w�$�Y�K◩��oU�����H�`�j�i���Ug�)FoMY+`��`G`,���k?���᳟���?P�e����Y:�&&NJ�c�qd�0�
+���8pdr�ͯ{�M���{�ρ����'D���3l9=R{N���� �^��0���� l�3��%����_S�Y�N=�+W"���
+��n�6�22���F�n�U�ܬ	3�amb!�,bQ�AZ��eL��e�K+�>d\���_���|���V�I��"-3�v�ҦH�R�$������1r/]�V���:d 9*6z�v���i�z}"F��.�_��Q�)�J�P���Q�S��a��}Nx1�����Rr,��G�c&���PE�iی�X�/|�} �#wtUO�e��a�f�Fu�|q��	g���|͡3��Cf\�0�ms��I,��a�*��^�g=
+�N>bz�<i����Oˀ�Z�����s� ���$�S�AC�� v���0`fbU����8� ��)�{���a9Y��e0��tWO+ɠ���#/ˢ[G��&�g���([LR�j! ���5��&��V%��5�x��I^�1�iTI)�i�cd�l�{�&�~��Y���"e����@̆�1̠��O������=:Ru8\(�� �ƽc����,pG�ûΜ N�w��x╦��n�2 �4�,�5��[Q�E�*�CQS�K�b.н�ޛ	�_�xg�%�^;��O�@9/{�PJH@�e��<��^��G? |�i�0l0XX����v����<}�S�Q-019�l�%�z��A1.�q�fUl푗�����b�$M7G>7�D ���A�M�ݕ�*�`ay�5�>��-*���_�jQ�.��TM�y�.��$��X��z��wH)�U	y]ū�ȱ�T�BZ,Y��%�8�C�÷���ق@���.���D3<~	���x�N��Z�`�%@! �G瘂�	��<����{*@���	�kf�F;8�&X�mD�[�-rccx�����W2n�9��*��2�(�)����D� �X�˕�Sm�RY�1DF2�)�S!�΋���&D�:pc�4X��-�b�݊��ׂ�O���9y�>�(?�'���Oazr0k�tt!�c�j���T�
+­g��]��	��
+���d�ک��5!���=�!�A��x�T�U���7]*��%��oί�:d�^=!���X�[^'��
+8��/-U4��Z�D+Ǻh�(bÌAU�m5�e�o��C�Y�:Xv���y
+������=���0�Gə�w�۩���ޖ3�|im�6"�ã����������F���H�=�O5e��q�cӶ�9��Q�Ÿ,D(K�� �����<�LT-�:	qs�T�D'@��H4#2c	�K�~�!\��_
+s۵� ;�X��Ao�y��?����q�'?���i��Mģ���^��| �/��F'<iA��DS�����Z$K���&���M�Q̹�}���>�)�K����$D�'e��j)�x�O�#�sHA�2JV}@/U{/�2K�e�P��[�6��Q�/�r�N1���oW��?�D���5�AY�n�Q� Ι�.�����wR���Z(}����Le��_��<�����͸62p�Q, k팉LZ�s�y�����k��z���g�_����0󒵣!��L�N  �Ҡ�^-�ɡ.�d���N`�K�`%��!���`q`"$�j��V5����A���0������9�n����B�]8��i���8hU���>�}�͸a�$��_���Aor� �E��y�uC��T�L$�0(ӡArh�V�1�2M���S���:S�ww$jmِ���m�u��/��?I]tZ��'�M��]/�뢊�&�U�U� X����9��ѴN\7T�:��*�"ٲ��^ �i�N�M�I==�en6��u�l����E���E�V�������
+`#�\���.t��q�. f�28qb���f�-�����!����X��2`	fڍC��"Y�&�5Ѳ�'7Q�B���kr�N�k��]=l�Z?�)!�5"J��Vө.f&r�),M�3
+D�4¨W��;�x�N<���cLO�11=���	LLM�h��ԓ�п��y��✱`k�
+@N�����gr7�8`���I�I��v�fM���$�ekTY�jZ�5� @��^m�&l��-=��DO� L���Fy�z�br�� �'e�W�&���&]�<�����	��S_M�T=I���}�I��q�L�oͮ� �.�ȸ�- �	�\t�O��%�~�Y����r˳O���L���iy�h1z�@[��r�pk�M2L��&�q>^�	Q�.�x��<��n�&ʝ�:�:!I'4
+�ܫA>���4I�6�{LĲU�+,--a�Ka��<��3�D�9��	t�Bo��f4gOc������K�YLl��!��˜����	ҥ}���E�)�J�(�n\��)��R=�S�8!j���O�V��K��Ƽ)IՍ�T�0�H]pl~}X�0OB��Գ��lzy��B T-GJ��G��IBRV'�aa�_ȰO��u��3�%NiĜ���t���OCU��,��6�N� 1p��r�Fx�gT��b�r� \J����ra.p��# vǍ�?8:��������a3<m���j�o��� ��n���Yϔ���OY?����35+<����s��Zk��3��l��2����V�Ƃ���àO0�F0pˤ�l�Qǋ��!������E7a�}p��A�.@�O�l���M�Y�%Dz4o��Z���r��������㠭I��;��쎘�O���P���/t�9YJ4�T+7�F����';���+���u:�N�_�4j-	L��:��F<���7,G0�k:�d|!
+.".wp)���^���0,@v߾���|�ߥ�y���~"����i�"�Ћq�a�n;>g�1���D�Qܜ�!$uFrq�5��C���ò�w�3���J�� ���P� ��Br8����"΂�a^���F\m����_�K��������Y���4dY��@C������ͨ��Ԣ-bfbf��lY4~�,�u�.�G�ɚr�J����vq�y��Ǳ��)�c�����x�vN�r�G��㡤�9��S
+q�6�����j.���;���U(��b_�*�c�U����T_���S��� ����x�m�oQ��"�!ZOt���EhK^e�z{㳘��09r)��+W���B��|Y�<�� ��k@G���|���3_G��F�w}3�fj�!��[����*�.o��1�N4�N��=K-tnh�v��	s��@�q,Jb��L���.=��5�RW'$���7��&���zFÆ+c��pG��ٴ"�p�{x��Sg`�	o�U���$�����Κ>d�# ]՗�M�.:�vy$:�zD����6_����J�=|[詨X��&K���.A A���5������wQ���+T8��U�DY)؜*�t̮m��㠼o�k�QJf������� ��਍�ֱ��,������p)Хr^@��}G�20�l��;�w��7�p�.�������Y"�$�i&��u��6������e
+NxP.�pC -�e0��#>��\�8N+�U��8j�I���i[*��XUNH�#[�zm�[_x���9Z�?H:�Iѭ���ڎz�V�a���e���F��\J���>㔈~�u)E�骆 �|Bd�-;����O1�:N�k�a�
+����~�m�	ڪh��{2O�ݘ=B_g�5������	Z6��+!�(��N肌��w_�W�Hxj'�I�8�!��J��k:����X�i�dL�T�#��� L�R�.�/�/��(���"0T�����p'ǆ8�j�M�{I54�������4:������u��"�����AC��8�랕TU٫�k1�Qn+��g����-Va��H���,��μm�a(�;"��Om�i$~Y"�B.+�F��۰�%7��`~�;��&D�_o�&���ܻK�ٴ�I})@ a��u�i(a��"��5���P��l<U���^��:j�]�RR9�g����˝��@�=�1�D���G�n��,���~�������X���������� "Hw�3�+Z~�n���ت�8�D��0@~߀$5���SC���T��>>59��3�N 8���/��0�^�(���������8�h�ك86�}�U�w�}#*|�R��`��i����`�m@$�,S\�V�[�P'#�#7��ףd���~���6	IzA䯶z��s�]�E{��g��*W��*1��A�4�����ܰ�� 2���?�o�dmӀ�5&���!���i�C2�.��@g/\K��?��ZY��$���")��-a/�0�|�2�d��I��'�F��ue������!�Ժ���O���
+���Zǰ�#��H����Sdqb"6d�j���_s�����[/��.���r� \J6x�����2��{�8�~��9dy��Dx;��k��Y2Ue�� f�J{O婞���a�7({�t�>��#�K�M8N�r��$�l��&Ae Ѹ��C>ބ���c��
+*��Fa��hcIMU����_x5��(����Zk�6����=��>��@UŴ��ע,�iIcD���ø1j��/!�S!�$��B��3�Qn��%F�u��!�I���▸i�<�V�b�XnN?l�.��b \}X���d$B?W�*M��4.��ϒJ/��;!�/�S����Ȼ��,�԰�����G���8~�������A���f���M�7�#3���o���7�I<�~6���l����	��A&�
+j����g>�� ]��r� 2�ͼ�h�p����2�-��D�W��f���Ĝ���m��a���Yж-���&��P���
+ m�:���@ӌP��	�2�6JD�V�[�%z}1
+�>(���C�讟.Yb[�e x��؃P��n��u ���[W�J`guL�wGWZ���u�S�s���j	�",��D�ê��vi�[���D\�c�7L�1�H���Y����%��P�Z
+..7p��A�����
+� �����n���^��P��r��9k��̤,��7�a�g�,�����z"����9���-A�
+���ta�<��G?@�3�+-qX������4l?�q�j��r�$�B
+��#MǞ�0-0����w�i"@V ���o�"$����l�#s�6T���Z� T�s53�i[�<��g A��1�KI�7-�>�3�"��c?�ĵQ%^�4F����NhFp��ws@X��@�&Yuu��<2��q�T�3ƥ��tr�Ủ"��(�M����CM)��z�,RH�?�oq#Y�+e�,>��^�)!�@��`����}x|߾m}�9������Vp�q�M<G�����N1w;���/X�Nd^��l�9����S�����0`)��W�Q��R:��K�g�e@س;#���j���B�x���Dh�=����d�w&�+&�h��{"�E��D��%�F��/�	��	��bp|sf�Ȱ8KS4R"`8aj�4�����ӏ���/j �Ene��ʗ(dc�g�["�@�k�S�����Hɘ�Ug�4]�|��G
+A��Ԧc�5c�!$@]�_��)�+��G
+�LȮĩ��ue"o2��e�ѿ;#������*]���)b@�B��j����}��(�g� �da��?���_��]_:?zS����;�ڡ�Sp�P, k�3�G+`�����g�v|��ɚ_1�x��Xd'�' &㉸�y��Mlȓ��\��O[������}�L���L�.)!��I��//���}�E1J�A<+o^��z&���d@h#���g�cԳ �y"�?�4�\$"4#L�0q�5�T�_Sf S�N�;��X�:u��DD��b�
+ׂ%�R�S���=ģ�mG�*ױg�(	#�OC�b߄ˏ��5D����p+ːX�:<u�Ũ���$���dɁ���U��x5�
+~��v��$c�wJ�m����Gԯ?����G03_�N��T�?J�#�r�m��[ p	p��#p���}0O�ny���G������z�kF��D葡	����� �8"�L�ֈ�)�!��8t�A<͜�� 0�0A��R6�^����L	�܄�~!v���@�!5ZhU��ꑲ�m�[�Z�N��rL$S��c��;�߿ؿ��!����M�4�tB�	����;p5hr�o'$�yg�xiK*�wLe��^�B����Y/���'���Tݰ����}����>
+�Zن�V�lDtF�L�4��$�U�_�����P��6QI�,$%5ӥ�i�N�a_�w��!�St�/�?�ܨҋy 1���<�%�W�-����Y��<�P��u�N� f�����������_��`�߻���aK!��( �X�r~V<k�G+�����&v�K� S}��]2d� ��Ė��ԟd.�4�K����J/q�$n�çZ�a)/2�=�@I�[qeq��8�F�M��j�/+Kk�4�2F�b�������,�0�Kt�j����R�G#��kw�l����䲒zdC�jE!�սX^��x����u�����:��S��V������qHK��^m�31��=��=�S=��@�b֤e��+N�˒��{��iw��6�+��~] lU���E��jf�9����'��ߞ��Wػ7Fך���y���3-N��Q@�q�o:��T��# �z��o�:q�?�T�Kl�Ď�sn��0zFQ΢�ً{��ʙм�����BF�|mpL'G�B0B�b��hsj�%��e�@e�m�=�F)t��QBg!d� Zp�H�U��v0ON`��7`X��|A�j�� OȔ3�O��zWmC�k;�F���c�cR����r�����c�s��-��N4v�����c��Tʚ�;��le��h��q\�B��Hj%8�eq'��Գ_���C�ϕ%H(4���H��:�"�<�w�C����g�ƕ�HWp�dĶI"�}=���"��Ȼƾ�� � �	@ŀaj� �� ���<����?q�h�Z�?7��N��)�.��,X'
+���L���p��,����}wN����ג����Qk�ޑ�g���j��& ��.e BA;,�&�I"q�V)9s\�qP>���t�r�L��㭑!dj��4_!?^ s���`�ʰ�ԤdN��z��@�,�0q�nL�|FKCT�m���P�`�I����1h��6����Ѱ?:8�U���Q�H�p'����_M81�V>�D�M�$ɜ��{���<��$��ⴉ�7^�?�Us�Նs�T;���B}80�%��KU�QL(�1��<V��Ŵ�V�$~���Y�i�x9�٥�V�2,�{u�~��w�� <>o�w/������}��։�D .5�Ӣ���]����������}�u�T����/aH@C��0FU^d�lxyEQ�G��� ' ���.�4���w�[�ր�WX�y�"�(�g0rf�a�8��lԓ�
+%�2Vc	媒�K�t�a���rۍ��[�,AF�(�����c�D�0�&n����Y`��Ԣ�Ȍ��	��:�-���;6G��*Ʉ�(a�������=�L	/��gV ��M��A��?�/��M�nP�l&I{�?�b�u C�?n;�5\Z?�B�X���ـ��]��,W.��&�6��Lo��S����;z�3�����b��Q 8�8�a�ɑ�\�z�*�Y�v��4-d�u��畆�����GP����r���l�&�K�Cnu�9ۘT�Nǂ�]�Dys���	�G��2�u��Hş�������U�F�B�Uy����t�0�I��V�x������z�%����a��7bh2��l��Ζ*O�ό;+��xb�n<]���+��{�Y"�aP�uB���'S)�~D�t��u=8��_Y"g��{�k�>��O��1�������e$�iqe�e�wϩ�d�ԉXy	\|<����P��Q[�\T	�HޛP�1�P�����H�l���j�3����80L�Q�V���V�66)0a��5*��O~��~�z�>� w 'g(! ���x�(��3�kp�Y�Fl��j@�
+m�p���{�[n����>��2��L�n���O�L�&�� :%��4q2  ���9�� ̽ɲ�wEOi 4�SA�?��и
+�U���xZ��e�c����2��P"��E3d�ى�-�`�8BE��}��l��D{W�"  Sah-꫷�}w�@��^��%6D��DH����u������������9�g	P�"��Ĕ�]�v���q��&��5	��~h�or�]?M*T�v��m��Ks���.�� <h]Rm��M�*�E�PZ�15�n�%i��Ϧ~���g>����Ы��߻��w�[ڿ�G��'V�f! ]t�I�q�&.�>��|��5���ed&~�m�����*�����E��'�j�e���D�ňdH̒����x|�hnq0��ޓ��V āG�k�is�)s���u�љ��3���{~�R.�]���5T�f ��y�t@CL��i��=���>o�H(�R>æ�َTۧ�mӰ�(٫!���!	's��	J�.YK=�L�e!j��
+��D�gJ��D�w�T�N
+�X�ՏB�����l�?I|B�:��!��Hc���qq|���I���DTҽ���X�K�$�+]'r��4�`1��T���X��!6�z��hLUC|��8zj��>���>Xh���̘M��h�;����
+X/�D �&�cq��W�|B0O��GNpl�k�z�[���L�UU��l�`;�q�`&=Aɨ��e��.!����Xe��}:��j �|l�]��MK�PxW���ja���\M![�m_�6�V��Й��JUB�I�䚆	f���/�� ��C�0�G^������l���޳�-7Lh�m
+�P%ݺ��\{�訊$'m��H�j��o��P���"�
+��~lhNV=�����Mr-��,�(D;"P�P,w҉�z��	��*�<�g;�)V��{����N�������E1���ȓ��0��fD����LU��������{f,f�r��c��͉�ś $�Z�\i��B�����y����������-K?=��� dkGL�e�`��">:���O�JW�LÆ4���qN1S]B:m������S�I'���N�a��"�W�huh�^�՝����]����h0@�B���}Y�s<��2��T�:1>i۫1�wAkcYN�U&
+��ԟ�_�%A�2v�x=��Tx�t����؅23sL�=��(�q(�?��Y��P�?R9�` i,���*��j�K�S�����hb��#�=U��v�mwSd]I|����e�~�p���]& �`c�P40��]S�_��'��{�`����N�ϡ�?����f& z����n��'����a~np��toס�;��%2���h��Kf���Ö/M4c`�(:Krp��Arb
+��Na�9W̯���A00�G1��}�/���&��#�ZFH4OA�����2���qd�SX��Z��W�T4S7���;l@D��?�saE�":{k  &��TnC 	h9VB*���P9I}��2@=��N�DzR�n	����*�/���ks�|q�$���J����k.�V'�>z�'���*��.b?�"-��{ �ue��V)�}0�N���"�r)Z���k̿�[���Uʅ�4QBV$�V��S��P1,5S3���޿����?�����Y|��
+w>Ҵ2�c	�x(�<��	@���4��h����~�:p�dS2�/F;_��O��~���a�<����45��ז޸/�-5م�&|�Oz�
+�5���7D�gAl�8[�[<[	a=,Q w�5���tO�fD"�z:���	�s��n,�bl{�,j�L����g��<�
+C0��v=/|�uF� ���4��v3�Ր��S&]�4��S�*YU��J���Ļ�▒����X�䳕��91���PY㴫v׹ϯ�F|Z:�5֮X����!c�i���'ҿ!�L~�&�0�-�z0x��R��ko����{��8�	<eǚ���J��k�[����Y�v�2ˮN�_�T�{��q�mf��nx�hi��zU�2�1�DĆ��������=y�	ΫZ�`uC99.��Q����1�Ɩ�N���Y�s����Mn�1UT���I���Y��݋5�*D��Lˤx?I"ׂMjMs�:%#�{�c���8=�y�6�rW�hZu̪���#���[a�oG��i�Z�e�T��n�9R�T����dl��W�c���4�"P���ŊE���!�*�3��$��#x�n�i�r�C���g�XwE�}f����,O�I©b��K��JW�����%i�B�_�.��IҦX�jL�lAU�+z����h�}��}��w��1��~~�i�M.�*�K(C.\n��b%m�?g�'	�NטG���-Mݶtͮ���p�]����Zn�y �5�:��W�e�1����Ŵ//o6�S��ꐾ9I�P#2����S�~t��ѭR0I���sء��g��a�3�p��-���16�E��N+
+���@OM��/�i,̶I�v�mĵ���lS�Ѝ����)�y`VB��˩�<2$���eq��J���ʑ �)��r��-Ǟe�lx���5���6�J�%ґ�.t<��
+�5����`���ҽ%Hj&����IW�vENHǤ����
+����m�گ��Ǐ��,��e/��Q(�r�������-?�
+W
+X�H���.�o�3��[������5���g��� ���Yd�=�~YN�N�s����H���S�Q���
+�0�zǗ]/P�ǝ�8�I2>�`��O2�b��gԇ�斉Y� �%Gb��BPj���8�@�ܲhW��IH��M�W����0 �|���`*��H[q��=��f�2n�~��k��e�,@�Ǻ,i�����y�h�ф��X?T�H�T-+aܪNU���3������_��eB���ѡ������8��z9_L7\�I��h�(�F�˷�T���C��AI $L��&eH������N}�_�E:��eT��i%�WsMU��?��;o~�C�[�xˑ	�=7��W���׊�-�k�ȩ����ˣ_��u�3�e��h��쵽%����Ms�`�8B������@0�V'!�H۳�Q. ��. 룕�7�q�g �Ѓ��#�RZ�D�P� >�u%J2yT�@iKa)8{Fe1�!^�st�w���d@��ip�zR|/Ǉ��݅����Lc%"��;���Li���i��O�L7m�yp���пn'����dɊe��$�98gi�.�%C����	���ԡT��j�$o���邸T�
+a
+I�U�+E�	c�r>+�C�6@� H\�6�%�2J� �D�+|M�s���PB�H='�4�2d��F�Y]��
+��&�`Ӑ����_�S������տq���Ks��'�b�|{�?�^�	��&�� ͐x�� l��[K>VVZ��<Gf`0l  ;oz��se�	��J&L0�";/�	���������d+��U��@:8z��V2-���t�I�l�&���g�v��UUeW0�ɝ����E!��t�Ѻ`c���BV��k��b8`��k���;h`��j7���7�T3A��[Ȫv�d�i�����o'�d߭4��V�bAy>Vi����腍��D�Qם�Bu��O��ş���|l�ߕ�C;��B'�����"Y"]�5�UG�)��$!T�*�0堪��%�Gu;&"��,�.���3Q����t��'���;���z�jL��w�W���͋UT��	�rj�,k5�2y��c�A�����m�3��c�k^�[�.|�e����i�q������9�2��os~���$�.�k��f�� �YNi��p]���R"Qt�0bm�5���@�c�[C
+�nh��o�����oA�uu�1�=��f���]�a�/4�x�Y��t�B4�3L�za,�X��6��v�ڶ��)���;#ا��Y0�KHGR��@���'��[F-�WUIU����&��-3z�6R��va���� ���^��J ܧ\P/�^L���$s��?\>�%��GU�?�=�,gA��A�N���]��~H����jc�#U�~�'>x?pw[�*`f 8y�����������b���U k��Mc��7G��y����`�-o�}pn� �0f�mF�@0 L0Q<B���h��~���Z	�0��f�
+�~@���R��ev�CdI��6i�[r�U+���x��tL�>Tu�)F�lF�lM�Bx ���9���л�Z4��Õ�ͻL�o0J�#��B���ں����i����c ����)$=��]�	�JyJ8��)|�ձZ�����[�ӷ�?n};6��s��N9c���>�lrc����d7v�����L"�QLؒ\����$�qH�p',�Qe���w���?�ܟ~��p�U�g������O�p���y]6���`X� w|�k��`5��Iȸ�c����0Cغ�����ګv����_Y�nf�v��ζ9jj�{>g�֬aB�*RW��G3?�:#αs��.�\t�	�v�҃��#���2.��
+�I4y�M�aVD��eR��f��;�yv�ͪ>|�\�"�J&��WW�� �&o��w���1&
+%�j2�xs#%Ce꺂��ͷq�G8@�l��+XG x�F����HÀ�A����ja��I�d�/A(e�;��g�ȏ�׎'���{b�r�{�K�K�q#�v���-���%:�E�<��α`��=��i�>"S\�wO}�����,����՗>�!�I?�P�v����J�u�b����rd�ڠ_�^�}��>���3���r�K��p��ˌ�kY�yV l�|lz��> �	�`-�a�q�2o�>C817�q`��w}��p�6�]��g����hd��|ٿ��)I��&��	�t�Y�F��*�i��cu%
+�F�hM����9I�,�1w��?dD$� #u�&�Ȝ��u��,��sd�kN��z'0ru`kjL?o?��^���o��b5>����� ={f�$�n�����G�1���dL�
+g*f"�CV��Dy-�k�%_q�����T5B�?w��*�y"ɴ���_SB�.3C�^ �rya�%���R��Kj;�ee��)-��mqUyhev�K�
+q�$��x:d�6cf&PUWԧO���G����x�+�`�MC��u������Y 6b,�и�xQ��e��W!灕:�:;�1vZ�<{'N��oز�������[٘=>���qo)w|KXzGX��2a�^$ӉRȨU�75��ʍ�����IB�+�ig��ֵr��w=xE�ˣ�m;i�h�f,�η���ӱMG�a�j�4&�Gc�m���ŸU�01��
+�G�ĩ��g�@k-��>}���uoٵn)��l�8"�+˾£R��$���s$��c|˅�:�-�l$=7����SB�嗹l�eV�#���s٤O���%��t�"��h���«!Kb�=�)H���OIY�w�ҷ�����"i�=�rq6(������������m;��_V�0?O��5��]���z��z�K�c�Y��^�5#Ζ֎�����5�\���y����~����^Πs4E� ���vn����lwd<_�e��O����Q��<�`�T��$Խ:��.-[^��$]R�i�F6��O;@�%!�ä}���F���W�w`F����$D����Y2�L����Y������@X؆}�^0f�mF�]��s+l#{��b k\�oږ�2Zu��/�(�,�J��W��;+����*#@Gl��lã1dCz� ]���IN�@:@���yl�giW�(�;�ҡ-2���[ׅP~
+Y�!Pez}c&��ڶw�w=������o؂�����8��z�ו�k���cn�y�^�逵
+�B<�3p!vͯ��p���	s� �ꆯ�n�7w2�7 �2�<��O�α;f��@HAH)��Q��Üj(���K��.��% g�D���}0%�c�9Gq�,aLNH@�f:��m8�1�cc�I&?	��@Ʈ"@�$ZY�i�}��i0"��C7�vn�=����:�)�f����@����0O�-A�Y�=��4P��vd�ߵ�=�a?�,*E��%�w�BbzemK��j��b/J�[�#��gHT��pL�9et�t��9��?yQ��^6s��/}R��7��/�%���fLy�9�e�=>��iT��Jc�K=x�U�������a�a���ʌ0Y����;�����Oa�nŮ�E�~���}�¯k��������� ���Sdn�-��8'��;�W���-k�Xl�� ����)�Y�\�5�|��U՛��ZS�;l3\ ��O�۰����Gش?9����m�.@{�1�k(+,u��u�Jk2(u!xf��'�A~��Kg�L�ߵn"e�fABa���	��NӪ�49TL�.�Z����`�,�vNazf?�00��2��kۂQ�FO<��?���E4Ϝ�ٶ< ���`��2�.����݁E<�^~P̹�Վ��d&i$J��5+�ޡ�|��b��"�_B���1Oҡ$�vG��g4���!��<%J�w;�qYP1t���;y�dD(h;��|�\��z2. fT5��loK���Ѝ��3�r�	��{�඗/����3��X�^���޽ss�]�w�8����>��������ر����
+331�ѣ�c�8����� X~�j�+Ȱ�) ͤ�����b &��]׽�S��̽�� To!��֎�Q�Iq'b"r�y��#�(vO��I����"�#j��-*\�B��)1UB^�x�w7o���٫��3�JK�Þ�AG�ʣB�e�7�{�3Ė�r7��d.���?s.��8IOikA�Ϩ��ty18�#L޸��{0,�8�i1���<ҙ���8�W��}�,h�Xx�)T=����C�_>���;�z{����J  �]�I��o�*,K��H�l*(�_��2��sH��#���&*���1��(T/��w��q�I����[��
+d��s$1Y�c~!iJ�R�o@|��1��x��>hCls�\9��9��� �l,��ѣ'͖ޏ��W��G�ؓx��n{�b��_N��&@�af�S����`nn���߽�������������b�����G���O�ظ�+ų���"���ʯ�U
+���}R_W8������܉! ��5_bG��`6o �}��[���Bn{d��S��d���> �
+�y�qy=������kPklJ�d��'�{d|U�[�2�s~_e'F�&Y�Q�Y=�Tx����.(ɳZ�i�C�,���m���z�жI�g��P��-�dY ƭ����b�/?�zd�#��g���N)��$��t��W��}``���QM���D2��#��&0GU�n�&�I�����������kZ�v��n�li:i����"f� Z�H	E�m.$�2ʒy���D��'r��2���|U$�?�
+L"ɯD�Jd|F�O77Ɔ��T5��O��N������!�����S���Ҫ���Z����g�v|�?�u�k�9���m�^���wg�m�#�?#�o�~�ɻD�*�N��}���j��8O8r�p��8R�8�_ǶzU�7�5d��}�z��D�;���d�PXe�ɮ��A;��?�$���������!�v{������_0s\�A*h�A�ߘ���]5o�E&+�ߓ�r
+Ϝ��P>!c3��l�Nb��7bhG�!$46�LZ7z�����Xz�Q��4եGO���C(_XsN �!�l��kv��:�O�D&>��ಧ�"�^����VOM.x9tI����O���i� {�5bp���-TFt��EJ��$�j�i��C6e>ギ������<� ��UC�"S�W��zۖ�y������p`���_��b��9�q> 9v�2���`��`�;޹gi�5G''�a�f��D�l����C ���}��WO������X=�v�S�5ƽZ��Y�#�����-/��k��r�?̽��K�-�0�0�j''����a5������ä^?��u�S�)��x��t��'1#9g]}��L�J��>��Q%5���DL2bz��L��{P��,�LqPG~c��Q�MJMq�!��3Pq�+aZ$y�)H���m��g�`�P�T7��pq���(��cm��k���>��c�`z=p�0��W*]'�c����؆�ߵ�]�a-���u]�еn� -Ȓ���7��V��?k�H���+J�2n�,ew<r�U����ދm7������2���_|'��d�r�P�;ZCg%-���	�&�Sa��B��!�Mm�dvĵ��%�wUo���~�N�$��!��
+d{�4�'��ɏ��;��84Uᛏp�㴬I?����3�����k��x����;z���kh8=��4�u�TF��z\�� ����0?O�n(��]��4�`�u'@�z+�<�(u��'���<Ǐ�������~q�4�aC��D��p�}2\�P �8�\\�`�̘II��t�b���\>T\2(��~w�rY�tdLHqd�7FN��.ҁ��waT" v{�G�B�R��&+i�I6���b�D"�l���M����LX ��f��0ԃ!���O��^ �*��N-�9��������������j��z�N4]�z�RV����m���FU`i�ekCZU���*KPP�1�T�YLY�#����r��HP%�uz!���Y�Z���b���r���OS"`,[ۀL�-ٞ����O������afv+n���K��0�����;�GcF����<v�np��-��#/:�e׿NO~7v����|�l�w��]>�աk�[)�Z��"�X�[/�ZCCh�3�.�?�7�y�֧�F����|+��LzO�T~y#⛲����a(�R�VL��!��45`�pL���L_"Ȏ~n���;�,�ω�i1Jr��p�G[���}ry�t� ̥�|9}b���m��N��pܬ7�}�'�g)�Ω17�LisUf�����$�x�Z��O�_�x�~_��WO���_|}�P]��]���3�z�H�T}��h�8�R��
+#C��� ��VJ.��	���i"ptl�~�;��GR����Ndo$�k��gں�����O>��ԋ���Ǳ�Ó��֩��F1_��j���&T��W�{��Y��_��g��C��z��/Q��<O|:� 6}6t�'��}������OaߝӸ8�'g��?N����&���y�a�c�F���_1ص彣ɩ7�����`���, `X^�٘�Z�N�9�M�7�+��.��˝�b���~|�s͎۾�&�/|?Q�S�b�ͳ��}��%�,�lQ�+��7�Х�t0�A�Rh� =�[[O㐁F�3N40J�!�&�y�o�ia50)[y26�zX��"'T���y��e���Վ�:�aou�*4���]����b�XCrS�#�)g`�a�'1x�)�{N�V50a�ؓ��P���X@ˢ�A�l1y��@]��ƕ#��}!���}�H	��uI�NXK��Ӿ���]�4���V�>O����C�p�k��}��ʒtR���l�7�	E�2�E��'3H�)����W`�+�"�v�� ?)��E�TUO�T���_p�;O��O��[&q���D��0_I���M�a0wl �S�����v���7[���G��h��:T�,�&W��\�jV����QWVcX��j��Х���'��,@���a���@�{@T[�gИi���)�~=�(,��Y�I;���1ء]ږ\S>h*j@\���ئ%�ޒ�E�
+��I�$?��,.���R�OR��w0�r������+���ʜ�',���s��i,�>�&4��n�6�*��xL��!��'B5lp��Au��ڸUD0����,@���%@���A��æA�Ж�6�BR�v7QV!FI��R����O���j"ХŉÀ��m��lIXOɈRc�t���<�]�U9�J�{1!�<(h�i��@!N�n�宮v����XU�$�Y��D ��cT�d�����'������o�����!=���s�N�z5}w�? ������<za��`��G�'������|��_���`��_E�a�s��S!j|�f��J͇��rv0�qX�`��ƅ?�� �����[^�%<�[��N��YbK������^I*/<�k�ԇl�a�ɾ���?���T�{��YOk�a|���|��E�"D85�Z�AS����V%�6���V�	I���~6�����ء$�0��/�}Rq���e�c����]�f4OMb�E7`X���)8�u����z�==�3�|���]������S�g@�q*�=�ff6�F�vM��5n��/F`]�TL�"0�H�)n7��bfp��)��ޢL؊S���	���az*�"�AE�ˤ9�����A�m$� ��E(������F��8%�6pL-vTSXI�B҇t��/�+N��P�H��4_���S�����x��#��#�T㥟�ė����]����!�`�W2�}���oy瞧wm�����{m�;yax����Q�N�-���͎�/�l�L�r��e�]t�"C���$ v�����ʚ_b���΀��8�SK;��V6�w�!��B�a��^�n'�8��wt�Z�J2����u�0�շs���}_bn��SLr��j���Uj�t� �Bh �#�hi��};y��h���N�(��6�D�`���Xz��''ݦ?���a��Y4�A��˨�$ᥑ�^�&�h45���]����r����m�k%����_O������\*��"�VO�{�V��<] z�!=ZZI����iZ2�j���sY�Ԉ ?g�~3q͆�k<cv���3�����c��af�����V�.?�;��33���3w��0��Q½o������S����h�:�i�m3@E��e6�`�	!�k	 W��ɏS2�  �JXc�t ��^p�X�> kx+��e�� �G����������Gg4��>���2����+��_�w4h`���[���"G��|�Y��%�Ԛh'�S�ZF���r-D�Y
+!�B!�"+��������x#)*�u-����Q;B�t����I�h�f"�M��d�=u�b���`�l�E�z�uhvL�?����IR��T�Tx�/>������o��� �3�`�|u�N��D"�9@��m� �k��M��j�t{�1s@�Tp�䝔�8P��&yt�g�c�ASV��U�WY�S�+�h�
+f}����s����"��IY<uΥ+%�;�Qu� ȓ	�����*��(kX�0�C��Y'.�%SW��zG�����/��U8|����Mk^}��c���a���	��c�{�����ŝ��;ڱ�͍�Ũ� Ӌ�яQ��W�`�ņ��Ls���.��������)W.�i��4Z?����kn64zZn΁i*
+$��ɘ�)<io���M�+Ӳ�X�I���6:3�BD`WU2��PJ��ߟ����dߤxx�8���s���3ȭoN�[v���&¨U��	�y8&*L�z=l��N@D��'RL�	����ٿ�z��<�%haAu^\���O�
+�)�d��8�����ľݰ5~�"�������0���n�v�!��J��@�Uַ�����gd��e�Y�>M�}ր�����=��4�dS���viH�SxR�1���.*��+���j��<��>�c8���Sk;�W��}�vN>��yƽo���G^�ۦ�mvny�.�a����ƺ�
+e�qp̰9�;v}k�Z�_1��������'���GLRS� U�-7� ���D�T6P�$��d��	�x(|�L��^�|��q��R�o�
+���S��d��8'��mAF�u�I>��XB��d��hV-- ��OF�U�B��߄�']?�(y��G���$72.%�b`�������؋�hf,��*�x0�>�}�I�y��IX/��J��@���sO��9
+�d lV,��`���p�z��Ԥ;@{�QK��/�<l���-k��)�Ŵ��m����LQ}����H۬%�^���ZaC�Z����EO�/�մɰ��
+"�N ����Hv=�q��a�o̩鴱T��V�0����O~����+f���<����@�����\���vm}���:�,,��tZ,FҰ�np������80�[U���u��1^���� ���K��v4 ��`uj���q>A"e"���J���^��x���n��v��{���(�wqZ"������l����VZ�)#ւϛ��������X���G+fc���}{�/��Y��E]&1���BP�JL�a4W&��4���;���{@��b�4�сX��Wq�+Ԧ�ٿ:	:7���`�V-	2��>{f�=gS�q���V��#�vm��
+;jBD�_>#YEe��%�����^m�[Z�ۗ�w�6���|�nrM����׈9��Ը?4��8�7n�G	�(��RO��UM:�o�����r���jꏄ%ԅ"�Q�Z1 +�����k������_�߳7�9/�c������G	�`17k���_�l�x�3/�K�0MD�i��l\Պ���(m����S���wR���zW\"�N�N�䫯oL�]DuD�4w�T�x{��'�{W��i�N ��t�㺠O�Y>cJ���5~K�!�T3j���P�	e/�D�RVˠL*��J4,�*W�s�(�"]aZ�%8�������\��V4C�+l=t ܫ`�����u�	C�&jТŹO>���AT�)	QW�O=��["=	�ͱ�,�0;j��6���W�{�Ĕ�tnq�����F5iR�IE�p��6!�	3K���g"H}�����-ǧ,�>s '��4/�]]�i��cEwa�#��)ҤȰ��ծ!'���W U�=�?�W�|���g���-�z ����
+��Z�?N��:½?;�ћ��?��x��`�7�`���~�D�;�N,/>t��}�� �M-n����B�8'��O���k�ŞX+0�#'{ �;�����ΕڕA�leB7���fS�)�h������a�^O"��E�t�R�#���Li��kj�Ved��N>�~ "1H@tmKT�$��]'�~�\��l"ޢ�B��U�	�u�l1X��cN�t�{�#��N�>�>�����`�j�V�o�K�ƺ#S+Q���� ԯ1x��ϞD�W{�K�dy(3L�N��豧�g��t[Kc�k�0��a�ڽh`�� H%��$֓�r���+Z��֣��t�Uz-k{����#�kS�7�dIN�-�'Ā�����I�9-��`�b����6]�B�*%��!���0y[*6 ��{���_��}ϟ���I<uz��]��a�1� ��p����6��߳�o��cl��Xn���C�w0C~{I��4��%8ݫU�`���X�v�p��yv�y��|���w��kn6�׃L Q�Z|��g���9ՆRp�&&�q��A[��a釸$2Qe�+�����ej�'�E�L��x��$3{9�W��+I������h��m�w�{�P�N�&ge�o}�\��;)!�f/��T�n�@�tc�[��n؊�` r�X�}o�h�d`zU���YاP��mz�X0=ZZ���'aF6�=3`�.���L�S��w����U��	ڋє̧�ĥ�oD�CJ��O]���zM����u�㔩�'�[�ia�	�Փ���	}Vhq\��^����'�^1��t���X!�ԙBPJ�ǘ4b�4���̐'����N���{��p��$����W{R�j��u�}�2�?�������{��_��mx'@C�ܶ�nS�8�J��	j3+��Y.
+.*ꕃ�"���Z��_N���E���朙5����ųN��,�(�I�����rE����,��(�!AX�T�ߧ�i~�a��8R���������[∂b�x Lq,��n�>��0-�bR(�IƼ��i����@��v��_q*%Ͻ�T�7��nE�M���{N�2-U�-����O����`���-���վ1���|�S�� ��%A%�d,~�Ilz!�8"@�h��|Z�n�6@�`z
+|����K5��+ɋ��eC���Ҁ�"��,�6~fb��C� ��qKx�֏�
+�<����[�a��	5qy�}$%�e�$�4�#D��8���V�������5y.{����MG�D ����5���޻��O����'�p�- F��`�{t5�ht��8��� �}�h�{�+F[&�+�p0�a���ɸ$V���.�W�1ȆN��H`�og`~�E(�x�H���y�<�*|�#K[��js��*bTh���.E2TsBPQSw�'GM]<��0:a/c����;Q�V����-�]����<"�S]Sp���qn=�����g���Ύv̒���������?���(���o��<眻�&�H#B ��ƃ^5~�cy��8����&�%� ���؎��� �zM<yNb;qb%`��l�kBhc�4���Y�=�<O��GwuW��;w6��i��=�Yz���Vuu�e������]�T�PDp�+"������2�Q9���=�cئ���	���y�e5��%.�"�`�!$���Q�+�ُ�0U���� Db�(��'V`���O:��M�ָ�[n0�e=�6�;��h8��J���D���$h�� K(�����_�^&�H��E?NƇop
+ 䯗��G��G+K��r�S�]��W��)��cP�-��}��.������t��2j�7	�O@]��5:��[c��/�a��y�3� =��� �o�'�%�G�[ '�����;��߼s8��7�T3S���̎�#�)4�CL�Z3+=�������y������	 t��?��x�����( �p��7U�L��n!�L����ZS������2�!O�0s�=N�P !���OoL�$Jj"ș��M)Kx�R"lI�y�>U�05/X�!�bn���K�T=�3lc[�)7Q�X�g�j�XM��P�	y�1��������k�d�(fz�y�娞�	�aC��by�/��cw= ~tE1����[�LQat�0��0S��i�^x��$d�4���.��{�A�z��"&o#NtZ�-rӸ2��#���)���=�9�*��e��0Vt�"�V�I��3��>�:������m\p-�N�$�~�j��U���lQR�&�� &#M��Ugk�)09R�#Z�4 �fjTJNSt��da����tu����z��Лcl�ў�5� o_<�,^B�|��-�y���~ſO����l�M3BQ8"�}��"cEJF~��H��ń:�iZ��/+�|:��\ �t̬)���- ��3���0�D���uqD`ʵ���k�@�r;]�#��';�53��dNpv_�vw��z�׃��cs�93��NxW�ѩ��:�Z��1�����Oz��SO܌�EP�M1dY�����F�; �(}���0�$̺�.lop�4@QT0��0���W-3,,z�l�X. ��(�	5�� �h\.4GV0����Y�ƙ�e�V��Ɠ)��c�,��d�7�s4:��w?Ll���?q3V
+��n ���$Б.��,��������P<a6|��1��ˀMs.b!;������%�.���k�|!2L k]eTT�@�t)kg�G)$<��Qƅ��4`��n�z�2���-�{A9=��6QWsT�sUm5��,���j�%K��Sz�@^���~��DTYS<P��_����%v>����[��D~��h������������o������i`P*����9R��1��W2�x��൦]�hH���t�ӹ  �(�;�N���l_���k��^��
+���$�9��-��o�3�`R�uU�LaZf{������h��*���IG`T^�:�\��.uf�Ԓ`��6_>ƴy=6<�۱�YW��0;�`�3��n	1��I1Y��Ca��n���^\B��ml�z� Р0`������J�z�ɢW�P�a�y3��6	!�/��X�7���C�{�e`�ޚ!��UID�5�`p�f<Z�K��mK��rɐ�Hh��Ɖ���woÅ?��h.ـ@��
+0l��2��f�B������W�T����kƖ��7�	�@�� �1��τ��s�z!��7c�E�~y�B	;H�fN>�: u���s �����OX���� ��
+S�0_LO_����a�W
+��a�ſz�Z?�yҞ��m�x�h��o�<���m��?��M	�Xg��? ʂ�AT�����)�D��v�0P����H��&;q
+����?�A:W�3K{�9���㎛�K��ҍ��K�D4 5C� ��k!N��V�L���pp��vEKp�9���̼>�ͶD������b$R"k�m�	O�Y�����N'�3kt�Ʉ�WU�Z�-P���2�M���۱�_|Ɨ�a�2�6lW��6n�ZY8�@��~RuuO�p4笉n�;h���2���)�&��q�qyϽ�-��|�>އ�d������#'P��c��#AY[�陜�c�%�k��ҷ���T�����Ѐ�߲4;{xT�REkmrYߡ��\�0N������M��.��cc�ź2n9�t�.�&�\	��� uյ�� �=�c���]  ,j�/ߩ��ZݐI� ��N5(��	45��-L��G)�=Y^h���M0e����#b��L� 5�x  T�L�+�J17u�����c��6�[�łT������E�?oeݡ7>exA�mv��!k&��n��W�&�-=��O�5 ���Cd��$��� :/��qz���H��7 �1�l���9�"t�;��ٲz��0�,��0�0�6�'<N�) (�V�U�F�%�epU��G1�0U�.�$[U���!eV���W''nKK=�f� W>�Gp���s:��Y6h�쐁 6�� nG#o�uż���w���aw�U�X���m kA܀����n߽���5�/{\���<#��^�Y[�����O�7j@�`��Bj�(�ca�����tѡ��:F�d�4�r����hlB�ƊG�il0^^���_��?��8V��5
+�����dX�5���G,:~8��U_E�qe�-�@7�q����>��,
+?V��(m�N��z@Q�]B'�e�v�(a�OE�l"�sSl2m�+;�K�a�\=;0_�����������sg��[lY`�
+������C�K�x���W�ûW���-+�?�L���)K�r�w�����43������u��[����L6�KN]�ϧ��� 8�6��\ �I=D�q3���� ��=�V�ժ�Ld�R�m�+�&^�ͅ'9<%�&��)��9G!��n,��	��Stm�k���"Do}9b�Hz@ش[/Q`8:�d������_�����p���(FIea���H�� �m��'��}��_�'�
+��k� /��ڰ�_���@�T�	��&j�0�8����Q���!���
+�i��)a9:��J	;s���r�f��r�:���_�Y����5��.�����9���=kP�P�H{���~�[�	�L	}5�H�_���݇���	�3�<5fb��u��Etl70�qfy�5,+2wr
+NZ!�]�{'��1�6� ��Ș>*��lX��n��O �J��o�e�{q�'���� :5�����0��V�W�޳ͦ�?����4M=����D`#��G ����h)å!��n�
+�S�+��Zӹ  �����@�0�� ��+f��)��S�\��x�N~ab�SD�ʠ�Yx�F��h�*\=\"���J����&��.N@%^P��e�@���k-Ќ)l哥0��1��p��\���O��'P�-J&Y�a���d�p�E�������sM12!����'B�� �"�pM��֘}���!" 3F_y |�0�~�L�`�C}HS8�Ol�C��QPi�ٟծ�,lmaK���]���|P�q�2.�0{�%��rF+5J��#4�j��;;�:��ʺA�R�]�ے@Ĵ�o\���zއ*?�n��F�e�o�D�jh�<��2d*K���n�����!�S������tA�~E� �u`@x�2�7n��Xbb*��~��hn��K}�p��WA��jt��$��7� ����?<���w�H��>Д��mFN�7�*x\��
+x҄�+ ��a�rY�-s��'����%�P˵��|:��8X8��j��uՃ�����X����FX���d$�B��� �FG���z&�P�Lg��o����b����������۟�CǏ�j����g��_��p.��]�7T3H����K�-I���Ηt��o@ZV�瑼V�3�$+5N���0�1�Q������φح��~�QTE�0g>�dW����Q]��*�E q)�Yu<�N%ka`��=�A	�]l�� �U�O�ոKr߽P��=:�{�������iΒ�m���=@�_�`���E�/�����56 7���V�ƮϏ��Ш�Dٸ��F����P/Xj�sU�<=����t���o�W�*�e'��$-�T����%ܸ����z�����n���{MY|S�<rѩ���o��q�dT���4��lCފ�i1L�;`�:t�Y zgB���� ϧs���K ��j92�G����[B�w���0���D�&�;s4ŭI��uѸY� ����V��@����"l2�N��� �fv�����ϋ�J����e}4b��W���ix�^�[bٰ�׀y���U}��I�����{���|D�e3@�"$ �G����!��)@O�����`4 ����P�'�,a��G\ ���$I��q,��. ���8��@�0L�6T`�<D�iSW]���~T(NM��i�A�dNhMQ�E��0�6٦)�?����$"��v'�tG���n� ��^ט�F�<���,��`2�"��H��d~x�J$OX�Il2[<!�Wm5w�
+��(+3(߱n�ů:�7��k+'ԕ���������~�����C�
+ܸs���y�/�q�vvp�%����DS��� 
+�f�P#�c���u �O&͔�|70�n����@@���=��@@g/�� X*��hD��+A�.i�F�3��SPr)�j����˥�e���3:$e")����ű�:*�^H� &q@��0����^���%��Gѧ��U'r(�_ni�'�/줉�H��n����n�1���r���ԇEAX�o�K��O�i�$� �H lL��`"����G`�T���zK�4ə	��flQm\�a
+|�8P����^�c�������2؋סid+#����k>�ܙ�/ÎR:��:BQ3ndFf�F�^� /13��ȑa�80�0��1�>�_�蝠��Ql�Emǝc#O����B�"w=��[:K9��� Õ)1]��.Z������G0���+�&��?����YX��<��7=o�����߮+��غ�a��J�m��2�[,�_�|�^)�?g��k�̟����#�WO�%�Og�K 'K� ��p@!,X��ȃ2擬զ^G�s���s>2]N�HR&�sK��S��0�䑌�y�s1%���)W1e����='-�F�]q��^�4KoJ���{�[.%jǿ̊ޜT=Y�'O�䔀���^w�߽'Z	z�Z	ްm��sA(k��_�̸��s�z8�*o�	w(���#�G��~�:�}(��}b��Q��1ؼu3���3d,��Q�OQ��>��T�3=ǿ9�)7���� ��4�$�8���/҆9��c�q�/��M��V���v���4�×p�������p��	�R����5MB���Q�>!-�a��=S���zW���C��#���>6�Oc9�5mY`���S���?��������-^��'�[7�>���N�m����l���h�D�P��ݠ(��%'�'8.iL+-?ٖ�����O�0=���W5�ΚG�x�-�"q��\��S�(�+�(���fJI���4��$^�"е�@@�Z��0�r��F���c�re'��R����<S�t��u[ ��O�M��Q�Υ��E��	�ݡ�YQ
+�n�j2y:��E�6)����9v wj�;Ѕ ����'���LA(����}��*�D�����>����=1�x�1��~��I�_�3���?0��oDc��pځ�}�+5�O��UO����	�U�ط+��I�!���t��i�t�Z��}�ߗy�������v��eԣ!���0�� ��c(�L%���_��
+"NK:��`$}"��ǭ�w���`�a�>�� f�/<�)o8����0���������4��ѹ;ӯ7���<��w�(_���h6�ޏ��d����TH��� ߠH+�3\��Y�+qH�@�Z��������:W �'|?�t��j��Sbc�q^�E�n��kB-�$��k���C��	Eh����ɪ�O¬�G$=�I����B�
+4��� ��/Ƹa�q�>�F-Y7�1�v1F������u���1`�q��1�j��z輴����F�Ћ�p���e�������0^<����BF��$CmU��M,-E��}��*+�(�F��U}��׼�75ʋ6�)n�(�CA�;_��0�-��4`�zر�a����ױ=Ӷ�Rb�4���tF��OC��ٲ����B��O�c��;,H &�,�0}�:��+���^<��������:w&�����^�@$��4��E�HS�}���M�������j�	l�����������������a����=�^���afp��y��Ώ%��r���ۄF2����E�J�3$��1G����Dz�"��] ����l�s��%WI����G�}Y�����d�c�pd�2��&�quR�N�2i^S�[4ܰ=L� �]�Vᵘ�О�,_���/�1�;Ǽ�ϵ_�w0�T�K�Ba�^ék�6��`�x#
+�hJBj�+��њ��@(���E�eg<�c�*^�H��ɿ��,B?�P�X��Uo�#����Lm�F��	�峨�`؆�N�k�7i�<�qAjԻ�zs�Ĩ~V�#�,ZxӠѻp0Ӄ=2�)�)I��7Ơ���L=�ɰ�X 6�hS� 4|X6�� j&N�q���G	h5� n��Z��Gc{H�� �����i��`v�/~����.܏��i4���� s���D�J�"���b��ڹ���%���rwLE9��cY��?��~��W�*��i;��/K �@��#%n�ay�n�2�r���*�W�V��cg����`C���?�%SM?
+4�!�+I�n����q�mr:�%�6K<�N+=N�q����@Ё�v�p�r}'qq�,�`�"�O�G�� �s��wU���!��g�X�\���,a_mD�f`/�I+���q�N�dȽU�k��g���T=�GcT��)�q��"#e�`�ѷ`ra�T=Ci�Is�'ր G;r�Ebo*�rچ[�&W �D@0��p�q�������a<�gC}����T�lA�?��}�D��G`L���Vj�^	�6����˺��Q�F0�Q��B�t�23W������	L�(�،q]���LfbP� �M��K���&m`�)�
+�F�x� �؝��4N��G�>��	�>XpQϠ��F1�Gs�0����4p�ALMO�r�-��3R�3|#���Rq�dS���&� ��,,j�� ��O]�s�I��Y`�<a�i	������	�n�n����mm�z��?���� *حg�鄹��(T����K(t>���?%����Zw�PO�@ö$��ϧ�{z, �&D���(�{�� :f��s�*�wx����Ȅ<:՚e�p��.
+�$~�fԊ�D-c_�G��8��5y�1��)� (�÷%��Yɇ4}��P�k�"��aB�������(���P����5/r��ɭC*���'Џ �%���pN��V���*��̠� ��`�:��E���%���T�0
+20�|b'��8�??����E���m,�`&��6�%Xq�"`��#�K�(/���Y�t:I@#�7��(gz(6N����(��tQ�*ak�����+a��]Ai����8�K0Y\A#C0�a
+�;Z������~����J?�,� @�o�� Eg4�5�8��z2����������g������8>�`n�q�"oQ�čiY�n�s�8Jt��j;�8�& '�-ՀK�VMO��;>��~m��[�m�e'�������2�����}��=���[�������7��;-7�z�p��J�)�G�]-��-<�X�S|������U��}&0��3Χ�y:  ����SH:����kz��/�+�l��p�: ������a�koX��׹����$��Xv��'�k��.��E4��a�{�Y���?�뢁@�N�O�C#�{eo��#Gp��ϸM3r�0��J�w� :Rw�N�'6ac�X0T�EA��5Q8���:�6Z'����&p`��R��[��JS�5<�wݏ���=|S��t䅮0U����Q � a|�N��Dsd�z��OZU�0t��)8�a]7��+�n��,���5})�	�f4Bu��]��m �izY�P#CU0֢�� �a�
+��q`��R?��a�퀖��hpnɄq!��-��~�g�o�,�����9���%4���GP/.�aP�P̭G�#p�d;�D���^5ʳy�����laR bn�A\�=T��L�W|�C�ŕ������ػ����ֶ�o-��{6^����+_�}vj�m�W=��f�	P�����BZ�N��R�g̓�9�h�ɃYE�����ީ�A�O�y:W���D8I�5ϸ�^�� 毸�%2�9zN�M��۪^��q������<R�p�ۿC��6ӦyE�j��vm
+���N�B�� [PU�7������;�E���V�$ш�@�R��W�VHd�z��뤒�c�]��O?8�A�,F<��L�s��8�gL���|l}*P�]�Y['�#�<<L�	���-LQ�^�1|�zx 9�0[�e�c��q�, ۀ���a`،1{�Q<a�a��km� L��}4_~K��oQ[�>���؅/����#>�������r��+��V�`�3|�`&w�S=�=1�=1���~��z 57P�L�a�{��*�z��Q���'��dBC\��pY��3c��v�S7W^��65���ڻv�֬��S!O�M�
+<w`q�u��k��=v0����g���(��O�dDP��e�p7,���bT2����Z��d����K��?���<�) ��TsŵM�V���w.0��rb���V��'�9�	���V�O�_�7r"�#�rV 7,Iki�I[�.�����L�h�BY��ɃU1�4O���uaO@��XMl���Dc�=�|���*A���� �ŖB��/L�C��Ȓ��Gŋ ��/��+T��X���{C���B��}㮻����S� �T�
+TU�r0*X+&mW)>B�\jDI��8��`��#��;�.���Dk���So���Þ�E��Qa�<Ub��.Ǹp����(�gh3,�=UU���c��`Lk,����, d0��ʭ�ɑ���Ms�Ã��C�e�o�Ծ2�)��U��)�S~)��:�l[k�!"|}���z�c�[b1����PrY4(�Tg_��G��� �wd��"��w�%�m�z��!v��׼�;]�nS�ϴ�ѐA�#�l��)01�.�� ȅ�&|R zd�ڥ <��-W�
+*9�� �pz�O_�t6- �)�אdb��ŏ|������[��1���y��i҈��Yq	hȲ
+�X{����ϕ#hO�	����j�:M���&ʞ|=ߣ��U9��]�+�A���ǽ�bsɰ�:�l� E(�Y$�ʋU�2�E<d�[���V -|�ع��p���qx$X�j�jy�e�Q��\���%�;��6QfD�gi��A�X�/�C�a��ʰ&ka�`4���"�z1��jXc#����&r���@5(�Y����`z��)����|j�hܾ�.�x��Wh-�qc(�#s���9����g�#b�^��7���o�3\�=�+�D��T���7���������ջ؁��3�yZ�/.��p�M���3�~��?�L�^ʥ�&� *��*�[q(�ީRJE$�>&i�!����&� N�Nv,��t�ҙ�s�a���A��5����X�7������8����p�K����(�$�@rV��l�M�:u����]ڌ�'(�L�m=�c�Df�CV/J0��:�L[4��O���뭕�����2K{�-�l�頠�� a���0�J��&'���)�w�W�*7�JiRzAn]^l���Cstta��4�D�4 j2h���i�.؈��o[���v毀�����ՠ�.�.�U�}���)�{7�E��P�Em8DDL��4Y!��"�/��;*�A@Kg(�GW�0���	14�:�zc=>fN �6��q�JڢQ�q��.�������9/�0NB����H���v�`y�vm9�u�K�o���`e�C�s��OWAO
+�s�ʮ�V�c��B�	)���|CN:Ks�K �AV�Uө<���� `���c�Ł-��»��*�ΰ�Q T�B��r��f�;�\�GS�'�8��X�<�+.#�� �=5�H��Dci��
+��pE�P/¤	�Z��/��6>����1+���냨P���y8��h��D丹ѵ���g�(��a���՞辟�,(�����pJ�T���lq� ��=n�����qԇ������ڰ|A���6 M�ѿ�BX���Mc÷]�qS�������9ڸ@G���(,�|�WA�W�^p8�O�1��!��;#
+�HG$}'��}���t��g	�r\r��w't���u^� ��D}.͊To��2{���}�z� �u�	��Bډd��С[�v�`epÛ.^r���~q������8�����]�-X��8�	�ҕ��I�1/l(��jLh��-l��Qg;,�����ڴV �E̜��۴g���64۷o�ox��L����5���|���8f�1��Mqo�N�sp���	�(����J�-|�q/�Z�Z�ޠ|H!���)!��J�Qr�Z�|����KA#�܇���l�|&(�>�������C�8�c�Ď�jY�f�x���Ǟcf�;���6ҕ�DHm�C�P����`�Yǎa��A9��ʖ�V˝�@A�)��O�T� P�)0�`�����d=��F��#
+���'�;lџ�y�8Nܵ���Z��x0Ȗ�XQ㩬c�E�@y%rv�i��\�e�7�8�ܫ�A_}S�%��f@��ܕ3غUS��>t��Ͼ����_�:��vz_��S�N%m��ش���|���ݣ�W���a�V����GdLEAlT�q ㈤2dC0��?z���O�NP";�W2�ZsyѲ�4y9@O˓�b�O�t��s&u�a~������Y�j�ߎ���)�Y\�����o�O�	6�\�'�"�h�hW��jGɮL�$��%��,�=p��5�|�l������7+b*�Y�������}3�3O���|��P����y���5��H�ct�B^$���a{a����@�{6�T�0,� �p��k��� ��p��<�fu��\|�������}\l��+1�P[o0�J�`/�C�}�����y�0���J
+����I���v�ǹ����� �+_Ame
+�+�&>�噔�&ntԓ ���ECT�Q�C4U���?q��.ތ<�S8�u�ռ�N�{	{�V��Cc\wݸ�o��z���W�+�4C�Sazqhy��3t���[KP�}(���S�KajI!�}���Ȉ � �F���r+@�3ϧ3Hk ]�[��Z���`a�O^����x�LO�nGQT��&�G����=�I�84��H r��Y(UW�����Ty?���"�Cr%�(IDI�� ��b(��2��f�������JV���@;z��l|_�#�w���5�v�������HAY�=|�
+��s�(c����J�q+������� k�.)� �`��Q^�ņu��yʏWVл����vK����0���Ke�/78����F��86�0
+u��2fI�[9��O<�ObIK��clg}�.{�ź��DU��U���9��`M��a�Riz\����k�O߸�{����*\��m��c|WK.6~�ݻW�?k��~�[����3���>��JH�pvpǱ�E����VN�B���xϝd~��H�'۽FHNr�����p�n>ˎ���IҙX �B\ݙ����&���v�w9�'>q��������J�AeY��Qk���>
+sbm)���Nmѩ&
+!m�j��^�o6%;����ɬ��[˭I���%Nw��؝��Ge�U����nh矋�Tp$�t�"��tbxRq��fR;�A2�n�q�?cÇ�����(�Grk�Ơ�X7���.tN� ƣ6|�h6L������%�a���oR��a��#X�g�~/�!���XS�d"-*��
+@ _����dG)nA%��8S�6L�o=���*W����&Hl��4w�3��=���}��/T�z��5��l �p:� �k��Cv�^�x�+��Ƿ�l45x{c�\�OP�� SA:�%�]^�Ё;��40 ��vʴj������m�i� ��k;��Z��I������	*��Jg �әN��w���]ꓧ-[���̏�n�vz����j}�Wa� `��S#B_4d����'�ڻja4�I^x�&Q��u1�e�3M�0(Ϥ���~��'�A{z�R�\���$�e#n[�Q�OO����׷�"�q(_��%O�`����i��k���z6з]b�tm
+�Fg�H3
+X��RJ� ~��H*���J���hs���b4 ٶ�i)GSQJL]z,1��!h�f�q9��u�[ $e.�>�S;�9te��6�c<�-�B۔�]B_%�98Rr��U��[[���%�����'53�5�e���j�xh��_c! ��(KT�������O����q�]p��Hv�c�?Oغ���wgnxӖc�\tc�/�1v��2��(7x�z,��#�:e�pk!��)lyM�%�;��D�JL���Ŀ�3����@@��]���Egy	��?I:S�sC�]X_����p������~l��m�����ul�l��@d����P��b�5T����ʂ�L��f�G����<��[[� k����G�'�'����yF�xNk���������GD�桎�x1��o�x�ky{��,����.}R`V������)R� BG�I��_E�x���F@M����>v}Q�;��CQ4��W�m���b�8+ ��� �'^ T=��1��'���g�[E�)�/Y��Ee�>��_�
+J2��OV$���q���G�ɱ����ʟϊ�U�% u��2��\��kȍp�B��8`n��P�%*s[o]�K������<g
+O}*��'��_��?� ���^��'������/ij��r*z~���C�"K:Z4��o�.�F ��w�|�
+�@P�q�8NԐ%�q�X�Q������8�VIg�	��I�@y��-�+��������<g������/��������1�P����>�i�v�8 �	�38*G�;{5U��&)8�a&kSf�y�t-��	l��ѿ�o���b~1����mm�R�V�T|�R'���$�U�by��#�F�!RKh�[ �B�0�G4�9|��o)۸"Fc�<��Vd�DK��go
+����/M����ۿ	�\vlA���j�M��"`Q%N|y���*+���۔�z �Wb?4�қ�b��i'��k�0kjg���Ə�����������Ć����|dfz�W��G��t
+��x�{k��KA�oY���kI�X�; ��=�{��Z�̼����7u�f�X�Q��(h3�%F'�-S�`�Θ�by(� &��6�S@�!P�u��[Pv��PH���z�ҩ����� ��mnY`�p�+���s��>��O�}���?c�'L�!*��T��D�LT/  �<��p�q���p[ɘٯ�F�Y%Y�� 9P�K4x��M��D��9<M�Nإ��-��[�ͫ�\4��H1x���^A�*#M�A�g�i�Y�t�PV�����h+�����R�*8�ysx0}D�H��C�k�Pؕ����@�H0i�ec�<����3cM3����`�Qm� ��Bu�,��z�6�h���������tb��!�q�8`�(c<�z ; ��UP@��>�Qk�qy��S�KR��/ɘ�B�w"u'R���`��a,LA��ͭ�hߧ��Y\s}�~��[�	���)��w:��s��b��z�o�����M����`v�� �|@0�V���E5�Ae>$C��MC�0~�+3�w��
+z�j��cq9�+��U��1�0��1��ͿkY@k�'��	g!�* xl���h҉[[Ϝ����v�����*g�4E7X࿁�a��f�ǖ�9��5����~T�N�nc��[�9%/��&�h_-�M���S���i��zV� jF%W��
+��@t�J!���+S:[���I�Si/���"Y�a����L�<�u�A�e�c�T;}��E����hN,E��o�*h����a�fQlڀ�\�r�ئ��39�v4R'l-�Z4u��"؇��_Bed�:��&Ɨ��5�c��䞔���RD<�zv@�LZ)x�2�`�`���,�l��_~�܉��c�{k��M5�SIIl�}q�������Uo�Ε��{�^���2����7� ϗ�ZԐ9�,�O6���%�Ļ�~���c�����-t.sS��� ���6���@�=�t �!=>#�%.�$ p�-�7[<���C�|���g��O/���~y���.�F���Z"L��B�����b�^hm�v�E�r�||�����y�W�0�#�"�ze�K1m@L����ac�1���q�h��J�E}�g�!L364D1n���r�\K���d�(�!���%�B�6����z����!f""�1��@c�o-ʲ�x�Q��q$�}�v�ID��w�@�	[1�MO��U�`L�I�NF7��5z����|��!Ek%f��2�Z'���I�~
+c7�O���R�M_[���B���h+�! Y5��Gr����Kl�`*�?��l�E���|?����M�;�t�������W�7.ܵ�q�u������٩?����^��p�'^'� I�#����w�}��+ vY��h�+33h� ��_ϯ�A��������AM�. �K����������J�O'����&�-�{/��w�0����=�������f���6�Yc�����B+~Z3�(78��I��.'@}�@)��!�����z���v�4����PS���*��u	d�Һh��I�ꗢ����<�43�efz[-eD|��|4r�6�0e�[��8� ���#.K`y����0Az�b��~�<Ɔ�x���)X��(Ȁ��m;3���O�kPi`�q��_D1�n"�G�*<�w��'��N况���N�פo���2��J^% #OD
+��	!y��Xb�lؠ�=�g�����[�ʷ���M��o~��g�iGǵ�KK��]^���g�w��ob�'�(z &MǴ��mB�D?P�q۩�qj���AY��7�'϶�K��YEЈaMw#&i���΍��K�O'@��M@[xa?,���5�S������3�k����1_�!��tY�	!�Uָ� �!S��岠,^���b��`�Z%�X�2ND���V^��u�H���@����kf�R��A�Ӳ\3��e'�(p����$�����@�ur�K��rF�I{�'�J�ׅ��/�Q�2d��1�f���?��p˨A�lC�п�B؋֡7(�ό���|n;��5ʩ+�<��WQ�q�f�Y��@_���J��=:Wc�O"�r	M�q��V�ٳꎢ'�t\%�>�����>��q͡
+?}h�����}0��"aic�=�G3�~���S�7q��pcW��`�O���,%+7�Ռ#[{,�E:��E)�z|E�i��l��Y�:昿F�p>"�pN/��N�4�� ��ٲ ���X�p*(}�c�P\^_v5z p������
+U��0\��d�d�8�'O�!�#���LV���P@ORa��e��j/� ��7	��Eth�`�L��Җ����W3���ь��>	�aN��\�?{*.��M��յ\��k�NG�s���ڵ����q�2a��~PӀ
+U�P'i�\��cj�L�k�)��;� �����:r��;�ȟq�ū�p��`��4
+�T�H��{kٟd�L ��l���c�9�G��aC fj�LE�*��7����ջ�X�|sZ&�������Y`��V�|���S�7�2�yT/4HZ���*�k)�dy�@4�[�+���#t�%���L~�~F��^$ 4{��9��q:[> 禃'!µL���n+��pP�{�a���{���}��m�V�ӿĦ��E`a�r�@+���d
+�R�7(r��U�j"1q�G&r���ov3���I�"��Ҭ:����'�.A�Y�R``�m?��&zD~x'6�4��	��T]J����9�BSU�_-�`�I ��U�O��a�~؍��Fݹ&X۠����be�+����S�Z�����պ�տw�O���	9q���=E/�$���	 ��5��������-6ز�e��@'�%kU6�T���z�욱Sӿa��_؆�E䎞
+u�1To(�N���h'q�&�AG:2Ӕ^����c&B��Ց��L���}]�����zܥ.��-��+,�mk�w>������g?��ڴ�ź��,����%K��Q���D#D�/Da�zcv�t��HI�u��*��h�]/���5{�+jQ�'FB���Y��B!,j%�.!	CY7ɫ�I��䪡����� ӿյ���	a}�[��j짔}�>���I�I�輵�<��GeQ�^:���	��B�)�+�9���e���}ٚ9�s^1�a�P�Q�����G� �B�#�N0#^�!h�a�(��;��#$�'V�ΝF��D�p�_��/�Zn@eAE���{��\'\������gn?T�{.����fiӺ�^�s�<��
+Ƅ�Aj�^�~bJ	�`��ύ�ɋ��>�.���;	��D�r�d=zq��u��8��f�������{۶��8�G�OkL��8 �ُ%ր������y�;��e;n��V|�ڼ����_������0�]�$r.Y��@�Y[`�z=,��2�<w=����ˡ��l��h�F��V5�F��^����ZK��%y�!��yA�תk�G'Q2$@U��Tu^��1X�
+�>d
+��+�)+�D@���v�R�;Y�c	�츰���f����AqbSU`����2DN+y���-�t�J�8��f,]0�%���wm�S��%�T�������{{ؖQ�- k�*�@`a���H���^���ԫ~����K���+2T����c�lY_��%��[��Kj����@�s�""�c�����YaL��G���Q��=ǿ��,��g �t�B���!����K��c�� .�p����?��.������Y��T�QЄD-ma��ƭ6b�e��!�l a�����eʮ�
+)���ZT�
+)�1T^JP?[�z�^����)󯢵��������Pq+���ZЪ#��xgQ�Es�^��Z8���+AB���#��9O}ruac`,����1�e&�W#�pr��l�����$5e����#}�!TE��1F�F%6��T0�b5��E�����ʔ;��C|Tb�
+Oǿ��Zˑ��GG��.f3�D�(>^n��D�}�vv��S�`�N��7x��V.��f���sջu�L�2�z�f�`e��� [&��i�
+B)O����@��2ڶ�7���#�0ŷH,�b�k'�q�CCb6`�1�~{���'V��[� h����׳�����@@~�ne���{��m;��.<�౟|�Sf���c.r��F�a&�(V]�":RJ1T�����T�T	X��!����9��x�\���KJ(ks�4�������d�bK���s�oH�C�U:�rC�ĄH
+Ɛ_J��f��#ΞQ�$mL=�|16d�#�u$H���S`�k���T )@Da�M�B������ �1X��=�G���+X �
+[�� �2�B�~�Y$�j�􎠃c�ߋ��a�h)��6�j�@���0e�\Ca�z��}�a\�C=̜�O�[�g���1P��޽�#�D|��K��\�� W�6\�1�`C��'��!x��
+h�)��B�� *�HI���T;�b�
+�%}����r�U�]�Z&������d�y��KZ (z���!���ޝ�+\�lC��y�➍f��>�����O����37ZS�� �c0�q�F!�=�#+�ZNt
+$�jØ�UF�e�٨��~Z坽�^�����)5�F98��r9�a*��QT�#���!��5���uc�K�p���8�y�R)�;+l���^���0>�(��eUf3PQο�JHj�(ȟ���e�T����EcAe��h�~�R$F<YR������m�F��]ϴ2DX6k��/@Ѓ!S�]eI30��Z��<�ޮ ��^�z�K���b��EPf�O2κG2�1�ɕ����Qr|@�X��2��Me����LXA�������hXk:��]�Z, ]�Q���r�������%�瞍W�*���g<4����6m���Tu�%3`��cf�LH�IfMQk$���?��U@>ѱ�����N:ZsR�C�[����Z�s��ʽ�����A�!�|��'���`�'�Z�ک5�D�:�ƥHEz�xi<{���p]�۪h�\oz1�;�1��48Uj5�E�C��1��EU�2��AҗP}�	_Λ���&T��_=���GP��9\D��q�A;�Ie�8�xELՁ�ʌ��'I��h%��%�б�5��Uv0�2"��`�}�X��~l���?;�{�Nk��ז�߾��oK�}v<�q���f 
+Ψ�	u�~�&�Z�?��0/��4��t^I�kʬ�@ܶ�8!�9#������v�����v��5�}=~���i�> ����? @;����0i���+�,�,0�p��������wզٟ�oX�&.{�2L���b�<�$ԬN�&(5}�3�]֌Ҭ5#�&(��hMޜPTG����ܩ;H�=���(���r�xז1R��'(���Z�޼�R<��Y�k�	7��%'��%x����LY�u����/�f��*��P� ������!LY9ẽ��R��FB$˚'�0��U䂇eX�4��Bߏ&ˀaC+e��􁏼���yn��3������/�g���ꂺ��1[�h����*O	^NZH�](����^����/$��0�O��d_���;hNo��ɗNX�O��3�8����������%��I*B�K�ϯ������y�K��b�oo����?_��S���i33u�-�> #0��DQ���_���&��n��LR�?u���W����C��\�D�@1���EM!���׃���4��T8E�u"��ߔ&-m�T�L�X@;Ơ�*��#8T��r�(_8
+k��r(/�ٺ-E���G�4g��[����b��p�B�+�C�8��P��
+!Rb��t=�����ØT퐶ȀS}��C$���S,�TAϛ t�a``�R=�� ���}���92?�D�� 88{��rA���qP��lu��O����&��i c6qE���qs��!�0�ָ�8.g%}(N����6>ϰ�X�a
+ӨV�9Y �� �n�t g߹����I�;���6 
+��O-ᾖӻ�;��O���KK��+n���V���8��[����{^o�܋PUZ�3���`P�B�3�j'e!�k�e��'��p�Hr70D������e��A�8�B;Rn���9���E�$�ȓ&Z?���K&��t�u��v3���Y�����N��0�)"�`����G@�T�q�Zٔ�(Wt��v�-	U���+���%����L!-OumX�"Ex%@/�/u
+}Щ�+Г�*
+w_�V� ����DL\ �����> ���7X���N�&� }m�s�����U�wsUn%�ѡ-���5��X��Ɛ
+r�E_	��e;eJF>�]?$���K�=��D�� 0��j���#�K�=��E�} �>i-N�:���N��s�w�r{tw���k.���^~)�����±K"��s��9գ>5`ر������<x�����~���~�Z�0STd�`�q�Q��ug��x�*��)np��Ġ����Z*d�a�͝� �C�
+�������Z���`%���Z�"��A˶�-g�R_��z��<���͋|Ry*9�>�7�����4����\��[��`���E�I��} f�8���Q�T�M5V��%� O��^P�@i�h�?`	�����O�� D�O���FfVG�����W����W�S׾]y�Њ����#��-_��a\�V�e���X��� K�4��AIM僜=�gyE�\V����E�?�4kcY�� �F }���A�y�p��ٌ���U�m�.3�ƍ�m��6�7O���3��������������ߡ>g+%~[�Z�Ν�����ӷn��M�����w5LGɔ�0d�Ҙ��s��@�G���R�7�=5q��Sb5A�v4K!�������qMP[ ؿ�����0(�Ay��G)L%%A;FGq�1S���q@W{�A�)SǮ����5O�̍T9�@&S�~�)j��G�|^�Ō�(�^����(��Pl@���7���[�S�:����,PH�$`R@+Yyq(����b�G�S�k쾓K����á�Cp�>�(�j�t�a0
+pæ��������1������N`�^�O~��j��V3�{��pH���Q�$3�X
+��üE
+����N��g�\E�y,N�a,�55��������:�s��$I����1M�b�9մ�A�#�0a���R4�qE��7]8��ݯ=�]���4��z5�wk��{�e��(��5ר;i�«w���������e�x��G��K��45�Da0 p�ꡰ�DͲ
+��8��R@ঢ)�Pwb"/ �ycM]�x��r_�u]u���>�g� �H-Z�
+А���yq�
+Ӕ;�,y'BRh��"+{$��#�V���
+���֊���@Y�.�0~x	����=�%� ?�df�D$|3�����X:����F�,I�N�C�I��ngw��R�^_E�P�*�_[R�cC"�m����q��w}�v�m�X�p��s�%�}�ۯ�^��7�k��B�J)��   IDAT��(H�6)��O�J�}t��q��_5<�q�N�,+U)�ݤ�q����I]���N����xJg�0���dK��E����1ճ��/�iꕿ�S���Q�k.����m��y����Եu�;���Uۯ����s~�Н��^RV�/7D{�b�Ԁi�~JF�85E���t��VY�����XV�dL�65�����c��A0?!,�캸�y�+[X^�9�D�=)w&J�89F9�XY�J)��i*�c i��9�_��)��Zc�+VA,C�� ["f<�h�~�V9lR�E	X�]�+ �=k����5��^T@Y�]DA�� �t��_�c.I�|��t��&��Q}��Q ��E��2z:���Q��/ VJ�-[ֶ��ִ���{w����>�n��S��@ԁ7�� 7��]|d�Ҋ2��5qЕ���{� �/��H,��������v��S=�Z��w>=�ҹ k�t��}��y~i���L�l��з7^��5o|���n�~��p�-w����=k�����٭�����; l�����X<|�{����?������P�|��D4�TwAB�"w (tA�'@�F�?<��@q�V�ܥ֔;���Y�e�s���yk��%cPD�L&�/��,F�,���ǵd���z���Fʜ��!_��O��J��wRJ�$�2Y��� C0d1����F����l)G�����i�5��
++�����Q8�J���A-�9P,��w�n}����4��I��Rz��O{0d-S3 .:�;���Z��潕��E���.�R�O��� ����<Vr�$�� 1��%�ʻ�k���`'�Xt�Jy�d���=i�!+
+a�N%����s d�����]�>��,��S�eY�'ճ���쮛n���.z��7�����.�ʱ>���[���*�����[��b�}{�g�N��g?���:z��_��/�5sDds��e�U��7Ȇ�I֡m%�����v'K
+&��(c�Z��]X�ߪ�|ok(BR�Vi�  <ړ����y=%�os��[ꪝ����i�����[�(��4�E�E��#M��pI���=�S��/=}4C�X�����}�+�#ˠ����:����Lv�������{��J��@?�G�d���Q�B /Ė�MhՌ;��T- ��� �o1�t�`8]^ʃ�F0[�0��y��&��9�H�~"�~J#/R�����	�;�2ݫ�Y_YK2��K��3ӹ  ���"5N�4 À%` M�l	���/<��7�~������~�>�ɴ~~0���4���y�����$�%~��V��2����n����?w���T���
+�lKX��1�f����[0���5	�������~T��@	�D�N�yDA�5K�\T��;R���5�1������uM�� a��r��%b?g��a
+��c(�O��'{�U6�I*�(t�)Q U�J�=�(K���>x�{��v�	����	�i��E�~�8���%�gS!��=�-M�����鯶��[B�v^+��D�(�U?G�� ��ӵp.İ��o�y��N#	�,^� �4�)�6��J���0u�ЗS���d^��2�GJ�l~C��_�� �#Y�p7ӎ��KqP.��"��O��t�} ��H0>�1 k�(�4#�ý�Ɨ\����{��g?U��W/]���ֽ{�غ�[@`a��ԧi��.f�q�v`��jϟ�Kw��m�E�_33�ԯ� �9X.�|�4 �Z��}����:QQ����@��J�"�d�JLf׵�%��Оh��9Z˪��mt^��MJ޴�G���X�JW��_�`+m}[UJVk{'�7�mSh�����a�T@(!�
+m��W����3`٢�*��⃰���
+rd�ݷ%x){)�E[5IF�z/�^m��^�����A�� �Q{n$�֧1p������0Ka�u�vœ_q�s�c��z���0�&�Ҥ
+u�k]��ۿ07��G/�O��t6�*8�S���8�f��m�����[��ӯ}�۟yS��߸��+_yt���X���޽U��|ǎ�3I�,b������<��?�~�{��M�|��b�0���`�,���k]�XP)�a���=���&�G�"6	��ഌ\��$۽�V�T��~B�[Q��Z�X	�^{ի�Z躭J����h-�Tl���q���MҼ �5�L�H��}^���*P���W?��m`�@�1�_{�?D� 2��I��Iи�,��U�Y��g���x�
+X���� 	����H5qy��n��g�$Y��K��Qd�,�^�c��Q�ty2CaV$�[0�d��[48�4����%�][��{o�E��8��1F��P�[���}�
+2��d�h����7���6�y
+h�$?d���=�����k�	0���)O���{��� O/��<��ҩ�n)��$A��4/9k���ܬ*b��JC�[?�l��z�_��y��ox�a��F��/qyܺZ�����t�Vƞw����?zݾ��m�X�����^I��(�,jDf�01A, R';r�?0B�"�v�P��6���9����������J़���ש�+�A$o�C[3�bZ\4����,Uޜ}��e�7])FR�l "��Ç��?�/T�0�_���3ek��}���>T�M'Pl0���u �Gh�S�n��PU�BX�n"�c#����
+���q�8r�(x��R�"p�b ,lcl��WY�:2&�Ҥ]��,�5�w5@Đ@��/���KY!-`�Q�A��=��44�)t~�h���Χ�4�n �Հ�ɮ�9-�i[!��HK ?�5vւ�yf=��ʷn{����p�����c�:��^�n����9pR���x�^����+��k��������Y�/������ E͖f`�2@#K��'�9	DA" �Fڣ��}�Gd��]���-��8L�����-N�M=��6���o�j�<�B�5%���IY�.�nU�m�GN�?B�3��+~���*jG�zUTԽ�3���?>>L�#Dx�) ��in�T*V>�U��Q��sV�a���RڷU�kR}D��s��Z�9�I~.��2f�5��;O��K�4͛��¹6�w[l�Ai�(G��E���H��z���.��D.�<�?��ȁ���EP'�9�n�Hg"�X���P�q����?�8D@Y�w�v�B[��)��u�������{w>��IQF�s���٘u��9���i�oz�����L�~�1|׿l6c�4��%��\�I��1p������V�][Oxvl�eW������K���'.�r뫫���T�Gٟ�EED�̰6NO ���3���J����Sۊo#d*l�xxƣ5? a8��_������K�m���Q�Ga�D��I5�m��L�#	.�i6Zk˩��rba�*�EUa|�Qأˠ��t��~l [��g@K'p�����E�g��$��41�|7���5�#Y"PE
+)A�����%���XF�.�=��K@m�%�N⫴o�&l2D(�"E&�O���0� E�TNgaP�_���E�|J��i������,�E"�rq
+T�ęX9wK @ڤ��ә� ������+K Cp��*��?4d˵���tܟzq�eû��n���~��Ł�/:v�_:|�����|�o�v	�u��U~K�]����=Z^y���{��-����A��_.f���Z��i��Lf(�#LQU "1����$�.1���Tc�.�K^səs��r�o���Ɇ��H1�P�A��ud��A[#���v�$���/���
+�#G�<����'ڢj7�0��ɪ0ߵ��W����h)o�'�P6f�L�a�5��"XJE~����	C9����2�YuCo��C�Z�� ;Y�b2���c��{��6���־�@b�� X�M Y��n�T��f������`�"��%������I�}��~ډ��Ɲ�K�C�/�<��\�ǖPbz�;ͨ~��3�;��|�/|��
+G�<�[na��p2�@����1v�%,d1&��[w��wme`ks�C0��������|d��Ol޹����O�ß�q�j2�[Y��E��'~/�D������L�	T��m�}�N�U�K8�N-�� p߻4C��UB�u��1��Ėh!MFL�q�@���~E��!���l����tk�`��jo�D���f�EY��x���Ɠ16 �1R-�E�ʀ-E�x�s��_��0��k��ɸ�����q=I�'�LM��H���}Usace\�˼f�F��(���  C��Ɯd����
+�n�)}���!��9ޓ/��=u䈌��Z��
+Jv�3�����B�U�:	_���*��������?;r�ϧ6�5\f�0�Ȩ��dcD.����ÕqS��mI/�ׯc�[7����x�ql}z�х��, ց��Բ���VK�v\��g���k��^`��ށ=�z��O|O��_^L�>�e��3p�~��T�H)�c3��|Z�.�)�.݅�ƒ�<�[]/^�Z��[���^/��w�:w�o�b�_�r�Î&��d�e��!g�}�`T;�Oq��.��¢(p�(�@U���v���wK5��vL c��dIîvM�4�֮W�S�����u���8�]���%	��솑^����kL�&�a���$�iԕ��K^��a��y���� ST-o�w��pVt�se]��>��@��]��z��|) �:dW��㫞[C�#���!�둭���(��[���{M�U�{%v����w� �~��qE���Z"X���
+�Wi�;N�m�;��n�{y����]�����m_���_C�ޯ��G��*�b �F�L12�Z�eY�'�M���d�=�j�OqS �2to�VŸE,���K�R��gA�ē���2�MP������4{�t����9	B,�|�!�g�Y���%��&$�ڕ_s��%P��p�aؕ:Y�5��@^f�~Uax�>�C�P�JXX����flX��� 0��d�]�W��*%;,R->y����Rm��v�7	�O��h��6p �Ȓ��p��i��?�Iv#�X�S�I�@�n�>Z[A ��i������u_�"g��<c�z���f��`��y��͐d�]�)��̜OI:�m��� =��o�6M"�o�l#{H,N�!6��Յ.�Ԡ��e��ů����������/���8�����?��̫��,�it��D�� �,l[h� ���V�}x�CG>��w�Ͻ�T��rU��E�S j0V��������7PvJ�v���)_@��ow
+�DA��N<A�ƪ�������*�H	ͪ����|�<��xZ��	y"͊ XkQ�=�<r��2@�����σ6(��p�3_E�0`(x͋�̑@�EW����-4�]�L��]c�d�DBR%��h�+�W]� � {n� .qQ y<$�M8.9�]�a"7���v����M����*��.ʿ"���E'?�#~��ބ�u��Ç��R��X�s���=������YJw����.��&E��0�w�� Hݩm��\3�WՏ���݋O����W���-��+~�8�m�8��> ��O�C Og+�P��`��ϵ�p���÷���_��+~��8w=��&��d �"�L5l�O�f�h�i)H�\P�Z-e����O�E� �K���<R�۲V��<�����IR��*��a��"�iw�ږ���.��#XnP�=4���GP57`0��K�ɀ-```���0~�0Fw�C�/a�%6|�!��^��)�˛kO�o��tE"�&��hq�af���^�"2�- ;�7њ� �Σ��te��7 �9�NEE��Z�����@++����b���!9�T��}Ʋ�@�o8���t� <��Ғ��z�ݳ2�0�YM��#Q:I��C��mЌk6���\[��yw��o~��+~�Yx�-����q\rI	|������J8�.`����#|�4��1{c�F��;{�����{k��'����rQ��� S90 b�!�Y�.q*tM���vN��#
+$��y�F����������w���&�Dݤ ,�F��(M�Ӕ˚���<96� m֞�b��5$i�p4�N�P��|�˨``c��� Y�8t}���ǘ�.p���;ꕰD��!��ʩ�M���R�>�+x��% ���X!� F4��e�@D��b�Էc[LȠi̹�O�s^�����I[\u��v��6�����պ���@/�ȣ������>0�!��s`��	ϝ�tv��o�t�Q��!�C��>���G7#fK�|���r�cH��@p���֍�UOC���fㆷ�~�i���o?�]w�6�m]��m7�h�xI��+�@;pj[�0��,��[=Zb~g��y㱣������쒗p��uni�A(��4dfw0	@�N��|!���8�u���N�����l��)S]��}���%����s5%c!Z��N�B �����U$B ,����kZ42¾��ZA�U��
+��\�Z�2�E5����2�̽4�n���G#`<&�-h��5���\0�{G��.��-�F���´��L�/�&�C�d��8Y�l�8���L4a�Ȃ���N��B#!<S��g�>���b�6l-8 �9!M��{�Ѥcu�Z?��`� Z�ɘH\u3Q�%t����6�^E� ��<���6b�A�4bd�!�ڰ^ac���['Q�|z<��3�4�?X�s�/C� NbD��+ d\6X��#kA�W~�~�.\���W��_^��������*�x����e�+� ����e�17Wcj#_���>�����߾e��/���p��-������fЊo<Ʋ�~�0�bw
+v�#����MW��~�������ws�O���:FA�+٢��MV�8��*9��(!IZ����h%"�	��]���/�%�C���=�ڇ�f��8 � �!�^W�w�zGG��_܁f�!��^Җ���|9�Tg��	�5��K�V��w��D���+���U��F�x�Ҹr��,�t���ӂ'��	�����rD�oȜ��v��]��@��珯�͘F<�P҄��i���=�>��Lg��[�����[�&ւ�'a��؏�0_	 C�
+2 ���h��6��O�s�o_�������]��-�8���f36p�P��ŵ�}�i�=OW,���,�q���o�c����'?�07�m3]���I��"6+��!��L��Ƚ���*-�3��4�RTa:e|Q���!��^Pϴ�XX*���N4[�����kIAD����k7R'���f���b�}_?2®NH�v@8+ ������o���%���>p� f}E�}K���>��O}�^�Wv���-�����SJ}4p��h��G��9�Ɛ��!5�*v�RA�U0E���&<�M���t,�k�F:�B��$���c�D�_�����8���
+ϜU;���QYf�y���uŹ�x>�A:�@@g/��5y`l����h��$�O�Sdx)�����W{ j��Æ�@�z2Q�l6n/_s�M����m���8���S؇��-��dI`~�:���[X>���G���e�2x��^p�������㗃��ZjjC��)1,��R�@(2��d7wU5r�^�)o�!��!`��7��Z�Q���@���۹��S�<(%�(s�&e�J,1�V����ffXCLMax��X|�-�z�e��/�]?3�a�;�����1]V��>�?ׁ�_=�g�v�&��.Y�u|Iq'���,
+��I���]��
+���� M��T��B�ni'@	ֵ������<P��cl��	-X͘�0�o�f��)%DN��r�7�I�3�U�[i({�3�;q���ؒsL9���L �k�����d�S&�IC~ + �x�d �M��/�,�420���maJ����7�(�����7{p�ul��{�;�>���{��'g�v X�?�75�pH����>a�����{��gt�ĵvX?��O��LC�-	T�Ɋ�tN"��?�C�S�B`�o�q�}r��?� i���hP_�����H��^|5��v�3�e������侨Jp>|M���x�_/
+���c�c_ĉO�T��<B�@�������"
+�㘧(L���+L��S,m��3��,Q3�"�Q#ѧ����H��Q��TO�\%�� ː�d��ƔT2�K��]}"k�������	4Y=M"f���O>���"�V���n<}���K���w�e��C����l�A��*��Dq�4�\A7̉ �%�)@37#.�'sQ�N�q��7^���s}����ػ���%�mۺ��6^�C��->���~6f�2�75�W\A����#�y�W=�u��_E���\�ǘʹ�EI#g�f��*H�{ �O	����\���'4x��O���(�@��n����	+?%
+�M��4�M����4�RYNP�z���M�w�i� ��G@� >0Yp	��)L7�N �# �Gof
+\7	<�DX'>��i3�� �����X�P���BGM�.H�j'y�����qa-p3.By �v��&F]���8�ZS���DS��NNQ_�}���e- u�I~���L��9�>7��jV��qե8��m2�� _2O��";��F<�N3�) HX�)�]��ww��3��E�WQ�Z��IU(�  8�J%��=�c��s�,s�T���O�����~��ڛ��p�C�+�����7�q��v6��ĸ������O��ꋶ����w�,��=0z`n�\�
+Z/�\H�{Ƽ��Èt0�L��J�L�R�-]B�C_̎���OF�ZK�O]�4��{�0F@!rg�'bڿ�le�����S�W�&N�S�h-�S��[g��h
+����Z��>�$�tC����v��~�U̹P5�ٳ��4���pbՀ������`Gm���'U��̟?�@��ԩ�w�t�N,{��ޖ���Z�j��kK�i�i^�P�L����ݻyb���q�#�L���U���(8���N��V2H6��y2oD+��8\�c����2�\�3��xO��7�^r�z�t�2�mq��%'[ �1����,4X�����)�|�����}�׎~�o��<��/�Ē9I��Y6��	��Qǅ����$�D^��{��}��>��9	m+�OR.I8�j:^Q����kIDah�.����V�;����K�����bq��Q@�f�Z�k�hi"����n� �lkX��[;�G+
+[��?� �m����:�e��M`�6I���%��Q*/OG}�Q�c쾸�R/��h=�#���[�n�����M��L`G2FgPR�Ndj�H,��`,S.���}{Rb,#����(�F��9�K��#��,�W��֎� ����:�. ���쯤3yں� `��n�C S@��| �s"�cE&�)'�CPw�
+Mh�|�Ɇ
+��㶩+[�;h��@�a��̾��߼�曁�`�m{P��A��@��y�<qP����Z��s� ��Q������|�_X�^�d���dzĦ�\�%/ܜXvDd�&��\g�>�w�*�D[r�3�0F���ki�$����x�DU��I�ߴM�ߜ�����n���:�딽"S}/��L<d=!�O��5�t�c;Q��w����R� �SA�c��a^��O��Ꮯǩ���\��φ�]M=��8 c�fA��4���0�?�i�"`��tV~�DzxD�a�PBV�+���L5����Bt�[������Ϯ�8�N)u��tH׌<��- e}b�a���"�A�"
+V��5�U�\s��?;P�&L�]&C%�{`j������v��++��=?�M��W��x�G8�H����L#`M `���50``�m����LM���ji��裟��wٍs���ŇA8DD��k~��0��^��H���)m�ަH��s�>��D��P�h?$Za����Q����l9{RsuWa�U�+dZ�,o��Xqw$� 
+~��gr�a�^���CPx9��=$(��sj/G@ҊTP���31���(J2A��.���]�{W/�:��n^[Z#(����))p����	cZ�}	� 䫚b��H�����a�*����0g�q�w�م�k {ΠOΧs������ûL�������,Z���@t`S���_Ğ��aE�d.&O�ⴆU`k��#�\۲����z��ٹ��oxݷc��k���ʊ��%3��L�1���_Kڲ�ں�1�P��uq�n�Bu�^B3��q�������6N��z1 ���ͭ��v�8�!�9!�D���l9:�����e�1��U�XT_�u|�dx������V�3����2�|~�ҫ�_ �̩Ɲ�+��������v��	�So�'�$dS���䄶�D�M?�28T��x��L9��=�lկ��T?�.eDP�f�-�V��yꒉ���!߾����ȏt>�����r���rC2��|�ANb5Ӆ��H��)_��x���"Y'���]�H���땾�� '9�]w1������Lal�WP�'��8N�0���f	-,�x���H.XT�����bP��?[o^��髞��W�4^��!�w,-�o�P��8���U^5-,0v��ؾ�`~g����ģ���?��h�����ۭ)	�2l �N-OVՅ{$���%q��I��'��L�+�:�k���|��.�[W'�a�e��%ߨM����Ϥ�M DX.`�����g�E� 8)�Z�������&7��뢟Oۦj���vs�Z�&0 >��   f�m"Ӿ�#�_�Z��ط����=����@T�;}:��h�ߎ��~Y��qD����.l;ɉ��-~;�\:W �c�w�I������wl]�����(B��X���kA���>�;�
+D��k��)e���t�u������x\�<}<3��/����+��شi�뮭���E �&����Y;��t���%�m;\yq�k�-���{��o��M��sU����E	2�ZG��۰�.��$ w`���x���>e��y���2w��i!���T�l�,i�B�':2q/�[��%v(HnJ����9u˵�XvP!���\���M�.�Ge:���H�$��(�9_!�-�-��5V��d)b���*��x��"��{s�9J3�$
+��)�<
+τ-u@$�ċ����}�
+|�K-�N�GBW�`������`��@��T>�97<C�rg���q�ε`�A��� F��m��97� *�?;e�.%��Լ�2����J&�d���D��=@ ����+��qi^��M���M�7��Y�D���n<=�����ǝ�e<�!�,p��������>��~���> S.��A	f�������	��L�^LØ@��3�/
+�M��N_�Nͨ�2u�C��P��^��(�����$^Ȉ�k�I�3丫��&�>��S��l���wGV�m {�#p̘�c����n�,`Y>�e"YNr�T8� ��	~yw��4M/[C�$\�3"�U�,�R!�)�]O����r�8�X6�\���eP�'�M�'P��) �1^�I�c���N����a�X @p�F���
+�~)	ϼ�_��8��*a{�1>�+����|7~C��fMGӒm3��l����к�Ջ�۰uc{G���E�k�]GKځS�ig�_^��+��_�����y���//f��^u�%S�=�����(xQ�"��h�A���$a��8ۊ Ij�#ly��pԽ���*�aG����.a��d���G�6�~�t
+ʑ��KHJ$�5_�6�5�'Z`ʆ�X?���>� ���2��$2,j���
+7,�,i�{U�W8AL(<Ol:��`�>7��Ô3�R\�
+�@�H��oZ�D	�Y^Ӆ��-T(�0�h��.W�fvј��>u�ijUF�e���.�s��<XCz�� �ϻ(^�}�ş�y��x�>2�'��Q����Zbn�E��8|$rV�b�\M{�S �z�b��ڠ�������=�޼�O�b㋁��/�E�ӟ]`�-i?,^Bغ�W�������\��M���]�����|�/pѺ�/��_c��L�1D%�� 7��BK�+� ґ��k�k�;�8雘�92�`���4Kϊ �)�SK�l.�kݐRxF3�;A9ey�,��� AW6��v�#Wk�"�eс��HO��"7�߇�����,߰���&J�n�(Ĳ������{r��e
+��Lg����%`�+�ZMݱپ�
+��$ ���=8�z�����S��3���F^�dj��	YQrL'd8S
+o��H�I��n��%�d�d�p��<8Iz, ��;a�`a��w/�c��G>�����L͏ \�Q�jnh��QlK
+Mp�1�����R� �JX[�چ��m��UN]������c�?W���a�6�l��-�x	�>��PIk�X��Ÿ�P���ѿ{���}叼��s�����aS<K}"XX�`b�(h,v�~�-�4�<"y�vD	I�R)�v�i�	��ad7��M�Ӫ��i+p�#��m��(���Z�"�����W�I�;�c~�ni�R��ǳ�>&�B��hAlO,���&WЖ�\�?��8Y��C����1%�1�h>��`�B�k�g��N�dB� 0�%U
+�q|7�i�Z�/��$�'��9 eb���
+�Vg�� � �y}���� `rD@XÁŮ]f����@�oGQ���YǨ(aViV<�z�w�T���zɓ������Q
+1�z��v�Z�#����G.���/��L�ꯎ�m�-{��~���}�nV;�$�yZXp��=T����w�<�yt�37�l�����e.�����
+��~���3N_�L ��[.L�e�&+�kv���Yl��Q�ۚ�C(~X;��i'�]���451��"�Oc"Ph�V��m'��<�%��A�#3hu$4U���	�Vy��*�8���ky��٫<W��\����f� ��������O���\6�џ,�D���ܦ���i6�0�1�j����Gv���uR����:_�S}�����$����öi�T��|�4v`��J|L�5��Q� v<� |��ܦ������ ��kp�H���_��cF���Qg�)�'�i�in>r��=�x0��V㈹ ���-�򓨨^0�`�T����mn޽�}O���s
+l���u�O�4�3`��� 1�',-Y<e~�k�/�����-o8z�s���f��_�U���0}԰4f0�;�UQͅ��L-RI�>���Q�Ar��g+-5.p�8�@DGZm �\	E%ײ�ZL���2R_��%F҂&�y��dޘ���"S}�q(R��鹘T'Am-� @��L� 1�i
+c&[X-��Z��s\�.@�/t�5q���s))<�1�J�V=Thj��
+V���*� w�8��m��4���4��� i5�n] 3G�w��"`
+�&����k�09�'a^��5|l��%����l��zPP�����#"KƠ �@ӌlm6��uU����'�c�ů�&�~ѱ��f	1�{ap�%�4ٺ/�~���a�c���'<��5�T�q�9|�{����o����Ea�+�c�f6����wg��3
+��"�M�2��K���(���j ^�u�*����Fz��*񩗋�Z�p�����(ӦC#&� �9_R�&�!g�$�o\�8�Uٜ�pK(���j��\'��\��X��(�/"J�{�'�!�T�4QN� d��QaA%��N�<��h![ÜY�ƭm���7���@D/;V�t�h�k"�!�$%�ѰU12E��τ��̸|�!Ż�X�2�IW��N��In�x��V�Gߨ�� �|D[]Xhp����_��{LS�72�h���p��n�fRD�I�-��O��U���<�����R� SȲ��r��,_4�����3�w�����ܾ>v�pM[� h(!�P�ٿK��)ה��m��	�\�pϺ���w�j�ET�w�(���f�쏦!b�,1��`���u�1��w�S�I���/xu)z���FQ�5��!��z�y\� !4xI%���e^��I@���I��;Y*��j� 0#N���ԛVD��.��jRt�d_ow��i����� Ch`�7��u�!�0h
+^)f�=�'  Gl���}���)@F�Tc8
+�.��?Ծ.�R��e����o�.+��(`��#V�R��%���\����<"�3JL��g���<��� t%	
+ �1 �����cܙ5�w+
+(&�aWH�R��e:RԬM��-s�qq A�*L	C%؎2la��V�7T��������sx�a<��ƿ�}�7<���3��a��Ƹ���N����[����m��m��˨�>E��h��bH�<��gX-LFɛ7D9�ɛL9ɳ�a����x��:�'כR�\8�ͬxA�߈2&����]��?�8����	�L?��;�f-` �Mj+��դ�:�p_@^G����{�f8��h���&�Mآ̈���z�Z7���������������@� ��Ō�I�!&��dN�3$�ؽ��$sF�OlSt��N.� ZN@�0��۠|��s�0��e��#�K Х��YZXh�kW��_�P,����� ��L̊K�i!򗠹�Gz����P�$����;H�@MdB��l@����-[5��j�9޺��w�����^u�X���A�
+�x	�Xg�rMi�<;�wX|�F��?x�o��W����l�y�N}��L�F�Ř��CY���^3a�T&��V�q�Ez���	����VȿL�q���f㽥腢|���Q�I;��A���0x����Ƣ���/8Db�2im_��\9O9?��h�En$&��$ �yzO��ˈ�#޹��@���l�M9E��Ӄ�����K���_�g��gm/q�*jZIgz��j�J�8�Z���d�\��q'��«DU�}?�U�B4�/����P�xFJ�rhc� �k@�C�6	�Z����N tq���t<w���@������]���[ Y1��&�(Ӹ���Y�'�y3�̍x:��E�(Փ���{#-� "CC˶`�gr��P>q���~��?�W|r����/�o݊*�x�)��O�k+��~�[w���r�Y����_�鷪u�ߴS�]MQL10�r�l�J�(�[,�Ѫ�S��!'�g�Iֿ��!Ů-�<��~�ը�c K'IkE�k�:b����z٭�ȡB��c�i�����0���Q�ל΋�K��+ �WR1�{�Ԗ�_�����/XX�+�{�lf��[��k��'���	_�D0z	�R���N�r��t&�c��4��
+6��Y�>��QcU���8���)�f1�ƧN։�ϝz�wm\X���=?O�u��o��y�o|�<>|�a����i��g/��0ݢP��52�6��	�Ċ�X���	���Y�@s@$�g�-�y8�B`	J�%�<��i�;�{[���=~���z�ptq�������s�k�e�)����٭��,-���o�w?0x�O�~�q�/���Omi���	E*����1��>� Ih�JGFb-�j�T`�ٮ��B���L�	#�e�hj��hU��ZΗ��c�7� ȸ
+�Uh%����Ǔ,�XJ42�۵�4y���d��/`�GYH N}��AZZb.������W�W�Q�<#��5���
+�,��Y���Sn�����6�z���w�������Ww��:9.{�c~�N�M����Ԍ�5�3H[<h2����V'	Q�v���N~��H�X�|M(~�)��z��#X9Eql�)�
+�$��d<i��6!r��(ɲе���nu>��[ N�N��?�4�P  Y�Ɩ-��E�Ν���G��8>�SS�*��h�!68o�m.s�(�sJ���T/S�P��E���b�AR��Μ�M�3[^�]��x�ٲ���k�򋳟������Mw�ں��>�|'�i ��35��g#c������;�j|���u���//�ף�n�D,O�1#����r�����#zۇ���aaZ!'�Hi6A�i6�Ձ��'������V��S�)�9��S��Rm�;�
+��j�q��|L��m�j�1��;�}��V�в�:N��K�N�J�`"�Tf�X�QU3��u5=��#��o�y`~~W��}W-6��G�ԻZ �;���~� ��lIBT��t���Ը��3uʌ��BzBj�D �ϡk`�K
+�2�?L� F7���!F6�b�K �-��� ũ֔8��S&&w���u?=]س�X�t�����3�^����ܾ??��U���S�"ڊ,�1�S٣$R-rϲ�@�]J�!=�gD �x� ^��| <cP�a[�X�z�7T��rՓ���W����/؍xn��5�u������m���'�3 wmel���w�+f�+������޶x��?����E<(o�^�O�b��0Z�l@�7=�8H+��	�Ѓ"�l$g2z���}�5se�-����r�a=^�Γ�V�l<���O�����[�ΊK��f-�w��x�G�-1B�X��PG��L�@@��sY� w�VX}&�hLLfHT�d���0sS�{�̼�O�#;���e��`a���kܥ�����1ۧ�$P�c&�Q�͈�2�e�J�{�C	'w���z����a��'�/ �o�@�ԏ̄BU�$����O2�d	`����8�N��| ւ�r���~>^O�ɫ��֭�~��K_:u���K��#�.���)�0e��G���*,�V����!ߠ����"E��;AP�\�\jr1B#pao:v�<���k�vhM��)駇��|�_|��\�ܥ���c=�č7N�}�{<�VAܹYt��'�� 72�b`]s�� ?����ߵ��>��{/x����f^f�{��M1��ff����R�6�c��E�gs�Y�QTd��i(�Oz/�2��ٶ��q@�4+��ߵ�#�c״��k�y
+cT�L����@�~:n�@t���cig�Jj�*� �cb���y�y�VQ�N��Li��t��
+�G���q��rv�����ދk���\=]�w��ƍ����,X�  { 'p"e�~�򋦫X�(�	X_)d��i��L��KFg'$�HidɸN�r�8��e��4-ٖڅn�C�pV��p�t*ϞO'I]K kI]����)�
+�Ig����֭��'���tp�����b�����3����D�s�TLK��YR���@�V��T��W��;T���v�&<�M=��R�"&X�m�=c\����t�[���?H�x�ql�6āߛ�����5x����M4���t;m����mb���~;�ˮ�zp߇_0<��M������7�W�Ŧ7��� �-�#��n9nz��<�s�.����,1��w|/fE�7QoN�Ⱦi�]#��x�+7��h����Px'���k�pI<�)'GG�ݠՖ����+E?F��b�{� ۢ��*�T�fc��>���w�G�}���?��%�U�f�N�_�H8���_��ز�1���h����]Hz�3�Ma4�,��Q`.���WI��s��Vh$ ,G�o��r��+.���mڟ�����o�$ ��{�N������	�<=����-v~{����~�?<�����kƘ��Ȣ���f�����ZQ���M��D%'n��B=��F9A�,~âQM�m,f&&0'�� � kG�q3l�7����~�mՍo�a�-w���/:�M�/���-PXˏ^-���Y6.r�\���w��\���_�|��wox���)gg_d��?�,JFo��%rH��J[�j����ʳ䅌Di�j�i�i���[�g ܑ� �M��K����B���Wux9u8NT.�X�JW�j��.�R>�������F�A�}���=3A��~�]���2�qb��ъ�����2���)_�e������p�j�������w�w5����/���][�[; ��O�`�gC��h�yw�1��jh��:���$�$�#ѲuT��,��k0Ή���R%�ذ�Kꌋ�J�&Heܕ]x��  ]�Դ��I�:����َ�����%-���5�_�`׮ޱ7��?wx5��ͬ�|�T���j;��+�VV̛J��!��a�&*ehVpP�QtD$�f�g�lMs��:A�(8�qS۪�MuQ���K.~s��-ϡ�x���\���l����Ͷqph:@@L�wM�n5��5��?x}���^9��?��x�%//g�7pa>Ӕ�)�Ee�V`iĉ�7Fݪ�r L�Z�i�6-0����Х�t+ϟ�H�)�WԾ��uv��B����-`&y��#U�[-X�dQ���t9��:5�>J]�|�(�����bD�MSA���]�\�S�w}�G��w�>2��Qc��U^���� �-0��iy��5�Fn|1G��(맮��a�w����-9��1NޏE�~���xQ=��J�AنN�Bm��τ*���՗�.2NU��σ�,�m �%F'}�N��+��Ln��]Xh  ׾�:�^�p�ŏ�\Z�:��~��!���AY��4C&���B�[C�������q��v ���ok8���%�i�1�f�z!/�w�Y�T���^���ƛ^1��7>oy�q<����Oa~o�=;]\���ᓥ�k�?W,Y��K�<oq`hq��}l��:�7o|�����w�6��W���*٢?��2ֲ��F���!��*�X\$D��`@ >Xxs4�˹����jW�|´�=����(5'q�C$���^�,��z*��]w��)�./��iҾD��Ȥ���B!�3�@`Tlx
+��Y���4 ���Oe5�����W��O�鑿ߗ��qcq�5��6�[l���6n�7 �Q���(	g9͎�l=`�T��%y�TG�w8t �~V�Y;S$"9�I�'���3�CW�D��U��4�8����v����p�@��N�U(`��NG,,�(a��֧1�{��?�V����8���h�k��_�RٛFm-l=
+u��v��313���Ųw���U�6�sfܓۭNE�����1" �x��b� ��1�p3f���j;O~c�y�;z�����s���/:�u�
+��M�"��_؁�@ O��z���Z<aS�+��\߿���C���O�ֿ���z)��om�`F1�!��ΓX����\��Й�=Y�R$�YE~�m-���PqB������K8ڙԡ�`�O��P�;ML�L6�s)�W���d�!�
+��6�k�H7���`	�|dʰ�a+�"B+�x�h�:"�\pq1
+SL�W.ѠxW��K�>�'��W7���]��\�Hw/ojB���mw��g���[�� AQ��P9���Oп<#&� �B����~D+�'�Y_̿lS�0p� & ��Xiܭ�'	|�t��GT?�"߸�<�Ԉ/��.���7�~���P����v��x��Vp�O˥�//j�&Y�I�zTU�Ʈ��%�[�X�*2�&+!�Z�6�Ia z:�I-� ـN�D.�{��`4���9�~�)����EO����^�]|��V�,���f���4����}��*i����w��^�#�Z��*��w����/������{	��߁�/�Xc �F�]�=�%�C�A?T�PБ���
+��ʈDڶ54]FT�wUңC�I��õ���ݐ�J��(�qr'���G���Wx}(�U���T�BRX�u:�2�X���d���(�(�ۊ���캙�x���܉��.q�5}ܳ�X�V�; �Vo|!�3��� f�	a9-<��H� N:9:��A�e �u3��z��͓�Eye�F���'���93�Gz�;)Gb�;E�����=���`a���>����/���>����7k��@L���Cئ��ۙᎱ4�_��L��D�)�T}�-@y�E�gB)H:1q��F��d���A�� 4�쨮٘�mo�����Z�歿2{�w��ʣX7KL_��xM� yڑ���P�W,Yl[h��l�`���bu��?���i��V�)_��W.��)�	<h�l�.G[��ʣ4��Q><��ʑЩ�P�S�E�?�LR�a-Z��eM,qC#��b�����$cq�Ii�	�82eM:�C�&� �tKby~-��?� AguY��@آ�h����<�����w��$˖+���$�a14�m��ZZZ��BXHH�	!������씥��(�ڴ؄BRp�=�g�J�D�e-ｙ����νsgޓ,�rZ�D~��r��]���s�9������oU�7N����.Zs�ώ�Үf}}�;�p�	�]J�M�wUX+������7�)��S�W�Vɻ�d!�kJ"$�w�?�a/v�;�1�tm��J���n�6���3^2<�q���Vt���	��%�q"[z�޷@4[?�4��C�J�]�~ ̈́?��5��@�{���;<�o*U�<�����er��I��cT(��H��43b����'�1g�k6Ar�33]sB�=��6��lI.?q��,Y$�2��+�a��J	��@V��*^|�)�z���o7�y���rc��_0��ҋt~�3��F�r�制�M�{Nᱡu�ݿ�����������o��BTR�Ʀ��i�]���3���17k\��V�dy��1��%�l�279٭��l:[8{!5��SN1W^c8�{�I�{���C��!0b�� ����,�:�|d�G��� ^wN�e��[���i_�ⷫ��2�Y*sF���XKm��HD����E�@�y��o�hIfJ��H����Z{n�iih��Y��a�ƫ��Ҝ%f����� ЄM;��O�O{�7P�T"t�d<~J��1�@�����v���:��Wa��ET�o&/hs���
+3�ݑ�MG|�S#�Y0��Ѵ�Lx��#&��:��y�a�?l]�j����$��q��ɃT�����|���^}.�h7:;c��E�,"��gO�z�y}����V���±��r_�������_I���J��Ǟ�Q+��`� ^K'n6_ �7"r)'Z7R
+�n��(��	���|r��2�v옺X<��8�ՠ�����mB�(b�D�tE�kE1kǦ鬯�ۜ�wI��U�z���OT%FD쵲U���X8�?_���|�N���}����K��i|� �Mس�ߐsԬ직��Blǟu"����5��,�ɍ�E��l�;u'5V܄,ga�i}N�g�LN�`�z{���q.r���QH��ޜ��&��ܧg �\3��4�%poh�C}* n8���W/�TW~���u~�n�zHHQ�EĪ�@�<jM^&1�YG�\���8�IC��G���L .�L���a�.c{��ȃ"s��/Q���M\U��Wc͚��Ƣ��l����e�ؘ�a�q��C	G�^�mpz���;���o� � �l!��J6����|֝�Y��Xu��4%�������vI �B�{�>�8�J*d���N��q�N2睅��
+(;�9�ܑF�p��T�k��4���ƌK��R�O�����ݿ��O+��� �~5�e��d=�SW�1���0�d�aI���|���i�� 7{_��Q�y�_GS¥��ꍉZ��ʎ�|'1�R �4�N$���U˜H���Ao͎$�׳K�e��P�� �B%��2�.a�{�!��@	U�eD�~<�9�+��ߛ���[���SS� �o	�q*[!���
+��YxK�xP��e�����Ml�w���X��J0�3s�I����#�j�8.��׵\z�{����/������� 0g �/�֌�@W�\tJ���"�� �`�]_z XT�mm&_��C��U0�:*�ֻ\7vʜ�^�ajl4.�53\����Α�p/ʉl���hC�5��������x��.�l�9G�e7���XmW�9̿��uV��r����޺֣��|a;V����rYi���cc����?c���A�8��p:-sa�W&-8	6!��+�p���La�.7�E�d���2ד����w�(�6M*E )���M�h��b�=�>?#��x�O�����"���5o�f��!3�����Dtz���/y
+�Pa�w�moQ^��K�"F�j`$�i'&�ՔL"��hF��Z$��N�&�'1Y+`���#󩷪5����^�H<��@>�R�P��$��+ �Q�?(\r�W��8� �uW�bx8FOO��d��d[��Y�0�Ä��@��������S��0�ou�j�����gPTbyE��j`x xF��F��d��nd:Μ��>`�9�o��ո4�\�+�1��� ������z�(��ع:��fGj;�%�cir/q�M��1�:���X�ҰL�J �eP`�ʢ�����͝?���� P.Xƭ���2�|�����>@k��أ����,�E ����^��%%��|�����!`���>e+���vkVK7� i?Q��l�h>m�\�ae�����>� 3\��8R�df`` �W�9MYV��� $�|*�Ҿ�\��.���B�S�#�,c|�E��e�K\���񩵢V�)�Q�T� �y�%,'m��� �]����Ǩ�Hc&�,M�j֡�2f�@�⺪Ɗ���q��5���W��N��Gal���a��,=�bx7]骰���
+q\!Ɖk�x�����Z��,����p���g��>C����Z��;��}u����pr��\;gP�Z��H���{�Yῇ��k8嫦ƙ���Y�^�U�-�pb\��ɤ���Tiy��eJ� F�P���
+�䉂����n�_y�Οlx�� � K�*��)�2� 	Ͷ��|6���`��o[�.X���D�ͬ�뉮��6D��F���� ��2a�9�M�B��v���b����j+Q�˨�}�Ќ�T�!��߿W4_���`��ط��T[;�_ax�0<L�Pض-·n���b��;������O_@��˩�M���"uR��W�ө�)7&r�A�Y-[��nn�Z��d' ��hd��R��TU)�EB�ƥ�U���Q���^�U��X�zm��׶P��^;	Ε�5`��8�:�^$9�����3���[��9�d�Q�oQ�GXx�
+Ĩ3#L�?iaaEu�w �0H�ii�@p�|���5�0Y�Ƀ�i���?�L�x/7���ּ;\>�q���?g�7+�r�) ������,�n*�7��p�/}���FC��/��QBbtu=s�r_ g����p Еf@��r��tQ2|-@u)�U���f-:���L��T�9��f 筒& )�~dnM�Ur���-��|&Y�ڼ��6nԃi��P߼O@�N�[�a<�aӶ7��c��`j�C���FLO}PT�/�Q�~	DL�[���/��絣w��'g�Y�� �DBj:N��Rv��yb�8����CA$��n�A `�1+�b�9�>|��������v`����}�Q.�p�z�ɗ����E���@o������N?qm�_�2��[��;��Ke[ˇ"AߋI�f�� �*Xe���f�����3ɨ�nPcoN.q젔�>{�����i(�W���jF���M��p]�����}�b���Z"�0�A���� DL)Y#��~�}�>Q�:���v��3[�b�����n�pBg8Ci�So�����ȇ��c{���� �>���ix#�]=�р��B�����?����kctǦI]��	��3H�c�9  �Q��oT��)M?C�|0ۯ�����E�Q �uH�	;�] �l1�����'Y��F���}}�ۏf�]_ܸ�����i09�a9U����
+Bx�fE*��e�8e'�� L�g'M���)ߝ��~՟.c��i�|D��&�g ��x�I��װ_�Fv.n��/y�cpp�r����u�qc!�8[;*�+��h{�<�ľ���W����Qu���b�J��=LR@�"!�C�"�,����,�F�1�ܭ�`<���lp�22|�a��L.�Kؿ���L�7�<���4v�}
+���ąe,F͈ri�M<CrN�֖"x�)�P��l֌��׮�z���8������N����ۋF��R�%��RB���7{K˖1 ,�N�J')r�wU�5tv��bj
+�d{#8��1�]�D!u����^���VĄ/6���Y:�����aF�����٤<����� �^pO;�F�T\��U��^zZ��:6�CG�ػ� �2~	 "�mUx�:�!�����5z����t����H����JEH�U�B������;�ȝ��r*����I��uus�o�h�-V3H.%���#)�P��0��0�tf����<��-�|�׭��IGԁe��Г�0���ؽ���~]iخ7��G�c���ூڝ�����X/�K�b�E�yE�N5p�@��ر�"�e�	�\ ^Aɮ��W��������\o`��g9ia^�ܚ'eSX��&�b�F�["4^ yV�aP#��"���	O����kph׹c?���e/����)� ����@����Q�v
+72{Z�Fݾ�I��gAnT��m6_���osL$#�!A��N�A$.�txK���Yy6��UL �ج[����*���{����0�Dk�Hy��B(�[;���8�kᅅ������g��Ȉ\�$d 0a��k7�6�}6ׯX�O��;׉���Ra��� ��Hq�2���-Z�D+�dv�$����Ȥ�hvrڽ��o�}N��&�a�϶���^g��$�Pj�c�Ŭ�(��Z��
+�]/~�� �gN����þv�C?��`��Q�l6�!Y���j�c�|5����>��[�}��[���[䀒t�"! d	�bf���xe�PR2(��
+���xl�OM���Ͱ�Kn�B-�6n�Im��e��C)w�-����D.�ٴ��t�yJ���/�y���g,FA�Hz%�I*��E��,z��W����ۺW�n�ғ�-�cj�fԋم�!�|
+���A}W��}D���> �������M�9^�0���LH��M�\鞖p�g�,�s4����K�+�\�-�g��8JA�ba���f���Ĕl��@�L� <����=� <�/��I�����GJ/>�p�94��xD�Q���#@��㱡:��p���U�����\����j�N�ۅ ��>�����4N3�����8Mqd-y� ?�@NyY�xc^� 0⤘1�J��@����4+>���N.�x�G�-�_�k�P��`��>z��=��fi/#t�W�	���'���[ꇟ�r+O/���O>��W_�5.>��9��"�C�� c%��a�H�,���Oۤz�Ą�5�hvL�X¶��K������v�L���v�h �ҡwd�!%uu�&�P3kCf�$ac�"���$��B܋�w�\�������<vݝu����'b��ߛ�1W���Y��D�&�U��}=C���?����d����p>+T� j����;{\H����;�`�Yf8�{3��V���7��-?U��>}J��BD�F�X�0M�;�,���K��`(��43���q�!�F�?z�p7 0)� b�)b*���+jw}�A,>��������^�G�\ЧA@y�1�:�����w}��i}��v����\��MA�� �����$��HH��f�fA��Dɇ5/��+�^���R��\�P���r��ZwM����E� ���G�PV�,��W�\uk��j���.l<I�'x(>��ѡ0��fZ�T`8�r�G��h+;�	� me~�5��Pˋ����k�[��=��f�x5+��Br��rM(�h�d8`�f�7T�*I��J��?��9͈�?�oYiC���4��`EkƇ�����g %c� 	��n�S��?Y�X�k��6�J��� `ߏ[��/��+?$R8je��-x��m�q��m#Ro���,#tog�1�a|9a`�Tݺ���?���?��h=��6�w�Qj^���Z��8��?��6'��ޗr���k���Xr\�=EMج)��芚T.O�K���y�6Y�[6��� �����/�?�� `a���@�t���UL`�(����<��5��M�������㚎-^02{
+�00t#�Ǹ� �_���2�>��?D4��\��Ȟ�BR�Ą���=������������qPKAB�)k��1�)��8�)�0�9��HV H��k�ix"@Px}�y/�����_�����P�?���i�*��d�@S?�>�;��kV�06���R�±%���v}�q _�|�{~ON�������+��4�2I���g6��(c�e���$�����FN��i�	(H�Mkg�O�t"�s�d�����3);�ȹ6�(R���!��g)>��7&���������Z�.#¦�:�O[����m5�]*�v�#�؂����.oU��V�VV��~�M�շE�K��D-� 0>J�@��D�/)���K؝��Ո���uo��Q`e1` ���M�31S��BrdP��"}?W�ϳD�{%�~/���Z���9IQ��b�D�ow캩��w��Q���M5�GA�c�����\���o ���[�H=�ڵ%��V/�|͖����D�|���O��H��R
+I�4fe����c�7�Fb݀i;#�Iȑ�I$na�ȟ")u�+@
+	�"bES��#��hQ���{�y���E��5�H�qG#��1b`��I�Ĕ�vB ����W��������`���{1h7��I��� ��X�	���Y��Q�R<���ښT�,����v�ݔ� ��'IΓ�[#3��J�SW{���B�:�	��"���ː���"�=����7n�������+��%л��f�M��3r�tf��^�W����O�o�UW�K^��7����pm$�9u�@�--�/���π�7&�غ;*�Ȕ�`�Y�w��b ��ɜc0���UL!N��q�>��1���ޚ:�f��y��%��s���̀x�����ׄ$II:N�gA�XMPȯ��_5~ﶳ����7հ��C�YM��2['C�X��9��`@�\{m�_��XB�����xq�>*�/�� �nx���a9�!gH7r@z�:�[g?���N�F�O����4�<�n��q�Ing=�	+�@P�U9��8�'�T���A��m��կ_z��m8�* ��#FF#�fa���AА�׮.Ʀ/��CV�^|p��x���S�d�(�W)����O$}0b�IK$A�d�#�vo���ך��5��l�#�0�Y�d�����gf��線e��/S�	����5�2��=&�!�� ?,Y|ޮ�|���U�ǞS������оM�νN�1�I ۼ�ZQ><xF���;eˇ��S,.]]�����?Q���$�ȅH������Is=[��<u���6f�$��DJbEd�q�^��h����@�X���.}['U$ ��U�^�����;2����vNPz��B��.�  fQvx.��٢gc;�&��hXA,A.�P��S����}l���Wv��=������{btA`k�h
+潽�40@8��:�@#�~}i�N�/:�6o�/�Z���GP��ê��N`Vt;��k�66��!����'s0�\<�)�!r�2)�����p�8��M2ђ���M�������\un����B�I�����=<�H;�m�P{��Ǿ�P�Ɇ�&�=�Jn-��b�����3<*;,o�)�ʩx5@����*��9�o@FIsX� �0�0ͪ��Ɩ�A��5C�#3)ˈb/&��P�~�%oPsХO�u�8je�u�:�;�K]]����Y�{�BU`d�;
+�Ȇ3�y{�H[��xѢ�C���b��y���,2X��_˃�p�
+�����R��<e#荙�|O2�12f��"�(�)}Rru��ߔw�p��';& ��V�9ӘeJ{޳���#=[ `nBx���� � �A*`V!���=�x�A'�������7�+ `gE4M!���	���U���ض)�ƍA��g=���ۮ��p��_CʀA>����`�Υ'�Ov2Y\� ���xÀ��#�}��lߘ��:��bbVıaLZ+g$�3�N4`J4� DE��ufL+�?.n)\���W����������=i?��+x�@��Ը��R!k�?�5���׮kř_�{��X��A��b��Wh"X^�e����|�&��u>�����M�B9��l��R�]��s�e�)�f�3�
+%�� Ү�, +0�����D�E�or�8�O/~����d'���]�޹�g����Q۷�×Gb><xF���/?���zKq0�?�U<�q<%*�	�bnus�<�\O��t �iS�t&�X)�觉R`n�lW��q����B��n!Jn�1s�E��Ld kb�w���I���&8`,x�� ��L��2V CG�}a��Ӛ��l���� V%PXCV�����7�|�#zW��M�1*Cl������������:nc\;T|��z8x��i��9���&���K���
+��Z���4��1fD�mEg��/ �F#Ìy0�-*k�0��I�	R!�Hz"%�V�����oQ���{���?g�Q�W��#�16�1� V�J�Ѓ�������]>[[���ӏ����X/ڼp �3�bP b�����3�f�.���
+P�¶Hh6�rjz�|������.�6��,�ᠴ�Q�"���s F� o
+=�'��ۆ�$�����[�����Y&Z6B�v�#��N~lݺ�-���.����"�3a����E������8J �BͿ~f���f4	 ʶm�"N����^f�7wLe�q@�A�=3#��
+�>��pM�4C��ovSǤ�s��Z����`\�~�so	�p䋴�c	Œ�� DzMfb�hz
+�:LMW/������;j�y���:ں���9�7�Wd"�c�+\����v})���M�O��pX�Z��}���+�	P:;1��	גU	�q���ok�N���V�*�S�~s�Bb�$�y����H4uH�X�ȡR�5^��N.[|U�k�G�y\�_,[&��y�7F�I �(6��:�iq��[�h������ŋ>,��R%�3C# E)�m��ƲD6i�M�=��fe��ԯ;Fo��'Oپ���%����˥�R̘3�i�MFk�	��� /��#ſ�������_��_�{+Wq䡄�-����s� ]Ocda{�|p͚ڃ��a�9W��e]�ڊ7D��Iq������ȃ VI�-�����l���=�5�� ���CN^�kj�
+��7]�|cg�&V���g�	NȠa ��f9�?�[?WѠ��C�* i�2�W�6�Y�3�Z���3 ��s����zy��u�gJ<�	�����8f�7`����O>9x�)�_��Ɩ!�;n����
+�+��sC<6c��Ү�>�[~�W���Q��A��E�Wdf���1��x�iv��Y���d����d��Bʩ�}\z�a�vo�oIc�m�d� � q<Ş_���o�%��^��,}�S���7հzu��S����2X�{>W��u�y{��]��11��Tk�|��U$�&"���J���mVb���H����3��:�ӍY߹Aj ٻ�QV�d���8͉u�H� ���W�n)�h���_��c��c����RX����Q&+��)�k��R]��`u�Yg���[��~H���}(XƵ� �z(�ky��qB�,���e�h�@ /�g[H�{>' � ;��7�z6�.�[��r]�isN<��G"�Sa�"]��Ĕ�[}��%g��9	Ub��!�s�������@��Tߝt �:��3��J3�
+ f����a�txv�Į�;���ǿ}]+6l0���� �BC����/q�P�ߨj[������/�(�K�f�I�}Ŭ_�a���|�:���IyRM��5���7��Y+@V�͌w�CS�d%�=��M�b Q���MǾ<^��������z10�cÙ!�!t�.�E0i�}Y�1��/z<���a��,Wa��_��<�E�s�7{�C����Ϙ%-@���F�~f�[r�M
+�N��!��4�{�4��U�u&��D�,�2��CXo��P� R�
+�]rQ�b���>��OㄾV�� B,-�L:f�v{E��ێa�u�g���9b|�.��-�&�SU��L@����v�7�+�bNޅ�9Tmx��m�k�����_L_N��;ŒlUxkŁ�4�I �^�����Sw���V��O�M��!) ��!�1��г ���� �E 2�4o�ד���&K�b	��)�*�*ⓢ�SW=��wWu���c�����#�n����tw¹�k֮�>��1�S���ۦ�ODY������7S̏�� $+ "d��0��7���]1dԡ���������8OÝf�p���"*q�Ч|����+���#�aC����u|X��y���atM���vƊ�-��{���|�&j-�O�'�"�%�X�d�u�dR3A`/n�i���ٸ��-�?�!��� to���y�E�+P �B�� ��3z��~l�����-Xr��Eh�y�k���	o�@%�ર��ڗ���WG�`]��CUmzJ)Y�+,�n�k�0��J��}�l��,(��;W4e/������sỻE�'7�׮�>C�J3���������q2�e��Mѧ��~��I �b�Y���u�zd,�Ԉ��=[X�X2jS�;�z|����O�����u���Eز!�֭Y3t,���T�RT��D	kח�+/�E<��K���9T�%bx� z?+\����ڥ���M �G�a�8�5��sŉET���U=r�
+Ҍ2"�0B�I�$��Ts-�FP�����rKp�5oƛ�\UGw Q���� ���J|7N���]ǉ}� ��w�6�u��UA|��7
+�$� F�i_�v�i�m�TAM/����d)�����Qm���С���`��e$��O�����a�:���~�����V�8��Y1b�3�q�����4��t_�A�>&��v��Dg�Ě55��T��uo	=��b)�:��*
+ H0gd�U��,����D==<�< ���6�Ư���p^�7Vk2��V�`�\j���uw�G�ל9s<ݖ:+���%��>���IR H#x�����|��E. xΚ?b��T�I��`��lN�0`HI(.0QNS̯�k����>޿��ӎÖ-6�X}������h��He'���#���h�����.W�O^�����D�D���3TAŤ�Mn�T�[Jm"p�9���Y�5�L�$�ޒ �$v��Ñ�/��9$$@ ��(�d)Cn+�),���'v\T��c0xF�B�@[�G�� 3�NW��Mk�O��׍J��4���_?���uq[am��&&D��#�Qd�+�0L�3��j�-�'�����A��U�j��,�۶��P��BDҫ�����%�Ƕ|��Op
+}}%,-lC�- �!�7��ﶥ!��Of3������D�l��6	�*�YS+^z�u^T��7E��+�(�"V�� D�[R�ر�_����Ɵ����c��P���9�Pc��=b��������|,9FFhߟ�:7�03`f��shS�@����~V�O��o��r!Ͳ����w�9)��'=�} \���g7Ϥ�~�$n%�G @����J!��Jǿ�M��][Ć3�o@__c{��!���0���{@g��[[�^��G��?�O��(�.	/���22�3/j��4`'��C��a���Yi�����9BIv2]�]/��"�!H�T�@�:�AЭ|�Ca��&��/:GG�<s
+�@b��s ��?`&v����ĵ�{������_�Jai��X��}�$� $ j`���$�F�\�t��LB��c�خ����p�(����uj�"fFFR(�����O�u���o�����w��� ���GhV��lm�@}��z�v��8�$���Q�O����$nm�N�%1�0� $�HSI밇�C��RF������h��Y��۟iR(T�`=���[��c��s�������{���(�曜A��F�s\([�=� �<��s	��wr^�a�L�L�V�U*��f�)��eF9���8.*DsT�z�Z9^3���_���}��]�/3;{�H���!���v��X�����A�s~ �ܽ�j�u"�ǩT�AB1sh~��S ��ݞN@cȷL��5\��I7'!@�Us7;�h�����h��DV�e����U@ Q<���%*y�ڽ��\�ɗ��g���:�byx��ss]�6ր#����?�5���|�-���
+�Ѷ�|� �i"*1H�D��@BR�ib������:�ֈό��Ra�~�esL13�Y	��1�P��男|��ۮ}
+�;���B,���9Y��Z���6c�9Ӗ�##���p��8�Z<�cGy/�=�%���K��i� !��3�T�vdZ��d��!G�x��9��>�L"���O�Y2��f�RA�+S���[���|�`^4?&��\�PSd
+�my�2C�R��0�̡���K�{)��u�������87*u$#�����D�oy�~7LwY�gf%��I���/��w_�V>���v�y0¦M�)�kr�@��z�}5X��T�����ۮ��{��?RzT����*%{�R��)B������K������}F�Lz��!8=�DJ�IJ���Y� "�AP�y�����U���}���m��08��Q��?P^�lh��{��u�Ol����?��;�{�Eq����ůȓ	Y	"��C��\d"&��Fm=OV��)��f�_��"((���_T>����K�^x̅#?���6��t��님���ԛ�Y��������=.p��*zH^v��K�ܤ����8�'�,	��>�רℳ�����D�Xx,�{��O����0��
+��? �P"Z]���Χ���̞�;��=h�"g!w�f�0`��=M�e�p�Ą��B�<��y�����h4��%�2&���Ik4��MZ'��d�Ϭ���I��B��*��9߈Z}����/��w�?�Q�̓n����1��9���@@eH/܉:��[p�	a��k��8��}4^E��1*�,�bA'�Q]
+6g����¤�ӊK%��L$M�j�&�'�����M�LZ���a��1f�aX�-�ҁA>�r�T%�)J�k��A^��?�M7�q�u��ge��!��Zsy�=�(*~�����"yx�����^�Њ��q�����S�w�oH̲�D>J)DPA!f&�!�H$�A�����`�Y�� cP`1�J�`��<���b�M��G����������~���>�;��z���f��'�E*�]r���ֻz�>�yC�x�ǎ��,���wxoV���(�H"��$�D���I&ѧd2�H�*1��K��L�$�A�}fOd.K�a�VK&�9=d�L. �Yj�Z2�1�؃l�(?�3@�I�)�O5 �L���5�5��q��( )���˳��
+�o��H<?+  �QLB(��M��d�w�|M-fl�3����X�Pu�h��B�?����>��%�<[6�رC����s�sJ3�?�JO#c�����[.�?�����x�L��~�b5A� ` ������lj���7�Nr�D030@��!�ցl� �}4�MT��o��I�rjFm�,! �!RU%EQ����Km������x�ǎ�u�Mc�c�6�Aô���\B�%��Jˣ�v����߼iFo��Χ?{��|p�{U|�=�X	�4���|�"��TgFȠ��Ͳ�^��`(ݵO�v%{H2��C�$�D��Q``)E ��,y���:޳�Ϗ�z�nz�����{�qR;�
+��1�υz�ج�FWk��#�����` ��C]�mP-�K9��z4 "HQ��P2#�lD��FFp�s�Q�s�
+��h�.�e��ɝ"յs��f�!�@?��7L!0�B\�/ՙq��8�,��}�5���s3� ��0o�_��Y7E<SԸg����wZ�}Z�HB�AV��N�l�M�or�����7�1H)R�����V�my�6,]��?�|Fx][G���|��y�10�Y׮o�c`���+`�.���w\q�<��W�5�[��̪��fbA��z}�f�aT�ȏ����Տ�L�f}��X� �i2�@�*exw>C^R��5t~Z�2 	*f�G!���՗^|��O׿��������X@�X���t�Ø�+=�2-tN�{�Lހ.F�a^wC+ά�߁�����n�}5y�D�U���W,�B��R��S#�J(�B0)	��5�J�;� ��dV>A�����)��B�[�R��AK�l_��v}&�\�����WpJ+�e`Soұs��y�Վa��=��N	� ��S������%o�\ͅ�a��㈀B�~�N}eF��ޥ�"X��5�qˬsP)�v�M�/H�5%	"���D�����KFw�?#y�Z4�ܟF�!+���q�b�2��	�);lu���U�h�o��쑲����	�9%s��X�  ̩��5J��� <렒�o�-#Z1�L(�z�B�&."f�8�K���31Y{���R�I��~������XtJ��}
+�V���;��N9 Pf��ѵ�q�����/�|�XT����������H�>� +f�����x��o�4N���t�'	���p��>#�^�,c��[����B5��֢1��L�P*�1
+�=���W���3��~��}�,�Q�Q��L]������Q��j�@����`�$p?��De|��GEO�ex�2��ő:HEQmĢ��o�qm"ٗ�M
+"bĉ����&�W��£�����p7u,�<��Gp��4@��+=����)�=�q�@W�wڧ��9�p�pX҆3�֋�<�V(�S�����z�
+"A��'�@ I'�Vٵl=mI�2B�Lrߠ���`E��� `o��[J�R���a*�����4c�O�I�s��L� r�2hH?��8?�\r�v������)��n�����J,#I��ռ6dګn�_#��'=[ �Q2�B>��N���[�Is٨(�z$����R�I�XK�R�u��5���I�/y��=��7�Ӗ3_QC�� ����"���䷤��ˬS�`=��a 1�/U@��W�νt�����
+�M��
+�"���D��)bD ���͎
+4yc�-DhV}&�,�L,\u#-'Ukƨ�I�F��X�X���v[fF��t̾�<�%�K���k7�h��n�����/�@�I�C/*}��-�E�PW�Q�R�u�hYbh�T����>�W�ֱ��P�RG�P���������(� Q� p�Q�13�����8���$�����m$Z(,�G}|tg垯��E� ����1֥�{W���řz7����r�{�ۖ{(l�Fu��Y��濪�ȗr=R �H�oF�`�d6[�
+ g��(�V4o�� 9�<���B�H4
+�v�ebYMr&��Ɯ��mns/q��{����wn���,�$3琽��@jzɕ��  �4��b���_ z� ��Y�� nT�	�l�<��vo H�JǬ�=�|i���X(	���:��P򏔪��w�5�^�������QY������+G{%��OC�By�3	�*;��}gv��}{T��п�̏W��:�|�Oy��Y�U(U#�O���r�v����6��`  "f�B�]}Ѫ[j{q���?�Up�	���m�����}��p��%Fa���/��z���sn(,�Q�9���hf�.�� � � �����z���V1��±
+���$v�����t+MM��~TS��
+C���#dI&!U\�j�*N�4QBi��mSU�x����U ��xݹp��q*1v� ��]c���w9���f��7!t����~�D����)�9c�m�5�갮w�Gkؓ�T� &b�3�Ӹ#��>L�� �@��6'�� 7\�V�l����f�# �^nL�:3=��i�q^7c`�5�Ȃ���[���2E�} ����dj����9[4�\��B�῀�l��ibB�5)���ӰeW�rs��	�R`-#��+�M�H)V�U�� (�7>qr��w^_z��shpG�^�*���9�\}f�"�2�+^��=���"n}��z������bQ�Yʣ��%U`""_��3�)�>��Zc�,�P���`�Rp~w�<vOjËk:L�1%�;�"�m&p@�1��O�0*.G�O*}��K���o�����`xL�u�W�o�f��, @�����c�����C��NzP8����@صl���8��<�cƑ
+c�*�S�5�@���|�;���nX`���Km��T���N�Jq����0�aTX��.�$��`ddT�Ԧb��!���)'�=b"/�ֶ �Ƃ�	@�.��7\�W�]tL���j�y����r�=���Gʣ{�a�N�fwf&u���9���gf/����l�Y�  l9Z[�Er��� ns�om)FX8r-;1��X�+��A���k���I )L#2�W��Ts���+��ܮM��"�ľv�n��Ҽ�D� Ա|���_*��և.���+~��Z��m��I�QP��R5b�!���T��ZW��,.p�3�O�Y��J}����&�hy���DR~�圩�2�a��$p�H�Y @K˛k�襏/���������3���/0�"
+�ĸe4N�Q�@}X��!1���Yc�:�P��t�R���o�	~{Z��S���NƑ�L�M(=�8r��}P�>��1c���;��o���ٰ�ҕ:P_�|\���������~��rA����W�}5���Vg�k ���������#L�|ϩ��R&t X��}���̚4��چ�B08��muތ8�������������E��;Y��!�r�Q�_�:�Z翆ɜ�~v5��sps_��F]� �5�=���Z쁦��n"�db�N���)/�$�2>����*��O[���0	���qH*<5^�v��lǊ�����]|���#�3~��Ƣ������p�Ƕ�ԻBz���~���K���O�x�B�@"��A1Xա٬�9��ym�&��M�槳������u:��B�h�19��*��flO1 $���9F=��#�ֶ�T�+^~��m��A�p�:G˛ ܙ,,���0��o��ۺG�)�V�QV�(��YS�~k��O���E
+�_�t2�Ba)���2��)L��}G�p��Č�)I�;�nѻ�}I���,������a��Ө ŏ|��Z{׵�R�K�A��A@�	&��JsCh��.dV +S�Agh�P!��W$����g��#���F�`)�M�GfȺ����dz�����O@Vf���ɥ�،�)t�JRV9���s}��� =��ٴ �Y��A���'')ƘY2!�O
+��)PY���2���\��9�z�{��Oj�D�+b��N=�諗���ϯ��;�B�uN�Gg��s`�BYSnN8�p7:c�,#�pC箙�	����S���l;-�_�/��(��3{$i�ŸS��#�ZT7B�)�,͡T�O[�h nKszm�x�Q�ɹ738��!��U-ɇ���z�NZ�]|������8�{�����7s��|�6�gw�}GY��?n�0���Ց�Ȏ�Z+��^�N�Gp��z����'j~0����	�x#"�ZWoy�����w�B��B�Jڔf��]��V�WN��'GS�2��`!���M@C^��5�HA�VЩ�J�촙խ�Y0�6m���(�Xvyd�������솘���$}�C�`H�Wj�' ���!Ӽ���� �ى��ܳ�ț������Ύ�����8kf@Y��N�T���u���1A��� V�$BĴ�c>�ǧO������^��G��v`��ϣ��l��<0�!�<ݗ�O =�>0�.e�xC��E5qÙ��i�W�;���$Ό^���0�C1��#;�ɺhen��i�5� ��#�Ҡ٘$k�4W���lOXm�`��5��L&0Z�_AD1Ǌ�H	�@K�;���9�J����~�vl�(1<�w�Ph�k�B��F�u3�Ĵ�,��2��}���h���u�5���S��l�1�S������?�t����m�u� �d@�t��fǓ�cr8L�+=���r����j1"���ll�����9�5;6�$P
+���8���4BG8ՅqfL�y��P�s�94C�^����ٚт�Yg��i)w�ٟ�tF�7���q�Io�M�O�'z�e��9=���hE�}^<Mď0��֝g���P�6�m�<�Nю��q��u��8���S겉�;n=�w�	xS�ǆ��һT�-�@�}� |z'c��������������������a:�E�V���Y)"�ݰ��h��N�0��6^��7)������i?�d�3� x$���QT�0dU,�/ꯕ��G���W�.08XG�N�s� �K������B�)w�-y��m�P�
+l��8zK[钫Σ��[U���X�-Pj�X�$3"�8�����	�0��x�p�;�[�Ip\T��Ĵ�4�o� s@�F�X��l�8���M�N��1���̬iX�w� �b���HiˉM���f���43ܙ��W��@4 Xhf5ώd`H���l	ӽ�*B�.2���Yhlq���v�:��]��̰�á�'^B����Fa�O�o����m{�;.l=��K���:��ڨ�M��i�a5DC�K}�ov_}�������6�mb�$�/Ĉ�дq�|���w�:^�39�e4�̞NY�� �V�I�Γ�'����qcaDH��zTcV�(���ֿ���;�xѧ�ĪUu�xJ, ��xv��&�s���g�2Bj������(p,�5kj��W�`�uٕђ�J��(U��@����)��<=o���TCM��8+h�=fAִ���f^-T�f(��7���?���u�+��D�(6�E2�X*�h�q�t�$�i�������X���/�#�&d\Z�Ԏ@Ωt�g0|�IMX���)�5�I���sxÆ~�	[�/�ꯉ�N0��4쬵�q��%V�7���k���5�eJ��jj=��Hy���.��y4�.��'�9���w6ă7�Q��ѳ��� �
+�,\f�e��'���1z ��_D7��~W=]?OT�A��/�����!V
+ʸV�fx3;I[�6K��j�0��z&1������Ln��B &�؃�k̨��@��^.j�d[�u�9��wx<�
+,�0�/> ��	�\�q�����Dm�u��e�hv��W���*�ּ�����^�����Bὑ
+�9�U����!+��wǡ&�]r���e:[�f�2�<��0C�l��d@��
+���Q,�ь�H-[��_� lyy�I�J�g�� �T"�y�i�B���?�A�O��V=1�	;@�9z�s�4�"����cek:%L	)�1<�A�F�w}��:b��hS�>�H0�k�VQ�^r�-K^|�;��,��CӨ�Px��V�l>I�5b`x�н�1<���Ga���97�����nյ��H�F(0�I����͎�G�3�����%s���صԸ���
+m<xF�7�0��V�D`�� ȃR�a}Z�jS��z��]��	��W���a�*:_���0�}af���*�B8��&.�� ̅��Y�c�����VS�n�4���b�׿�����OU*���$l-;����E��d,q��t^�,��d:��"k�
+~��]��0�� �P�o��LH�TӳM�T��s�.&��հ�`��2,�ʔ�ZH舄t:7���K��}��i+ڀS����u	`�q��� ̓��(���1����-�;=�w*R��Y�k�s�Tf<C���.Qj�٣����z��</��"Aį���O��㯔�x�v�������#}V��T6nTXx3��2���!F;%V��r,~?��u�[.���(�A�?Aq9�8�BG.y,����n�D���|aK��GI�_㒧{,YNL�V�[��JYӌi� xDLPq`O1�",�GR�B�_��÷������~�#��>�$]r(/�]g�f�`'�^ g;mB���+��~�>Fe��W{( ��}�����<-��J�Q*�`0A��m�d(�	Ys��>t�c���I�(�)�AV} ���
+)͔�o��cFl!*e�AqZCi��+��3I��2C) h`g�{aq�>� ���Q�pv'����u�jx��� }�>sk���Q	�3����{`R�U����V;���f�����p4L���o��3� ��P\P3��Ǉ�0Z����^���[Oz*Cul�1�W���(����(8y�߽�ѝh<�tG�~A���N�����+�9艱����d��Y�X�_�$��J)�D�d'tF��\���z�Ȯ�r�o��^����B�,"�Ո`(�*�ɷ���ȑ�.�_{4��`���� x��F����h&k@_���*vS���x�e����r#���)�nZS[��b��N���u ��J�Q�7�a�A3PM�勻��� U\�iF������6k�#9�,4F��w'���*;g�̗�����/�V�������͠�����&��̷�/4c�p���a��A�1: ����) 0��#=xO��+=ODw	��H�I����x�!F��Yr�1��c.
+6,�]�?���B������R��T��ni�9�O�:�c
+w��㶑}H�9��L���j���l*=5�v�X��֑�M��'?�-�~���^%��Q!� �B Pšn���*e6��%r�ٶS�9%VI#�f�]�,K�qv�DZ����{�B���M>�`�)(!z��.I|�.��=m߰��U�pn�򰟘��c1ɢ����:0�=y��lgD�X��Dy��08X��0/��I�]�>�N�*2cBx���	Ӿ"��4��'�Xcd;��4d�&�3��(wl�
+WعOǟ7�Aof�o�'j
+��SdQ�&L�������L2�bn-g H��HwA�듦�rH����.�rq��^��&ez3��ˤó��0��Z.���l�_N�  �c������D�A�$�ğ*U3���q�%��3#?�L9n�|0��KgR�Ym6 ��%E����h�`�WT�oz��?�u��3oT��M5l��%6mڻ~N��l��c�tGh{���� _�/N^u��ߎ|L��}����g�h�|� ��B0Y��H�&�>�7Τ�8�˱����s�
+n)9=ŭ�.D@w ��H@P��XM�E�Em��.��{_y
+F��18X�
+ �oἘ���ٳ�J%u{�ǥ<(p�� 1�I<����h񺫟��E��>���t8�� ��	�ڞɄ��ɬ��ӥ�qb:S2o����vt��Yu�A�"�c5�6��v�˖9�Me`�LY�M��Gf*�z�7l�'!8����~a!���,?�^?Β�b43*qh������ )Н��xx"Ɗ>�_�՝ !��0��A6Q��8HCM	ک��	`eY�mʲ!5�$φ@�OS��(R�UwM����w~�s�9������ض�CG���f4S���i�@}�Ԟ�e�����?;�Z���o�ݵ��x�_��	)�,�*L�*	������Ɖ�U��P&kE1a�e�Ω~D&� B���:�	�hn�'*K��l��LBx�( �!�O�q�*�V-*��-^��҇�Ǚg� b�1�ik��ɔ����-��v�O ��A&��z�7��Ht͸iM��=��ŋ������nT����B�R�
+)�U!@"`���a$��3��oO�|�S�c`���M=�n��3��8S����rN�����s��ql�'5J��]��p�X��t�����q��a�Ih�T�̍�m��m�	�=kQ�ၔ����o0����ܦ������^��  ~a�h��������һ���\�!��c!�]�0�=kA0�oo6�����c@Q"0U2�
+ P�iR�B�N��������7��|<��*~�-1\������_32�ex�p�)�&j.`�OJ�����+��Ȼv�u� ����@B�D]�%� e�v� W� `3�٫ݶt4|{����0�4�h����g��,@$�����UkU���RU*\�,�d��O�1v�B�iMݯ"���7��� �ғ8�&'��tfZ晉�}���~�h��
+^����K�Ö^��|*
+
+oRE�NO��!�@�w
+�ݑ��@S��D�돜�j w�[,� ��١�\� Oݵ*�/,��y0�WXt��<G	1>.�S.5�����i1)8Q�LK&(e�'ۂ	�H� �U.?�F-˔G H1���(���/�L������h1V���Z�R��଍��Ci�<�q'��cf�;3��%��0b�}b��L�o5���TP���괈�%T��J�j�>���^����9VQ�������k@OO�����o�����>|g᷻E=�XԢ;� A%0
+Q�NzU��x͜܊�fYА��\fp 9�e���d��<��B< ����)fZ��wZ��{'���8�C1��:������;t�+�����
+9�A˭�0*Ǝ�p�ul�Z.���D��'���Ta\� B�
+,AP�ǆ�Ƣj�YIR�_�S3��f�t�0TՄ�g@�&�t7��;|��o~�@e�\�@ͼ[f@�WG�Ϟ7̩�)�������&�n.:�{����f����
+�z��ٲ �q��S�0@@��s�x➯N2��8!I>���Դ�r�f����g���7��Ø�9�e~@�a"���sXCV���'�yO��w��@�b<��~<F�k���@3��M����ox��B S���q�߷OY*��9_&k��jx�����~�PF�,���f���޴�]	�=�mg�YS�抢4K?�e~�s2��82��@����!<��q�4 .��.\��֭�Ʊ�@�2dƋ|!@�|�hv���|� �a�C�<���.K��kO��J�U��'!+���$�B!���-U�ԟq���s�n���jGp��$sSca���%��n
+@d� �`5.�$�͟K�st�L���sL �Ğ��f��
+���^���i���8�&���~��r�ac��2�k��Q�d���(����� ��=O�!>��'Ɗ����c�n����[{g����K��S�	Yd�V#�[%�}��ry0���� ���zb@Jƪ>IQ�������O;s�?Ё�P���HA�ղ��M�:��������*�^�G�}����V��X�����w=��e�!��R2I/`��R��dya�!������&����I��a*B�ƌP��0H���8�ɌY�&-r5#�IN�r��v��TF�ٗ����Z�q�x���m���P�YSP�����> �!�}ސ+���ǥ��� �O% ��e �OD���_s�/:�|���)U(��a}
+aP��%��v�'�Η����˶���؁��Y��Dc�UH�S�MG���뫄̥�m��Κ?�f�ׄ�#+U3O0@�T/Yw���� 5�^aR����f	�y�Ӥi[9���%l���"�\g 	e�n3,�qÆ�˛��,�z��3i�L�=_�j�*3�ژ�ONL�諉 �`
+�,�K���;1b֝&	��W� �Yz2�S-G6.:��2� fbOna�J�'E�^�Uu�zz��S�w2�e��o����;����)�ܜ��n�˄�e�mϛ���w_���v��}YMW�"�P�A2�k�@H��3�q�d�}��ܴE��FM�hf���Xb�h�qq��4
+4A�ZF5��S\(υ�Gk�K�)\|�-��n]�6E%�8
+Η��z�"�f��N��v��G%�-ct�bp����O���W)��W$�pz
+������Oq�~����2���� ܙ���-�h����F\eLI�̀� �B
+�q�h
+̄�	Foo�1�w��I��b3��iPj�roJM��� c$AN���Iz ��
+uw���]@7�A��� [����X@���#����{+�./m�b`Xb����E �!!x`����{v�6����}���/��Xw��߈���Urs�]�K���G+@pQ��I�q�xO��ԍ���۳���y�`�-"��x��Β@3@�R3��2��9Ku�	twG�T�tG	����c�l�/����^N�h<_@zA���Z�f�"��jK�E�ej�0B����kev.t�bb;��9	ؽ��I�NY�@$
+`�yzj��,r��xQ˵O�K�|ꄥ=}E�tS7�[G�v©cc����3w��Ϳ��3^�����N��q�8y$ƺu�8������e�_�rnTh�!��3b"��d��/ ��X��Ď'ڞ��p�t�g��u������OѮ����K���K��H��sL��$�WL�M���	�6Ic``���BR�:�*N�R	�+ ��k�2m�9Qk�	�t���`;�k�� ���X��*��s� ���	S�<���@��a!7ۥ��P���oZ�����R�V���\�Z���/~P��Gۏ������{3��
+A,I�q�O&�αC'S9���l��p"9L������<���	d�Y��M��(��a�È	�
+D�q^�"_���._~�+C�5�X�GK 1��f�е�I�������팑e���vg�4���Å�[4���]X��V:��a���~�7�:��CVL���e� ���3�d8bCO�*��e�|pZ��Ȯ����R��NE�?	6�ABB��8�3���KE�^�b�.Y�~�%W~oj`��m����b��a��e��0*;g;	g����cg��لw,����z��10b� ��7�O��/E�O���Z����jm��Z�����sڱ���T��'�5�<6!| ��^C
+i'���C"1��dd�G�J��NN�Q�(@��M���*��D�D�)�l�g# C{���j$�OJ$�7�W<鑧_-܄l^��4O�VF�'�39��-��p~8uvP5�e�U��:�l���? ��lMkH�1�fU�g�0�_��^ʕ��B W¹���Y��!ym����~h����BH5͐I$p&���ݨ{���6uf����)�rQN��';�`&5��l)��[2��D��O BA��K�z��s]'��;���x�����3���s|X3ם�6��c��1���i���7s<����­������_S _tA��JZ��z��f��.�$����
+&��(����h8��7a��I�lJND���H���F��Hňk�� A�*�xy(ũ�I�>�)�?�@�K_?h�F�n���/ct��
+u�/�l�l��e0���W��r�!#�g���1-�BH�z����+��y/�-�kPj_��h��a�5ԫ�$� �J,2zYg8Rj5�s�a���$��t����ۜ�6q������e��֯�QI��'E�vI���o���̟�?��[�1��h!)�hQ"!Ҥ7N�X��=c���\f�j��A)Q:'�7 ���,�i6�%QS�T,�(�t&�_4���h:��|� �~?����Ln����0ր~b<A�8����Ρ��Ǽ�B�0�M���qD��	�EÄ�A��7�N��K����� Q����a��|�d7!S=���	�*���Q�NB�P)����W����[&����
+�z���z�b�6A�k��MȂ w9����e�����p��A���Kv}i��~�?��S?�E��H�P�q1��ļ+�6���\5��o��P��Q�����yi�\L1��� �0ϴC���Ky!���$� �ms��f_ ��TW�����-���Wn.���ę�vahUhې�00@z#�n�i���٩��	tw3��ܯ��mgt�0�����h��DS/�^Z�
+��+��?��UCub�Hx����" p�X���Βz�g�WVѴ*?5�1��4��bf��L����LR6���>���>/ėZ���:zՇú��⶟�t�8Y���h���V���k A��+_W3\�s��3mm���i�rږz,&<!��朋�)�ݬI�=�w
+L��*֌�`;)=�G8���k�����fS���y����G�N�9����	��04����,	=�I����8�B� )a�m�JҙR�^p�&}�2�$7��1+�`{*̑���$GɁ�C@�b��&E�E"�o���B����
+��������$�󎃽3\7��,(YF�~c��BO	�Ra�X��&N|�[Q��I��"*!�G�]J Ă��׶��Fr퓩�۬  k��� b$8�<3�+m��Uv�+�Ҳ��GC!d���B�Gq��$���_�z�W@� &�v�ױ��{�2W�����/�\�D��ȧ��Ba%�_q�|��Q�Ǔ1�`��𵊪��-' H��\����&i�[s$fzg|#7�3W'}��5#���-v3+79�)� R ���(���,�������/����ζ/
+�l�  �۵#�!�63�� �'�=qlL��3��O\ȴl�GX�z�fx����h�P�I)b�-\�۰(`��Bd��S0��(Il�Y��gі���1Ӹ�ڷ������_J�`b&7��,	Y�D���#�����36n�������� �-�%��@y���d��8����ᗎ��l=�o+3�KD�D)�
+PZ饁$��	ձ��L�D�O����&��>������F���\Y@v-5q0H�һ����W�)�^���`������S���}}p*a�2�ѷϜ��mJ>{s�, t��Q�9	���/��z�xժ�xg}t�.:^��X���>�8$�c>4Ӡ��L[Y&�u��XM��-�ʨU.��MUU��S��G�A>��yzz�A>����࿘���~#�7L~�H�dr;�_�;��'�h7M�t=�=UĈ��S�Su�@�!��_m�}q{�����(����q轈��e(K��"�Ru:db	�"<��AJM"ݥ6E��?�ڞ�?;�ڽ��w��	G��� 2s���pN�8ݟ"�ۚ( -D�E=����֯^w֣Ա�����qF��.��y�G�ɉI��E0��Q��_��8d�l�#��,6c&�r��p�uQ�Hǧ���,���È H�f��7i�%�:-�ق�oӜy/���@�{� dg:G�è�(����CC���������/��bV*&�I	b�G;)��o�a�\����ŋ3s59O�|iZ�~s�,/�$�.�`届wpU:W��%�=��޲�{��nx(��Î����'XW���nJ>{g�π�&_��!�z���/*���|x�ʾ�]'���R|'yjx%DQ�"f!5�b B+Ԧ��D	LLS�m_%� M��!�uٗ;$�r�6�U4�O
+ 
+�*�tm7�j1�_�$^��v�8�r�
+�NAW�<)�4	AS �I��X|RB�b����Q��IɥL�=b!H0��P�X����H�8���e��x� Ts�ipn	�9��Ҍ�O[3��{������*[�Z�Ȏ�=�#�]"���k�/wW~��]7�Oݺ������S(Tӈ����G�4#��υ� d^�N>�G�<�\_��<W51��:��]���n^+�V�><�^�Jj�55v��M:�S�Axfr��}�� 3���I������k<���]�n���rߺ]հB�y/d�A�Hs��fAD�]wfμ�T6�rjF���Tn4+ p���8�k쿺pJlyLH�
+�*�Q�X����{�8��wy����`+Wz��!�v�f���2�q��vT1|��9��;;�E<�m���p��%���U���c�TVD ��n�ȴz�J�	���#W�[�K��"1o&�&�X�?�g��e�a�φa��f��2�IH�J�
+�c�<��j��<y$Q|�� 	Y�j�d��� � q�DGj�TL�
+����Ch 	������8�N�rd��in����\��Si70R�?y��ꗜ-��x��0�5_�wN~m��?���_i�8�S�Ƕl�~�c�Q��m>��	�J�������||�2���
+Z /pN�1.S'��� a�����'N4s�;�%��ݹ3'��p�>����ݓ�ԚC���r��42F ��ak��L�B
+�F��٣�}E u`(�x��7D*:OŴ��H��b����Oi���㎓^V��+�)��2��7h��~I!xꨖ�v{�Ē��)�D+K�S���>/e�;c��G  +�=L��k�$�:�z�m���ӌ�7�@����I��`�'ެ�[�T^��}Y@X�)��Ж�J��V�r��49k�ք��|�qS�O���آ�ejv44\��|e��@`���5r��11!R�0��Y{���\��
+B竂 �c"ID�Z2p02�&2"��&������fp�զ����_��g�lF&z�Ș�^
+q� <�>Q?�Q�� �n�l���F����}8t"U���&���샎�m���0�� ���Ce��d��z���`��M4	B����5wm�"&0+�����Ϊ��jT�Ѽ�DkXt��k#<�*<d�����k������~sN> ����� ��,̛��:Tű�pp_0v���u���iZ�*�0V��S�jb��@�Y�G�L�dQ��)����pE�`ŋ���q}J(�n�+�'-=�����Go���*��~	l��4�3�M��zјR�dĶ==!�]Ђe�U}ݺo����<�\*�� �#؋��-��C@�=G���mdt8�J��nc5��9C)�!R6t���p�������ԭލ�&@%7 �$ ���2�zNT:��Bv]�M��2�î"7��#u~ԗ4AC��|���9Y��~�-�ǩ�b"��fۖ��i�>�P�ԯD����0�������"گ%��S��0��н]�2��3 �X��BF�73-�&���k���d��fº?�Adp|V��L�]9MfDn8�!��4�B�of\�æ�&Y�ij~u�Lsk`o�r�4?Z�4��9�)����$�8��c��*�y��Z�>@D'�"T%Yϴg OX�L�e�}s,5'���SM�-�0�V�d�5�9��E�f`ַ�J  4&�,�)���ӧ�E-�]7~?V����
+�/���������(�,p��i"bq�'��:�Gy�D%��c+)4
+ 	�q�})�����#Ё\�d[��!�I�'�D����4]� v��X� ̜7�e�iAZ�'o�n"p3c0��ܻh�����$i�k�g��gZ�F4a�}���S�Y)���9A*)\ ,�G̻��}������~��%n/�b$�vG�7�{Z�8�6��[��`�X .��[���z�j5�
+�P>N�Z�'s��ތ '7���r������7���g�Ƶ&d�����4���y|~�sNG%��&�$U?M}�D�F����q�?<�	-���sH��@[��r��*�p��}s����
+�q?�Bz`��FlEk6<-��ٕ˙�񸣅5�	dN��Ԝr�8����'X��0�P�6)Tt����ƻ�ol�"X������P�M1v�i�)�����CC������q�5-�qc_�7�ʣ��T�Q�Sx~җ�H)fp�V�i�}ȧ��`�A
+�s�-_)+��-C�ݘ� �9�Kgww��?gK
+���1v�g��������-����i3�5@�^c�,h0]��GN���.%P����'��Q����]gE���g�܆���~s�w襫��<��uK�Y�?��/�LY�'�V��d��3�ڵ�;�BmB���J��rNض���d����&�W���YJ0 �a��@I���R˖� ����N 8��ܥ��5�#�!oo���w����#$p�`�'����(R���IC��f��+�=�a���Y�5r�Xg�����c��
+��$L��/Mj�b"0<f.�8BMŵ��h2��{h�E��q��#L����΃��5L�;�n�7�z\}�����γ�/�'HHO�
+H��AZCT�����97���'�U^� r��a�l�]�0L@�v�e���L�9�ְ̟9�.�6��'38m���2���+B��H�[S�\ 2mg^1Y�vlLd�*�2M�I��q�u6?�fOz�bZ��������O���i��ڂ�U�:*C��� �g�5��l�4��ϓ�9�~v��E.�6�A10}j,���,�K�Q�/d���;�P���/�X=�\+��#��br��؎��W�!t.�٢���Ǥh/h�j<�A����Lr�k[�0]���?}�U�>P�e ;A"`"B��8 �̜͖ր��Ncǻ�\�N�D��s�='�@��e�LZ�P/S��@ׁ}f�xR�Qg<^=�vM_۱�?�
+��P��3Cl���N��B�2�|a���3F�D\SW.
+o��ÿ����/��
+)"yRD"��.�*�$�'����e�_�r�G�$YM��q�bB�d��ܿ�j�hM��6\�����&�\�sv�4��ڟa���r��KP�-1�V��J�����sz�eر����"*����I��mתS�SOxA=�1xd�O��>��X�z:j�r6J��N�y��6�C�L PN�[����&���TcJ�����T����>(Q�͸�cެS	� 	"��V�	�K�@�Im� �d���4H��AN9�%���  �\.z ̃�W���{@`x≓��rwKW�M<���/9[H�XA�Mz��P��L���ڕ��xה��_I�Ș��0�����Y�6���"���U�C��a����ڍ���:��ˀ���% (���*F��l��UE��4��o}�[���A>���QǗ	��I���ik�/v���h`�|W����Tg%�,X�t&�0�I3}?�o�h*��^�n_��ґ�1�P�`sU~�)e;�cZ��*�445W�tȺ�fʳ���,S�Ă� +��L� ��/�{�C�O]V����s�M��6l�k����fK�cs�� ` 9@�!��Ȏ�D�;��ɜw�Oڡ� %ND>|O��I�H��h.wi����F�h#��	� p��ӂ�� �<�z�ɛ�0=S�7��ɳ�I*�ͽ
+;{�������}4��>/|��0V_#AO2_�BU��w�@��k4�DH$aa���5ǝZ[��j�lL��o'�K���m���`�ղ?3�A0���$MGK�Z�X�7/z��'�o�����6A,8�P�k���Ʒ�8����{�'�=Ǜ�_&�6���v$[�p���&M��UZ�d�.���V3v������M�<K)��5Zˏ��]��]���2)˩�~rb���d��)��d���X����K�J��d��d�.���ƺ�����I��?�����O� ��4���jb���}�9���i��_��q�h�{cp��}�  ��$� �'P݌�f)���q���a�纇�c.�8���.��u1e&!� z�@� �WĴ�@5!������i�ҝ��.Oq�X�q����N� ���l�o�k�4z� @���+��4X^�!a��V'�������D�"t�N�A,�u/���D1<?A�v����9C��9���ٟy<�2nJM���%Q� ��cb5EQ�j��7ڇ���%�<CÌ̓1n�@����T&<�!�k�[[±Ǣ6��K�O�G��	B�OD�u8��R"m�<�w��Ű�l�5�9�RA���2m�j��@d��c���`���>��9'�b�'�t>�|9���Y�h��D!��!�����^��G@l (	���������p�ſ���%
+q��ԑo��lW럯��YH� ��+�b�N#����cy��v�9~� a�"A>��W�x@NL�OU'ό�p-��0��'A����s�0��'θK�\�3[�Xh)�V t�������L��σg�U�����)F_E����݉�Rg���U���Y,�� t�$k����$u�l$�)Y�w3�i��DSu2&E8�;<&�n����$�aW��:ŜV0��6�pB*Z���Q,߰hŶ[�G�o�948�-+���f�	pP��[jf�;���a���Kh;���b���.Uj�@ �R�$���,X���b��$�8�Xb#p��@�۲I?���,J4�L(�m�� ��:���؝���0+]�A��n$c��ܪ�r��=&I���v�	�R�h���o+(b]Hg@�������Ă<��)D�����}����6Ő(����P� e6�2�"��?���L����hZ7���~�g�6�f�b�����4��h�Hy�a&�`@y����nr��}����w��# ��	K%+C�~vi���0P]2���ɇ�{n��G�g�[� 5�g�@3|�P"Ȇ��b�V�Q+�����|J��`�1����*Ѻ��TB�c;��DYImU��t�J���G�)g�P.@g�?�d*�1�#,J��Ą�U���vM���:^�ޞ��+%6jcގd��Z6!�#���ĸ{<��@�����Ï�MJ��d�$�y R V�P1A��PK�,�V0��4GҠy�{.��as@P��4�c��	����� E����\}���ـ�=H��a�5h#d\u=�jՠq��2���%��6Qf���҂[�$�$cCV $������}��x�����/10�c9"t̲iO3j���5}�o����8���(�nP`H�4��n�
+J'Z�P���������/;�9]�!&!)"���/>g���"n����/q�խxä_v��^� �� ��,��_���M]ȱ8�͘v�U�dS!/������PK�������%�f���h��o dhA��M1�TC�?�������5`�3��ceG�ô���U��L��k̄�!�Ț�\�m�;�!��aF�V�
+�) ,F�#��)�v�jk���o��[���x��14c�a�3^\0W@�UalBcFA[�0ax����J< ��o����J|��5�k�"V[I��'4H2ș�LM��)�9'�"�͠DB0���]0�d�db6e��$��v�iW����}�t4������ܐ��5���L�-�΂ɼ/�b�`��$�����H������1:u�����O��O���[0���Al5��e�ڿ�fk��e���|L��#�pz�pe�K��N1�ʆ�4�1����T�3S�(`g���}$<At���h+Eww���GUE��ڡ"��>�}ǵQ�`��x /q�P�D� �>��-Ww��Fɕl�KCw�	�@���eF3r��uh�L::*�s�fZ�z�UaG�P�x};�����1MRx`���CL	|N��r�9���L|J�7��ծZM3rG9�Ǭv
+�%����xF�g� A� B)��iU�??�
+o�������w�����qb� 0rC7af P��MZN8!�X%����=o"�v�5ގ��br��RqM��NάC69u�L#d��/D�d$@H�^�o���RN꿭�hF�v�����ph〗&r��+�\�/��YƜgʔ3"��	����֩�}G'N�D�$���G��1�A0+ff��'V�h�~}ˎ�FW^�#��#�� [�� ��)�?��5����~�����Q2�yk)k�1�J��t b��a0��u�/�I�R�����b�FGQ�DPl�θ������o�q�w��ɳI���Q"!�4����\�رD��4k�g�<�a	`~��\u@��+=��&\lў֚�y��O� c�@�
+b��`�o�����y�# <@�D��c�]y��_�9�0��=a=��Ed��M�=�\l�� ��
+��:��Q��
+�S�w��N7^��%(�#l�0�*6m��g_| 6!��`ن$*to���k��a�vӥ�Z���n��8��{��LBJ0�@;�E���m�[���8�Ц�k���DM��q��E�F��G�DJ����Vr$n�@�Rm���u���~3�!V�*�Y�"������t�䍗>���":GD�oh6;��!tܾ_����a�4M�<N��5��L�Ĺ���0�bIJUc�wa���cڧ�'?tw3��C���1֯/a �GKKW@�$��$I*)5JC��Q��4�����Dl�@ z��͘x�4��o�9�`�~г ����r�E�'��0���	!V���:��]��D�'�6&1A�|3����/d�a�˘��HG�G:R��y�1�NC�aNx�!#��5[cH�����_@�H@8 ��(<�wO��>:v����l�N���K�h�{����o�I�RaT��?��,�ڵ��Cڞ�Ʒ]�]Sg���7���|0$�����t�����B�8��o���@F36͙6�틆ԭd� 8SFz�[��k�a��5. 4u0��,���G�����u��Ԋę�%����:�lqZO(b�I_0&QW�DO���?�a�sC##1 �2��|��f��w��.p_7��{���0�z��b�����oIP�̐�>G�G����2�#��fIh���`��X��	0���{��==��[�?��;}l�N��knqt� mқ�$�l"IN��aI���֖	b�h�&}���W��F�׹��g+����0x���k���&���=�eL�ww�c7�%���?J�\+��B�mL�g"A��$�gGY���4A�;T�4�k�A�k��;il�{�~�T��A�uC��L��!�r+@�cP5A�WS�Ӣ��v|��}�'>���:��)l�v��+h�� m2��?Q��P�q��wx��?�vM^"��)=E$=(�zkRTL��X�~kq�2�
+W'1O�f@�Lo`�d�%�,�pA6�R�j��rϜ���6� 0�iM4�t�~O��K�k� ���/$IH��"�ꗫ*��_{���݄{Fctw/�C��츅01B��ӏ>�ҳ�gJf/�N���7C�9�Owr�m���1ga��#�pOF��h3�)����.x_�b��aӂ{����#,[���臗�?�k��넔����!(m*ngPg����E���%F���g ��P��`27��� ohFeƃ��q�:ꨕŃ<���N |?+�6�"�(�	P�f���L���d�F��'�ƹ�c�I8#���
+��k��y�\�`bV�CQbs0 C� ��*V �R��E�������\q�	�
+[n�0t��@`/&yW�gܙ0��@��� ���bl��M�?:���{_iyj�]41}��b�#"	� t�D�VΕ��o˦#�Hд�,�3�+�)/��)N {��M���?�N� �Q�s�7x1I�}��
+E�	+���%	1��<OBa�����l���S��/�
+�B/.H�+FǕc����aǩ#��_��S�<���18��a�r�����29!	�I;�ٍ���(�ǜ��-l�,���I!D"S9��<)��^����ڪ�+�Ü������1z�֟���Ѩ��5"��%D��A�M��K(��X%��+��d˂';@�B�4 h��3p�=��Kj���&���S?|vX��Jikm|�m�JS8���p?�D�����QϦ�u�x-s���ph���d>sv+8��Lw�ғxvk~H�k�9]��(��m�:!A,�9��J���e�鉯/9��r�;�Bl����^��B;ʴ�{�ޡ�my��N���-����S�ص�]���RVYʀ�p�����ʌ�x��V�V �Υ ���f��q��k�&��9��ټ�n_g Z�gF[p�T�Ft�[��n�vқ�f3LF���y��2e�ܶ 6�"3�Y�G�:�KLGg�Lk��/�+ tv�@oljn�w=���FF##@+�gF�h����_r���'§�� �H��BFXҖ3݆fn����v�l��dz̶o(�̊��n_�A�B�Up��
+��k���b	fܾU���P�_v�?˰v���1|D��C�̤A�"����ְА��n����s�g2�����t_nZ��f*���@��@�%�Ep���[V +V��O�ӎɒwK���	)?K�QV@����5�Ӛ�w�^���37�zs"��k�q��������74�^��@3T$T|t4]:Y�q����}��K]�É)qG�f���5s��0ۿ���JO�- ��t�����M=Q?]L����H
+ɒ<f�AۄAF��`�����{��8V�`/X�T�:��S����~�v��a�O�C��8���}Gn8� ��R1$8~�k���T�J}�����������#TvrF�wi.�y��ן����� +��j@�[o����H�)�y�ȶ����S;JA�+���J�3�m�f��0�0@}����8�0�q�=����)#����$�)F}��
+�GU��Y�z�$��2���p�C���^)$=I�t��D���J4#AD�l���-��C$�t�����z��vf�=g�̡\gM��TH�n-����8|h�ݢ��"E� mN�� ����Md��&��q�C����C�!#�fzA��V�If���M����J\/�0�����/��7�/��s�>��Q*������ʞ���F�aƎa©
+��0z�D�� �����o~�9��v:j���v	/��Niil�t�je�M�k}I�A�1 �0krR=;��yF;����`��TӲ��VK�C?MU�������%H����(a嗱
+1�D��$h��*��m<���=��~�շz@��X��Q���������ق� ��V�Ҩ��v��/׎?���C�|���z����O"�^�G{�ޮNB_�!}ye����@���ϔ���s�����gX�S�U;ȁ�`�>Y���I��v����o�10@ػy4<��]�����b���x�� Tg�?!!A1{PJ*����Q������J+ ]�����-����=��ڠ���}e�)9P3��`�;��!�b���W_~z����j����1��A�)���Ht�tW��~{QF�H>��S��Eh�1�l����43��X�	�D���:����p���v~�黦�:�m��ÈP���ڨ�g��dm$���]=�ǻ#t�i��rY�W�����0U[C$~FR
+�`V`�S��Y!]�t�����T�V�B{���J�q��-loJ���D�2���Xh��g~#� Ҁ�q8I�R)�a�R�|OHz���#������W_4�ի} Ђ���P� z��&̜ ƺ	
+����`���~�G����� 9����ܪF�#[��+C�2	H��< ���"`��1��3�llBd8<�`���&8Ab	<�ؙ1�e�E�X#[#���U��w�[�������uw-��nU�s�w�=�'���υc��#����eQJ�E�*�o�5���Q�?+
+�(�6J-]���Z�>��!�G�(�_G__	';�){{����r��!�3�,:'��?��o�ri��M�y%��BrHjʭJ�%4��= �D`v��O�ʟ'�"p�e+���00*��l-���������Âĕ��sCG�j p�ر A�pz��`gO�l�f��hdI��CJ;H\�$�$�ץ]%��R���L���{���_4�T��wC��[<LW��F��jHr�h�ģ�o �Th�'�~D������[E��D����6� ftl��R�|���z�x�F��#�]���|���m���{^�P#�������<_�Y[0��j9ڈ1��`@��A��E;��%�<�E��1
+>���1z����I�Z�~߅ty|�~NFG	����]]�����bw���_��<2v˧A�3 �Ȥk�5�=�h77H��(��
+��m�Շ���L��5q+q�bW1�7����B��]�\�.
+���se,vI� [|lߞ)���h���>D�F��m,YQ�!���dF��<�v 3p��[h2��0�(e]��/S�=������& �=��k�G�~�[^(��,o��3A2�0��IN�s�'Û����6�QLN�j��-����z#h ����p�		���� 8��g��42������0n����Q�!LӜi�4�M�zQw����6�wf��ꮎ����d�J��!�2>�<��2����v0;쇣x���b���(��Y�X!�I���p8!��"F�N�T'd�y�m��S�mf��^	A��P!�	R� �L��\*^~��C!λ�CC�ۃ�~�-s��Yb��0����i�ƾ�ܹ��_t�[���5����� bd�3HZd*b��8���!LZe � $�2N�3�c�=;-R|�G%������ǀ!F3��`  ��6�����\���+��e�m`K0 #���$�UP⦋����ֈl�,U�ARJ�J�!0�~&�
+��� � �|[�zG��/f���H�AmL, 8��- �I�%'�n��!=��%���O�@J}e���Bu�����?��gb�Y�������g�������������%$��чi��Am��ɖ2r .��c��w���F11�Wb��%!iJ���C�6����{U�{�B���b^G>�#)E��b�z6T�i��ў&tZ�� �L��P3�����}W܉;2@�ú����,�i��,5E�6�����I��3��3?up��<U|$�ٓ!����.ӵ.<d���:�0e����/��k�|�&��*����'9 $� e 9$i�� �|��;vx�;@ag���-e���~-S.�r��I�Y�@�e�  X�b�3�c bFK�7K� ��LN|.TS�w�g��&>�Si¹|vr߷G&�M;
+�"��HH��0t�:�`@�F}ǖ `,K�,a�iFY�Y�һd�1�Y�1���`�7(��q�L\n��!s0擹^�oZ��7�n��Ik1�_�B<r��`��"а�0!tL�y? �L�	p�um(�Pw�m��_̔.�����H���P��o"v;Ťq�}��߯rF���' ��Z��Mr���fq�m3���WuKMmUu���O����%٣�9�T�~�!_dE)�ϛ,������K�}�}��6��E���oU��
+�?kߝ�iH������C�c�y��fr߁
+G��N��(�X0�%{3d�:J�Xh��u�q���-��G5+�_4faGa�7| ��z��nZ⏥�t@e�7L<�;|�>���}�\�7�؄� �r�~X�}�.f�$�ϓ��v���%H.Ax>��@8=}? �����f���&`��ZX�78�
+�v�1�q�ym�����]m��
+OЧtPx^�����U r��r��� ��~D��[lS�Gf �O�&0�����W�;����%�6/~�����z�;~�����"J�	��Ug=�&�zF�U�8$pS�}��F���.n�ʥO��%?��0�X"�!6�I��dU�����1�L"*�ꢚz�v����Nf��fǈ��K�<�/13��!(�e��ƨX�g&|�+?v��&���!\~M��������<oc�o�3��}L�������?����<<z-&��!(��fY"�d�\���  ���iW��%�S�P�Z	'���&Z�dz�M`���99@���ƌ��L�w�3�-�Ї$ff�l�e�ݾ^F_/��#���$����[Ʈ-����'��]3�X�'K�%����@��G&��c������ �R .�e-E�	X�
+�"c.����28ȸ�{%��a�ym���~!ŧ��A�� "!���!A��f��x��@�c�a�<���Y�A����I6׷�.�3v_�h��B�F Xj���]Đm@(9,�擩X�^~���<��+ֽ�����":U�}]��㜢�J@,�+�cnj�~��W߽�������$�B����%���B�:�����k�[BW�U��u;5�]AO�Tl�3�%���cG'�[:�l�1!�+�(r�d־�L&��ES���>6}U���{��.�˯��� n!נ�������uu	�>֭������e�{�}6���g�O�4�	Y�ߊ_	)MF��X��9:a�9�QV":��h�H�a�����56+�Mq�o�����o�U>����Β7z?n�9���ډ~��wry=��z�e!���t������ᕋ�xax������N�b�?	�ϸ�"
+/�����:�I$�~M�b* i�\���}�XJ� ���e�2��|��>L\q�-_�w	�/1�q� $K�MG�+�.�l����dp�����uw #k�ơۧhm�&7qTv*� C�INS���3�����C�~ݳ��|`w���� �}]B�`ւbh��6�8EPma�+���p�W^�����¾wݖ92�nQƧ�1�Y� e�4肿ɹ_l�����O����t��u��lQr�DF)`�$� ���&H��cF�_�3�������#�^X��g�X��2������L� �n���n��/�l��h��.z[q�������8#�p
+�`Θ*��n���	x��rh�]�W��malؠ���Kr�5�?�ޞj�������&�l��P�ʟ���J��
+��/�	���_K	�X ��Z	������P}ߏ2�S�(]����WG��|�ڛ�����i�d>��X.@B\-�`.�%��&�?W���~����}��C��:�|/eA�����Pw���u�H<;��"� G���������� �іlO�A �C3�	��Z
+�<OL��ڳ_{����0�_Bg7㑟{�eҸ�x~�ô"0���5�O�Iw���7�s�⦛ڋ׼���7S�J�J��	���
+vP5&�)C�D�H���n�1�#34sC�G�]����{�m��>��Gm�>JA�LR�m�f62䉌(�����o���o����K�$���C�C�N��&N�	B���}]�F ��W:��u����pb��TϢ�<łC���P��;?�w�;�|ٛ�X��I��T�u�@ z.�QQ���I�	�b�;ʣ���B�r�g��~c��������tA_���g��Ck˸�.�B�������^���]~�����l�"�S���n_�0'�uȈՇ�T jY��`67e<({7��z�����k&��|lb߿|�˸�ND����u:؇�TqCP�f�Q���
+-�L�x�0�1�_2
+\2V��#��c�jc�F� IgX��E��$Iy6��wܱ����pk�6`�mEt�J<�cZ��	��VB�g!�����NL�?z�M4=��bj��"���3�� �L��=E})Ov�p%`��h�����q{Q)j�KDD��$>bbF�ˀx��7�t����\�����n?>���(���i��ti�����.���ۮ/�G}A�������bpa1�Q@Σ���	�%�*l�8��7,�Y��@uԫS0�J��j!��ø��_N�A�bN,M�@P6�0��rf�(�XZ��A��������mS�J@���p��!����B��P���, ���*�͒�oil��E0�V&� 4�&-�^�"���;wL��m�|^��������}'7p�|��E# �K-�T�11�0L�T:����2��Ȃ�ɍ�or��v����v&�A�m^�����u���8�eW>	߿���}!n��kW�������>G8��8�zюwf�O^��������h��S"��!�)`�Љ}�uJ���r�V��N�����.����a��Ze�hJ�>~(�C������Q>�'�
+>~ŏ�cGW~j-�� 8���N&� t?e��P5Ʀ�\�MC9����eWnZ����D�7p _ɡ�0� �*� d�/�(�TD}�'���[�c� ��E�u=�W:�Xe<��T +���d<��!��Z\}�Q�����Q*Ы����w�Q < Ţ���\��aeu+�I��F�"��;T~��_���}7߃��>fz� �V��<_���1O8ӊS7MHřP�r�g��[��^�lk�v��	��J��H��`J�Q
+��b�3��L�����l��c�F5����􀢹4�Y�C��6�6	[�q`�͟\7����z�?�c�y3�(�}�{m�D$0B�� KH�4�P��B0<�̓t��N�WQ��W����
+����a�U�@2_d	t�+����'������4>����N�f�����'%�MZgy����o������`���zN>�[���?�C�|�gf>Da��L�A�[C��.���I�T�\������}m؃�"x�T�i�qC8J�����[������=���җ���k
+;�ز�l��53/jziV�}��@�^x"J*f$Q��X���K�ھՖ���:XI
+�l���e���A.�8^O����+�O<�/֎�y���}��r��
+!�: Hd=����,!a���`0�p|�1C<A�Ǭ��.rg��)�N�i�śc�)�iV��.��v��q
+���+�љ�������÷��ݻ�`_��>d���� r��aP�8mjW��Z
+k���͝��9��x�(��Yr���AxY0{�fK"!�Cb"��]�/1��6@0���r`�e\S)�%L�if�lF���!f����z���n��s
+;� 8���cJ���f��V v�@3W���Bv�IW���x�e����_�u�g~�p|�3(o$���X�!�Y0$��P�TP)���{�̔��7�D�q�0�a�J��Sa�\[.G���5�Kf�V�O�\i�Ƿ5�����f�BK?��7��	'��%���sT�o6�+:5��I��ܴ�-��y#I��4��ħ�o	PK�u_�^ ��ֽ3�ݽ=;|������������3�E�t.��B)�)p��&-LȨ�9B�a�X�*����C%A�6�|Q3z��z5m��0n	�DCj��Q�@�3�p�d.��"���B|0|x�Yk�������[y��2z�g��[�+��!�H�0 iq�jp��o(�ݼm}/�V�k���'��싗��?@6�$��������;�Ԝ�xĿ1!���حL31��+d���d $!�ؤb {$���R�����X�+M�|��_ �PX����?���Qu���'���u�n�b�����T��}���b�On~Ca���zU�#oD����1�O�z !3$����\�4R����"�2�e�w�UҐ����NOLBr�%�\������z�y�����=WWR&�Aq�/�?8���<��38p D����o�0��,�����ծ'my=�V�0W$�E���V$l/a�gK��~����޿���o���?�E��� 
+��z� ��d�B� Ό0�.W��H���KNH  O�IDAT���,K��fGN��d�%�D|�����Y >S8ERfx�K���uOy���q�_��c�# [�z�˭����u�������~j�@. ��Y\����k�: p��/x�mG�=����E,�υ�r싍,�Je�H�5I��hdǭ�J�jvD8V!+z����j»�wK�	!t0���#���#c?n�� ��3L
+�������Z�k�Q��o6U��8̠밇N0n,ӯ��Ϲ�9���Y,�V���c��Eb�!U�@D�Ȓ�҉(�\�Ǆ`�#��q�->��2 y}�l�z�1�� �eJ/� u�d��Uv)��;#3 %2٬(x2(�|�ʟ�pS;��[Ɓ��g�A�������_J�!�z�t=�����r��K�ep�i�@,�0#wA��>�o���O�?�D�E��?!�OG����2<m�W��R61hD�(���C�p��l�
+I}���@� �i�#��b�u��=|�o�~�Y���'��^ ����K����*��$0ئ?���X��<cK?�gg�����3�S�*{�Ǟ��:ϑ?��͂����@%��P��`x_��Z��8������)�G��,Rΐ�� ��A*���>��x�G ��6�{ ���Zv�D�����kO*N�b$G�=�@�������>�
+�.�e�\.�&��e"���|>���HJ���.% ,� �,�e%�A�z����q��5�8���*���z�),@~��}���NN8����Q�)�#]}�h��` ��f�����$%C���z���}W~�B��Ctw7��w>�� u¬�����n��R �u-!?G,��X�>0/�[\ȍp� ��ؕE�l�Bw�m��ȫ���,���k �A�cSGؾ�) �* �g��������6�� p앍R����@D0��,���5��^�����񝣷��oA��|^�p�D��7��A��3�ސA����-���E 8��|��7��S���,��l)�;�8C�����:�y>�Cbbe�3 it5R]B�o"	@����#�~x�o9,��O��0)7��9��k& 7�Ԏ��F�!�4���w��l���А�P	t��g���7��3o!m S�����$�"��E�"���qc�ɝU<��?
+>f����C�l_�3k( U�3�T���J������3n��bD�|dD�r�\&C�g� غ� Y�޸��	�q��R�����gK��_=뿙�?�ŧ﹂�U
+�t��L�KC�c��:h) +���~����E���N��6�UJ���A�xY(Cü�Ԍ���Go��wm�G�@��'��O���~�J9NO��8F��I�rި����FQ �"�������Қ��;�ܴ�����ւ���%:k�y�������1�po/���ɠ{���-3x�Kpʩ���W�NæMg中}�G��2(�����]�@C�`� �o��J�4	�8��C`y���������}O��{�g��� �s����6�M0�?�l����MH���(\���\��}�������l#Yb"1��v&)@B
+�*�5Gr|J�����,�ʀ��^p0���-޼�֠cK� �C
+N�ҫNNy�7B!^��V  @Ư�~(cR��� �fk<?�;6�om��I�>>��.�@44�e>Bߠ��Pe�\x�b �U�-��Vi�.o(i����8�.�C�8��[�N�5{�%$���!�CP��J�x2A���w9����e�hAe�:'	�j�.�Ѡ��Y�7���� ��$D3�'�k�/�#���֮��џ�ï ��� 6��u�k�K�-tc�ہ���O���6��`M;a��3@ >�k�y���g�����<>��n�v��P�NI����<�1{a"�e)��q����~X惣�6���c=��{�Yt>��=R`�02Vƶ���d�h����� `t��S�''�P.�/��<N2��6Gs�?
+N0�"�[���� �B�� ��`���=�څ�����7U2 �a6r�*
+��o�D/Dq����Ҫ�ѿ0�r<���KB0I�9[{�t�<���?���K�V�����Ҭ��(�����Zۥ!�6���Jz����n�n�c%�/�<�կ���8���" �΍�LLd(H�_M�W%e�o��+����Fı�1� �6�|s�jܷZ�$6�JA�L ����0S@$f�����P��2�u�3�}��׮C>��oDcJ@=�P�s��|?p���Y������k�2&����w[D1�lF3���2���::�l���訴��1,��bV?�iݳ��|�q9��A�,�d�΂��X���eE�W( � ��9Ϣ*���*3�`�e��>^W��]8'߁��؅9���(EpU�0 ��'G�1����32��,%�H�B���L_Y��U����O-��L�s
+���\��̢��
+z���@��X��-�zZi��IL$6�e f	����j*^4Oٺ`-��Ҏ��@	~?��V����#�(Z�p�<�%�SJ���V D���g��^���X����wi.���} 8�vY3.`�
+�k�����x.�-[X��<������ �=Mo�8��[b�4c�����ab�q�Q`M'c�c���臉IN�u1�v�"�c��%01A�U��|�_n��⫸~@�qdy�I2�ڬi�P!'eX&��:b��d���9�1jݬsx�P�^�{��o�w��;���E����*fF@����J.-�:�}�́/^@��"#R ��2W��m
+��>���/W�?r��(��<Pj8�h��?�66b�Wۯ@����cm`5� 7@��M�/#�񣗭=<�/��z���'ۿ=�|!H<� �ĐL�I$��;������%3�/�ׯ�$��Y����|.��0�JG�`kY�`)ۙ�D<I%�Ȁ/�2|�q��ﳯ�o�s��8s�U��a�b���U�k�B4�lP��{	m'�8w�|@Uq3뇇	ݯc�"%�q�Ɍ��]ۀm���=�1�g"���vC�nT�W�N^�z����)q��`k��/����c�˙�"
+%��� �����R��w��(~iʤ���Ŧ�s\���5� �+����f{���%}��r�2Dt�l>�¹u�`!$1��«���n\w]?�R��&�oӧ�-��oV;�Ij	�X�� g�"�]��
+��~��?�������]{��*��!	�K"�)�L��j�9�+3Ũ�X�[6S��(m�z�/��d3���F�ЯhE���NÊF��㰔�,��,O�d�9��Ԏ�C���<ԃ<�����fL8���)P��wcR�}���H!��v��ow޻]@�0#��aF����ʷ�P�0�W�}��BY��ꃑa`��?��z�{�]�������Tp���D�b�Z<c��)�g�&W�m��%�R��Y�D ��BE��Z�d�^���<K�VީM���h��a���;M&���y�Og��t!�|�H�o�9���G��k
+�x�a������J�6�Tl�l���2�mZ��V)�v�
+�d�a��ֆ�'g��K�s[;K��_/%���3U*U��3���}v~v�{ĦZ�F�*�Nz7���BA1�n�
+v�m�@W�S�8�0�$��D(R�	��m��~{�g��o�� =ۅe�����I}�k0��S�֙�`��iw��^Wxƅ�O���L�S3��P
+��e;�=��; ��H!M�fؠR��ԾZ���C�H�i&����0H
+!��^������c.�����׿����2~�I7�����eYJ���v ��1��@��n����'?r���^X��-�9�Yٴ?%>ݓH�ot_TY�B�f�Q���$W��wa�^�E�J8���O������*��wˍ$�ۀ��h$<���=� �ƮX�[��jQ�(ӽ��8F�s�/il�}�,8���z ܽ��b��D��	kg
+	��T,�npd����]w��P�_}����]�KTIc�t#º��Okw1��1n��C�N�����^|��]�3Gg��əW"f�x
+�k�X%�g�%&8�϶���}q�I�0ySYB�F��SlW�a�ڠv�X"�*���ps�k��WS�COI�}�� ԧOO��I��<O�����ĕ���n\~y�{g�Zٯ.(�W���K�37��
+�-G�uiX�c��a5+ �^�4IUo�e��(�> �7���O�޼�!���7���_~�s�7IpA��Q>Z�I��*8���86��&�a��f�m�A��K���Ǎ��oeE#�xؒF$	,I�ec#E ��f�FO�$�����T�k���?��^Ӂ;w8�,��0ad���6���Yl74ıϥ�.``�sߖ9rCi|�<3��9��s��tdI�5J���k��F0z?jȖ�2�����%#�5>t6�. *��<�� U KxOff�G��rpۺ���K}��_Ӂ��@���eNֿQX�]�J}����}:'Suy��:+x,_|�f�Q��+n6A��U�k��u�㏟6�3����9����}�������Ǆ)� $IfvF-%�]E�⭫������K7 ��V�VTj#H������ ����>��r�'����#��N<�3N��.?��s%�z=͛	��(�B|P����|��#9�y�G}6��=�9o9���7é�k),O�) ��L��y�i#T�A�ܩX�De ���bR ��A=Æ���@ ?�$6.��.HS�A������������I~��O\� ����?�4�H�h��Bt.��_�d]��& �G���W฾88�g$5ŹPR���r�~��S���(�|�����Uw����:��e!�7t*AO��@�w����o�&��hڀn�N�W*�t��d��=��b,���ky��;~Q��������w}�(/�ՙ�L���?4��	1�|�s�HN1"w��k~�2S�JG��#d����"��C:~~uL�h[�@�[�u�����b�eH=&�:	s�et����!VS.�� � ��B�*E�D��LF�i*��>1v��kz�+n�@�iE�͓�w���,��?�12y^��F��j�B)h1 
+IZ������L ����3�|^���������ٶ�£_0!d���r������%��W��0y��G�uƌ-��K گ�#0e�,�,�^236q����7���g�g��j�ZhTYHcҦ"V���sp��Z���l�m���7��+}.����@���K���z��K�� v����/��|�������	�ʜ�
+h����� "dI�� ����0�*��Ù��ލ�G/�8g�(���,:���:���o��[�)Xx�*�3�����-�>,S!�$p���|Oǖ�2 �]�w[=��D}y��i�ӹ^V�Ft�2��!$)k�XbQ0Yϩ!  fNL���S!`z�G��z_ `�๊�1��[��4ո�M�����H�o�[��������� .�7���|"���OSB&�	���r��w�$�\�S�wNep	����vP&���U?�`� 9���c��w����II8��^L�s߲LP)��\���3��~�?��.m��>����BrG5�{����V��}�'�v��f^���4�4u!�� �T�?k����YUd��>�xU�jH�ҷ�Pm<MCK�/ Z@���T0^��u��Fػ���8�M��?)��絍v�>r�-W��/`�_�pn�PH;�����붨Kl�3r�#���Z�:���f���Wp3:l��_�!���dcwZ	�A��$�,yPl
+Ǌ�><�o]������}����B�fL3�7+!�����MC����ڥ���{��š���ɏ����E]��S��5(zb_8�:����p��^-6��  
+�Z�L�)j���9�u��5�R�^.��í��a�S�`!����L��=a�?�������B;�-�����~>X����1j���?�c����'���ն_ƨ��3J� c��J�8�����w��D��	�	&>!� $K
+M=w��AtJ]
+g}T1��KVs�%��c(���P�(&��9�lF�F�9�9�2�>�,�T~Fy��/�����~�/�����%�!�]��L���i���%�]@.���n?�	G>]��6�J[�PV1w��`a�3�+�c����z!�*�r� ��I灓�H*��X��U�R����r�c=�7a1'�8V[WO������J�� ��]������;q�wd0��ԨI�����]�\(�}__���1����ؼ<�R �������x�%l��m߾����o����k���K�i��E�*�� 3Ǚ##ݱ�q����UWD����i6�R4���*��� �B#:�wX���A�9ꖵ&0�2�,{r|�������?����o�6�~�$��*#@�D8W�>�MC*�H�0z��ʜ�v�wy��CGn'�/\�p�%f� ��J@�v����Ă����^)�#W���54�ǒe��b�A�*n�(g�%�+B�cP{�Y n�{#L �"J�1BD��0&��fʼ�{��?�����wf0���} �;ǿ�K�������Ըu>[+��~�]X�r�ق�V�7+�?�<��P_i��_qb�����%K~2$<ÿ�#����!#��F�����h����a]o�[PQຈ�W@Zc�Zw�m�t�����p��(�Ib0�䉬b��5�O���?�0�[o��y>cdE����������7�X�.�|��,1�O��\@,�`Yb"�H�	e��M����]���Hd T�QI{۞���	m](JR����I�g�N�� ?��!��u��~�.��K��EڽL��¶m�����p��m�yfr�[[��	�x[;��`o�B���|��S�o�p��P��A���b�?Ȼ!1� �\�����>S|Zx�]��i/��HPE� Nߎϖ�}뿏r�&O��[@O�������	f��r`����&���iu&� 1�ǒ�"�J����c�?������Cl듸u��H.n�ײ��PJ�@�۾W���q�G&�*���@2 ���j���xq��_�w��н,�?'9�n�ă(�'R'm��e8��<&Fl��&a� $�%�o_�!��]$��F9 شI������={`�',��|������}G���w)���@=��/�
+�}q`���/W8V�ź<�B�56c@ [	=�����3_}B��(�����d�!3Dz�g��l��O��F`�;	`�7�_bU�`�k�IcR�-#�3���d�6��% ��r)I�B�ߓ������\�ţ?��(���`� C���F�4����u)�� �z���t5OO]AO@�����} ��q���������T���ʋ!"s����L؊�\�T"ᷱ� �x��oo��B;{˱Y ��}W	�����)7�b(�	���oK0t,>�x��+TP��������J��ǹ����4�BR�I<��L�+7��
+6�/��k+�Bxz7:��������ł�
+�����@	9��Ĕ��ALVa��H�|&�,E��'t~䥧��?����}6�C��w׏�^(W�Q:vAؠ?#�;����'��'�<z��>�_Md9�2	)*r��n��������i�!��i�qc]���pl̏��A�lT<� �*i�m3-�	�Q���z�7���"_�"U�굄{�Ss9�|x��}�0�@b�n(�ү��X������%�2xW5VP�VS zY�=0����gH/�e�W�� �@�*. c�;H����o��)6�#�ʍ:���ɖv�3L��������'f꣮F���H��1��Б�o;�k�p����lJ�9�,�ک������0~�p��!�`���*]L��)$?aȌP*�Kƥ���ͬ��"�m>�j�%z7iPt��%�B<t.]�)�N�}��*f 3�2 ��q׿i��{���cǎ  T� @� �=���a��ڝ�`f?� ���aq�R � ����*x�{	( �3���G~���$�6��U�y#L~�d�`�b	S̝[ *�B����Ǒ�1�L=d��,��S庤"�c׈�!8��ː�L��\��跞p�m�>a�Nǉ�"�a�<tu��S���a߹�?������+�닝����ug_�F����<Q��§�� ���M���8�Fjl�����j��fI�A+��-��]����}f�F({Y�,f2����#@��=�l����OF�T�L�P1�A���Fl��=o��0����pQݳ��9_4��hu�����a�7:��/ ��g7�����;e�/%p�,1 ��#���I��� ����i�ӑDB;� #B�¤�@�yl(���I\A���͉3K0&&�#�@� ݍ�u��ִ}��������hEi���&�}]��3Ge��r-����&�~��n�����������I3�'ϗA�G���I:9���,ӫ����"Z��Ћ��i�{0��"�_�8��'u� u_(چ����X�,�2�R��x_h;��ۃw|u/��c�6��$��YV�گ6M�	�lݾt��B��&\���2D��T��5�K䱉��/7<�M'�c�Px	�D,g � �Q�\Z�0d|�	�3�iR0�#@������
+@,���hT)D�4���V"f��&�D�>����m�]ޚ�?�8~�����'��O� ��4�?]�'Ì�=���*Ohz��p�ac��)�� �r!����1_8�����+��{|B^����-�j$��P���[��:��#�K�ɼh�f�X0'۞��:`��F}3�@�v P��l4T�a��O����k:�o��c�V�D짢�_�!��r]5�W`�B������<�$�ӹ�J,#tL�h���ct��]�61���-�|��|6K|�?&C"� ʀ�1�8r+�I��4��ҧ��X�V���Q�>f���6��s�T �0^fK<j��v��u�:s �`"���K�~���^����������7ܗR�F y`��a���������.	�Hd�#N}�{N�|��g�N�����p<An�s(Ir�iJV�>S4��X�&��M�l����u%u�L>����:g�c��F Ar4]ԆbƟM�J� � ) ��,yt���Xw������4�|l���ړ
+A=� f�]3���Po�s��	�@��X
+ ���C����p���2��,q@' rR��pL곑������x��q^Y�"$�O��\#kա����i�%plqHB�H���l
+���<"?,<����?�Y�^�^�tv�;���=�y�Kg����c�tA?į�=M�1d�k0Q�X,�˙�Se1|R9�F2|��D��$_Q�,�j�1��?�q�D�tud(uW= g���*X�,��Y�"��2��L��;�^�=T�$3GC�J %��_d��lG��G��n ����*������� M	H�t�
+���ԗ�Pk��f�)-�`��1��b� ��� ?D��1 ��[	垞��N�n�%�2d~��De�A�z�1=#6@rL�uߍ@�� �a���`+�M��d����]��ft���Y1 O�� �-� �2F��Q�ᴔ<#��,�)%�#o��,3�	�5DX`-�k���(5r�L\&��VAHp{U �t�-���i3'ZU�U��P(Ό@�F|ڦaL�o �s��A�c�*� `O���hBd��2kڮ=��/?�[��=gQL��B��?.jex�M���` ��Ј���-��њ�����
+3��j�2�9F~�P������k��M��k���2�����(�R�fN?Q��-!ԙ���W�����$�j6V��4�Ǘ�pD��-���V�F����/ =�|��.FPd2,1����������ы|�?���^�����>h�`�|x��J̧C��e� �"(,��$�>�=@
+[��m(��d��k���}��F�5��4s��c[bA�1N��6�����~)rB�c�=�FK
+2��B�7٬Y�9��/?���J��[_��7QS�)���m��w#�>���S�Sڪ5�-�t���K�Z�"�7`��F1D(��v	���/��پ����K</�rm��@�!=��(o�<6ыc��y@c!&�"�?RԸb|Ά0k�~�7k�?�&�v#&���:�0���`@� �Lm���
+��UFtR"��k߅16��:0�iG�̩��51��L6�d����0t>&��;>�n��ױ�e{
+`����I�=y��q��k�����6�ڧ�����}}�[/lO�]��`V~�fb!����\��k��H���-,Z
+��C=�X0��e��g�>v
+�������O����/�Ӊ��:���4�H��f��E�*���v�|���~	@Y��i��#X�܆�E�m�Ű4;i��A���A]��'w�{���DN�#�ء�]EG��>o8��Y�V8�= ����(Q��0Dw����=&Z��m�b��(7Jt�Ȳ*�"GH� ��!=9���O��o�ҡ_~�Q���a��ͮ��l��f�� +I��&�Q Z���� ��I�j�n��9��V����{?xb���W��C <��Y�����xa���ӂ�"�-��!m��^��秕��	�T�J���p��h/�G��%r�;"=j;N雅�K��6�@��Ⱥ�	ؤ<  �t{m���������=CUM�0	�@��3�� �&������~�����J��� =*�B��!B>~)��{K��N�[~H����^�h) +I �U{)���(C��.������S�SSo{ŠS�a	� ���ƒ�\�
+�'1U��w7�Ltd�Oqa�ųӳ6�M�Vӷ� ���zV!�+*a�Q�qz]7WcܭP �P	�e��E��tr�%v�̦@E-���B�hY6�$�I���W7+�QfB%�"������= ����gbO��忘����i4[ں٠� ,C�� W�fh���,_d��!z�=�w^�ỿ��)�=�Q@��w����,$H�E2L(-ᘐR� �Kr���=b��O��ٵɣ2������N'cljgӆ{G�]#%�G�"aK��aC�úK�� l��9�9����9o�C����(j�n�c��������Q�6���i���o��!I� �Aw���������=�{г=���!�s�g� �i�\��K�vѨ�Oލ
+�'�k����
+DKX���g#�6	}�'� v�m]��[�������煗�G��~���@ F��F;�T#"Vܵu�e�3M��J�Vm���mN�l0�QSHW2��t]D=��i��Ñ�]���[���ʑ߉@���(�@E[1vƨ��E""��
+AO����CC���8sTbw<!�C�LA���!�ݟ�Z������G��s��c�o7��[XFh) +�y6[%`��� Wk��% �ؽ���SO�w��}cO����]�#&�>�b��α ��H�Lu@ �t��l��XS��bv�Ө]�uVt��f�;@f�1�9��jj#�����ּg]Y1�8]~7��)v��l��dF��?�	�*5�=5���Hr�*}��������NKn.�}@����,S!!h�@�e�}��xM�C���rA]!�L$��sI�k�Y��?�=�w�-`�aRq�2�`�!����g\؎�m(��w�-�����n��E�� �2X�nV$�h����x�;%եTa %vՇg�i�UU�8v�ۤ���|3!�|����tZ݄���~dN6���h���n�}r�2)�9CD��8�hV��
+$�x�2�������?�.��c�u/r�,FF�aU?��
+��Zn�$�~���a�<*������*DK86�H/�,;=�?�ܩ2n�������=_���'����b�@�$2*B���g��Ǩ5�
+J)Q)�X�Ȭwu
+���pY�țͱ����#AMg�����f.�LP��5��+$�Y�nM��|%l�����M��۴۾=�UXG8}��F	��3�H�>�C�N�+�|��>v�7_y�/m��ؽMV��W�� )����\ 1m�΢�GKXyhĴ[B4#�m�@w�����|v�/����-7dDv;��D�� ~;1I0e�Gt~ڥ3q��"C���7&=ҹ�1��״��pD�f�l�(5�$ w�#\A]q��ߎR;YW]��N�w�۹�J���
+G-���:P���	I!X����ILB��L��t���������k��vz_�V~3�
+y#�g�u�2�^_���;[X]h) +.[[)O*������\۶I��lϠg{��}����g�r������,�����%�kR�jT����=y�,tŤ1�UH�I $���y��W33O����ĆPG� W�T�]��0�q���Lsb�$��?�������1@���,���|�QA	@*���'0A�����s�
+���a�b!D;��},�.s��wށ\>���>��.���Q���F�7��bm$�~R)HۦZ;�OHSs�J��gZX�h�ܕ�Fi�E��&��|�!��q{o+��g��w�,]F�Lk�����r�s̆������)��Xiy��Bh� 3Q��nm6�4�N�s��R
+�� +���i%�%����BJ���jk1���i�x-�'�Ί�Ũ�J-`+���K2$JD�! !w�>]{����/O='߱��/@g'c�&�Ȉj}Ӧ�[��9�3�~.1K�J,�.�Eha��� �<��r.O��J��� 8��0����2r�6_�6��+wv���!����� $ 
+es����	��0�C�X�I�92��u�n�[��
+�Tbݹ	6U��O�pv=QL��s�nZaCY���cQ�� HP���f-ݯ�v3�z)��h��#ك1B�H�t$o̶�]|��[��������m#e�y���FF�6��뿔1 �����t�0m�٦�U���:�j������@8������=�y����w�ߑ/.a~ �A~���d�n+ʬ�	�Jb�t�%����ky񑁝�}��v:s�߅ �O�i`�1鎓ֿ�)�{���p[��I"��iR	aB�;�X��{=/�7�/�x��=���>M.�(�r�l�U�g����K^��G�����^���$��b�����e������+%�K@����A�߼�Ҷ�{o�ޚ��ɣϰ�@�OD>X�5}NƄ�Ih)d��q|�;G*��ەT��I_2U\k�ʨJ:7��I�N���B�ՒxE���*��kj(�ޡ���Ɖ`;F����)�S���	���D�-c��|��a���>y�<�qDbbX522B��w1W�a�}�R ע�&�?��K������qb}��j�@�F�<�/���յ�er��O��z�����q�4 �Z�Ϲ�K��s�� ,Y'�*j#HKjmm����fD�=�洏VEI�L��=�1 ���q��(
+&x��D}ܨ؎s�:>@��^KQu��S`� �4nvtV}� �`�R���]b��nf	�Bd�q0������o~�/mC�QF>`׮����s�@��j�ys�n;�-�����n����-��b V �1 K��ϥLp������/y�B�|v���;�׼�@��,f>Hd�"�a$��&�� Ħ�������M��%��8m�l�b���"h�@�&�2Jԫ �I������i���		���I���a���S��p���7?�3.l��ϖ�!���~��70�~��4=ۈ��Y�Fڪ�M5�����]��O��B��2la�g��ڧ��{�� �u��#��.���%�:����힠m`�I���$ɃPv���Wf* $���?EapZq "2��i�L���^��1 f���q��
+������B����@�;`7q��*k]yH�gt����ueXՀ�+�ts����4y����O>~�-�����#����ݻA��泲��O<+�2 i����&�iY�-4-`����]ӵ��ﺥkm�L�ə)ؽMb� ##40�>v����{���>F��HHA^L!�$�>Y����YS�g�pV���OH|��+46g���!2Ҹ��w\l�̬�Z�����XN vC�V�cY����$)��L����we����[������ُ "�o���0+��@��b_���!�cǙeq��a��-�6��c����A�N�[�On|�_l.�~o��jO������S���r�q�k���C�G9�#�<n�3l���5ï���7��mݙ�o�� s~l�kD3E-��:�c��c�nK���.�� ��X��U*T�L`�I
+!�C �D�g�p�uw��i���ί�������5��w�`�YQ�zW�9����b Z����n�!�[��+^��'s��_�;��o���ȼ]B�Z�	����#/9�IO�7�Տ��$ɰ���hןd�"׼��|���vf�'9yM��?���i���M����څ����gN4V�OC�� �G?�f�����wܱ^�g�] fc��g��w�����y}+`h�Yh��c�/q5=��vz�'0P�z�m���ߔ��+�x-X�*.6O�|�l}�6J��������N7� Wp�}�6� GV���F�G-�� Rq,M�a�}z;�'D��+4�9��B�}O�1a��H���/Y�	��\w}���7?���:;۶I�#��>oT��d j��]�X	���
+�j�[��z��ۭ��Ü7�g���/�7=��'��L�%��|dr(%;M����@=�0Q��#q�:ܿ���H�o���v9qL��uq$E����@�=f<�����W�ґ��c���>��?;V|�Mx�����eq�t�
+~��CS��d�_����O�[9J�r>�V	Z.�cT��jC$��Cl}����G���=vm{����OA��A@"�����p��4�	TW�'Gh��\5��mp���27t{���9�Q(�Hw��d�q"�h\q��BBB���Le���k����x�2zzT��ۢ�Fл����*I&�Wq�1 �ń���jƫyh���c��K�\��Z�	�1v�
+��2�=9<4���]k��<|^�8
+���%E�t���Ar�J�#Y�I��O#>@�}\h]�;�Q��"�xDQu?��(:�3����F
+��.�dB�a���q��C��WG�������$��F��� ͈����OG��Q���.�VE��e��p���@�7�^��m���N�i[�{�g_>�m'\��f.�_��U�{9�B�L������<�j��MiB�y �j@d����ړ�n��������.��4��	��CI�)���Bb����!@��G�-������{�6����F$�Cq�i��u>�`�>Ԟ
+�|��J��b��C��cH�����J�t�>��	fy��z�D��^�	.�$�!�XyD�NJ�hlVAyZ �f6�U����=7ɐ�����飲4T�7m%�����������~ ���|��/�G������~`{[��-�۔@�d$�:ON�s��ZeYZ���Z]-4ǈ h!�f���f9���Пc`��u��{w�s��������K2�gx:a1��ɼ�
+V.'�y7�������y�ub�x~ Ӥ\@g��\	���)U+�ִ��b �$� �/ ��}���N���;�~=���+�)����
+�f�'�k`@�xɴ���ٺ�\.�����h� Zh6�������*T�����ֶ��K��g���Y��L6�q)�Q&�D����.���ٓ�e 2%Ͼ�2� )YmCH�2����Ax{,��L�$!�|q����u��7=��ϔ�u���N���!����Wi�9M��eɹ�I������u'"Mi���燄S��{5X�P�Ϩ�R����͸��)3�-�3��`�"��7���޻.��:B���އ �|��!3� ��6��8�5Ǣ����v���&������X;T`�T<�)�vuB�Q8n�[�?���) u�`�BX���P�=qm��������n���8�p�he���1�;��>�1z���b0s}A-,(Z���� �U��;���A�?��{O���t���]��}���2xU&C���� �TN{�)̱�}�A�&j@Gݛ�Ȯ>�����կZ 	351ك�l���o��*�<�u`N�%1X�o�Dt���5*'?<r��F6��y��J����Ut��������Vҵ�i[�;�?��j;�.�AXh���c�~l�Q���4[�d<[�:C�����!z�g�+��@�W�0|1��0M��2�!�;�7c(ۺy���f�B��|���nV
+���
+�ŏM�D ����#&�!��D��FD?$_���o�[w	LL:;9V�w޹�Z �( ��޵�{�~��a�-,!��_́=��i=W�W ��_k����|.�/����wa��'%v��A�hӘR� ��Ƶ`}z=�[��65�_�]S� r0�`���y����7��/�}�!
+���Y�?2B�Q ���
+��Z
+@���� ��LBsq,ԛ_�D��~I����{~��`�I�ܞm{� ��LC0��f�eIr��C���QA�\���̊���gg���Cn(B�/��J��%��0<_�������wv}R	��%p晑������
+�Z���ҽ�=���W�;��j�2��ZX�s��"YF�T������@^`����!1��yoX72�=r���D~�R�$�LL 2D���
+� 6Uy���=`�{��ֱ@vU���1������ ����c�Q!�_�t�g��W�!�5a�߾k��;��R� �-�1m-��hXF�u� I?P9(��V�3Uo�yBi�r9Ƈ�$8��7��	&{|��� � �62K��D��̰� �X��u�����*{չQ��"�a>�ߟL �,A��D����1�
+$�֍�6�_�=�Q((����V�g�X�>�儖�`�-,2��*�VT�V�3���S�Z����x}ב�`3g� ��H2���bf��,�I$��'A��ޙ�@ɸJ��c�bfiW�ł���D@@5��'AmB�� �n��?K���y�^�O�C�=���0�}܄IM/�L��R����E�*�[hj�����	+�в�(� г=s�Tpr)�z�����"H�"ǃ%�9`p�ARxD�KI>iN�p��IY�V�L`��0@��e��' Y�%��xP���'�Iwv�c��P)U�/Ғ��Z ��۶���h�n�IH�I�^k`[e
+ ��������N�1�j��4	<��|^�gxN"�'B0B	�2�P���!0e��e��߲� �$"��2�@B9�e����{D�L��~��o�_2 ��^����T ��@�{1��ZhV�@��<���6�U� �P�nص;4��Ax�;�M��Ùғ3�?Kxrs�<U�`3@��"K$�$�6~�Y�h fAh��I?��#�&d������/gK'_��0n��L��m�� �I4�M�j�}��[B��%�*�[�%Ҩ���t=7
+9�<g�L��#�m�%���@xN����?���D��&ϗ'3����D򼍒�.0ڙ�L����L��4.��`@�0�Y��+�m�v8�����8"�?�cb��U�'�ObQ�j��1� �c���[�A��ch _2����V@ڶiX�@�ut�I�;q�������d�C�n-�����Ƈ�:�DqMX��3>{�@*&��)�0��L6c'�m�7��
+���[o�0���m�8"+��/)�,��o�s�&��mg�F���-ڿ�e�U6P�0���mV��O�Z�*���*��d��1��4!�y##��	��j�Ƒx�d?`	��d�����}�k�Ȥ	�4�����hX�x�Dr@����4�U���a�T `z��qc�� �� ��/���]��;;9�o-,�PMػ�W��+jͤj�_-��hXŃx�Dڳ�FS
+ 0��u�*�2`�*=��(�����>z��=q��H����,��%��i��W���Qc�J���rw��&xzYa��-����l�
+�LV3K̦Ln������j}��_p,Get�	��M����3�|����9������i>�Zht[7�߼`z�ڶ��1�iEy��U8�s8Fߵj��\����8�U���B�D�ڮe}W�6���������a̦��<��Zh.�s��1w�-TE2X��˳J��&�d^�� -v`6�����'��W��'�Yt,'�j9�+��T�˷�/��Z��<����o#��k�?�5Q��O�����
+V$��g������7�r�����R Z � ��xY�`���s��M��f*1�	�4˾��න�
+A3����JTnVb,�fͧ)y�9Ɗ~&Z
+@-$Q(
+ɅMV�}_$���Q�+b�'>kQ��-�BV����U{a-,
+V��Sp�b�f����ѫ��ͱ�4�^>�f���F��K2���峨�/���/�8-�.��y���/�	�������f�Bz�/Ep�&����u��o��\	XV{���VO�7�+}w,be�s5�*/��%E�gj��D�����* @�Pm�TF`%M�[v�b���g��=����U�V@��?&�_���}b�S7���)�yf��d>�$��V���\ι�́�M��g�� ��l$���	�j��rw��@B�s��)��$�I���3XHkE�T�{-�+��i) -,��K�&���F�I�J@Z��\��S�Zha�`1ߕ�����R ZXH,�$*iT~�x���k� ͡�g�?m�Z�)e"I�7��jM\�X�{�bߥ����%�/f#��z��Pa��i� �OкT}�Ex��0������\�5��u�EbVk�t4��)���~�jg.�-K��c��e/n�+Q�>�z|5$�Its U����O����W-s�<��T�Z�H��_:�&i�;�h6�,�5r��L�/}
+���Z	S�@����6�< ��WsM4��yiE{ܶ=n����&��j��3}�XDZ_��繴]�s����<���/Z���FX�Ti���r0����+0[�r��|f4�X1�ߠ���_i׵�H�f�d${-Ec!�Y2�dE�� {H�����[4#�`�mT���*0����yz�Q�z'��m�aU���_}3�ޗ4�f����R ���|_��+�����ň?��H�ǔ�fR�.��J�\��..)�%��u+�]��f�P�R�Ҭ��_,��c��`�yA�3.�Y��2��ۯi��MX��>�T4Zԧ��BS/��iX(+qqiW7���u���U��A�Ɯ������E�5�8�H4�����؍��wѨpo���ج�҅����Zh.�������tl���jY-?��?os����|I!�l��%Xp�c.�]뜖e�߹"�L��!�S����X�9Po��K��S��͒�U�\�-Z.��4�m6����xa̼�X���\wZM��fjq=�>���,[Մ�|�c�,����x.������f�ZZ�|h���sI�L೜-*je	4Azɿj�7�[���h�����a�1E����t��<n�}_qJ^Kha6�Fm���:��y��P��@�o1�U�u	�Y~�8V���a.�n�����RM�X�����\�젩��u~hT�WK���%�W0������^�ؒjm���K�4h�ܽǜ�>W$�Eڽ9&���Գ���m    IEND�B`�
 ```
 
 ## app\lawazem\page.tsx
@@ -4784,10 +9662,32 @@ import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { useStudentStage } from '@/hooks/useStudentStage';
+import { useBookmarks } from '@/hooks/useBookmarks';
+import { useRecentViews } from '@/hooks/useRecentViews';
 import { Input } from '@/components/ui/Field';
-import type { LectureNote, Subject } from '@/lib/types';
+import { ReportModal } from '@/components/ReportModal';
+import { postJson } from '@/lib/api-client';
+import type { LectureNote, Subject, Track } from '@/lib/types';
 
 type SubjectWithNotes = Subject & { lecture_notes: LectureNote[] };
+
+// ==================== Tag Colors ====================
+const TAG_COLORS: Record<string, string> = {
+  'نظري': 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300',
+  'عملي': 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300',
+  'محاضرة': 'bg-teal/10 text-teal',
+  'ملخص': 'bg-amber/15 text-amber-800 dark:bg-amber/20 dark:text-amber-300',
+  'أساسيات': 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
+  'مراجعة': 'bg-pink-50 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300',
+  'سلايدات': 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300',
+  'امتحان': 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300',
+  'واجب': 'bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300',
+  'فاينل': 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300',
+};
+
+function getTagColor(tag: string): string {
+  return TAG_COLORS[tag] || 'bg-ink/5 text-ink/60';
+}
 
 // ==================== Icons ====================
 function IconSearch() {
@@ -4801,6 +9701,25 @@ function IconArrowLeft() {
   return (
     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+    </svg>
+  );
+}
+function IconFolder({ open }: { open: boolean }) {
+  return open ? (
+    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9h18" />
+    </svg>
+  ) : (
+    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+    </svg>
+  );
+}
+function IconChevron({ open }: { open: boolean }) {
+  return (
+    <svg className={`h-5 w-5 flex-shrink-0 text-ink/40 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
     </svg>
   );
 }
@@ -4818,18 +9737,51 @@ function IconEmpty() {
     </svg>
   );
 }
+function IconTelegram() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+    </svg>
+  );
+}
+function IconDoctor() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    </svg>
+  );
+}
+function IconClose() {
+  return (
+    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  );
+}
+function IconBookmark({ filled }: { filled: boolean }) {
+  return (
+    <svg className="h-4 w-4" fill={filled ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+    </svg>
+  );
+}
+function IconFlag() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+    </svg>
+  );
+}
 
 // ==================== Skeleton ====================
 function Skeleton() {
   return (
-    <div className="space-y-6">
-      {[0, 1].map((i) => (
-        <div key={i} className="rounded-3xl border border-line bg-white/80 p-6 backdrop-blur-sm">
-          <div className="mb-4 h-6 w-40 skeleton-shimmer rounded" />
-          <div className="space-y-3">
-            <div className="h-4 w-3/4 skeleton-shimmer rounded" />
-            <div className="h-4 w-2/3 skeleton-shimmer rounded" />
-            <div className="h-4 w-1/2 skeleton-shimmer rounded" />
+    <div className="space-y-4">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="rounded-3xl border border-line bg-white/80 p-5 backdrop-blur-sm dark:bg-paper/80">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 skeleton-shimmer rounded-lg" />
+            <div className="h-5 w-40 skeleton-shimmer rounded" />
           </div>
         </div>
       ))}
@@ -4837,13 +9789,344 @@ function Skeleton() {
   );
 }
 
-// ==================== Back Link ====================
 function BackLink() {
   return (
     <Link href="/" className="group inline-flex items-center gap-1.5 text-sm font-bold text-teal/70 transition-colors hover:text-teal">
       <span className="transition-transform duration-200 group-hover:translate-x-1"><IconArrowLeft /></span>
-      رجوع للوحة الأقسام
+      رجوع إلى لوحة الأقسام
     </Link>
+  );
+}
+
+// ==================== Sorting ====================
+function sortNotes(notes: LectureNote[]): LectureNote[] {
+  return [...notes].sort((a, b) => {
+    const aNum = a.lecture_number ?? Number.POSITIVE_INFINITY;
+    const bNum = b.lecture_number ?? Number.POSITIVE_INFINITY;
+    if (aNum !== bNum) return aNum - bNum;
+    return a.title.localeCompare(b.title, 'ar');
+  });
+}
+
+// ==================== Doctor Group ====================
+interface DoctorGroup {
+  name: string;
+  notes: LectureNote[];
+  totalNotes: number;
+  subjectName: string;
+}
+
+function groupByDoctor(notes: LectureNote[], subjectName: string): DoctorGroup[] {
+  const groups: Record<string, LectureNote[]> = {};
+  for (const note of notes) {
+    const doctor = note.professor_name?.trim() || 'غير محدد';
+    if (!groups[doctor]) groups[doctor] = [];
+    groups[doctor].push(note);
+  }
+  return Object.entries(groups)
+    .map(([name, notes]) => ({
+      name,
+      notes: sortNotes(notes),
+      totalNotes: notes.length,
+      subjectName,
+    }))
+    .sort((a, b) => {
+      if (a.name === 'غير محدد') return 1;
+      if (b.name === 'غير محدد') return -1;
+      return a.name.localeCompare(b.name, 'ar');
+    });
+}
+
+// ==================== Track Badge ====================
+function TrackBadge({ track }: { track: Track | null }) {
+  if (!track) return null;
+  const styles =
+    track === 'نظري'
+      ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'
+      : 'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300';
+  return (
+    <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${styles}`}>
+      {track}
+    </span>
+  );
+}
+
+// ==================== Doctor Accordion ====================
+function DoctorAccordion({
+  doctor,
+  isOpen,
+  onToggle,
+  reportCounts,
+  onReport,
+}: {
+  doctor: DoctorGroup;
+  isOpen: boolean;
+  onToggle: () => void;
+  reportCounts: Record<string, number>;
+  onReport: (note: LectureNote) => void;
+}) {
+  const initial = doctor.name === 'غير محدد' ? '?' : doctor.name.trim().charAt(0);
+
+  return (
+    <div className={`overflow-hidden rounded-2xl border bg-white transition-all duration-300 dark:bg-paper ${
+      isOpen ? 'border-teal/30 shadow-[0_4px_16px_rgba(14,74,74,0.08)]' : 'border-line'
+    }`}>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={isOpen}
+        className="flex w-full items-center gap-3 p-4 text-right transition-colors hover:bg-ink/[0.02] dark:hover:bg-white/[0.03]"
+      >
+        <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-sm font-black transition-all duration-300 ${
+          isOpen
+            ? 'bg-amber text-ink shadow-[0_4px_14px_rgba(224,166,58,0.30)]'
+            : 'bg-amber/15 text-amber-800'
+        }`}>
+          {doctor.name === 'غير محدد' ? <IconDoctor /> : initial}
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-sm font-extrabold text-ink">
+            {doctor.name === 'غير محدد' ? 'بدون دكتور' : `د. ${doctor.name}`}
+          </h3>
+          <p className="mt-0.5 text-xs font-bold text-ink/50">
+            {doctor.totalNotes} {doctor.totalNotes === 1 ? 'ملزمة' : 'ملازم'}
+          </p>
+        </div>
+
+        <IconChevron open={isOpen} />
+      </button>
+
+      <div className={`grid transition-all duration-300 ease-out ${
+        isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+      }`}>
+        <div className="overflow-hidden">
+          <div className="border-t border-line/60 bg-paper/40 px-4 py-3 dark:bg-white/[0.02]">
+            <ul className="space-y-1.5">
+              {doctor.notes.map((note) => (
+                <LectureItem
+                  key={note.id}
+                  note={note}
+                  subjectName={doctor.subjectName}
+                  reportCount={reportCounts[note.id] ?? 0}
+                  onReport={() => onReport(note)}
+                />
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==================== Lecture Item ====================
+function LectureItem({
+  note,
+  subjectName,
+  reportCount,
+  onReport,
+}: {
+  note: LectureNote;
+  subjectName: string;
+  reportCount: number;
+  onReport: () => void;
+}) {
+  const { isBookmarked, toggle } = useBookmarks();
+  const { addView } = useRecentViews();
+  const bookmarked = isBookmarked(note.id);
+
+  const hasLecture = note.lecture_number != null;
+  const isTelegram = note.file_path.includes('t.me');
+  const noteTags = Array.isArray(note.tags) ? note.tags : [];
+  const hasWarning = reportCount >= 3;
+
+  function handleOpen() {
+    addView({
+      id: note.id,
+      title: note.title,
+      subject_name: subjectName,
+      file_path: note.file_path,
+    });
+  }
+
+  return (
+    <li>
+      <div className="group flex items-start gap-2 rounded-xl border border-transparent p-3 transition-all duration-200 hover:border-teal/20 hover:bg-white hover:shadow-[0_2px_8px_rgba(14,74,74,0.06)] dark:hover:bg-paper">
+        {/* المحتوى */}
+        <a
+          href={note.file_path}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={handleOpen}
+          className="flex min-w-0 flex-1 flex-col gap-2"
+        >
+          <div className="flex items-center gap-3">
+            <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg font-mono text-sm font-black transition-all duration-200 ${
+              hasLecture
+                ? 'bg-teal/10 text-teal group-hover:bg-teal group-hover:text-white'
+                : 'bg-ink/5 text-ink/40'
+            }`}>
+              {hasLecture ? note.lecture_number : '—'}
+            </span>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <IconDoc />
+                <span className="truncate font-bold text-ink transition-colors group-hover:text-teal">
+                  {note.title}
+                </span>
+                <TrackBadge track={note.track} />
+                {note.year != null && (
+                  <span className="rounded-md bg-ink/5 px-1.5 py-0.5 font-mono text-[10px] font-bold text-ink/50 dark:bg-white/10">
+                    {note.year}
+                  </span>
+                )}
+                {hasWarning && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-md bg-red-100 px-1.5 py-0.5 text-[10px] font-black text-red-700 dark:bg-red-950/50 dark:text-red-300"
+                    title={`${reportCount} بلاغ`}
+                  >
+                    🚩 {reportCount}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <span className="flex-shrink-0 text-ink/30 transition-all duration-200 group-hover:text-teal group-hover:translate-x-[-2px]">
+              {isTelegram ? <IconTelegram /> : (
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              )}
+            </span>
+          </div>
+
+          {noteTags.length > 0 && (
+            <div className="flex flex-wrap gap-1 pr-12">
+              {noteTags.map((tag, i) => (
+                <span
+                  key={i}
+                  className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${getTagColor(tag)}`}
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </a>
+
+        {/* الأزرار */}
+        <div className="flex flex-shrink-0 flex-col gap-1">
+          <button
+            type="button"
+            onClick={() => toggle(note.id)}
+            aria-label={bookmarked ? 'إزالة من المفضلة' : 'حفظ في المفضلة'}
+            title={bookmarked ? 'إزالة من المفضلة' : 'حفظ في المفضلة'}
+            className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200 active:scale-95 ${
+              bookmarked
+                ? 'bg-amber/20 text-amber-700'
+                : 'text-ink/30 hover:bg-ink/5 hover:text-ink/60'
+            }`}
+          >
+            <IconBookmark filled={bookmarked} />
+          </button>
+          <button
+            type="button"
+            onClick={onReport}
+            aria-label="بلّغ عن مشكلة"
+            title="بلّغ عن مشكلة"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-ink/20 transition-all duration-200 hover:bg-amber/10 hover:text-amber-700 active:scale-95 dark:hover:text-amber-400"
+          >
+            <IconFlag />
+          </button>
+        </div>
+      </div>
+    </li>
+  );
+}
+
+// ==================== Subject Folder ====================
+function SubjectFolder({
+  subject,
+  isOpen,
+  onToggle,
+  forceOpen,
+  reportCounts,
+  onReport,
+}: {
+  subject: SubjectWithNotes;
+  isOpen: boolean;
+  onToggle: () => void;
+  forceOpen: boolean;
+  reportCounts: Record<string, number>;
+  onReport: (note: LectureNote) => void;
+}) {
+  const notesCount = subject.lecture_notes.length;
+  const open = isOpen || forceOpen;
+  const doctorGroups = useMemo(
+    () => groupByDoctor(subject.lecture_notes, subject.name),
+    [subject.lecture_notes, subject.name]
+  );
+  const [expandedDoctors, setExpandedDoctors] = useState<Record<string, boolean>>({});
+
+  function toggleDoctor(name: string) {
+    setExpandedDoctors((prev) => ({ ...prev, [name]: !prev[name] }));
+  }
+
+  return (
+    <div className={`overflow-hidden rounded-3xl border bg-white/80 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm transition-all duration-300 dark:bg-paper/80 ${
+      open
+        ? 'border-teal/30 shadow-[0_8px_24px_rgba(14,74,74,0.08)]'
+        : 'border-line hover:border-teal/20 hover:shadow-[0_4px_16px_rgba(14,74,74,0.06)]'
+    }`}>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full items-center gap-3 p-5 text-right transition-colors hover:bg-ink/[0.02] dark:hover:bg-white/[0.03]"
+      >
+        <span className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl transition-all duration-300 ${
+          open ? 'bg-teal text-white shadow-[0_4px_14px_rgba(14,74,74,0.30)]' : 'bg-teal/8 text-teal'
+        }`}>
+          <IconFolder open={open} />
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-lg font-extrabold text-ink sm:text-xl">{subject.name}</h2>
+          <p className="mt-0.5 text-xs font-bold text-ink/50">
+            {notesCount === 0
+              ? 'لا توجد ملفات حالياً'
+              : `${notesCount} ${notesCount === 1 ? 'ملزمة' : 'ملازم'} · ${doctorGroups.length} ${doctorGroups.length === 1 ? 'دكتور' : 'دكاترة'}`}
+          </p>
+        </div>
+
+        <IconChevron open={open} />
+      </button>
+
+      <div className={`grid transition-all duration-300 ease-out ${
+        open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+      }`}>
+        <div className="overflow-hidden">
+          <div className="space-y-2 border-t border-line/60 bg-paper/40 px-4 py-4 dark:bg-white/[0.02]">
+            {notesCount === 0 ? (
+              <p className="py-2 text-center text-sm text-ink/40">لا توجد ملفات حالياً.</p>
+            ) : (
+              doctorGroups.map((doc, idx) => (
+                <DoctorAccordion
+                  key={doc.name}
+                  doctor={doc}
+                  isOpen={expandedDoctors[doc.name] ?? idx === 0}
+                  onToggle={() => toggleDoctor(doc.name)}
+                  reportCounts={reportCounts}
+                  onReport={onReport}
+                />
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -4854,10 +10137,15 @@ export default function LawazemPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [reportCounts, setReportCounts] = useState<Record<string, number>>({});
+  const [reportingNote, setReportingNote] = useState<LectureNote | null>(null);
 
   const deferredSearch = useDeferredValue(searchTerm);
   const term = deferredSearch.trim().toLowerCase();
 
+  // ===== تحميل البيانات =====
   useEffect(() => {
     if (!stage) return;
     let cancelled = false;
@@ -4875,25 +10163,84 @@ export default function LawazemPage() {
       if (fetchError) {
         setError(fetchError.message);
         setSubjects([]);
-      } else {
-        setSubjects((data ?? []) as SubjectWithNotes[]);
+        setLoading(false);
+        return;
       }
+
+      const list = (data ?? []) as SubjectWithNotes[];
+      setSubjects(list);
       setLoading(false);
+
+      const allIds: string[] = [];
+      for (const s of list) {
+        for (const n of s.lecture_notes) allIds.push(n.id);
+      }
+
+      if (allIds.length > 0) {
+        try {
+          const res = await postJson<{ counts: Record<string, number> }>(
+            '/api/reports',
+            { action: 'counts', lecture_note_ids: allIds }
+          );
+          if (!cancelled) setReportCounts(res.counts ?? {});
+        } catch {
+          /* فشل صامت */
+        }
+      }
     }
     loadData();
     return () => { cancelled = true; };
   }, [stage]);
 
+  // ===== فلترة =====
   const filteredSubjects = useMemo(() => {
-    if (!term) return subjects;
     return subjects.map((s) => ({
       ...s,
-      lecture_notes: s.lecture_notes.filter((n) => n.title.toLowerCase().includes(term)),
+      lecture_notes: s.lecture_notes.filter((n) => {
+        const noteTags = Array.isArray(n.tags) ? n.tags : [];
+        if (selectedTag && !noteTags.includes(selectedTag)) return false;
+        if (term) {
+          const inTitle = n.title.toLowerCase().includes(term);
+          const inDoctor = n.professor_name?.toLowerCase().includes(term) ?? false;
+          const inTrack = n.track?.toLowerCase().includes(term) ?? false;
+          const inTags = noteTags.some((t) => t.toLowerCase().includes(term));
+          if (!inTitle && !inDoctor && !inTrack && !inTags) return false;
+        }
+        return true;
+      }),
     }));
-  }, [subjects, term]);
+  }, [subjects, term, selectedTag]);
 
-  const totalNotes = useMemo(() => subjects.reduce((sum, s) => sum + s.lecture_notes.length, 0), [subjects]);
-  const visibleCount = useMemo(() => filteredSubjects.reduce((sum, s) => sum + s.lecture_notes.length, 0), [filteredSubjects]);
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    for (const s of subjects) {
+      for (const n of s.lecture_notes) {
+        if (Array.isArray(n.tags)) {
+          for (const t of n.tags) tagSet.add(t);
+        }
+      }
+    }
+    return Array.from(tagSet).sort((a, b) => a.localeCompare(b, 'ar'));
+  }, [subjects]);
+
+  const totalNotes = useMemo(
+    () => subjects.reduce((sum, s) => sum + s.lecture_notes.length, 0),
+    [subjects]
+  );
+
+  const forceOpenIds = useMemo(() => {
+    if (!term && !selectedTag) return new Set<string>();
+    return new Set(filteredSubjects.filter((s) => s.lecture_notes.length > 0).map((s) => s.id));
+  }, [term, selectedTag, filteredSubjects]);
+
+  const visibleCount = useMemo(
+    () => filteredSubjects.reduce((sum, s) => sum + s.lecture_notes.length, 0),
+    [filteredSubjects]
+  );
+
+  function toggle(id: string) {
+    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+  }
 
   if (!ready) {
     return (
@@ -4904,28 +10251,29 @@ export default function LawazemPage() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
+    <main className="mx-auto max-w-3xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10">
       <BackLink />
 
       <div className="mt-6 animate-slide-up">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
           {stage}
         </span>
         <h1 className="mt-3 text-3xl font-black leading-tight text-ink sm:text-4xl">الملازم والمصادر</h1>
         {!loading && totalNotes > 0 && (
           <p className="mt-2 text-sm text-ink/50">
-            <span className="font-bold text-teal">{totalNotes}</span> ملزمة موزعة على <span className="font-bold text-teal">{subjects.length}</span> مادة
+            <span className="font-bold text-teal">{totalNotes}</span> ملزمة موزعة على{' '}
+            <span className="font-bold text-teal">{subjects.length}</span> مادة
           </p>
         )}
       </div>
 
       {totalNotes > 0 && (
-        <div className="relative mt-6 mb-8 animate-slide-up" style={{ animationDelay: '100ms' }}>
+        <div className="relative mt-6 animate-slide-up" style={{ animationDelay: '100ms' }}>
           <IconSearch />
           <Input
             type="text"
-            placeholder="ابحث باسم الملزمة..."
+            placeholder="ابحث باسم الملزمة، الدكتور، أو وسم..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="py-3 pr-11 shadow-[0_2px_8px_rgba(26,33,31,0.04)]"
@@ -4934,89 +10282,100 @@ export default function LawazemPage() {
         </div>
       )}
 
+      {allTags.length > 0 && (
+        <div className="mt-4 mb-8 flex flex-wrap items-center gap-1.5 animate-slide-up" style={{ animationDelay: '150ms' }}>
+          <span className="text-xs font-bold text-ink/50">تصفية:</span>
+          <button
+            type="button"
+            onClick={() => setSelectedTag(null)}
+            className={`rounded-full px-2.5 py-1 text-xs font-bold transition-all duration-150 active:scale-95 ${
+              !selectedTag
+                ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.20)]'
+                : 'bg-ink/5 text-ink/60 hover:bg-ink/10'
+            }`}
+          >
+            الكل
+          </button>
+          {allTags.map((tag) => {
+            const isSelected = selectedTag === tag;
+            return (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => setSelectedTag(isSelected ? null : tag)}
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold transition-all duration-150 active:scale-95 ${
+                  isSelected
+                    ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.20)]'
+                    : 'bg-ink/5 text-ink/60 hover:bg-ink/10'
+                }`}
+              >
+                #{tag}
+                {isSelected && <IconClose />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {loading && <Skeleton />}
 
       {!loading && error && (
-        <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 animate-slide-up">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 animate-slide-up dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
           <p className="font-bold">خطأ في الاتصال بقاعدة البيانات</p>
           <p className="mt-1 text-red-600/80">{error}</p>
         </div>
       )}
 
       {!loading && !error && subjects.length === 0 && (
-        <div className="mt-6 rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up">
+        <div className="rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up dark:bg-paper/80">
           <IconEmpty />
-          <p className="mt-4 font-bold text-ink/70">لا توجد مواد مضافة لمرحلتك حاليا.</p>
-          <p className="mt-1 text-sm text-ink/50">تفقدها لاحقًا</p>
+          <p className="mt-4 font-bold text-ink/70">لا توجد مواد مضافة لمرحلتك حالياً.</p>
         </div>
       )}
 
-      {!loading && !error && subjects.length > 0 && visibleCount === 0 && (
-        <div className="mt-6 rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up">
+      {!loading && !error && subjects.length > 0 && (term || selectedTag) && visibleCount === 0 && (
+        <div className="rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up dark:bg-paper/80">
           <IconSearch />
-          <p className="mt-4 font-bold text-ink/70">لا نتائج مطابقة</p>
-          <p className="mt-1 text-sm text-ink/50">&laquo;{searchTerm}&raquo;</p>
+          <p className="mt-4 font-bold text-ink/70">لا توجد نتائج مطابقة</p>
+          <p className="mt-1 text-sm text-ink/50">
+            {selectedTag ? `الوسم: #${selectedTag}` : `البحث: «${searchTerm}»`}
+          </p>
         </div>
       )}
 
       {!loading && !error && (
-        <div className="mt-6 space-y-5">
+        <div className="space-y-3">
           {filteredSubjects.map((s, idx) => {
-            if (term && s.lecture_notes.length === 0) return null;
+            if ((term || selectedTag) && s.lecture_notes.length === 0) return null;
             return (
-              <section
-                key={s.id}
-                style={{ animationDelay: `${idx * 80}ms` }}
-                className="group overflow-hidden rounded-3xl border border-line bg-white/80 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm transition-all duration-300 hover:border-teal/20 hover:shadow-[0_8px_24px_rgba(14,74,74,0.08)] animate-slide-up"
-              >
-                <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line/60 px-6 py-4">
-                  <h2 className="text-lg font-extrabold text-ink sm:text-xl">{s.name}</h2>
-                  <span className="rounded-full bg-teal/8 px-2.5 py-0.5 font-mono text-xs text-teal/70">{s.stage}</span>
-                </div>
-
-                <div className="p-6">
-                  {s.lecture_notes.length === 0 ? (
-                    <p className="text-sm text-ink/40">لا توجد ملازم لهذه المادة حاليا.</p>
-                  ) : (
-                    <ul className="space-y-3">
-                      {s.lecture_notes.map((note) => {
-                        const hasProfessor = !!note.professor_name;
-                        const hasLecture = note.lecture_number != null;
-                        return (
-                          <li key={note.id} className="group/item">
-                            <a
-                              href={note.file_path}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-start gap-3 rounded-xl border border-transparent p-3 -m-3 transition-all duration-200 hover:border-teal/20 hover:bg-teal/[0.03]"
-                            >
-                              <span className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-teal/8 transition-all duration-200 group-hover/item:bg-teal/15">
-                                <IconDoc />
-                              </span>
-                              <div className="min-w-0 flex-1">
-                                <span className="font-bold text-ink transition-colors group-hover/item:text-teal">
-                                  {note.title}
-                                </span>
-                                {(hasProfessor || hasLecture) && (
-                                  <p className="mt-0.5 text-sm text-ink/50">
-                                    {hasProfessor && <span>د. {note.professor_name}</span>}
-                                    {hasProfessor && hasLecture && <span> · </span>}
-                                    {hasLecture && <span>محاضرة {note.lecture_number}</span>}
-                                  </p>
-                                )}
-                              </div>
-                            </a>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </div>
-              </section>
+              <div key={s.id} style={{ animationDelay: `${idx * 50}ms` }} className="animate-slide-up">
+                <SubjectFolder
+                  subject={s}
+                  isOpen={!!expanded[s.id]}
+                  onToggle={() => toggle(s.id)}
+                  forceOpen={forceOpenIds.has(s.id)}
+                  reportCounts={reportCounts}
+                  onReport={(note) => setReportingNote(note)}
+                />
+              </div>
             );
           })}
         </div>
       )}
+
+      {/* Report Modal */}
+      <ReportModal
+        note={reportingNote}
+        onClose={() => setReportingNote(null)}
+        onReported={() => {
+          if (reportingNote) {
+            setReportCounts((prev) => ({
+              ...prev,
+              [reportingNote.id]: (prev[reportingNote.id] ?? 0) + 1,
+            }));
+          }
+        }}
+      />
     </main>
   );
 }
@@ -5030,23 +10389,48 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { ToastProvider } from '@/components/ui/Toast';
 import { ConfirmProvider } from '@/components/ui/ConfirmDialog';
+import { ThemeProvider } from '@/components/ThemeProvider';
 import { NavBar } from '@/components/NavBar';
+import { MobileBottomNav } from '@/components/MobileBottomNav';  // ✅ جديد
 
 export const metadata: Metadata = {
   title: 'لوازم — كلية طب جامعة العميد',
   description: 'منصة تعاونية لملازم ومصادر وجميع احتياجات طلاب كلية الطب جامعة العميد',
 };
 
+const THEME_INIT_SCRIPT = `
+(function() {
+  try {
+    var saved = localStorage.getItem('theme');
+    var prefers = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    var theme = saved || prefers;
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
+    document.documentElement.style.colorScheme = theme;
+  } catch (e) {}
+})();
+`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ar" dir="rtl">
+    <html lang="ar" dir="rtl" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="min-h-screen bg-paper">
-        <ToastProvider>
-          <ConfirmProvider>
-            <NavBar />
-            {children}
-          </ConfirmProvider>
-        </ToastProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <ConfirmProvider>
+              <NavBar />
+              {/* ✅ جديد: padding-bottom على الجوال لإفراغ مساحة للشريط */}
+              <main className="pb-20 md:pb-0">
+                {children}
+              </main>
+              <MobileBottomNav />
+            </ConfirmProvider>
+          </ToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
@@ -5063,6 +10447,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { STAGES, STORAGE_KEYS } from '@/lib/constants';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
+import { RecentViewsCard } from '@/components/RecentViewsCard';
+import { ContinueCard } from '@/components/ContinueCard';
+import { LiveFeed } from '@/components/LiveFeed';
 import type { Stage } from '@/lib/types';
 
 // ==================== Icons ====================
@@ -5101,6 +10488,13 @@ function IconChart() {
     </svg>
   );
 }
+function IconSwap() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+    </svg>
+  );
+}
 function IconArrowLeft() {
   return (
     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -5115,6 +10509,13 @@ function IconCheck() {
     </svg>
   );
 }
+function IconLock() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+    </svg>
+  );
+}
 
 // ==================== Section Config ====================
 interface Section {
@@ -5123,6 +10524,7 @@ interface Section {
   href: string;
   icon: React.ReactNode;
   accent: 'teal' | 'amber';
+  requiresStage?: Stage;
 }
 
 const SECTIONS: Section[] = [
@@ -5131,6 +10533,14 @@ const SECTIONS: Section[] = [
   { title: 'الجدول', description: 'جدول المحاضرات الأسبوعي لمرحلتك', href: '/schedule', icon: <IconCalendar />, accent: 'amber' },
   { title: 'جات الدراسة', description: 'برومبت ذكي يدرس معك بالـAI', href: '/study-prompt', icon: <IconSparkles />, accent: 'amber' },
   { title: 'المعدل', description: 'احفظ درجاتك واحسب معدلك الموزون حسب وحدات موادك', href: '/gpa', icon: <IconChart />, accent: 'teal' },
+  {
+    title: 'تبديل الكروبات',
+    description: 'تبديل كروبات العملي — متاح للمرحلة الثانية فقط',
+    href: '/group-swap',
+    icon: <IconSwap />,
+    accent: 'amber',
+    requiresStage: 'المرحلة الثانية',
+  },
 ];
 
 // ==================== Stage Card ====================
@@ -5139,7 +10549,7 @@ function StageCard({ stage, index, onClick }: { stage: string; index: number; on
     <button
       onClick={onClick}
       style={{ animationDelay: `${index * 80}ms` }}
-      className="group relative w-full overflow-hidden rounded-2xl border-2 border-line bg-white/80 p-6 text-right shadow-[0_2px_8px_rgba(26,33,31,0.05)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-teal hover:shadow-[0_12px_30px_rgba(14,74,74,0.15)] active:scale-[0.98] animate-slide-up"
+      className="group relative w-full overflow-hidden rounded-2xl border-2 border-line bg-white/80 p-6 text-right shadow-[0_2px_8px_rgba(26,33,31,0.05)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-teal hover:shadow-[0_12px_30px_rgba(14,74,74,0.15)] active:scale-[0.98] animate-slide-up dark:bg-paper/80"
     >
       <div className="absolute inset-x-0 top-0 h-1 origin-right scale-x-0 bg-gradient-to-l from-teal via-teal-light to-teal transition-transform duration-500 group-hover:scale-x-100" />
       <div className="flex items-center justify-between">
@@ -5158,21 +10568,58 @@ function StageCard({ stage, index, onClick }: { stage: string; index: number; on
 }
 
 // ==================== Section Card ====================
-function SectionCard({ section, index }: { section: Section; index: number }) {
+function SectionCard({
+  section,
+  index,
+  currentStage,
+}: {
+  section: Section;
+  index: number;
+  currentStage: Stage;
+}) {
   const isTeal = section.accent === 'teal';
+  const accentText = isTeal ? 'text-teal' : 'text-amber-700 dark:text-amber-300';
+  const isLocked = !!section.requiresStage && section.requiresStage !== currentStage;
+
+  if (isLocked) {
+    return (
+      <div
+        style={{ animationDelay: `${index * 60}ms` }}
+        className="group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-white/40 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.02)] backdrop-blur-sm animate-slide-up dark:bg-paper/40"
+        aria-disabled="true"
+      >
+        <div className="relative">
+          <div className="flex items-start justify-between">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-ink/5 text-ink/30 dark:bg-white/5">
+              {section.icon}
+            </div>
+            <span className="flex h-7 items-center gap-1 rounded-full bg-ink/5 px-2.5 text-[10px] font-black text-ink/40 dark:bg-white/5">
+              <IconLock />
+              مقفل
+            </span>
+          </div>
+          <h2 className="mt-4 text-base font-extrabold text-ink/50">{section.title}</h2>
+          <p className="mt-1 text-sm leading-relaxed text-ink/35">{section.description}</p>
+          <div className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-ink/30">
+            <span>متاح فقط للمرحلة الثانية</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const gradient = isTeal
     ? 'from-teal/8 to-teal/4 group-hover:from-teal/12 group-hover:to-teal/6'
     : 'from-amber/12 to-amber/6 group-hover:from-amber/18 group-hover:to-amber/10';
   const iconBg = isTeal
     ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] group-hover:shadow-[0_6px_18px_rgba(14,74,74,0.34)]'
     : 'bg-amber text-ink shadow-[0_2px_8px_rgba(224,166,58,0.30)] group-hover:shadow-[0_6px_18px_rgba(224,166,58,0.42)]';
-  const accentText = isTeal ? 'text-teal' : 'text-amber-700';
 
   return (
     <Link
       href={section.href}
       style={{ animationDelay: `${index * 60}ms` }}
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-teal/30 hover:shadow-[0_12px_30px_rgba(14,74,74,0.10)] active:scale-[0.99] animate-slide-up"
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-teal/30 hover:shadow-[0_12px_30px_rgba(14,74,74,0.10)] active:scale-[0.99] animate-slide-up dark:bg-paper/80 dark:hover:shadow-[0_12px_30px_rgba(0,0,0,0.40)]"
     >
       <div className={`pointer-events-none absolute inset-0 bg-gradient-to-bl opacity-0 transition-opacity duration-300 ${gradient} group-hover:opacity-100`} />
       <div className="relative">
@@ -5219,9 +10666,9 @@ export default function HomePage() {
       {!stage ? (
         <main className="relative mx-auto flex min-h-[calc(100vh-70px)] max-w-2xl flex-col items-center justify-center px-6 py-16 text-center">
           <div className="relative animate-slide-up">
-            <span className="inline-flex items-center gap-2 rounded-full border border-teal/20 bg-teal/5 px-4 py-1.5 font-mono text-xs uppercase tracking-widest text-teal backdrop-blur-sm">
+            <span className="inline-flex items-center gap-2 rounded-full border border-teal/20 bg-teal/5 px-4 py-1.5 font-mono text-xs uppercase tracking-widest text-teal backdrop-blur-sm dark:border-teal/30 dark:bg-teal/15">
               <IconCheck />
-              منصة طلابية
+              منصة لطلبة جامعة العميد
             </span>
           </div>
 
@@ -5229,7 +10676,7 @@ export default function HomePage() {
             اختر مرحلتك الدراسية
           </h1>
           <p className="mt-3 max-w-md text-base leading-relaxed text-ink/60 animate-slide-up" style={{ animationDelay: '160ms' }}>
-            في لوازم نعرض لك المحتوى المناسب لمرحلتك قنوات، جداول، وكل شي.
+            في لوازم نعرض لك المحتوى المناسب لمرحلتك — قنوات، جداول، وكل ما تحتاجه.
           </p>
 
           <div className="relative mt-12 grid w-full gap-4 sm:grid-cols-3">
@@ -5239,36 +10686,52 @@ export default function HomePage() {
           </div>
 
           <p className="mt-10 text-xs text-ink/40 animate-slide-up" style={{ animationDelay: '400ms' }}>
-            تكدر تغيّرها لاحقًا من أي وقت
+            يمكنك تغييرها لاحقاً
           </p>
         </main>
       ) : (
-        <main className="relative mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
+        <main className="relative mx-auto max-w-5xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10">
           <div className="flex flex-wrap items-end justify-between gap-3 animate-slide-up">
             <div>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal backdrop-blur-sm">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal backdrop-blur-sm dark:border-teal/30 dark:bg-teal/15">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
                 {stage}
               </span>
-              <h1 className="mt-3 text-3xl font-black leading-tight text-ink sm:text-4xl">شنو تحتاج اليوم؟</h1>
-              <p className="mt-2 text-sm text-ink/50">كل شي بمكان واحد — اختر القسم اللي تحتاجه</p>
+              <h1 className="mt-3 text-3xl font-black leading-tight text-ink sm:text-4xl">ماذا تحتاج اليوم؟</h1>
+              <p className="mt-2 text-sm text-ink/50">كل شيء في مكان واحد — اختر القسم الذي تحتاجه</p>
             </div>
             <button
               onClick={changeStage}
-              className="rounded-lg border border-line bg-white/80 px-3.5 py-2 text-xs font-bold text-ink/70 shadow-[0_1px_2px_rgba(26,33,31,0.04)] backdrop-blur-sm transition-all duration-200 hover:border-ink/20 hover:bg-paper hover:text-ink active:scale-95"
+              className="rounded-lg border border-line bg-white/80 px-3.5 py-2 text-xs font-bold text-ink/70 shadow-[0_1px_2px_rgba(26,33,31,0.04)] backdrop-blur-sm transition-all duration-200 hover:border-ink/20 hover:bg-paper hover:text-ink active:scale-95 dark:bg-paper/80"
             >
               تغيير المرحلة
             </button>
           </div>
 
+          {/* تابع من حيث توقفت */}
+          <div className="mt-6">
+            <ContinueCard />
+          </div>
+
+          {/* شبكة الأقسام */}
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {SECTIONS.map((sec, i) => (
-              <SectionCard key={sec.href} section={sec} index={i} />
+              <SectionCard key={sec.href} section={sec} index={i} currentStage={stage} />
             ))}
           </div>
 
+          {/* آخر التحديثات */}
+          <div className="mt-8">
+            <LiveFeed stage={stage} />
+          </div>
+
+          {/* آخر ما زرته */}
+          <div className="mt-6">
+            <RecentViewsCard />
+          </div>
+
           <p className="mt-12 text-center text-xs text-ink/40 animate-slide-up" style={{ animationDelay: '400ms' }}>
-            صُنع بكل حب لطلاب كلية الطب · جامعةالعميد · برمجة واعدادالطالب : علي مازن @E_W_9
+            صُنع بكل حب لطلاب كلية الطب · جامعة العميد · برمجة وإعداد الطالب: علي مازن @E_W_9
           </p>
         </main>
       )}
@@ -5328,7 +10791,7 @@ function BackLink() {
   return (
     <Link href="/" className="group inline-flex items-center gap-1.5 text-sm font-bold text-teal/70 transition-colors hover:text-teal">
       <span className="transition-transform duration-200 group-hover:translate-x-1"><IconArrowLeft /></span>
-      رجوع للوحة الأقسام
+      رجوع إلى لوحة الأقسام
     </Link>
   );
 }
@@ -5382,7 +10845,7 @@ export default function SchedulePage() {
       <BackLink />
 
       <div className="mt-6 animate-slide-up">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
           {stage}
         </span>
@@ -5392,25 +10855,25 @@ export default function SchedulePage() {
       {loading && <Skeleton />}
 
       {!loading && error && (
-        <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 animate-slide-up">
+        <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 animate-slide-up dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
           <p className="font-bold">خطأ في الاتصال بقاعدة البيانات</p>
-          <p className="mt-1 text-red-600/80">{error}</p>
+          <p className="mt-1 text-red-600/80 dark:text-red-300/80">{error}</p>
         </div>
       )}
 
       {!loading && !error && !imageUrl && (
-        <div className="mt-6 rounded-3xl border border-line bg-white/80 p-12 text-center backdrop-blur-sm animate-slide-up">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-amber/10 text-amber">
+        <div className="mt-6 rounded-3xl border border-line bg-white/80 p-12 text-center backdrop-blur-sm animate-slide-up dark:bg-paper/80">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-amber/10 text-amber dark:bg-amber/15">
             <IconCalendar />
           </div>
-          <p className="mt-4 font-bold text-ink/70">لا يوجد جدول مرفوع لمرحلتك حاليا.</p>
-          <p className="mt-1 text-sm text-ink/50">تفقده لاحقًا</p>
+          <p className="mt-4 font-bold text-ink/70">لا يوجد جدول مرفوع لمرحلتك حالياً.</p>
+          <p className="mt-1 text-sm text-ink/50">يرجى العودة لاحقاً</p>
         </div>
       )}
 
       {!loading && !error && imageUrl && (
         <div className="mt-6 animate-slide-up">
-          <div className="group relative overflow-hidden rounded-3xl border border-line bg-white/80 p-3 shadow-[0_4px_16px_rgba(26,33,31,0.06)] backdrop-blur-sm transition-all duration-300 hover:shadow-[0_12px_30px_rgba(14,74,74,0.10)]">
+          <div className="group relative overflow-hidden rounded-3xl border border-line bg-white/80 p-3 shadow-[0_4px_16px_rgba(26,33,31,0.06)] backdrop-blur-sm transition-all duration-300 hover:shadow-[0_12px_30px_rgba(14,74,74,0.10)] dark:bg-paper/80 dark:shadow-[0_4px_16px_rgba(0,0,0,0.30)] dark:hover:shadow-[0_12px_30px_rgba(0,0,0,0.45)]">
             {!imageLoaded && (
               <div className="aspect-[3/4] w-full skeleton-shimmer rounded-2xl sm:aspect-[4/3]" />
             )}
@@ -5418,7 +10881,7 @@ export default function SchedulePage() {
               src={imageUrl}
               alt={`جدول ${stage}`}
               onLoad={() => setImageLoaded(true)}
-              className={`w-full rounded-2xl transition-all duration-500 ${
+              className={`w-full rounded-2xl transition-all duration-500 dark:brightness-90 ${
                 imageLoaded ? 'opacity-100' : 'absolute h-0 w-0 opacity-0'
               }`}
             />
@@ -5428,7 +10891,7 @@ export default function SchedulePage() {
             href={imageUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="group mt-4 inline-flex items-center gap-2 rounded-xl border border-teal/20 bg-teal/5 px-4 py-2.5 text-sm font-bold text-teal transition-all duration-200 hover:border-teal/40 hover:bg-teal/10 active:scale-95"
+            className="group mt-4 inline-flex items-center gap-2 rounded-xl border border-teal/20 bg-teal/5 px-4 py-2.5 text-sm font-bold text-teal transition-all duration-200 hover:border-teal/40 hover:bg-teal/10 active:scale-95 dark:border-teal/30 dark:bg-teal/10 dark:hover:bg-teal/15"
           >
             <IconExternal />
             فتح الصورة بحجم كامل
@@ -5497,7 +10960,7 @@ function IconCheck() {
 // ==================== Skeleton ====================
 function Skeleton() {
   return (
-    <div className="mt-6 space-y-5 rounded-3xl border border-line bg-white/80 p-6 backdrop-blur-sm">
+    <div className="mt-6 space-y-5 rounded-3xl border border-line bg-white/80 p-6 backdrop-blur-sm dark:bg-paper/80">
       {[0, 1, 2].map((i) => (
         <div key={i} className="space-y-2">
           <div className="h-4 w-24 skeleton-shimmer rounded" />
@@ -5512,7 +10975,7 @@ function BackLink() {
   return (
     <Link href="/" className="group inline-flex items-center gap-1.5 text-sm font-bold text-teal/70 transition-colors hover:text-teal">
       <span className="transition-transform duration-200 group-hover:translate-x-1"><IconArrowLeft /></span>
-      رجوع للوحة الأقسام
+      رجوع إلى لوحة الأقسام
     </Link>
   );
 }
@@ -5591,7 +11054,7 @@ export default function StudyPromptPage() {
       setResult(data.prompt);
       toast.show('تم توليد البرومبت', 'success');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'صار خطأ، حاول مرة ثانية.';
+      const message = err instanceof Error ? err.message : 'حدث خطأ، يرجى المحاولة مرة أخرى.';
       toast.show(message, 'error');
     } finally {
       setGenerating(false);
@@ -5606,7 +11069,7 @@ export default function StudyPromptPage() {
       toast.show('تم النسخ', 'success');
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast.show('فشل النسخ — انسخ يدويًا', 'error');
+      toast.show('فشل النسخ — يرجى النسخ يدوياً', 'error');
     }
   }
 
@@ -5625,31 +11088,31 @@ export default function StudyPromptPage() {
       <BackLink />
 
       <div className="mt-6 animate-slide-up">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
           {stage}
         </span>
-        <h1 className="mt-3 text-3xl font-black leading-tight text-ink sm:text-4xl">جات الدراسة</h1>
+        <h1 className="mt-3 text-3xl font-black leading-tight text-ink sm:text-4xl">أدوات الدراسة</h1>
         <p className="mt-2 text-sm leading-relaxed text-ink/55">
-          اختر مادتك وشلون راح تزوّد المحتوى، وراح نصيغ لك برومبت احترافي تنسخه وتستخدمه بأي أداة ذكاء اصطناعي.
+          اختر مادتك وطريقة إرسال المحتوى، وسنصيغ لك برومبت احترافياً تنسخه وتستخدمه في أي أداة ذكاء اصطناعي.
         </p>
       </div>
 
       {loadingSubjects && <Skeleton />}
 
       {noSubjects && (
-        <div className="mt-6 rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-amber/10 text-amber">
+        <div className="mt-6 rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up dark:bg-paper/80">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-amber/10 text-amber dark:bg-amber/15">
             <IconSparkles />
           </div>
-          <p className="mt-4 font-bold text-ink/70">لا توجد مواد مضافة لمرحلتك حاليا.</p>
+          <p className="mt-4 font-bold text-ink/70">لا توجد مواد مضافة لمرحلتك حالياً.</p>
         </div>
       )}
 
       {!loadingSubjects && !noSubjects && (
         <form
           onSubmit={handleGenerate}
-          className="mt-6 space-y-6 rounded-3xl border border-line bg-white/80 p-6 shadow-[0_2px_8px_rgba(26,33,31,0.04)] backdrop-blur-sm animate-slide-up"
+          className="mt-6 space-y-6 rounded-3xl border border-line bg-white/80 p-6 shadow-[0_2px_8px_rgba(26,33,31,0.04)] backdrop-blur-sm animate-slide-up dark:bg-paper/80"
         >
           {/* المادة */}
           <div>
@@ -5671,7 +11134,7 @@ export default function StudyPromptPage() {
           {/* طريقة الإرسال */}
           <div>
             <label htmlFor="sp-method" className="mb-2 block text-sm font-bold text-ink/70">
-              شلون راح تزوّد المحتوى للذكاء الاصطناعي؟
+              كيف ستزود المحتوى للذكاء الاصطناعي؟
             </label>
             <Select
               id="sp-method"
@@ -5688,7 +11151,7 @@ export default function StudyPromptPage() {
           {/* أشكال الشرح */}
           <fieldset>
             <legend className="mb-3 block text-sm font-bold text-ink/70">
-              شكل الشرح المطلوب <span className="text-ink/40">(تكدر تختار أكثر من وحدة)</span>
+              شكل الشرح المطلوب <span className="text-ink/40">(يمكنك اختيار أكثر من خيار)</span>
             </legend>
             <div className="space-y-2">
               {STUDY_FORMATS.map((f) => (
@@ -5702,7 +11165,7 @@ export default function StudyPromptPage() {
               ))}
             </div>
             {selectedFormats.length === 0 && (
-              <p className="mt-2 text-xs font-bold text-red-600" role="alert">
+              <p className="mt-2 text-xs font-bold text-red-600 dark:text-red-400" role="alert">
                 اختر طريقة شرح واحدة على الأقل.
               </p>
             )}
@@ -5719,8 +11182,8 @@ export default function StudyPromptPage() {
               onChange={(e) => setLanguage(e.target.value as 'ar' | 'en')}
               className="w-full"
             >
-              <option value="ar">بالعربي</option>
-              <option value="en">بالإنكليزي</option>
+              <option value="ar">بالعربية</option>
+              <option value="en">بالإنجليزية</option>
             </Select>
           </div>
 
@@ -5732,27 +11195,32 @@ export default function StudyPromptPage() {
             icon={!generating ? <IconSparkles /> : undefined}
             className="w-full"
           >
-            {generating ? 'جاري التوليد...' : 'ولّد البرومبت'}
+            {generating ? 'جاري التوليد...' : 'توليد البرومبت'}
           </Button>
         </form>
       )}
 
       {result && (
-        <div className="mt-6 overflow-hidden rounded-3xl border border-line bg-white/80 shadow-[0_4px_16px_rgba(14,74,74,0.06)] backdrop-blur-sm animate-slide-up">
-          <div className="flex items-center justify-between gap-3 border-b border-line/60 bg-gradient-to-l from-teal/5 to-transparent px-6 py-4">
+        <div className="mt-6 overflow-hidden rounded-3xl border border-line bg-white/80 shadow-[0_4px_16px_rgba(14,74,74,0.06)] backdrop-blur-sm animate-slide-up dark:bg-paper/80 dark:shadow-[0_4px_16px_rgba(0,0,0,0.30)]">
+          <div className="flex items-center justify-between gap-3 border-b border-line/60 bg-gradient-to-l from-teal/5 to-transparent px-6 py-4 dark:from-teal/10">
             <h2 className="flex items-center gap-2 text-lg font-extrabold text-teal">
               <IconSparkles />
               البرومبت جاهز
             </h2>
-            <Button variant="secondary" size="sm" onClick={handleCopy} icon={copied ? <IconCheck /> : <IconCopy />}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleCopy}
+              icon={copied ? <IconCheck /> : <IconCopy />}
+            >
               {copied ? 'تم النسخ' : 'نسخ'}
             </Button>
           </div>
           <pre className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap break-words p-6 text-sm leading-relaxed text-ink/80 scrollbar-thin">
             {result}
           </pre>
-          <p className="border-t border-line/60 bg-paper/50 px-6 py-3 text-xs text-ink/50">
-            انسخ هذا النص والصقه بأي أداة ذكاء اصطناعي تحبها، وابدأ ترسل سلايداتك حسب الطريقة اللي اخترتها.
+          <p className="border-t border-line/60 bg-paper/50 px-6 py-3 text-xs text-ink/50 dark:bg-white/[0.03]">
+            انسخ هذا النص والصقه في أي أداة ذكاء اصطناعي تفضلها، ثم ابدأ بإرسال سلايداتك حسب الطريقة التي اخترتها.
           </p>
         </div>
       )}
@@ -5775,9 +11243,11 @@ export default function StudyPromptPage() {
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useTheme } from './ThemeProvider'; // ✅ جديد
 
 export function AnimatedBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { theme } = useTheme(); // ✅ جديد: نقرأ الثيمة الحالية
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -5788,10 +11258,15 @@ export function AnimatedBackground() {
     ).matches;
     if (prefersReduced) return;
 
+    // على أجهزة اللمس لا توجد فايدة من تفاعل الماوس، ونوفر المعالج كليًا.
+    const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+    if (isCoarsePointer) return;
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     let rafId = 0;
+    let running = true;
     let width = 0;
     let height = 0;
     let dpr = 1;
@@ -5806,8 +11281,16 @@ export function AnimatedBackground() {
     }
 
     const particles: Particle[] = [];
-    const TEAL = 'rgba(14, 74, 74, 0.35)';
-    const AMBER = 'rgba(224, 166, 58, 0.30)';
+
+    // ✅ جديد: ألوان ديناميكية حسب الثيمة
+    const isDark = theme === 'dark';
+    const TEAL = isDark
+      ? 'rgba(42, 136, 136, 0.45)'
+      : 'rgba(14, 74, 74, 0.35)';
+    const AMBER = isDark
+      ? 'rgba(240, 199, 105, 0.40)'
+      : 'rgba(224, 166, 58, 0.30)';
+    const LINE_RGB = isDark ? '42, 136, 136' : '14, 74, 74';
     const CONNECT_DISTANCE = 140;
 
     const mouse = { x: -9999, y: -9999 };
@@ -5841,7 +11324,7 @@ export function AnimatedBackground() {
     }
 
     function step() {
-      if (!ctx) return;
+      if (!ctx || !running) return;
       ctx.clearRect(0, 0, width, height);
 
       for (let i = 0; i < particles.length; i++) {
@@ -5853,7 +11336,8 @@ export function AnimatedBackground() {
           const dist2 = dx * dx + dy * dy;
           if (dist2 < CONNECT_DISTANCE * CONNECT_DISTANCE) {
             const opacity = 1 - Math.sqrt(dist2) / CONNECT_DISTANCE;
-            ctx.strokeStyle = `rgba(14, 74, 74, ${opacity * 0.12})`;
+            // ✅ جديد: يستخدم LINE_RGB الديناميكي
+            ctx.strokeStyle = `rgba(${LINE_RGB}, ${opacity * 0.12})`;
             ctx.lineWidth = 0.6;
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
@@ -5908,6 +11392,15 @@ export function AnimatedBackground() {
       resize();
       init();
     }
+    function onVisibilityChange() {
+      if (document.hidden) {
+        running = false;
+        cancelAnimationFrame(rafId);
+      } else if (!running) {
+        running = true;
+        step();
+      }
+    }
 
     resize();
     init();
@@ -5916,14 +11409,18 @@ export function AnimatedBackground() {
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseleave', onMouseLeave);
     window.addEventListener('resize', onResize);
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
+      running = false;
       cancelAnimationFrame(rafId);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseleave', onMouseLeave);
       window.removeEventListener('resize', onResize);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, []);
+    // ✅ جديد: أضفنا theme للتبعيات، فيُعاد التشغيل عند تغيير الثيمة
+  }, [theme]);
 
   return (
     <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
@@ -5938,6 +11435,641 @@ export function AnimatedBackground() {
 }
 ```
 
+## components\ContinueCard.tsx
+
+```
+// components/ContinueCard.tsx
+'use client';
+
+import Link from 'next/link';
+import { useState } from 'react';
+import { useRecentViews, formatRelativeTime } from '@/hooks/useRecentViews';
+
+// ==================== Icons ====================
+function IconBookmark() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+    </svg>
+  );
+}
+function IconPlay() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+    </svg>
+  );
+}
+function IconTelegram() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+    </svg>
+  );
+}
+function IconClock() {
+  return (
+    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+function IconClose() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  );
+}
+
+// ==================== Component ====================
+export function ContinueCard() {
+  const { recent, addView, mounted } = useRecentViews();
+  const [dismissed, setDismissed] = useState(false);
+
+  // لا تظهر قبل mount (تجنّب hydration mismatch)
+  if (!mounted) return null;
+
+  // لا تظهر لو مافيه سجل أو تم الإخفاء
+  if (recent.length === 0 || dismissed) return null;
+
+  const last = recent[0];
+  const isTelegram = last.file_path.includes('t.me');
+  const hasMore = recent.length > 1;
+
+  return (
+    <div className="group relative overflow-hidden rounded-3xl border-2 border-amber/40 bg-gradient-to-bl from-amber/12 via-amber/6 to-transparent shadow-[0_4px_20px_rgba(224,166,58,0.12)] backdrop-blur-sm animate-slide-up dark:border-amber/50 dark:from-amber/20 dark:via-amber/10">
+      {/* زر إغلاق */}
+      <button
+        type="button"
+        onClick={() => setDismissed(true)}
+        aria-label="إخفاء"
+        className="absolute left-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-lg text-ink/40 transition-colors hover:bg-ink/5 hover:text-ink dark:hover:bg-white/10"
+      >
+        <IconClose />
+      </button>
+
+      <div className="flex flex-col gap-4 p-5 pr-14 sm:flex-row sm:items-center sm:justify-between">
+        {/* المحتوى */}
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-amber text-ink shadow-[0_4px_14px_rgba(224,166,58,0.30)]">
+            <IconBookmark />
+          </span>
+
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+              تابع من حيث توقفت
+            </p>
+            <h3 className="mt-0.5 truncate text-base font-black text-ink sm:text-lg">
+              {last.title}
+            </h3>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink/55">
+              <span className="font-bold text-teal">{last.subject_name}</span>
+              <span className="text-ink/30">·</span>
+              <span className="inline-flex items-center gap-1">
+                <IconClock />
+                {formatRelativeTime(last.viewed_at)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* الأزرار */}
+        <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+          <a
+            href={last.file_path}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() =>
+              addView({
+                id: last.id,
+                title: last.title,
+                subject_name: last.subject_name,
+                file_path: last.file_path,
+              })
+            }
+            className="inline-flex items-center gap-2 rounded-xl bg-amber px-5 py-2.5 text-sm font-black text-ink shadow-[0_2px_10px_rgba(224,166,58,0.30)] transition-all duration-200 hover:bg-amber-soft active:scale-95"
+          >
+            {isTelegram ? <IconTelegram /> : <IconPlay />}
+            متابعة القراءة
+          </a>
+
+          {hasMore && (
+            <Link
+              href="/lawazem"
+              className="inline-flex items-center rounded-xl border border-line bg-white/80 px-4 py-2.5 text-sm font-bold text-ink/70 transition-all hover:border-ink/20 hover:bg-paper active:scale-95 dark:bg-white/[0.06]"
+            >
+              كل الملازم
+            </Link>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+## components\LiveFeed.tsx
+
+```
+// components/LiveFeed.tsx
+'use client';
+
+import { useEffect, useState } from 'react';
+import { postJson } from '@/lib/api-client';
+import type { Stage } from '@/lib/types';
+
+// ==================== Types ====================
+type FeedType = 'lecture_note' | 'channel' | 'subject' | 'channel_content';
+
+interface FeedItem {
+  id: string;
+  type: FeedType;
+  title: string;
+  context: string;
+  created_at: string;
+  link: string | null;
+}
+
+interface Props {
+  stage: Stage;
+}
+
+// ==================== Icons ====================
+function IconDoc() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  );
+}
+function IconChannel() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+    </svg>
+  );
+}
+function IconBook() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+    </svg>
+  );
+}
+function IconPin() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 4.5v6.75L6 15v1.5h12V15l-3-3.75V4.5M12 16.5V21" />
+    </svg>
+  );
+}
+function IconClock() {
+  return (
+    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+function IconExternal() {
+  return (
+    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+    </svg>
+  );
+}
+function IconSparkles() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+    </svg>
+  );
+}
+
+// ==================== Helpers ====================
+function formatRelativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (seconds < 60) return 'الآن';
+  if (minutes < 60) return `قبل ${minutes} دقيقة`;
+  if (hours < 24) return `قبل ${hours} ساعة`;
+  if (days === 1) return 'أمس';
+  if (days < 7) return `قبل ${days} أيام`;
+  if (days < 30) return `قبل ${Math.floor(days / 7)} أسابيع`;
+  return `قبل ${Math.floor(days / 30)} شهر`;
+}
+
+function getTypeConfig(type: FeedType): {
+  label: string;
+  icon: React.ReactNode;
+  styles: string;
+} {
+  switch (type) {
+    case 'lecture_note':
+      return {
+        label: 'ملزمة جديدة',
+        icon: <IconDoc />,
+        styles: 'bg-teal/10 text-teal dark:bg-teal/20',
+      };
+    case 'channel':
+      return {
+        label: 'قناة جديدة',
+        icon: <IconChannel />,
+        styles: 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300',
+      };
+    case 'subject':
+      return {
+        label: 'مادة جديدة',
+        icon: <IconBook />,
+        styles: 'bg-amber/15 text-amber-800 dark:bg-amber/25 dark:text-amber-300',
+      };
+    case 'channel_content':
+      return {
+        label: 'محتوى جديد',
+        icon: <IconPin />,
+        styles: 'bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300',
+      };
+  }
+}
+
+// ==================== Feed Item ====================
+function FeedItemRow({ item }: { item: FeedItem }) {
+  const cfg = getTypeConfig(item.type);
+
+  const inner = (
+    <div className="flex items-start gap-3">
+      <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition-all duration-200 ${cfg.styles} ${item.link ? 'group-hover:scale-110' : ''}`}>
+        {cfg.icon}
+      </span>
+
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-bold text-ink transition-colors group-hover:text-teal">
+          {item.title}
+        </p>
+        <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-ink/50">
+          {item.context && <span className="truncate">{item.context}</span>}
+          {item.context && <span className="text-ink/30">·</span>}
+          <span className="inline-flex items-center gap-0.5">
+            <IconClock />
+            {formatRelativeTime(item.created_at)}
+          </span>
+        </div>
+      </div>
+
+      {item.link && (
+        <span className="flex-shrink-0 text-ink/20 transition-colors group-hover:text-teal">
+          <IconExternal />
+        </span>
+      )}
+    </div>
+  );
+
+  if (item.link) {
+    return (
+      <a
+        href={item.link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group block rounded-xl border border-transparent p-2.5 transition-all duration-200 hover:border-teal/20 hover:bg-white hover:shadow-[0_2px_8px_rgba(14,74,74,0.06)] dark:hover:bg-paper"
+      >
+        {inner}
+      </a>
+    );
+  }
+
+  return (
+    <div className="group rounded-xl border border-transparent p-2.5">
+      {inner}
+    </div>
+  );
+}
+
+// ==================== Component ====================
+export function LiveFeed({ stage }: Props) {
+  const [items, setItems] = useState<FeedItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setError('');
+      try {
+        const data = await postJson<{ items: FeedItem[] }>('/api/feed', { stage });
+        if (cancelled) return;
+        setItems(data.items ?? []);
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : 'فشل تحميل التحديثات');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [stage]);
+
+  // Skeleton
+  if (loading) {
+    return (
+      <div className="rounded-3xl border border-line bg-white/70 p-5 backdrop-blur-sm dark:bg-paper/70">
+        <div className="mb-3 flex items-center gap-2">
+          <div className="h-7 w-7 skeleton-shimmer rounded-lg" />
+          <div className="h-5 w-32 skeleton-shimmer rounded" />
+        </div>
+        <div className="space-y-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-14 skeleton-shimmer rounded-xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Error
+  if (error) {
+    return (
+      <div className="rounded-3xl border border-line bg-white/70 p-5 backdrop-blur-sm dark:bg-paper/70">
+        <div className="mb-3 flex items-center gap-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal/10 text-teal">
+            <IconSparkles />
+          </span>
+          <h2 className="text-base font-extrabold text-ink">آخر التحديثات</h2>
+        </div>
+        <p className="text-sm text-ink/50">تعذّر تحميل التحديثات الآن.</p>
+      </div>
+    );
+  }
+
+  // Empty
+  if (items.length === 0) {
+    return (
+      <div className="rounded-3xl border border-line bg-white/70 p-6 text-center backdrop-blur-sm dark:bg-paper/70">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-teal/8 text-teal">
+          <IconSparkles />
+        </div>
+        <p className="mt-3 text-sm font-bold text-ink/60">
+          لا توجد تحديثات بعد
+        </p>
+        <p className="mt-1 text-xs text-ink/40">
+          كل جديد سيظهر هنا تلقائياً
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-3xl border border-line bg-white/70 p-3 backdrop-blur-sm dark:bg-paper/70">
+      <div className="mb-1 flex items-center justify-between gap-2 px-2 pt-2">
+        <div className="flex items-center gap-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal/10 text-teal">
+            <IconSparkles />
+          </span>
+          <h2 className="text-base font-extrabold text-ink">آخر التحديثات</h2>
+        </div>
+        <span className="rounded-full bg-teal/10 px-2 py-0.5 text-[10px] font-black text-teal dark:bg-teal/20">
+          مباشر
+        </span>
+      </div>
+
+      <div className="space-y-0.5">
+        {items.map((item) => (
+          <FeedItemRow key={`${item.type}-${item.id}`} item={item} />
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+## components\MobileBottomNav.tsx
+
+```
+// components/MobileBottomNav.tsx
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useEffect, useState, type ReactNode } from 'react';
+
+interface NavItem {
+  href: string;
+  label: string;
+  icon: ReactNode;
+  accent?: 'amber';
+}
+
+const BASE_ITEMS: NavItem[] = [
+  {
+    href: '/',
+    label: 'الرئيسية',
+    icon: (
+      <svg
+        className="h-[18px] w-[18px]"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+        />
+      </svg>
+    ),
+  },
+  {
+    href: '/lawazem',
+    label: 'الملازم',
+    icon: (
+      <svg
+        className="h-[18px] w-[18px]"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+        />
+      </svg>
+    ),
+  },
+  {
+    href: '/channels',
+    label: 'القنوات',
+    icon: (
+      <svg
+        className="h-[18px] w-[18px]"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+        />
+      </svg>
+    ),
+  },
+  {
+    href: '/dictionary',
+    label: 'القاموس',
+    icon: (
+      <svg
+        className="h-[18px] w-[18px]"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M4.8 2.3A.3.3 0 105 2H4a2 2 0 00-2 2v5a6 6 0 006 6v0a6 6 0 006-6V4a2 2 0 00-2-2h-1a.2.2 0 10.3.3M8 15v1a6 6 0 006 6v0a6 6 0 006-6v-4"
+        />
+        <circle cx="20" cy="10" r="2" />
+      </svg>
+    ),
+  },
+  {
+    href: '/schedule',
+    label: 'الجدول',
+    icon: (
+      <svg
+        className="h-[18px] w-[18px]"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+        />
+      </svg>
+    ),
+  },
+  {
+    href: '/gpa',
+    label: 'المعدل',
+    icon: (
+      <svg
+        className="h-[18px] w-[18px]"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+        />
+      </svg>
+    ),
+  },
+];
+
+const STAGE_2_ITEM: NavItem = {
+  href: '/group-swap',
+  label: 'تبديل',
+  accent: 'amber',
+  icon: (
+    <svg
+      className="h-[18px] w-[18px]"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+      />
+    </svg>
+  ),
+};
+
+export function MobileBottomNav() {
+  const pathname = usePathname();
+  const [stage, setStage] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    try {
+      setStage(localStorage.getItem('student_stage'));
+    } catch {
+      /* تجاهل */
+    }
+    setMounted(true);
+  }, []);
+
+  // لا تظهر في صفحات الإدارة أو بوابة القناة
+  if (
+    pathname?.startsWith('/admin') ||
+    pathname?.startsWith('/channel-portal')
+  ) {
+    return null;
+  }
+
+  const showSwap = mounted && stage === 'المرحلة الثانية';
+  const items = showSwap ? [...BASE_ITEMS, STAGE_2_ITEM] : BASE_ITEMS;
+
+  return (
+    <nav
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper/95 backdrop-blur-xl md:hidden"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      aria-label="التنقل السفلي"
+    >
+      <div className="mx-auto flex max-w-md items-stretch justify-around">
+        {items.map((item) => {
+          const active =
+            pathname === item.href ||
+            (item.href !== '/' && pathname?.startsWith(item.href + '/'));
+          const isAmber = item.accent === 'amber';
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex flex-1 flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-bold transition-all duration-200 active:scale-95 ${
+                active
+                  ? isAmber
+                    ? 'bg-amber/15 text-amber-800 dark:bg-amber/25 dark:text-amber-300'
+                    : 'bg-teal/10 text-teal'
+                  : isAmber
+                  ? 'text-amber-700 hover:bg-amber/10 dark:text-amber-300 dark:hover:bg-amber/15'
+                  : 'text-ink/55 hover:bg-ink/5 hover:text-ink'
+              }`}
+              aria-current={active ? 'page' : undefined}
+            >
+              {item.icon}
+              <span className="whitespace-nowrap leading-none">{item.label}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+```
+
 ## components\NavBar.tsx
 
 ```
@@ -5946,12 +12078,13 @@ export function AnimatedBackground() {
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { ThemeToggle } from './ThemeToggle';
 
 const NAV = [
   { href: '/lawazem', label: 'الملازم' },
   { href: '/channels', label: 'القنوات' },
   { href: '/schedule', label: 'الجدول' },
-  { href: '/study-prompt', label: 'جات الدراسة' },
+  { href: '/dictionary', label: 'القاموس' },    // ← جديد
   { href: '/gpa', label: 'المعدل' },
 ] as const;
 
@@ -5960,9 +12093,9 @@ export function NavBar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-line/60 bg-paper/80 backdrop-blur-xl">
-      <nav className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3.5 sm:px-6">
+      <nav className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <Link href="/" className="group flex flex-shrink-0 items-center gap-2 transition-transform active:scale-95">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] transition-all group-hover:shadow-[0_4px_14px_rgba(14,74,74,0.32)]">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)]">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
             </svg>
@@ -5970,7 +12103,7 @@ export function NavBar() {
           <span className="text-base font-black text-ink sm:text-lg">لوازم</span>
         </Link>
 
-        <div className="flex gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-1.5 sm:overflow-visible [&::-webkit-scrollbar]:hidden">
+        <div className="hidden flex-1 items-center justify-end gap-1.5 md:flex">
           {NAV.map((item) => {
             const active = pathname === item.href || pathname?.startsWith(item.href + '/');
             return (
@@ -5988,8 +12121,471 @@ export function NavBar() {
             );
           })}
         </div>
+
+        <div className="flex flex-shrink-0 items-center md:border-r-0 md:pr-0">
+          <ThemeToggle />
+        </div>
       </nav>
     </header>
+  );
+}
+```
+
+## components\RecentViewsCard.tsx
+
+```
+// components/RecentViewsCard.tsx
+'use client';
+
+import { useRecentViews, formatRelativeTime } from '@/hooks/useRecentViews';
+
+function IconClock() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
+function IconDoc() {
+  return (
+    <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  );
+}
+
+function IconTelegram() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+    </svg>
+  );
+}
+
+export function RecentViewsCard() {
+  const { recent, clearAll, mounted } = useRecentViews();
+
+  // لا تظهر شيئًا قبل mount (تجنب hydration mismatch)
+  if (!mounted) return null;
+
+  // لا تظهر شيئًا إن كانت فارغة
+  if (recent.length === 0) return null;
+
+  return (
+    <section className="animate-slide-up">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-lg font-extrabold text-ink">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber/15 text-amber-800">
+            <IconClock />
+          </span>
+          آخر ما زرته
+        </h2>
+        <button
+          type="button"
+          onClick={clearAll}
+          className="text-xs font-bold text-ink/40 transition-colors hover:text-red-600"
+        >
+          مسح
+        </button>
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        {recent.map((view) => {
+          const isTelegram = view.file_path.includes('t.me');
+          return (
+            <a
+              key={view.id}
+              href={view.file_path}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center gap-3 rounded-2xl border border-line bg-white/80 p-3 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-teal/30 hover:shadow-[0_4px_16px_rgba(14,74,74,0.08)] active:scale-[0.98]"
+            >
+              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-teal/8 text-teal transition-all duration-200 group-hover:bg-teal group-hover:text-white">
+                <IconDoc />
+              </span>
+
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-ink transition-colors group-hover:text-teal">
+                  {view.title}
+                </p>
+                <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-ink/50">
+                  <span className="truncate">{view.subject_name}</span>
+                  <span>·</span>
+                  <span className="flex-shrink-0">{formatRelativeTime(view.viewed_at)}</span>
+                </div>
+              </div>
+
+              <span className="flex-shrink-0 text-ink/30 transition-colors group-hover:text-teal">
+                {isTelegram ? <IconTelegram /> : (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                )}
+              </span>
+            </a>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+```
+
+## components\ReportModal.tsx
+
+```
+// components/ReportModal.tsx
+'use client';
+
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { Textarea } from '@/components/ui/Field';
+import { useToast } from '@/components/ui/Toast';
+import { postJson } from '@/lib/api-client';
+import type { LectureNote, ReportReason } from '@/lib/types';
+
+const FP_KEY = 'device_fingerprint';
+
+function getFingerprint(): string {
+  try {
+    let fp = localStorage.getItem(FP_KEY);
+    if (!fp) {
+      fp = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      localStorage.setItem(FP_KEY, fp);
+    }
+    return fp;
+  } catch {
+    return '';
+  }
+}
+
+interface ReportModalProps {
+  note: LectureNote | null;
+  onClose: () => void;
+  onReported?: () => void;
+}
+
+export function ReportModal({ note, onClose, onReported }: ReportModalProps) {
+  const toast = useToast();
+  const [reason, setReason] = useState<ReportReason | ''>('');
+  const [noteText, setNoteText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (note) {
+      setReason('');
+      setNoteText('');
+      setDone(false);
+    }
+  }, [note]);
+
+  useEffect(() => {
+    if (!note) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [note, onClose]);
+
+  if (!note) return null;
+
+  // ✅ حفظ المرجع لتضييق النوع داخل الـclosures
+  const currentNote = note;
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!reason) {
+      toast.show('اختر سبب البلاغ', 'error');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await postJson<{ success: boolean; duplicate: boolean }>(
+        '/api/reports',
+        {
+          action: 'create',
+          lecture_note_id: currentNote.id,
+          reason,
+          note: noteText.trim() || null,
+          fingerprint: getFingerprint(),
+        }
+      );
+      setDone(true);
+      toast.show(
+        res.duplicate ? 'سبق أن أبلغت عن هذه الملزمة' : 'شكراً، وصلنا بلاغك',
+        'success'
+      );
+      onReported?.();
+      setTimeout(onClose, 1400);
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل إرسال البلاغ', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-3xl border border-line bg-paper p-6 shadow-[0_24px_60px_rgba(26,33,31,0.30)] animate-scale-in dark:shadow-[0_24px_60px_rgba(0,0,0,0.60)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {done ? (
+          <div className="py-4 text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-teal/10 text-teal dark:bg-teal/20">
+              <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="mt-4 text-lg font-black text-ink">شكراً لك</h3>
+            <p className="mt-1 text-sm text-ink/60">وصلنا بلاغك وسيراجعه المشرف قريباً.</p>
+          </div>
+        ) : (
+          <>
+            {/* Header */}
+            <div className="flex items-start gap-3">
+              <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-amber/15 text-amber-700 dark:bg-amber/25 dark:text-amber-300">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                </svg>
+              </span>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-lg font-black text-ink">الإبلاغ عن مشكلة</h3>
+                <p className="mt-0.5 truncate text-xs text-ink/50">{currentNote.title}</p>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="إغلاق"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-ink/40 transition-colors hover:bg-ink/5 hover:text-ink"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+              <fieldset>
+                <legend className="mb-2 text-sm font-bold text-ink/70">ما المشكلة؟</legend>
+                <div className="space-y-2">
+                  <label className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
+                    reason === 'dead_link'
+                      ? 'border-teal bg-teal/5 text-ink dark:bg-teal/15'
+                      : 'border-line bg-white text-ink/80 hover:border-teal/40 dark:bg-white/[0.03]'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="reason"
+                      value="dead_link"
+                      checked={reason === 'dead_link'}
+                      onChange={() => setReason('dead_link')}
+                      className="h-4 w-4 accent-teal"
+                    />
+                    <span className="flex-1">
+                      <span className="block font-bold">الرابط لا يعمل</span>
+                      <span className="text-xs text-ink/50">الرابط لا يفتح أو محذوف من تيليكرام</span>
+                    </span>
+                  </label>
+
+                  <label className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
+                    reason === 'outdated'
+                      ? 'border-teal bg-teal/5 text-ink dark:bg-teal/15'
+                      : 'border-line bg-white text-ink/80 hover:border-teal/40 dark:bg-white/[0.03]'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="reason"
+                      value="outdated"
+                      checked={reason === 'outdated'}
+                      onChange={() => setReason('outdated')}
+                      className="h-4 w-4 accent-teal"
+                    />
+                    <span className="flex-1">
+                      <span className="block font-bold">الملزمة قديمة</span>
+                      <span className="text-xs text-ink/50">المحتوى قديم أو من سنة سابقة</span>
+                    </span>
+                  </label>
+                </div>
+              </fieldset>
+
+              <div>
+                <label htmlFor="report-note" className="mb-2 block text-sm font-bold text-ink/70">
+                  ملاحظة إضافية <span className="text-ink/40">(اختياري)</span>
+                </label>
+                <Textarea
+                  id="report-note"
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  placeholder="أي تفاصيل تساعد المشرف..."
+                  rows={2}
+                  maxLength={300}
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  type="submit"
+                  loading={submitting}
+                  disabled={!reason}
+                  className="flex-1"
+                >
+                  إرسال البلاغ
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={onClose}
+                  disabled={submitting}
+                >
+                  إلغاء
+                </Button>
+              </div>
+            </form>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+## components\ThemeProvider.tsx
+
+```
+// components/ThemeProvider.tsx
+'use client';
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react';
+
+type Theme = 'light' | 'dark';
+
+interface ThemeContextValue {
+  theme: Theme;
+  toggleTheme: () => void;
+  setTheme: (theme: Theme) => void;
+}
+
+const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
+
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [theme, setThemeState] = useState<Theme>('light');
+
+  // ===== تحميل الثيم المحفوظ أو المفضّل =====
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('theme') as Theme | null;
+      const preferred: Theme = window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light';
+      const initial = saved ?? preferred;
+      setThemeState(initial);
+      document.documentElement.classList.toggle('dark', initial === 'dark');
+    } catch {
+      /* في حال فشل localStorage */
+    }
+  }, []);
+
+  // ===== تغيير الثيم =====
+  const setTheme = useCallback((next: Theme) => {
+    setThemeState(next);
+    try {
+      localStorage.setItem('theme', next);
+    } catch {
+      /* تجاهل */
+    }
+    document.documentElement.classList.toggle('dark', next === 'dark');
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setTheme(theme === 'light' ? 'dark' : 'light');
+  }, [theme, setTheme]);
+
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
+export function useTheme(): ThemeContextValue {
+  const ctx = useContext(ThemeContext);
+  if (!ctx) throw new Error('useTheme must be used within ThemeProvider');
+  return ctx;
+}
+```
+
+## components\ThemeToggle.tsx
+
+```
+// components/ThemeToggle.tsx
+'use client';
+
+import { useTheme } from './ThemeProvider';
+
+export function ThemeToggle() {
+  const { theme, toggleTheme } = useTheme();
+
+  return (
+    <button
+      type="button"
+      onClick={toggleTheme}
+      aria-label={theme === 'light' ? 'التحويل إلى الوضع الليلي' : 'التحويل إلى الوضع النهاري'}
+      title={theme === 'light' ? 'الوضع الليلي' : 'الوضع النهاري'}
+      className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg text-ink/60 transition-all duration-200 hover:bg-ink/5 hover:text-ink active:scale-95"
+    >
+      {/* الشمس */}
+      <svg
+        className={`absolute h-4 w-4 transition-all duration-300 ${
+          theme === 'light' ? 'rotate-0 scale-100 opacity-100' : 'rotate-90 scale-0 opacity-0'
+        }`}
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+        aria-hidden="true"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+        />
+      </svg>
+
+      {/* القمر */}
+      <svg
+        className={`absolute h-4 w-4 transition-all duration-300 ${
+          theme === 'dark' ? 'rotate-0 scale-100 opacity-100' : '-rotate-90 scale-0 opacity-0'
+        }`}
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+        aria-hidden="true"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+        />
+      </svg>
+    </button>
   );
 }
 ```
@@ -6014,16 +12610,16 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANTS: Record<Variant, string> = {
   primary:
-    'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] hover:bg-teal-light hover:shadow-[0_4px_14px_rgba(14,74,74,0.30)]',
+    'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] hover:bg-teal-light hover:shadow-[0_4px_14px_rgba(14,74,74,0.30)] dark:bg-teal dark:hover:bg-teal-light',
   secondary:
-    'bg-white text-ink border border-line shadow-[0_1px_2px_rgba(26,33,31,0.04)] hover:bg-paper hover:border-ink/20',
+    'bg-white text-ink border border-line shadow-[0_1px_2px_rgba(26,33,31,0.04)] hover:bg-paper hover:border-ink/20 dark:bg-white/[0.06] dark:text-ink dark:hover:bg-white/[0.10] dark:hover:border-ink/30',
   outline:
-    'bg-transparent text-teal border-2 border-teal/30 hover:bg-teal/5 hover:border-teal/60',
+    'bg-transparent text-teal border-2 border-teal/30 hover:bg-teal/5 hover:border-teal/60 dark:text-teal dark:border-teal/40 dark:hover:bg-teal/10 dark:hover:border-teal/60',
   danger:
-    'bg-white text-red-600 border border-red-200 hover:bg-red-50 hover:border-red-300',
-  ghost: 'bg-transparent text-ink/70 hover:bg-ink/5 hover:text-ink',
+    'bg-white text-red-600 border border-red-200 hover:bg-red-50 hover:border-red-300 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900/50 dark:hover:bg-red-950/50 dark:hover:border-red-800',
+  ghost: 'bg-transparent text-ink/70 hover:bg-ink/5 hover:text-ink dark:text-ink/70 dark:hover:bg-white/5 dark:hover:text-ink',
   amber:
-    'bg-amber text-ink shadow-[0_2px_8px_rgba(224,166,58,0.28)] hover:bg-amber-soft',
+    'bg-amber text-ink shadow-[0_2px_8px_rgba(224,166,58,0.28)] hover:bg-amber-soft dark:bg-amber dark:text-ink dark:hover:bg-amber-soft',
 };
 
 const SIZES: Record<Size, string> = {
@@ -6162,16 +12758,154 @@ export function useConfirm() {
 }
 ```
 
+## components\ui\DropZone.tsx
+
+```
+// components/ui/DropZone.tsx
+'use client';
+
+import { useCallback, useState } from 'react';
+import { useDropzone, type FileRejection } from 'react-dropzone';
+
+interface DropZoneProps {
+  onFileSelected: (file: File) => void | Promise<void>;
+  accept?: Record<string, string[]>;
+  maxSizeMB?: number;
+  uploading?: boolean;
+  disabled?: boolean;
+}
+
+const DEFAULT_ACCEPT = {
+  'application/pdf': ['.pdf'],
+  'application/msword': ['.doc'],
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+  'application/vnd.ms-powerpoint': ['.ppt'],
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+  'image/*': ['.png', '.jpg', '.jpeg', '.webp', '.gif'],
+};
+
+export function DropZone({
+  onFileSelected,
+  accept = DEFAULT_ACCEPT,
+  maxSizeMB = 50,
+  uploading = false,
+  disabled = false,
+}: DropZoneProps) {
+  const [error, setError] = useState('');
+
+  const onDrop = useCallback(
+    async (acceptedFiles: File[], rejectedFiles: FileRejection[]) => {
+      setError('');
+
+      if (rejectedFiles.length > 0) {
+        const reason = rejectedFiles[0].errors[0]?.code;
+        if (reason === 'file-too-large') {
+          setError(`حجم الملف كبير جداً (بحد أقصى ${maxSizeMB} ميجا)`);
+        } else if (reason === 'file-invalid-type') {
+          setError('نوع الملف غير مدعوم');
+        } else if (reason === 'too-many-files') {
+          setError('اختر ملفاً واحداً فقط');
+        } else {
+          setError('فشل اختيار الملف');
+        }
+        return;
+      }
+
+      if (acceptedFiles[0]) {
+        try {
+          await onFileSelected(acceptedFiles[0]);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'فشل رفع الملف');
+        }
+      }
+    },
+    [onFileSelected, maxSizeMB]
+  );
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept,
+    maxSize: maxSizeMB * 1024 * 1024,
+    multiple: false,
+    disabled: uploading || disabled,
+  });
+
+  return (
+    <div className="space-y-2">
+      <div
+        {...getRootProps()}
+        className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-6 text-center transition-all duration-200 ${
+          isDragActive
+            ? 'border-teal bg-teal/5 dark:bg-teal/10'
+            : 'border-line bg-paper/50 hover:border-teal/40 hover:bg-teal/[0.03] dark:bg-paper-deep/40 dark:hover:bg-teal/5'
+        } ${uploading ? 'cursor-wait opacity-60' : ''} ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+      >
+        <input {...getInputProps()} />
+
+        <span
+          className={`flex h-12 w-12 items-center justify-center rounded-2xl transition-all duration-200 ${
+            isDragActive ? 'bg-teal/15 text-teal' : 'bg-teal/8 text-teal'
+          }`}
+        >
+          {uploading ? (
+            <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+              <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+            </svg>
+          ) : isDragActive ? (
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+          ) : (
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+          )}
+        </span>
+
+        <div>
+          <p className="text-sm font-bold text-ink/80">
+            {uploading
+              ? 'جاري الرفع...'
+              : isDragActive
+              ? 'أفلت الملف هنا'
+              : 'اسحب الملف هنا أو اضغط للاختيار'}
+          </p>
+          <p className="mt-1 text-xs text-ink/50">
+            PDF, Word, PowerPoint, صور — بحد أقصى {maxSizeMB} ميجا
+          </p>
+        </div>
+      </div>
+
+      {error && (
+        <p
+          className="rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-600 dark:bg-red-950/40 dark:text-red-300"
+          role="alert"
+        >
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+```
+
 ## components\ui\Field.tsx
 
 ```
 // components/ui/Field.tsx
 'use client';
 
-import { forwardRef, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes, type ReactNode } from 'react';
+import {
+  forwardRef,
+  type InputHTMLAttributes,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+  type ReactNode,
+} from 'react';
 
 const BASE =
-  'w-full rounded-xl border-2 border-line bg-white px-4 py-2.5 text-sm text-ink placeholder:text-ink/35 transition-all duration-200 focus:border-teal focus:bg-white focus:outline-none focus:shadow-[0_0_0_4px_rgba(14,74,74,0.10)] hover:border-ink/20 disabled:cursor-not-allowed disabled:bg-paper disabled:opacity-60';
+  'w-full rounded-xl border-2 border-line bg-white px-4 py-2.5 text-sm text-ink placeholder:text-ink/35 transition-all duration-200 focus:border-teal focus:bg-white focus:outline-none focus:shadow-[0_0_0_4px_rgba(14,74,74,0.10)] hover:border-ink/20 disabled:cursor-not-allowed disabled:bg-paper disabled:opacity-60 dark:bg-white/[0.06] dark:text-ink dark:placeholder:text-ink/40 dark:hover:bg-white/[0.08] dark:hover:border-ink/30 dark:focus:bg-white/[0.08] dark:focus:border-teal dark:focus:shadow-[0_0_0_4px_rgba(77,184,184,0.15)] dark:disabled:bg-white/[0.02]';
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   function Input({ className = '', ...rest }, ref) {
@@ -6183,10 +12917,20 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
   function Select({ className = '', children, ...rest }, ref) {
     return (
       <div className="relative">
-        <select ref={ref} className={`${BASE} cursor-pointer appearance-none pl-10 pr-4 ${className}`} {...rest}>
+        <select
+          ref={ref}
+          className={`${BASE} cursor-pointer appearance-none pl-10 pr-4 ${className}`}
+          {...rest}
+        >
           {children}
         </select>
-        <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <svg
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </div>
@@ -6196,38 +12940,175 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(
   function Textarea({ className = '', ...rest }, ref) {
-    return <textarea ref={ref} className={`${BASE} resize-none leading-relaxed ${className}`} {...rest} />;
+    return (
+      <textarea
+        ref={ref}
+        className={`${BASE} resize-none leading-relaxed ${className}`}
+        {...rest}
+      />
+    );
   }
 );
 
 export function FieldGroup({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`space-y-3 rounded-2xl border border-line bg-white/70 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] ${className}`}>
+    <div
+      className={`space-y-3 rounded-2xl border border-line bg-white/70 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] dark:bg-white/[0.03] ${className}`}
+    >
       {children}
     </div>
   );
 }
 
 export function Checkbox({
-  checked, onChange, children, className = '',
-}: { checked: boolean; onChange: (v: boolean) => void; children: ReactNode; className?: string }) {
+  checked,
+  onChange,
+  children,
+  className = '',
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <label
-      className={`group flex cursor-pointer items-center gap-3 rounded-xl border border-line bg-white px-4 py-3 text-sm font-medium text-ink/80 transition-all duration-200 hover:border-teal/40 has-[:checked]:border-teal has-[:checked]:bg-teal/5 has-[:checked]:text-ink ${className}`}
+      className={`group flex cursor-pointer items-center gap-3 rounded-xl border border-line bg-white px-4 py-3 text-sm font-medium text-ink/80 transition-all duration-200 hover:border-teal/40 has-[:checked]:border-teal has-[:checked]:bg-teal/5 has-[:checked]:text-ink dark:bg-white/[0.03] dark:hover:bg-white/[0.06] dark:hover:border-teal/40 dark:has-[:checked]:bg-teal/15 ${className}`}
     >
       <span className="relative flex h-5 w-5 flex-shrink-0 items-center justify-center">
         <input
           type="checkbox"
           checked={checked}
           onChange={(e) => onChange(e.target.checked)}
-          className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border-2 border-line bg-white transition-all duration-200 checked:border-teal checked:bg-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/30 focus-visible:ring-offset-2"
+          className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border-2 border-line bg-white transition-all duration-200 checked:border-teal checked:bg-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/30 focus-visible:ring-offset-2 dark:bg-white/[0.06] dark:border-line"
         />
-        <svg className="pointer-events-none absolute h-3 w-3 scale-0 text-white opacity-0 transition-all duration-150 peer-checked:scale-100 peer-checked:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5} aria-hidden="true">
+        <svg
+          className="pointer-events-none absolute h-3 w-3 scale-0 text-white opacity-0 transition-all duration-150 peer-checked:scale-100 peer-checked:opacity-100"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={3.5}
+          aria-hidden="true"
+        >
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
         </svg>
       </span>
       <span className="flex-1">{children}</span>
     </label>
+  );
+}
+```
+
+## components\ui\TagInput.tsx
+
+```
+// components/ui/TagInput.tsx
+'use client';
+
+import { useState, type KeyboardEvent } from 'react';
+
+interface TagInputProps {
+  tags: string[];
+  onChange: (tags: string[]) => void;
+  placeholder?: string;
+  maxTags?: number;
+  suggestions?: string[];
+}
+
+export function TagInput({
+  tags,
+  onChange,
+  placeholder = 'أضف وسماً...',
+  maxTags = 10,
+  suggestions = [],
+}: TagInputProps) {
+  const [input, setInput] = useState('');
+
+  function addTag(value: string) {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    if (tags.includes(trimmed)) {
+      setInput('');
+      return;
+    }
+    if (tags.length >= maxTags) return;
+    onChange([...tags, trimmed]);
+    setInput('');
+  }
+
+  function removeTag(index: number) {
+    onChange(tags.filter((_, i) => i !== index));
+  }
+
+  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addTag(input);
+    } else if (e.key === 'Backspace' && input === '' && tags.length > 0) {
+      removeTag(tags.length - 1);
+    }
+  }
+
+  const filteredSuggestions = suggestions
+    .filter((s) => !tags.includes(s) && s.includes(input.trim()))
+    .slice(0, 6);
+
+  const reachedMax = tags.length >= maxTags;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex min-h-[44px] flex-wrap items-center gap-1.5 rounded-xl border-2 border-line bg-white px-3 py-2 transition-all duration-200 focus-within:border-teal focus-within:shadow-[0_0_0_4px_rgba(14,74,74,0.10)] dark:bg-white/[0.06] dark:focus-within:bg-white/[0.08] dark:focus-within:shadow-[0_0_0_4px_rgba(77,184,184,0.15)]">
+        {tags.map((tag, i) => (
+          <span
+            key={`${tag}-${i}`}
+            className="inline-flex items-center gap-1 rounded-full bg-teal/10 px-2.5 py-1 text-xs font-bold text-teal dark:bg-teal/20"
+          >
+            <span>#{tag}</span>
+            <button
+              type="button"
+              onClick={() => removeTag(i)}
+              className="ml-0.5 rounded-full p-0.5 transition-colors hover:bg-teal/20 dark:hover:bg-teal/30"
+              aria-label={`حذف ${tag}`}
+            >
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </span>
+        ))}
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={() => addTag(input)}
+          placeholder={tags.length === 0 ? placeholder : ''}
+          disabled={reachedMax}
+          className="min-w-[100px] flex-1 bg-transparent text-sm text-ink placeholder:text-ink/35 focus:outline-none disabled:cursor-not-allowed dark:placeholder:text-ink/40"
+        />
+      </div>
+
+      {input && filteredSuggestions.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {filteredSuggestions.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => addTag(s)}
+              className="rounded-full border border-line bg-white px-2.5 py-1 text-xs font-bold text-ink/70 transition-all duration-150 hover:border-teal hover:bg-teal/5 hover:text-teal active:scale-95 dark:bg-white/[0.06] dark:hover:bg-teal/10"
+            >
+              + {s}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <p className="text-xs text-ink/40">
+        {reachedMax
+          ? `وصلت إلى الحد الأقصى (${maxTags} وسوم)`
+          : `اضغط Enter أو فاصلة لإضافة وسم — ${tags.length}/${maxTags}`}
+      </p>
+    </div>
   );
 }
 ```
@@ -6375,6 +13256,171 @@ Get-ChildItem -Recurse -File | Where-Object {
 
 [System.IO.File]::WriteAllText("$root\$outputFile", $sb.ToString(), [System.Text.Encoding]::UTF8)
 Write-Host "تم إنشاء الملف: $outputFile"
+```
+
+## hooks\useBookmarks.ts
+
+```
+// hooks/useBookmarks.ts
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+
+const STORAGE_KEY = 'lawazem_bookmarked_notes';
+
+export function useBookmarks() {
+  const [bookmarks, setBookmarks] = useState<string[]>([]);
+  const [mounted, setMounted] = useState(false);
+
+  // ===== تحميل المحفوظ =====
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setBookmarks(parsed.filter((id): id is string => typeof id === 'string'));
+        }
+      }
+    } catch {
+      /* تجاهل الأخطاء */
+    }
+    setMounted(true);
+  }, []);
+
+  // ===== تبديل حالة الحفظ =====
+  const toggle = useCallback((noteId: string) => {
+    setBookmarks((prev) => {
+      const next = prev.includes(noteId)
+        ? prev.filter((id) => id !== noteId)
+        : [...prev, noteId];
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        /* قد تكون المساحة ممتلئة */
+      }
+      return next;
+    });
+  }, []);
+
+  // ===== التحقق =====
+  const isBookmarked = useCallback(
+    (noteId: string) => bookmarks.includes(noteId),
+    [bookmarks]
+  );
+
+  // ===== مسح الكل =====
+  const clearAll = useCallback(() => {
+    setBookmarks([]);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      /* تجاهل */
+    }
+  }, []);
+
+  return {
+    bookmarks,
+    toggle,
+    isBookmarked,
+    clearAll,
+    mounted,
+    count: bookmarks.length,
+  };
+}
+```
+
+## hooks\useRecentViews.ts
+
+```
+// hooks/useRecentViews.ts
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+
+const STORAGE_KEY = 'lawazem_recent_views';
+const MAX_ITEMS = 6;
+
+export interface RecentView {
+  id: string;
+  title: string;
+  subject_name: string;
+  file_path: string;
+  viewed_at: number;
+}
+
+export function useRecentViews() {
+  const [recent, setRecent] = useState<RecentView[]>([]);
+  const [mounted, setMounted] = useState(false);
+
+  // ===== تحميل المحفوظ =====
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setRecent(parsed);
+        }
+      }
+    } catch {
+      /* تجاهل */
+    }
+    setMounted(true);
+  }, []);
+
+  // ===== إضافة زيارة جديدة =====
+  const addView = useCallback(
+    (view: Omit<RecentView, 'viewed_at'>) => {
+      setRecent((prev) => {
+        // إزالة الزيارة احاليابقة لنفس الملزمة (لتحديث وقتها)
+        const filtered = prev.filter((v) => v.id !== view.id);
+        // إضافة في المقدمة + تحديد الحد الأقصى
+        const next = [
+          { ...view, viewed_at: Date.now() },
+          ...filtered,
+        ].slice(0, MAX_ITEMS);
+
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        } catch {
+          /* تجاهل */
+        }
+        return next;
+      });
+    },
+    []
+  );
+
+  // ===== مسح الكل =====
+  const clearAll = useCallback(() => {
+    setRecent([]);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      /* تجاهل */
+    }
+  }, []);
+
+  return { recent, addView, clearAll, mounted };
+}
+
+// ===== تنسيق الوقت النسبي =====
+export function formatRelativeTime(timestamp: number): string {
+  const diff = Date.now() - timestamp;
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (seconds < 60) return 'الآن';
+  if (minutes < 60) return `قبل ${minutes} دقيقة`;
+  if (hours < 24) return `قبل ${hours} ساعة`;
+  if (days === 1) return 'أمس';
+  if (days < 7) return `قبل ${days} أيام`;
+  if (days < 30) return `قبل ${Math.floor(days / 7)} أسابيع`;
+  return 'منذ فترة';
+}
 ```
 
 ## hooks\useStudentStage.ts
@@ -6594,6 +13640,480 @@ export const MATERIAL_METHODS = [
 ] as const;
 ```
 
+## lib\strings.ts
+
+```
+// lib/strings.ts
+/**
+ * ملف النصوص المركزي
+ * كل النصوص العربية للموقع موجودة هنا بصيغة فصحى رسمية.
+ * تعديل أي نص هنا يظهر في كل مكان يستخدمه.
+ */
+
+export const strings = {
+  // ==================== عام ====================
+  common: {
+    appName: 'لوازم',
+    loading: 'جاري التحميل...',
+    backToHome: 'العودة إلى لوحة الأقسام',
+    backToChannels: 'العودة إلى القنوات',
+    save: 'حفظ',
+    cancel: 'إلغاء',
+    delete: 'حذف',
+    edit: 'تعديل',
+    add: 'إضافة',
+    confirm: 'تأكيد',
+    retry: 'إعادة المحاولة',
+    all: 'الكل',
+    filter: 'تصفية',
+    remove: 'إزالة',
+    copied: 'تم النسخ',
+    copy: 'نسخ',
+    close: 'إغلاق',
+  },
+
+  // ==================== التنقل ====================
+  nav: {
+    home: 'الرئيسية',
+    lawazem: 'الملازم',
+    channels: 'القنوات',
+    schedule: 'الجدول',
+    studyPrompt: 'أدوات الدراسة',
+    gpa: 'المعدل',
+    bottomNavLabel: 'التنقل السفلي',
+  },
+
+  // ==================== الصفحة الرئيسية ====================
+  home: {
+    badge: 'منصة لطلبة جامعة العميد',
+    chooseStage: 'اختر مرحلتك الدراسية',
+    chooseStageDesc: 'نعرض لك المحتوى المناسب لمرحلتك — قنوات، جداول، وكل ما تحتاجه.',
+    changeStageHint: 'يمكنك تغييرها لاحقاً في أي وقت',
+    greeting: 'ماذا تحتاج اليوم؟',
+    greetingDesc: 'كل شيء في مكان واحد — اختر القسم الذي تحتاجه',
+    changeStage: 'تغيير المرحلة',
+    chooseAction: 'اختر',
+    openAction: 'فتح',
+    footer:
+      'صُنع بكل حب لطلاب كلية الطب · جامعة العميد · برمجة وإعداد الطالب: علي مازن @E_W_9',
+    sections: {
+      lawazem: 'الملازم',
+      lawazemDesc: 'ملازم الدكاترة مرتبة حسب المادة',
+      channels: 'القنوات الدراسية',
+      channelsDesc: 'دليل قنوات التلغرام الدراسية',
+      schedule: 'الجدول',
+      scheduleDesc: 'جدول المحاضرات الأسبوعي لمرحلتك',
+      studyPrompt: 'أدوات الدراسة',
+      studyPromptDesc: 'برومبت ذكي يدرس معك بالذكاء الاصطناعي',
+      gpa: 'المعدل',
+      gpaDesc: 'احفظ درجاتك واحسب معدلك الموزون حسب وحدات موادك',
+    },
+  },
+
+  // ==================== الملازم ====================
+  lawazem: {
+    title: 'الملازم والمصادر',
+    backLink: 'العودة إلى لوحة الأقسام',
+    searchPlaceholder: 'ابحث باسم الملزمة، الدكتور، أو وسم...',
+    filterLabel: 'تصفية:',
+    summaryPrefix: 'ملزمة موزعة على',
+    summaryMiddle: 'مادة',
+    emptySubjects: 'لا توجد مواد مضافة لمرحلتك حالياً.',
+    emptyNotes: 'لا توجد ملفات حالياً.',
+    emptyNotesShort: 'لا توجد ملفات حالياً',
+    noResults: 'لا توجد نتائج مطابقة',
+    noResultsFor: (search: string) => `البحث: «${search}»`,
+    noResultsTag: (tag: string) => `الوسم: #${tag}`,
+    doctorCount: (n: number) => (n === 1 ? 'دكتور' : 'دكاترة'),
+    noteCount: (n: number) => (n === 1 ? 'ملزمة' : 'ملازم'),
+    withoutDoctor: 'بدون دكتور',
+    doctorPrefix: 'د.',
+    lectureLabel: 'محاضرة',
+    trackTheoretical: 'نظري',
+    trackPractical: 'عملي',
+    bookmark: 'إضافة إلى المفضلة',
+    removeBookmark: 'إزالة من المفضلة',
+    openOnTelegram: 'فتح على تلغرام',
+    openFile: 'فتح الملف',
+  },
+
+  // ==================== آخر ما زرته ====================
+  recent: {
+    title: 'آخر ما زرته',
+    clear: 'مسح',
+    justNow: 'الآن',
+    minutesAgo: (n: number) => `قبل ${n} دقيقة`,
+    hoursAgo: (n: number) => `قبل ${n} ساعة`,
+    yesterday: 'أمس',
+    daysAgo: (n: number) => `قبل ${n} أيام`,
+    weeksAgo: (n: number) => `قبل ${n} أسابيع`,
+    longAgo: 'منذ فترة',
+  },
+
+  // ==================== القنوات ====================
+  channels: {
+    title: 'قنوات الدراسة',
+    backLink: 'العودة إلى لوحة الأقسام',
+    searchPlaceholder: 'ابحث باسم القناة...',
+    searchContentPlaceholder: 'ابحث بعنوان المحتوى...',
+    channelsCount: (n: number) =>
+      n === 1 ? 'قناة متاحة لمرحلتك' : `${n} قناة متاحة لمرحلتك`,
+    empty: 'لا توجد قنوات مضافة لمرحلتك حالياً.',
+    checkLater: 'يرجى العودة لاحقاً',
+    noResults: 'لا توجد نتائج مطابقة',
+    openChannel: 'فتح صفحة القناة',
+    openTelegram: 'فتح القناة على تلغرام',
+    notFound: 'لم نجد هذه القناة.',
+    pinned: 'مثبّت',
+    emptyContent: 'لا يوجد محتوى مضاف لهذه القناة حالياً.',
+    emptySearchContent: 'لا توجد نتائج مطابقة لبحثك',
+    filePrefix: (n: number) => `ملف ${n}`,
+    dueDateLabel: 'تاريخ التسليم:',
+    dueExpired: 'انتهى الموعد',
+    dueToday: 'التسليم اليوم!',
+    dueSoon: (days: number, date: string) =>
+      `تاريخ التسليم: ${date} (بعد ${days} ${days === 1 ? 'يوم' : 'أيام'})`,
+  },
+
+  // ==================== الجدول ====================
+  schedule: {
+    title: 'جدول المحاضرات',
+    backLink: 'العودة إلى لوحة الأقسام',
+    empty: 'لا يوجد جدول مرفوع لمرحلتك حالياً.',
+    checkLater: 'يرجى العودة لاحقاً',
+    openFullSize: 'فتح الصورة بحجم كامل',
+  },
+
+  // ==================== المعدل ====================
+  gpa: {
+    title: 'المعدل',
+    backLink: 'العودة إلى لوحة الأقسام',
+    description:
+      'افتح كل مادة وأدخل درجاتك أولاً بأول على مدار السنة. يمكنك تعديل «من كم» لكل محطة إذا كانت تختلف بكل مادة. الدرجات تُحفظ في متصفحك فقط.',
+    empty: 'لا توجد مواد مضافة لمرحلتك حالياً.',
+    progress: 'التقدم',
+    progressText: (entered: number, total: number) => `${entered} من ${total} مادة`,
+    units: 'وحدة',
+    noScores: 'لا توجد درجات',
+    yourScorePlaceholder: 'درجتك',
+    fromLabel: 'من',
+    finalAverage: 'معدلك النهائي',
+    partialAverage: 'معدلك الحالي (جزئي)',
+    enterScores: 'أدخل درجاتك ليظهر معدلك.',
+    clearAll: 'مسح كل الدرجات',
+    confirmClear: 'حذف كل الدرجات المدخلة لهذه المرحلة. هل أنت متأكد؟',
+    components: {
+      first: 'الفصل الأول',
+      mid: 'المد',
+      second: 'الفصل الثاني',
+      finalTheory: 'الفاينل (نظري)',
+      finalPractical: 'الفاينل (عملي)',
+    },
+  },
+
+  // ==================== أدوات الدراسة ====================
+  studyPrompt: {
+    title: 'أدوات الدراسة',
+    backLink: 'العودة إلى لوحة الأقسام',
+    description:
+      'اختر مادتك وطريقة إرسال المحتوى، وسنصيغ لك برومبت احترافي تنسخه وتستخدمه في أي أداة ذكاء اصطناعي.',
+    empty: 'لا توجد مواد مضافة لمرحلتك حالياً.',
+    subjectLabel: 'المادة',
+    methodLabel: 'كيف ستزود المحتوى للذكاء الاصطناعي؟',
+    formatsLabel: 'شكل الشرح المطلوب',
+    formatsHint: '(يمكنك اختيار أكثر من خيار)',
+    formatsError: 'اختر طريقة شرح واحدة على الأقل.',
+    languageLabel: 'لغة البرومبت',
+    arabic: 'بالعربية',
+    english: 'بالإنجليزية',
+    generateBtn: 'توليد البرومبت',
+    generatingBtn: 'جاري التوليد...',
+    resultReady: 'البرومبت جاهز',
+    resultNote:
+      'انسخ هذا النص والصقه في أي أداة ذكاء اصطناعي تفضلها، ثم ابدأ بإرسال سلايداتك حسب الطريقة التي اخترتها.',
+    generateSuccess: 'تم توليد البرومبت',
+    generateFailed: 'حدث خطأ، يرجى المحاولة مرة أخرى.',
+    copySuccess: 'تم النسخ',
+    copyFailed: 'فشل النسخ — يرجى النسخ يدوياً',
+    loadFailed: 'فشل تحميل المواد',
+  },
+
+  // ==================== لوحة التحكم ====================
+  admin: {
+    title: 'لوحة التحكم',
+    badge: 'مشرف',
+    logout: 'تسجيل الخروج',
+    loginTitle: 'دخول المشرف',
+    loginDesc: 'أدخل كلمة مرور المشرف للوصول إلى لوحة التحكم',
+    passwordPlaceholder: 'كلمة المرور',
+    passwordRequired: 'أدخل كلمة المرور',
+    loginBtn: 'دخول',
+    loggingIn: 'جاري التحقق...',
+    passwordIncorrect: 'كلمة المرور غير صحيحة',
+    genericError: 'حدث خطأ، يرجى المحاولة مرة أخرى.',
+    tabs: {
+      subjects: 'المواد',
+      materials: 'الملازم',
+      channels: 'القنوات',
+      schedules: 'الجدول',
+    },
+  },
+
+  // ==================== المواد (لوحة التحكم) ====================
+  subjects: {
+    addPlaceholder: 'اسم المادة الجديدة',
+    chooseStagePlaceholder: 'اختر المرحلة',
+    addBtn: 'إضافة',
+    empty: 'لا توجد مواد مضافة حالياً.',
+    emptyHint: 'أضف أول مادة من الأعلى',
+    editBtn: 'تعديل',
+    deleteBtn: 'حذف',
+    saveBtn: 'حفظ',
+    cancelBtn: 'إلغاء',
+    confirmDelete: (name: string) =>
+      `حذف مادة «${name}» سيحذف جميع الملازم والأسئلة المرتبطة بها نهائياً. هل أنت متأكد؟`,
+    loadFailed: 'فشل تحميل المواد',
+    addSuccess: 'تمت إضافة المادة',
+    addFailed: 'فشل إضافة المادة',
+    editSuccess: 'تم الحفظ',
+    editFailed: 'فشل الحفظ',
+    deleteSuccess: 'تم الحذف',
+    deleteFailed: 'فشل الحذف',
+  },
+
+  // ==================== الملازم (لوحة التحكم) ====================
+  materials: {
+    warningNoSubjects:
+      'أضف مادة أولاً من تبويب «المواد» لتتمكن من إضافة الملازم.',
+    chooseSubjectPlaceholder: 'اختر المادة',
+    chooseTrackPlaceholder: 'نظري / عملي',
+    trackTheoretical: 'نظري',
+    trackPractical: 'عملي',
+    titlePlaceholder: 'اسم الملزمة / المحاضرة',
+    professorPlaceholder: 'اسم الدكتور (اختياري)',
+    lectureNumberPlaceholder: 'رقم المحاضرة',
+    fileSectionLabel: 'ملف الملزمة',
+    fileUrlPlaceholder: 'الصق رابط تلغرام أو Supabase يدوياً',
+    fileReady: 'الملف جاهز',
+    telegramLink: 'رابط تلغرام',
+    tagsLabel: 'الوسوم (Tags)',
+    tagsSuggestions: [
+      'نظري',
+      'عملي',
+      'محاضرة',
+      'ملخص',
+      'أساسيات',
+      'مراجعة',
+      'سلايدات',
+      'امتحان',
+      'واجب',
+      'فاينل',
+    ],
+    addBtn: 'إضافة ملزمة',
+    empty: 'لا توجد ملازم مضافة حالياً.',
+    saveBtn: 'حفظ',
+    cancelBtn: 'إلغاء',
+    editBtn: 'تعديل',
+    deleteBtn: 'حذف',
+    confirmDelete: (title: string) =>
+      `حذف الملزمة «${title}» نهائياً. هل أنت متأكد؟`,
+    loadFailed: 'فشل تحميل البيانات',
+    addSuccess: 'تمت إضافة الملزمة',
+    addFailed: 'فشل الإضافة',
+    editSuccess: 'تم الحفظ',
+    editFailed: 'فشل الحفظ',
+    deleteSuccess: 'تم الحذف',
+    deleteFailed: 'فشل الحذف',
+    uploadSuccess: 'تم رفع الملف',
+    uploadFailed: 'فشل رفع الملف',
+  },
+
+  // ==================== القنوات (لوحة التحكم) ====================
+  adminChannels: {
+    namePlaceholder: 'اسم القناة',
+    descriptionPlaceholder: 'وصف قصير (اختياري)',
+    descriptionEditPlaceholder: 'الوصف',
+    telegramPlaceholder: 'رابط تلغرام (https://t.me/channelname)',
+    telegramEditPlaceholder: 'رابط تلغرام',
+    passwordPlaceholder: 'كلمة مرور القناة',
+    generateBtn: 'توليد',
+    copyBtn: 'نسخ',
+    copiedBtn: 'تم',
+    copyFailed: 'فشل النسخ — يرجى النسخ يدوياً',
+    addBtn: 'إضافة قناة',
+    empty: 'لا توجد قنوات مضافة حالياً.',
+    saveBtn: 'حفظ',
+    cancelBtn: 'إلغاء',
+    editBtn: 'تعديل',
+    deleteBtn: 'حذف',
+    confirmDelete: (name: string) =>
+      `حذف القناة «${name}» نهائياً. هل أنت متأكد؟`,
+    loadFailed: 'فشل تحميل القنوات',
+    addSuccess: 'تمت إضافة القناة',
+    addFailed: 'فشل الإضافة',
+    editSuccess: 'تم الحفظ',
+    editFailed: 'فشل الحفظ',
+    deleteSuccess: 'تم الحذف',
+    deleteFailed: 'فشل الحذف',
+    passwordLabel: 'كلمة المرور:',
+    passwordNotSet: 'غير محددة',
+  },
+
+  // ==================== الجدول (لوحة التحكم) ====================
+  adminSchedules: {
+    description:
+      'ارفع صورة جدول المحاضرات لكل مرحلة، وستظهر للطلاب مباشرة في صفحة «الجدول».',
+    changeBtn: 'تغيير',
+    uploadPrompt: 'رفع صورة الجدول',
+    uploadHint: 'PNG / JPG / WebP — بحد أقصى 5 ميجا',
+    uploadingImage: 'جاري رفع الصورة...',
+    saving: 'جاري الحفظ...',
+    uploadSuccess: (stage: string) => `تم رفع جدول ${stage}`,
+    uploadFailed: 'فشل رفع الصورة',
+    imageLoadError: 'تعذّر تحميل الصورة الحالية.',
+    uploadNew: 'رفع صورة جديدة',
+    fileTypeError: 'نوع الملف غير مدعوم. استخدم PNG أو JPG أو WebP.',
+    fileSizeError: 'حجم الصورة كبير جداً (بحد أقصى 5 ميجا).',
+    loadFailed: 'فشل تحميل الجداول',
+  },
+
+  // ==================== بوابة القناة ====================
+  channelPortal: {
+    loginTitle: 'دخول صاحب القناة',
+    loginDesc: 'اختر قناتك وأدخل كلمة المرور التي أعطاك إياها المشرف.',
+    chooseChannelPlaceholder: 'اختر قناتك',
+    passwordPlaceholder: 'كلمة مرور القناة',
+    loginBtn: 'دخول',
+    loggingIn: 'جاري التحقق...',
+    passwordIncorrect: 'كلمة المرور غير صحيحة',
+    genericError: 'حدث خطأ، يرجى المحاولة مرة أخرى.',
+    channelPrefix: 'قناة:',
+    viewsLabel: (n: number) => `${n} زيارة`,
+    logout: 'تسجيل الخروج',
+    tabs: {
+      content: 'المحتوى',
+      settings: 'الإعدادات',
+    },
+  },
+
+  // ==================== محتوى القناة ====================
+  channelContent: {
+    filesLabel: 'الملفات والروابط',
+    fileNamePlaceholder: (n: number) => `اسم الملف ${n} (اختياري)`,
+    deleteBtn: 'حذف',
+    uploading: 'جاري الرفع...',
+    urlPlaceholder: 'أو الصق رابطاً بديلاً',
+    addSlotBtn: '+ إضافة ملف / رابط',
+    searchPlaceholder: 'ابحث بعنوان المحتوى...',
+    filterAll: 'جميع الأنواع',
+    folderPlaceholder: 'اسم المجلد (اختياري)',
+    descriptionPlaceholder: 'تفاصيل إضافية (اختياري)',
+    pinLabel: 'تثبيت هذا المنشور في أعلى القناة',
+    pinned: 'مثبّت',
+    dueDate: (date: string) => `تاريخ التسليم: ${date}`,
+    pinTooltip: 'تثبيت',
+    unpinTooltip: 'إلغاء التثبيت',
+    titlePlaceholder: 'العنوان',
+    addBtn: 'إضافة',
+    saveBtn: 'حفظ',
+    cancelBtn: 'إلغاء',
+    editBtn: 'تعديل',
+    deleteBtnFull: 'حذف',
+    empty: 'لا يوجد محتوى مضاف حالياً.',
+    emptyHint: 'أضف أول منشور من الأعلى',
+    noResults: 'لا توجد نتائج مطابقة',
+    fileSizeError: 'حجم الملف كبير جداً (بحد أقصى 20 ميجا).',
+    loadFailed: 'فشل تحميل المحتوى',
+    uploadSuccess: 'تم رفع الملف',
+    uploadFailed: 'فشل رفع الملف',
+    addSuccess: 'تمت إضافة المحتوى',
+    addFailed: 'فشل الإضافة',
+    editSuccess: 'تم الحفظ',
+    editFailed: 'فشل الحفظ',
+    pinFailed: 'فشل التثبيت',
+    confirmDelete: (title: string) => `حذف «${title}» نهائياً. هل أنت متأكد؟`,
+    deleteSuccess: 'تم الحذف',
+    deleteFailed: 'فشل الحذف',
+  },
+
+  // ==================== إعدادات القناة ====================
+  channelSettings: {
+    infoText:
+      'الاسم والمرحلة ورابط تلغرام يديرها المشرف. يمكنك تعديل الصورة والوصف فقط.',
+    imageLabel: 'صورة القناة',
+    changeImageBtn: 'تغيير',
+    imageLoadError: 'تعذّر تحميل الصورة الحالية.',
+    uploadNewImage: 'رفع صورة جديدة',
+    imageUploadPrompt: 'رفع صورة للقناة',
+    imageUploading: 'جاري الرفع...',
+    imageHint: 'PNG / JPG / WebP / GIF — بحد أقصى 5 ميجا',
+    descriptionLabel: 'وصف القناة',
+    descriptionPlaceholder: 'وصف مختصر للقناة...',
+    saveBtn: 'حفظ',
+    unsavedChanges: 'توجد تغييرات غير محفوظة',
+    imageTypeError: 'نوع الصورة غير مدعوم (PNG / JPG / WebP / GIF).',
+    imageSizeError: 'حجم الصورة كبير جداً (بحد أقصى 5 ميجا).',
+    imageUploadSuccess: 'تم رفع الصورة — لا تنسَ الحفظ',
+    imageUploadFailed: 'فشل رفع الصورة',
+    saveSuccess: 'تم حفظ بيانات القناة',
+    saveFailed: 'فشل الحفظ',
+
+    passwordSection: 'تغيير كلمة المرور',
+    passwordNote:
+      'بعد التغيير، لن تعمل كلمة المرور القديمة. تأكد من حفظ الجديدة في مكان آمن.',
+    newPasswordLabel: 'كلمة المرور الجديدة',
+    newPasswordPlaceholder: '4 أحرف على الأقل',
+    confirmPasswordLabel: 'تأكيد كلمة المرور',
+    confirmPasswordPlaceholder: 'أعد كتابتها',
+    passwordMismatch: 'كلمتا المرور غير متطابقتين.',
+    changePasswordBtn: 'تغيير كلمة المرور',
+    passwordChangeSuccess: 'تم تغيير كلمة المرور',
+    passwordChangeFailed: 'فشل التغيير',
+  },
+
+  // ==================== Drop Zone ====================
+  dropZone: {
+    dragActive: 'أفلت الملف هنا',
+    dragIdle: 'اسحب الملف هنا أو اضغط للاختيار',
+    uploading: 'جاري الرفع...',
+    hint: (maxSize: number) =>
+      `PDF، Word، PowerPoint، صور — بحد أقصى ${maxSize} ميجا`,
+    fileSizeError: (maxSize: number) =>
+      `حجم الملف كبير جداً (بحد أقصى ${maxSize} ميجا)`,
+    fileTypeError: 'نوع الملف غير مدعوم',
+    tooManyFiles: 'اختر ملفاً واحداً فقط',
+    selectFailed: 'فشل اختيار الملف',
+  },
+
+  // ==================== Tag Input ====================
+  tagInput: {
+    placeholder: 'أضف وسماً...',
+    removeAria: (tag: string) => `حذف وسم ${tag}`,
+    maxReached: (max: number) => `وصلت إلى الحد الأقصى (${max} وسوم)`,
+    hint: (count: number, max: number) =>
+      `اضغط Enter أو فاصلة لإضافة وسم — ${count}/${max}`,
+  },
+
+  // ==================== رسائل الأخطاء ====================
+  errors: {
+    invalidRequest: 'الطلب غير صالح',
+    unknownAction: 'إجراء غير معروف',
+    idRequired: 'المعرّف مطلوب',
+    unauthorized: 'غير مصرح',
+    channelNotFound: 'القناة غير موجودة',
+    passwordIncorrect: 'كلمة المرور غير صحيحة',
+    dbError: 'حدث خطأ في الاتصال بقاعدة البيانات',
+    loadFailed: 'فشل تحميل البيانات',
+    saveFailed: 'فشل الحفظ',
+    deleteFailed: 'فشل الحذف',
+    addFailed: 'فشل الإضافة',
+  },
+} as const;
+
+// ==================== Type Helpers ====================
+export type Strings = typeof strings;
+```
+
 ## lib\supabaseAdmin.ts
 
 ```
@@ -6648,6 +14168,8 @@ export type Stage = 'المرحلة الأولى' | 'المرحلة الثاني
 
 export type ContentType = 'assignment' | 'lecture_note' | 'summary' | 'task';
 
+export type Track = 'نظري' | 'عملي';
+
 export interface Subject {
   id: string;
   name: string;
@@ -6662,10 +14184,34 @@ export interface LectureNote {
   title: string;
   professor_name: string | null;
   lecture_number: number | null;
+  track: Track | null;
+  tags: string[];
+  year: number | null;                 // ← جديد
   file_path: string;
   status?: string;
   created_at?: string;
   subjects?: { name: string } | null;
+}
+
+export type ReportReason = 'dead_link' | 'outdated';
+
+export interface LectureNoteReport {
+  id: string;
+  lecture_note_id: string;
+  reason: ReportReason;
+  note: string | null;
+  created_at: string;
+  resolved_at: string | null;
+  resolved_action: 'deleted' | 'ignored' | null;
+  lecture_notes?: {
+    id: string;
+    title: string;
+    subject_id: string;
+    professor_name: string | null;
+    year: number | null;
+    file_path: string;
+    subjects?: { name: string } | null;
+  } | null;
 }
 
 export interface FileEntry {
@@ -6692,6 +14238,8 @@ export interface ChannelContent {
   title: string;
   description: string | null;
   due_date: string | null;
+  track: Track | null;
+  tags: string[];
   file_urls: FileEntry[];
   folder: string | null;
   pinned: boolean;
@@ -6752,7 +14300,8 @@ import "./.next/types/routes.d.ts";
     "@supabase/supabase-js": "^2.110.8",
     "next": "16.2.11",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "react-dropzone": "^20.1.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -6891,10 +14440,4 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
   "exclude": ["node_modules"]
 }
 
-```
-
-## tsconfig.tsbuildinfo
-
-```
-{"fileNames":["./node_modules/typescript/lib/lib.es5.d.ts","./node_modules/typescript/lib/lib.es2015.d.ts","./node_modules/typescript/lib/lib.es2016.d.ts","./node_modules/typescript/lib/lib.es2017.d.ts","./node_modules/typescript/lib/lib.es2018.d.ts","./node_modules/typescript/lib/lib.es2019.d.ts","./node_modules/typescript/lib/lib.es2020.d.ts","./node_modules/typescript/lib/lib.es2021.d.ts","./node_modules/typescript/lib/lib.es2022.d.ts","./node_modules/typescript/lib/lib.es2023.d.ts","./node_modules/typescript/lib/lib.es2024.d.ts","./node_modules/typescript/lib/lib.esnext.d.ts","./node_modules/typescript/lib/lib.dom.d.ts","./node_modules/typescript/lib/lib.dom.iterable.d.ts","./node_modules/typescript/lib/lib.es2015.core.d.ts","./node_modules/typescript/lib/lib.es2015.collection.d.ts","./node_modules/typescript/lib/lib.es2015.generator.d.ts","./node_modules/typescript/lib/lib.es2015.iterable.d.ts","./node_modules/typescript/lib/lib.es2015.promise.d.ts","./node_modules/typescript/lib/lib.es2015.proxy.d.ts","./node_modules/typescript/lib/lib.es2015.reflect.d.ts","./node_modules/typescript/lib/lib.es2015.symbol.d.ts","./node_modules/typescript/lib/lib.es2015.symbol.wellknown.d.ts","./node_modules/typescript/lib/lib.es2016.array.include.d.ts","./node_modules/typescript/lib/lib.es2016.intl.d.ts","./node_modules/typescript/lib/lib.es2017.arraybuffer.d.ts","./node_modules/typescript/lib/lib.es2017.date.d.ts","./node_modules/typescript/lib/lib.es2017.object.d.ts","./node_modules/typescript/lib/lib.es2017.sharedmemory.d.ts","./node_modules/typescript/lib/lib.es2017.string.d.ts","./node_modules/typescript/lib/lib.es2017.intl.d.ts","./node_modules/typescript/lib/lib.es2017.typedarrays.d.ts","./node_modules/typescript/lib/lib.es2018.asyncgenerator.d.ts","./node_modules/typescript/lib/lib.es2018.asynciterable.d.ts","./node_modules/typescript/lib/lib.es2018.intl.d.ts","./node_modules/typescript/lib/lib.es2018.promise.d.ts","./node_modules/typescript/lib/lib.es2018.regexp.d.ts","./node_modules/typescript/lib/lib.es2019.array.d.ts","./node_modules/typescript/lib/lib.es2019.object.d.ts","./node_modules/typescript/lib/lib.es2019.string.d.ts","./node_modules/typescript/lib/lib.es2019.symbol.d.ts","./node_modules/typescript/lib/lib.es2019.intl.d.ts","./node_modules/typescript/lib/lib.es2020.bigint.d.ts","./node_modules/typescript/lib/lib.es2020.date.d.ts","./node_modules/typescript/lib/lib.es2020.promise.d.ts","./node_modules/typescript/lib/lib.es2020.sharedmemory.d.ts","./node_modules/typescript/lib/lib.es2020.string.d.ts","./node_modules/typescript/lib/lib.es2020.symbol.wellknown.d.ts","./node_modules/typescript/lib/lib.es2020.intl.d.ts","./node_modules/typescript/lib/lib.es2020.number.d.ts","./node_modules/typescript/lib/lib.es2021.promise.d.ts","./node_modules/typescript/lib/lib.es2021.string.d.ts","./node_modules/typescript/lib/lib.es2021.weakref.d.ts","./node_modules/typescript/lib/lib.es2021.intl.d.ts","./node_modules/typescript/lib/lib.es2022.array.d.ts","./node_modules/typescript/lib/lib.es2022.error.d.ts","./node_modules/typescript/lib/lib.es2022.intl.d.ts","./node_modules/typescript/lib/lib.es2022.object.d.ts","./node_modules/typescript/lib/lib.es2022.string.d.ts","./node_modules/typescript/lib/lib.es2022.regexp.d.ts","./node_modules/typescript/lib/lib.es2023.array.d.ts","./node_modules/typescript/lib/lib.es2023.collection.d.ts","./node_modules/typescript/lib/lib.es2023.intl.d.ts","./node_modules/typescript/lib/lib.es2024.arraybuffer.d.ts","./node_modules/typescript/lib/lib.es2024.collection.d.ts","./node_modules/typescript/lib/lib.es2024.object.d.ts","./node_modules/typescript/lib/lib.es2024.promise.d.ts","./node_modules/typescript/lib/lib.es2024.regexp.d.ts","./node_modules/typescript/lib/lib.es2024.sharedmemory.d.ts","./node_modules/typescript/lib/lib.es2024.string.d.ts","./node_modules/typescript/lib/lib.esnext.array.d.ts","./node_modules/typescript/lib/lib.esnext.collection.d.ts","./node_modules/typescript/lib/lib.esnext.intl.d.ts","./node_modules/typescript/lib/lib.esnext.disposable.d.ts","./node_modules/typescript/lib/lib.esnext.promise.d.ts","./node_modules/typescript/lib/lib.esnext.decorators.d.ts","./node_modules/typescript/lib/lib.esnext.iterator.d.ts","./node_modules/typescript/lib/lib.esnext.float16.d.ts","./node_modules/typescript/lib/lib.esnext.error.d.ts","./node_modules/typescript/lib/lib.esnext.sharedmemory.d.ts","./node_modules/typescript/lib/lib.decorators.d.ts","./node_modules/typescript/lib/lib.decorators.legacy.d.ts","./node_modules/@types/react/global.d.ts","./node_modules/csstype/index.d.ts","./node_modules/@types/react/index.d.ts","./node_modules/next/dist/styled-jsx/types/css.d.ts","./node_modules/next/dist/styled-jsx/types/macro.d.ts","./node_modules/next/dist/styled-jsx/types/style.d.ts","./node_modules/next/dist/styled-jsx/types/global.d.ts","./node_modules/next/dist/styled-jsx/types/index.d.ts","./node_modules/next/dist/server/get-page-files.d.ts","./node_modules/@types/node/compatibility/disposable.d.ts","./node_modules/@types/node/compatibility/indexable.d.ts","./node_modules/@types/node/compatibility/iterators.d.ts","./node_modules/@types/node/compatibility/index.d.ts","./node_modules/@types/node/globals.typedarray.d.ts","./node_modules/@types/node/buffer.buffer.d.ts","./node_modules/@types/node/globals.d.ts","./node_modules/@types/node/web-globals/abortcontroller.d.ts","./node_modules/@types/node/web-globals/domexception.d.ts","./node_modules/@types/node/web-globals/events.d.ts","./node_modules/undici-types/header.d.ts","./node_modules/undici-types/readable.d.ts","./node_modules/undici-types/file.d.ts","./node_modules/undici-types/fetch.d.ts","./node_modules/undici-types/formdata.d.ts","./node_modules/undici-types/connector.d.ts","./node_modules/undici-types/client.d.ts","./node_modules/undici-types/errors.d.ts","./node_modules/undici-types/dispatcher.d.ts","./node_modules/undici-types/global-dispatcher.d.ts","./node_modules/undici-types/global-origin.d.ts","./node_modules/undici-types/pool-stats.d.ts","./node_modules/undici-types/pool.d.ts","./node_modules/undici-types/handlers.d.ts","./node_modules/undici-types/balanced-pool.d.ts","./node_modules/undici-types/agent.d.ts","./node_modules/undici-types/mock-interceptor.d.ts","./node_modules/undici-types/mock-agent.d.ts","./node_modules/undici-types/mock-client.d.ts","./node_modules/undici-types/mock-pool.d.ts","./node_modules/undici-types/mock-errors.d.ts","./node_modules/undici-types/proxy-agent.d.ts","./node_modules/undici-types/env-http-proxy-agent.d.ts","./node_modules/undici-types/retry-handler.d.ts","./node_modules/undici-types/retry-agent.d.ts","./node_modules/undici-types/api.d.ts","./node_modules/undici-types/interceptors.d.ts","./node_modules/undici-types/util.d.ts","./node_modules/undici-types/cookies.d.ts","./node_modules/undici-types/patch.d.ts","./node_modules/undici-types/websocket.d.ts","./node_modules/undici-types/eventsource.d.ts","./node_modules/undici-types/filereader.d.ts","./node_modules/undici-types/diagnostics-channel.d.ts","./node_modules/undici-types/content-type.d.ts","./node_modules/undici-types/cache.d.ts","./node_modules/undici-types/index.d.ts","./node_modules/@types/node/web-globals/fetch.d.ts","./node_modules/@types/node/assert.d.ts","./node_modules/@types/node/assert/strict.d.ts","./node_modules/@types/node/async_hooks.d.ts","./node_modules/@types/node/buffer.d.ts","./node_modules/@types/node/child_process.d.ts","./node_modules/@types/node/cluster.d.ts","./node_modules/@types/node/console.d.ts","./node_modules/@types/node/constants.d.ts","./node_modules/@types/node/crypto.d.ts","./node_modules/@types/node/dgram.d.ts","./node_modules/@types/node/diagnostics_channel.d.ts","./node_modules/@types/node/dns.d.ts","./node_modules/@types/node/dns/promises.d.ts","./node_modules/@types/node/domain.d.ts","./node_modules/@types/node/events.d.ts","./node_modules/@types/node/fs.d.ts","./node_modules/@types/node/fs/promises.d.ts","./node_modules/@types/node/http.d.ts","./node_modules/@types/node/http2.d.ts","./node_modules/@types/node/https.d.ts","./node_modules/@types/node/inspector.generated.d.ts","./node_modules/@types/node/module.d.ts","./node_modules/@types/node/net.d.ts","./node_modules/@types/node/os.d.ts","./node_modules/@types/node/path.d.ts","./node_modules/@types/node/perf_hooks.d.ts","./node_modules/@types/node/process.d.ts","./node_modules/@types/node/punycode.d.ts","./node_modules/@types/node/querystring.d.ts","./node_modules/@types/node/readline.d.ts","./node_modules/@types/node/readline/promises.d.ts","./node_modules/@types/node/repl.d.ts","./node_modules/@types/node/sea.d.ts","./node_modules/@types/node/stream.d.ts","./node_modules/@types/node/stream/promises.d.ts","./node_modules/@types/node/stream/consumers.d.ts","./node_modules/@types/node/stream/web.d.ts","./node_modules/@types/node/string_decoder.d.ts","./node_modules/@types/node/test.d.ts","./node_modules/@types/node/timers.d.ts","./node_modules/@types/node/timers/promises.d.ts","./node_modules/@types/node/tls.d.ts","./node_modules/@types/node/trace_events.d.ts","./node_modules/@types/node/tty.d.ts","./node_modules/@types/node/url.d.ts","./node_modules/@types/node/util.d.ts","./node_modules/@types/node/v8.d.ts","./node_modules/@types/node/vm.d.ts","./node_modules/@types/node/wasi.d.ts","./node_modules/@types/node/worker_threads.d.ts","./node_modules/@types/node/zlib.d.ts","./node_modules/@types/node/index.d.ts","./node_modules/@types/react/canary.d.ts","./node_modules/@types/react/experimental.d.ts","./node_modules/@types/react-dom/index.d.ts","./node_modules/@types/react-dom/canary.d.ts","./node_modules/@types/react-dom/experimental.d.ts","./node_modules/next/dist/lib/fallback.d.ts","./node_modules/next/dist/compiled/webpack/webpack.d.ts","./node_modules/next/dist/shared/lib/modern-browserslist-target.d.ts","./node_modules/next/dist/shared/lib/entry-constants.d.ts","./node_modules/next/dist/shared/lib/constants.d.ts","./node_modules/next/dist/lib/bundler.d.ts","./node_modules/next/dist/server/config.d.ts","./node_modules/next/dist/lib/load-custom-routes.d.ts","./node_modules/next/dist/shared/lib/image-config.d.ts","./node_modules/next/dist/build/webpack/plugins/subresource-integrity-plugin.d.ts","./node_modules/next/dist/server/body-streams.d.ts","./node_modules/next/dist/server/request/search-params.d.ts","./node_modules/next/dist/shared/lib/segment-cache/vary-params-decoding.d.ts","./node_modules/next/dist/server/app-render/vary-params.d.ts","./node_modules/next/dist/server/request/params.d.ts","./node_modules/next/dist/server/route-kind.d.ts","./node_modules/next/dist/server/route-definitions/route-definition.d.ts","./node_modules/next/dist/server/route-matches/route-match.d.ts","./node_modules/next/dist/client/components/app-router-headers.d.ts","./node_modules/next/dist/server/lib/cache-control.d.ts","./node_modules/next/dist/shared/lib/app-router-types.d.ts","./node_modules/next/dist/server/lib/cache-handlers/types.d.ts","./node_modules/next/dist/server/use-cache/use-cache-wrapper.d.ts","./node_modules/next/dist/server/resume-data-cache/cache-store.d.ts","./node_modules/next/dist/server/resume-data-cache/resume-data-cache.d.ts","./node_modules/next/dist/lib/constants.d.ts","./node_modules/next/dist/server/render-result.d.ts","./node_modules/next/dist/server/response-cache/types.d.ts","./node_modules/next/dist/server/response-cache/index.d.ts","./node_modules/@types/react/jsx-runtime.d.ts","./node_modules/next/dist/next-devtools/userspace/pages/pages-dev-overlay-setup.d.ts","./node_modules/next/dist/build/static-paths/types.d.ts","./node_modules/next/dist/server/route-definitions/app-page-route-definition.d.ts","./node_modules/next/dist/build/adapter/setup-node-env.external.d.ts","./node_modules/next/dist/server/instrumentation/types.d.ts","./node_modules/next/dist/lib/setup-exception-listeners.d.ts","./node_modules/next/dist/lib/worker.d.ts","./node_modules/next/dist/server/lib/experimental/ppr.d.ts","./node_modules/next/dist/lib/page-types.d.ts","./node_modules/next/dist/build/segment-config/app/app-segment-config.d.ts","./node_modules/next/dist/build/segment-config/pages/pages-segment-config.d.ts","./node_modules/next/dist/build/analysis/get-page-static-info.d.ts","./node_modules/next/dist/build/webpack/loaders/get-module-build-info.d.ts","./node_modules/next/dist/build/webpack/plugins/middleware-plugin.d.ts","./node_modules/next/dist/server/require-hook.d.ts","./node_modules/next/dist/server/node-polyfill-crypto.d.ts","./node_modules/next/dist/server/node-environment-baseline.d.ts","./node_modules/next/dist/server/node-environment-extensions/error-inspect.d.ts","./node_modules/next/dist/server/node-environment-extensions/console-file.d.ts","./node_modules/next/dist/server/node-environment-extensions/console-exit.d.ts","./node_modules/next/dist/server/node-environment-extensions/console-dim.external.d.ts","./node_modules/next/dist/server/node-environment-extensions/unhandled-rejection.external.d.ts","./node_modules/next/dist/server/node-environment-extensions/random.d.ts","./node_modules/next/dist/server/node-environment-extensions/date.d.ts","./node_modules/next/dist/server/node-environment-extensions/web-crypto.d.ts","./node_modules/next/dist/server/node-environment-extensions/node-crypto.d.ts","./node_modules/next/dist/server/node-environment-extensions/fast-set-immediate.external.d.ts","./node_modules/next/dist/server/node-environment.d.ts","./node_modules/next/dist/build/page-extensions-type.d.ts","./node_modules/next/dist/server/route-modules/app-page/module.compiled.d.ts","./node_modules/next/dist/server/route-definitions/app-route-route-definition.d.ts","./node_modules/next/dist/server/lib/i18n-provider.d.ts","./node_modules/next/dist/server/web/next-url.d.ts","./node_modules/next/dist/compiled/@edge-runtime/cookies/index.d.ts","./node_modules/next/dist/server/web/spec-extension/cookies.d.ts","./node_modules/next/dist/server/web/spec-extension/request.d.ts","./node_modules/next/dist/shared/lib/deep-readonly.d.ts","./node_modules/next/dist/server/lib/incremental-cache/index.d.ts","./node_modules/next/dist/shared/lib/router/utils/middleware-route-matcher.d.ts","./node_modules/next/dist/build/webpack/plugins/flight-manifest-plugin.d.ts","./node_modules/next/dist/build/webpack/plugins/next-font-manifest-plugin.d.ts","./node_modules/next/dist/server/route-definitions/locale-route-definition.d.ts","./node_modules/next/dist/server/route-definitions/pages-route-definition.d.ts","./node_modules/next/dist/shared/lib/mitt.d.ts","./node_modules/next/dist/client/with-router.d.ts","./node_modules/next/dist/client/router.d.ts","./node_modules/next/dist/client/route-loader.d.ts","./node_modules/next/dist/client/page-loader.d.ts","./node_modules/next/dist/shared/lib/bloom-filter.d.ts","./node_modules/next/dist/shared/lib/router/router.d.ts","./node_modules/next/dist/shared/lib/router-context.shared-runtime.d.ts","./node_modules/next/dist/shared/lib/loadable-context.shared-runtime.d.ts","./node_modules/next/dist/shared/lib/loadable.shared-runtime.d.ts","./node_modules/next/dist/shared/lib/image-config-context.shared-runtime.d.ts","./node_modules/next/dist/client/components/readonly-url-search-params.d.ts","./node_modules/next/dist/shared/lib/hooks-client-context.shared-runtime.d.ts","./node_modules/next/dist/shared/lib/head-manager-context.shared-runtime.d.ts","./node_modules/next/dist/client/flight-data-helpers.d.ts","./node_modules/next/dist/client/components/segment-cache/cache-key.d.ts","./node_modules/next/dist/client/components/router-reducer/fetch-server-response.d.ts","./node_modules/next/dist/client/components/segment-cache/types.d.ts","./node_modules/next/dist/shared/lib/segment-cache/segment-value-encoding.d.ts","./node_modules/next/dist/client/components/segment-cache/scheduler.d.ts","./node_modules/next/dist/client/components/segment-cache/cache-map.d.ts","./node_modules/next/dist/client/components/segment-cache/vary-path.d.ts","./node_modules/next/dist/client/components/segment-cache/cache.d.ts","./node_modules/next/dist/client/components/router-reducer/ppr-navigations.d.ts","./node_modules/next/dist/client/components/segment-cache/navigation.d.ts","./node_modules/next/dist/client/components/router-reducer/router-reducer-types.d.ts","./node_modules/next/dist/shared/lib/app-router-context.shared-runtime.d.ts","./node_modules/next/dist/shared/lib/server-inserted-html.shared-runtime.d.ts","./node_modules/next/dist/server/route-modules/pages/vendored/contexts/entrypoints.d.ts","./node_modules/next/dist/server/route-modules/pages/module.compiled.d.ts","./node_modules/next/dist/build/templates/pages.d.ts","./node_modules/next/dist/server/route-modules/pages/module.d.ts","./node_modules/next/dist/server/render.d.ts","./node_modules/next/dist/build/webpack/plugins/pages-manifest-plugin.d.ts","./node_modules/next/dist/server/route-definitions/pages-api-route-definition.d.ts","./node_modules/next/dist/server/route-matches/pages-api-route-match.d.ts","./node_modules/next/dist/server/route-matchers/route-matcher.d.ts","./node_modules/next/dist/server/route-matcher-providers/route-matcher-provider.d.ts","./node_modules/next/dist/server/route-matcher-managers/route-matcher-manager.d.ts","./node_modules/next/dist/server/normalizers/normalizer.d.ts","./node_modules/next/dist/server/normalizers/locale-route-normalizer.d.ts","./node_modules/next/dist/server/normalizers/request/pathname-normalizer.d.ts","./node_modules/next/dist/server/normalizers/request/suffix.d.ts","./node_modules/next/dist/server/normalizers/request/rsc.d.ts","./node_modules/next/dist/server/normalizers/request/next-data.d.ts","./node_modules/next/dist/server/after/builtin-request-context.d.ts","./node_modules/next/dist/server/normalizers/request/segment-prefix-rsc.d.ts","./node_modules/next/dist/server/route-modules/pages/builtin/_error.d.ts","./node_modules/next/dist/server/load-default-error-components.d.ts","./node_modules/next/dist/server/base-server.d.ts","./node_modules/next/dist/server/after/after.d.ts","./node_modules/next/dist/server/after/after-context.d.ts","./node_modules/next/dist/server/use-cache/cache-life.d.ts","./node_modules/next/dist/server/app-render/work-async-storage-instance.d.ts","./node_modules/next/dist/server/lib/lazy-result.d.ts","./node_modules/next/dist/server/app-render/create-error-handler.d.ts","./node_modules/next/dist/shared/lib/action-revalidation-kind.d.ts","./node_modules/next/dist/server/app-render/work-async-storage.external.d.ts","./node_modules/next/dist/server/async-storage/work-store.d.ts","./node_modules/next/dist/server/web/http.d.ts","./node_modules/next/dist/client/components/hooks-server-context.d.ts","./node_modules/next/dist/server/route-modules/app-route/shared-modules.d.ts","./node_modules/next/dist/client/components/redirect-status-code.d.ts","./node_modules/next/dist/client/components/redirect-error.d.ts","./node_modules/next/dist/server/web/spec-extension/adapters/request-cookies.d.ts","./node_modules/next/dist/server/async-storage/draft-mode-provider.d.ts","./node_modules/next/dist/server/web/spec-extension/adapters/headers.d.ts","./node_modules/next/dist/server/app-render/cache-signal.d.ts","./node_modules/next/dist/server/app-render/instant-validation/boundary-tracking.d.ts","./node_modules/next/dist/server/app-render/instant-validation/instant-validation-error.d.ts","./node_modules/next/dist/shared/lib/router/utils/parse-relative-url.d.ts","./node_modules/next/dist/server/app-render/instant-validation/instant-samples.d.ts","./node_modules/next/dist/server/app-render/dynamic-rendering.d.ts","./node_modules/next/dist/server/app-render/work-unit-async-storage-instance.d.ts","./node_modules/next/dist/server/lib/implicit-tags.d.ts","./node_modules/next/dist/server/app-render/staged-rendering.d.ts","./node_modules/next/dist/server/app-render/work-unit-async-storage.external.d.ts","./node_modules/next/dist/build/templates/app-route.d.ts","./node_modules/next/dist/server/app-render/action-async-storage-instance.d.ts","./node_modules/next/dist/server/app-render/action-async-storage.external.d.ts","./node_modules/next/dist/server/route-modules/app-route/module.d.ts","./node_modules/next/dist/server/route-modules/app-route/module.compiled.d.ts","./node_modules/next/dist/build/segment-config/app/app-segments.d.ts","./node_modules/next/dist/build/get-supported-browsers.d.ts","./node_modules/next/dist/build/utils.d.ts","./node_modules/next/dist/build/rendering-mode.d.ts","./node_modules/next/dist/server/lib/router-utils/build-prefetch-segment-data-route.d.ts","./node_modules/next/dist/server/lib/cpu-profile.d.ts","./node_modules/next/dist/build/turborepo-access-trace/types.d.ts","./node_modules/next/dist/build/turborepo-access-trace/result.d.ts","./node_modules/next/dist/build/turborepo-access-trace/helpers.d.ts","./node_modules/next/dist/build/turborepo-access-trace/index.d.ts","./node_modules/next/dist/export/routes/types.d.ts","./node_modules/next/dist/export/types.d.ts","./node_modules/next/dist/export/worker.d.ts","./node_modules/next/dist/build/worker.d.ts","./node_modules/next/dist/build/index.d.ts","./node_modules/next/dist/lib/coalesced-function.d.ts","./node_modules/next/dist/server/lib/router-utils/types.d.ts","./node_modules/next/dist/trace/types.d.ts","./node_modules/next/dist/trace/trace.d.ts","./node_modules/next/dist/trace/shared.d.ts","./node_modules/next/dist/trace/index.d.ts","./node_modules/next/dist/build/load-jsconfig.d.ts","./node_modules/@next/env/dist/index.d.ts","./node_modules/next/dist/build/webpack/plugins/telemetry-plugin/use-cache-tracker-utils.d.ts","./node_modules/next/dist/build/webpack/plugins/telemetry-plugin/telemetry-plugin.d.ts","./node_modules/next/dist/telemetry/storage.d.ts","./node_modules/next/dist/build/build-context.d.ts","./node_modules/next/dist/build/webpack-config.d.ts","./node_modules/next/dist/build/swc/generated-native.d.ts","./node_modules/next/dist/build/define-env.d.ts","./node_modules/next/dist/build/swc/index.d.ts","./node_modules/next/dist/build/swc/types.d.ts","./node_modules/next/dist/server/dev/parse-version-info.d.ts","./node_modules/next/dist/next-devtools/shared/types.d.ts","./node_modules/next/dist/server/dev/dev-indicator-server-state.d.ts","./node_modules/next/dist/next-devtools/dev-overlay/cache-indicator.d.ts","./node_modules/next/dist/server/lib/parse-stack.d.ts","./node_modules/next/dist/next-devtools/server/shared.d.ts","./node_modules/next/dist/next-devtools/shared/stack-frame.d.ts","./node_modules/next/dist/next-devtools/dev-overlay/utils/get-error-by-type.d.ts","./node_modules/next/dist/next-devtools/dev-overlay/container/runtime-error/render-error.d.ts","./node_modules/next/dist/next-devtools/dev-overlay/shared.d.ts","./node_modules/next/dist/server/dev/debug-channel.d.ts","./node_modules/next/dist/server/dev/hot-reloader-types.d.ts","./node_modules/next/dist/server/web/spec-extension/fetch-event.d.ts","./node_modules/next/dist/server/web/spec-extension/response.d.ts","./node_modules/next/dist/build/segment-config/middleware/middleware-config.d.ts","./node_modules/next/dist/server/web/types.d.ts","./node_modules/next/dist/shared/lib/router/utils/parse-url.d.ts","./node_modules/next/dist/server/base-http/node.d.ts","./node_modules/next/dist/server/lib/async-callback-set.d.ts","./node_modules/next/dist/shared/lib/router/utils/route-regex.d.ts","./node_modules/next/dist/shared/lib/router/utils/route-matcher.d.ts","./node_modules/sharp/lib/index.d.ts","./node_modules/next/dist/server/image-optimizer.d.ts","./node_modules/next/dist/server/next-server.d.ts","./node_modules/next/dist/server/lib/types.d.ts","./node_modules/next/dist/server/lib/lru-cache.d.ts","./node_modules/next/dist/server/lib/dev-bundler-service.d.ts","./node_modules/next/dist/server/dev/static-paths-worker.d.ts","./node_modules/next/dist/server/dev/next-dev-server.d.ts","./node_modules/next/dist/server/next.d.ts","./node_modules/next/dist/server/lib/render-server.d.ts","./node_modules/next/dist/server/lib/router-server.d.ts","./node_modules/next/dist/shared/lib/router/utils/path-match.d.ts","./node_modules/next/dist/server/lib/router-utils/filesystem.d.ts","./node_modules/next/dist/server/lib/router-utils/setup-dev-bundler.d.ts","./node_modules/next/dist/server/lib/router-utils/router-server-context.d.ts","./node_modules/next/dist/server/route-modules/route-module.d.ts","./node_modules/next/dist/server/load-components.d.ts","./node_modules/next/dist/server/web/adapter.d.ts","./node_modules/next/dist/server/app-render/types.d.ts","./node_modules/next/dist/build/webpack/loaders/metadata/types.d.ts","./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.d.ts","./node_modules/next/dist/server/lib/app-dir-module.d.ts","./node_modules/next/dist/server/app-render/app-render.d.ts","./node_modules/next/dist/server/route-modules/app-page/vendored/contexts/entrypoints.d.ts","./node_modules/next/dist/client/components/error-boundary.d.ts","./node_modules/next/dist/client/components/layout-router.d.ts","./node_modules/next/dist/client/components/render-from-template-context.d.ts","./node_modules/next/dist/client/components/client-page.d.ts","./node_modules/next/dist/client/components/client-segment.d.ts","./node_modules/next/dist/client/components/http-access-fallback/error-boundary.d.ts","./node_modules/next/dist/lib/metadata/types/alternative-urls-types.d.ts","./node_modules/next/dist/lib/metadata/types/extra-types.d.ts","./node_modules/next/dist/lib/metadata/types/metadata-types.d.ts","./node_modules/next/dist/lib/metadata/types/manifest-types.d.ts","./node_modules/next/dist/lib/metadata/types/opengraph-types.d.ts","./node_modules/next/dist/lib/metadata/types/twitter-types.d.ts","./node_modules/next/dist/lib/metadata/types/metadata-interface.d.ts","./node_modules/next/dist/lib/metadata/types/resolvers.d.ts","./node_modules/next/dist/lib/metadata/types/icons.d.ts","./node_modules/next/dist/lib/metadata/resolve-metadata.d.ts","./node_modules/next/dist/lib/metadata/metadata.d.ts","./node_modules/next/dist/lib/framework/boundary-components.d.ts","./node_modules/next/dist/server/app-render/rsc/preloads.d.ts","./node_modules/next/dist/server/app-render/rsc/postpone.d.ts","./node_modules/next/dist/server/app-render/rsc/taint.d.ts","./node_modules/next/dist/server/app-render/collect-segment-data.d.ts","./node_modules/next/dist/server/app-render/instant-validation/instant-validation.d.ts","./node_modules/next/dist/next-devtools/userspace/app/segment-explorer-node.d.ts","./node_modules/next/dist/server/app-render/entry-base.d.ts","./node_modules/next/dist/build/templates/app-page.d.ts","./node_modules/next/dist/server/route-modules/app-page/helpers/prerender-manifest-matcher.d.ts","./node_modules/@types/react/jsx-dev-runtime.d.ts","./node_modules/@types/react/compiler-runtime.d.ts","./node_modules/next/dist/server/route-modules/app-page/vendored/rsc/entrypoints.d.ts","./node_modules/@types/react-dom/client.d.ts","./node_modules/@types/react-dom/static.d.ts","./node_modules/@types/react-dom/server.d.ts","./node_modules/next/dist/server/route-modules/app-page/vendored/ssr/entrypoints.d.ts","./node_modules/next/dist/server/route-modules/app-page/module.d.ts","./node_modules/next/dist/server/request/fallback-params.d.ts","./node_modules/next/dist/server/web/spec-extension/image-response.d.ts","./node_modules/next/dist/server/web/spec-extension/user-agent.d.ts","./node_modules/next/dist/server/web/spec-extension/url-pattern.d.ts","./node_modules/next/dist/server/after/index.d.ts","./node_modules/next/dist/server/request/connection.d.ts","./node_modules/next/dist/server/web/exports/index.d.ts","./node_modules/next/dist/server/request-meta.d.ts","./node_modules/next/dist/cli/next-test.d.ts","./node_modules/next/dist/shared/lib/size-limit.d.ts","./node_modules/next/dist/server/config-shared.d.ts","./node_modules/next/dist/server/base-http/index.d.ts","./node_modules/next/dist/server/api-utils/index.d.ts","./node_modules/next/dist/build/adapter/build-complete.d.ts","./node_modules/next/dist/types.d.ts","./node_modules/next/dist/shared/lib/html-context.shared-runtime.d.ts","./node_modules/next/dist/shared/lib/utils.d.ts","./node_modules/next/dist/pages/_app.d.ts","./node_modules/next/app.d.ts","./node_modules/next/dist/server/web/spec-extension/unstable-cache.d.ts","./node_modules/next/dist/server/web/spec-extension/revalidate.d.ts","./node_modules/next/dist/server/web/spec-extension/unstable-no-store.d.ts","./node_modules/next/dist/server/use-cache/cache-tag.d.ts","./node_modules/next/cache.d.ts","./node_modules/next/dist/pages/_document.d.ts","./node_modules/next/document.d.ts","./node_modules/next/dist/shared/lib/dynamic.d.ts","./node_modules/next/dynamic.d.ts","./node_modules/next/dist/pages/_error.d.ts","./node_modules/next/dist/client/components/catch-error.d.ts","./node_modules/next/dist/api/error.d.ts","./node_modules/next/error.d.ts","./node_modules/next/dist/shared/lib/head.d.ts","./node_modules/next/head.d.ts","./node_modules/next/dist/server/request/cookies.d.ts","./node_modules/next/dist/server/request/headers.d.ts","./node_modules/next/dist/server/request/draft-mode.d.ts","./node_modules/next/headers.d.ts","./node_modules/next/dist/shared/lib/get-img-props.d.ts","./node_modules/next/dist/client/image-component.d.ts","./node_modules/next/dist/shared/lib/image-external.d.ts","./node_modules/next/image.d.ts","./node_modules/next/dist/client/link.d.ts","./node_modules/next/link.d.ts","./node_modules/next/dist/client/components/unrecognized-action-error.d.ts","./node_modules/next/dist/client/components/redirect.d.ts","./node_modules/next/dist/client/components/not-found.d.ts","./node_modules/next/dist/client/components/forbidden.d.ts","./node_modules/next/dist/client/components/unauthorized.d.ts","./node_modules/next/dist/client/components/unstable-rethrow.server.d.ts","./node_modules/next/dist/client/components/unstable-rethrow.d.ts","./node_modules/next/dist/client/components/navigation.react-server.d.ts","./node_modules/next/dist/client/components/navigation.d.ts","./node_modules/next/navigation.d.ts","./node_modules/next/router.d.ts","./node_modules/next/dist/client/script.d.ts","./node_modules/next/script.d.ts","./node_modules/next/dist/compiled/@edge-runtime/primitives/url.d.ts","./node_modules/next/dist/compiled/@vercel/og/satori/index.d.ts","./node_modules/next/dist/compiled/@vercel/og/types.d.ts","./node_modules/next/server.d.ts","./node_modules/next/types/global.d.ts","./node_modules/next/types/compiled.d.ts","./node_modules/next/types.d.ts","./node_modules/next/index.d.ts","./node_modules/next/image-types/global.d.ts","./.next/dev/types/routes.d.ts","./next-env.d.ts","./next.config.ts","./node_modules/@supabase/functions-js/dist/module/types.d.ts","./node_modules/@supabase/functions-js/dist/module/functionsclient.d.ts","./node_modules/@supabase/functions-js/dist/module/index.d.ts","./node_modules/@supabase/postgrest-js/dist/index.d.mts","./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.d.ts","./node_modules/@supabase/realtime-js/dist/module/lib/serializer.d.ts","./node_modules/@supabase/phoenix/priv/static/types/constants.d.ts","./node_modules/@supabase/phoenix/priv/static/types/longpoll.d.ts","./node_modules/@supabase/phoenix/priv/static/types/types.d.ts","./node_modules/@supabase/phoenix/priv/static/types/timer.d.ts","./node_modules/@supabase/phoenix/priv/static/types/socket.d.ts","./node_modules/@supabase/phoenix/priv/static/types/push.d.ts","./node_modules/@supabase/phoenix/priv/static/types/channel.d.ts","./node_modules/@supabase/phoenix/priv/static/types/presence.d.ts","./node_modules/@supabase/phoenix/priv/static/types/serializer.d.ts","./node_modules/@supabase/phoenix/priv/static/types/index.d.ts","./node_modules/@supabase/realtime-js/dist/module/phoenix/types.d.ts","./node_modules/@supabase/realtime-js/dist/module/lib/constants.d.ts","./node_modules/@supabase/realtime-js/dist/module/realtimepresence.d.ts","./node_modules/@supabase/realtime-js/dist/module/realtimepostgresfilterbuilder.d.ts","./node_modules/@supabase/realtime-js/dist/module/realtimechannel.d.ts","./node_modules/@supabase/realtime-js/dist/module/realtimeclient.d.ts","./node_modules/@supabase/realtime-js/dist/module/index.d.ts","./node_modules/iceberg-js/dist/index.d.ts","./node_modules/@supabase/storage-js/dist/index.d.mts","./node_modules/@supabase/auth-js/dist/module/lib/error-codes.d.ts","./node_modules/@supabase/auth-js/dist/module/lib/errors.d.ts","./node_modules/@supabase/auth-js/dist/module/lib/web3/ethereum.d.ts","./node_modules/@supabase/auth-js/dist/module/lib/web3/solana.d.ts","./node_modules/@supabase/auth-js/dist/module/lib/webauthn.dom.d.ts","./node_modules/@supabase/auth-js/dist/module/lib/helpers.d.ts","./node_modules/@supabase/auth-js/dist/module/gotrueclient.d.ts","./node_modules/@supabase/auth-js/dist/module/lib/webauthn.errors.d.ts","./node_modules/@supabase/auth-js/dist/module/lib/webauthn.d.ts","./node_modules/@supabase/auth-js/dist/module/lib/types.d.ts","./node_modules/@supabase/auth-js/dist/module/lib/fetch.d.ts","./node_modules/@supabase/auth-js/dist/module/gotrueadminapi.d.ts","./node_modules/@supabase/auth-js/dist/module/authadminapi.d.ts","./node_modules/@supabase/auth-js/dist/module/authclient.d.ts","./node_modules/@supabase/auth-js/dist/module/lib/locks.d.ts","./node_modules/@supabase/auth-js/dist/module/index.d.ts","./node_modules/@supabase/supabase-js/dist/index.d.mts","./lib/supabaseclient.js","./lib/api-client.ts","./lib/types.ts","./lib/constants.ts","./app/admin/_components/useadminauth.ts","./lib/supabaseadmin.ts","./lib/api-server.ts","./app/api/admin/channels/route.ts","./app/api/admin/lecture-notes/route.ts","./app/api/admin/schedules/route.ts","./app/api/admin/subjects/route.ts","./app/api/channel/content/route.ts","./app/api/channel/view/route.ts","./app/api/study-prompt/route.ts","./app/channel-portal/_components/usechannelauth.ts","./hooks/usestudentstage.ts","./components/ui/toast.tsx","./components/ui/button.tsx","./components/ui/confirmdialog.tsx","./components/navbar.tsx","./app/layout.tsx","./components/animatedbackground.tsx","./app/page.tsx","./components/ui/field.tsx","./app/admin/_components/subjectssection.tsx","./app/admin/_components/materialssection.tsx","./app/admin/_components/channelssection.tsx","./app/admin/_components/schedulessection.tsx","./app/admin/page.tsx","./app/channel-portal/_components/contentsection.tsx","./app/channel-portal/_components/settingssection.tsx","./app/channel-portal/page.tsx","./app/channels/page.tsx","./app/channels/[id]/page.tsx","./app/gpa/page.tsx","./app/lawazem/page.tsx","./app/schedule/page.tsx","./app/study-prompt/page.tsx","./.next/types/cache-life.d.ts","./.next/types/routes.d.ts","./.next/types/validator.ts","./.next/dev/types/cache-life.d.ts","./.next/dev/types/validator.ts","./node_modules/@types/estree/index.d.ts","./node_modules/@types/json-schema/index.d.ts","./node_modules/@types/json5/index.d.ts"],"fileIdsList":[[97,143,483,484,485,486,613],[97,143,613,616],[97,143,226,524,527,530,582,583,584,585,586,587,588,595,597,603,606,607,608,609,610,611,612,613,616],[97,143,483,484,485,486,616],[97,143,226,524,527,582,583,584,585,586,587,588,595,597,603,606,607,608,609,610,611,612,613,614,616],[85,97,143,226,576,577,578,591,592,593,598,613,616],[85,97,143,226,576,577,591,592,593,598,613,616],[85,97,143,226,576,577,578,591,592,613,616],[85,97,143,226,576,578,613,616],[85,97,143,226,579,592,598,599,600,601,602,613,616],[97,143,226,524,581,613,616],[97,143,226,524,577,578,580,581,613,616],[97,143,226,524,580,581,613,616],[97,143,226,524,578,581,613,616],[85,97,143,226,576,577,578,591,592,598,613,616],[85,97,143,226,575,576,577,578,613,616],[85,97,143,226,589,592,598,604,605,613,616],[85,97,143,226,507,517,575,577,578,598,613,616],[85,97,143,226,507,575,577,590,598,613,616],[85,97,143,226,507,575,577,590,592,593,598,613,616],[97,143,226,525,528,591,593,594,613,616],[85,97,143,226,507,577,578,596,613,616],[85,97,143,226,507,575,577,590,613,616],[85,97,143,226,507,575,576,578,590,591,592,598,613,616],[85,97,143,226,613,616],[97,143,226,507,517,613,616],[85,97,143,226,592,613,616],[85,97,143,226,517,577,578,613,616],[97,143,226,575,613,616],[97,143,226,524,580,613,616],[97,143,226,577,613,616],[97,143,226,574,613,616],[97,143,226,613,616],[97,143,528,529,530,613,616],[97,143,226,528,613,616],[97,143,569,613,616],[97,143,564,613,616],[97,143,559,567,568,613,616],[97,143,559,563,567,568,569,613,616],[97,143,559,564,567,569,570,571,572,613,616],[97,143,558,567,613,616],[97,143,567,613,616],[97,143,562,567,613,616],[97,143,559,560,561,562,566,568,613,616],[97,143,559,562,564,565,567,613,616],[97,143,533,613,616],[97,143,533,534,613,616],[97,143,541,542,543,544,613,616],[97,143,540,541,542,543,544,545,546,547,613,616],[97,143,541,545,613,616],[97,143,541,613,616],[97,143,540,541,542,545,613,616],[97,143,539,540,613,616],[97,143,537,551,553,554,613,616],[97,143,549,613,616],[97,143,548,613,616],[97,143,548,549,550,551,552,554,613,616],[97,143,537,538,549,550,553,613,616],[97,143,553,613,616],[97,143,556,613,616],[97,143,535,536,555,557,573,613,616],[97,140,143,613,616],[97,142,143,613,616],[143,613,616],[97,143,148,176,613,616],[97,143,144,149,154,162,173,184,613,616],[97,143,144,145,154,162,613,616],[92,93,94,97,143,613,616],[97,143,146,185,613,616],[97,143,147,148,155,163,613,616],[97,143,148,173,181,613,616],[97,143,149,151,154,162,613,616],[97,142,143,150,613,616],[97,143,151,152,613,616],[97,143,153,154,613,616],[97,142,143,154,613,616],[97,143,154,155,156,173,184,613,616],[97,143,154,155,156,169,173,176,613,616],[97,143,151,154,157,162,173,184,613,616],[97,143,154,155,157,158,162,173,181,184,613,616],[97,143,157,159,173,181,184,613,616],[95,96,97,98,99,100,101,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,613,616],[97,143,154,160,613,616],[97,143,161,184,189,613,616],[97,143,151,154,162,173,613,616],[97,143,163,613,616],[97,143,164,613,616],[97,142,143,165,613,616],[97,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,613,616],[97,143,167,613,616],[97,143,168,613,616],[97,143,154,169,170,613,616],[97,143,169,171,185,187,613,616],[97,143,154,173,174,176,613,616],[97,143,175,176,613,616],[97,143,173,174,613,616],[97,143,176,613,616],[97,143,177,613,616],[97,140,143,173,178,613,616],[97,143,154,179,180,613,616],[97,143,179,180,613,616],[97,143,148,162,173,181,613,616],[97,143,182,613,616],[97,143,162,183,613,616],[97,143,157,168,184,613,616],[97,143,148,185,613,616],[97,143,173,186,613,616],[97,143,161,187,613,616],[97,143,188,613,616],[97,138,143,613,616],[97,138,143,154,156,165,173,176,184,187,189,613,616],[97,143,173,190,613,616],[85,89,97,143,192,193,194,196,478,523,613,616],[85,97,143,613,616],[85,89,97,143,192,193,194,195,459,478,523,613,616],[85,89,97,143,192,193,195,196,478,523,613,616],[85,97,143,196,459,460,613,616],[85,97,143,196,459,613,616],[85,89,97,143,193,194,195,196,478,523,613,616],[85,89,97,143,192,194,195,196,478,523,613,616],[83,84,97,143,613,616],[97,143,481,613,616],[97,143,483,484,485,486,613,616],[97,143,429,492,493,613,616],[97,143,201,202,204,216,240,355,366,474,613,616],[97,143,204,235,236,237,239,474,613,616],[97,143,204,372,374,376,377,379,474,476,613,616],[97,143,204,238,275,474,613,616],[97,143,202,204,215,216,222,228,233,354,355,356,365,474,476,613,616],[97,143,474,613,616],[97,143,211,217,236,256,351,613,616],[97,143,204,613,616],[97,143,197,211,217,613,616],[97,143,383,613,616],[97,143,380,381,383,613,616],[97,143,380,382,474,613,616],[97,143,157,256,453,471,613,616],[97,143,157,327,330,346,351,471,613,616],[97,143,157,299,471,613,616],[97,143,359,613,616],[97,143,358,359,360,613,616],[97,143,358,613,616],[91,97,143,157,197,204,216,222,228,234,236,240,241,254,255,322,352,353,366,474,478,613,616],[97,143,201,204,238,275,372,373,378,474,526,613,616],[97,143,238,526,613,616],[97,143,201,255,424,474,526,613,616],[97,143,526,613,616],[97,143,204,238,239,526,613,616],[97,143,375,526,613,616],[97,143,241,354,357,364,613,616],[85,97,143,429,613,616],[97,143,168,211,226,613,616],[97,143,211,226,613,616],[85,97,143,296,613,616],[85,97,143,217,226,429,613,616],[97,143,211,282,296,297,508,515,613,616],[97,143,281,509,510,511,512,514,613,616],[97,143,332,613,616],[97,143,332,333,613,616],[97,143,215,217,284,285,613,616],[97,143,217,291,292,613,616],[97,143,217,286,294,613,616],[97,143,291,613,616],[97,143,209,217,284,285,286,287,288,289,290,291,294,613,616],[97,143,217,284,291,292,293,295,613,616],[97,143,217,285,287,288,613,616],[97,143,285,287,290,292,613,616],[97,143,513,613,616],[97,143,217,613,616],[85,97,143,205,502,613,616],[85,97,143,184,613,616],[85,97,143,238,273,613,616],[85,97,143,238,366,613,616],[97,143,271,276,613,616],[85,97,143,272,480,613,616],[85,89,97,143,157,192,193,194,195,196,478,522,613,616],[97,143,157,217,613,616],[97,143,157,216,221,302,319,361,362,366,421,423,474,475,613,616],[97,143,254,363,613,616],[97,143,478,613,616],[97,143,203,613,616],[85,97,143,208,211,426,442,444,613,616],[97,143,168,211,426,441,442,443,525,613,616],[97,143,435,436,437,438,439,440,613,616],[97,143,437,613,616],[97,143,441,613,616],[97,143,226,390,391,393,613,616],[85,97,143,217,384,385,386,387,392,613,616],[97,143,390,392,613,616],[97,143,388,613,616],[97,143,389,613,616],[85,97,143,226,272,480,613,616],[85,97,143,226,479,480,613,616],[85,97,143,226,480,613,616],[97,143,319,320,613,616],[97,143,320,613,616],[97,143,157,475,480,613,616],[97,143,349,613,616],[97,142,143,348,613,616],[97,143,211,217,223,225,327,340,344,346,423,426,463,464,471,475,613,616],[97,143,217,266,288,613,616],[97,143,327,338,341,346,613,616],[85,97,143,208,211,327,330,346,349,383,430,431,432,433,434,445,446,447,448,449,450,451,452,526,613,616],[97,143,208,211,236,327,334,335,336,339,340,613,616],[97,143,173,217,236,338,345,426,427,471,613,616],[97,143,342,613,616],[97,143,157,168,205,217,221,231,263,264,267,319,322,387,421,422,463,474,475,476,478,526,613,616],[97,143,208,209,211,613,616],[97,143,327,613,616],[97,142,143,236,263,264,321,322,323,324,325,326,475,613,616],[97,143,346,613,616],[97,142,143,210,211,221,225,261,327,334,335,336,337,338,341,342,343,344,345,464,613,616],[97,143,157,261,262,334,475,476,613,616],[97,143,236,264,319,322,327,423,475,613,616],[97,143,157,474,476,613,616],[97,143,157,173,471,475,476,613,616],[97,143,157,168,197,211,216,223,225,228,231,238,258,263,264,265,266,267,302,303,305,308,310,313,314,315,316,318,366,421,423,471,474,475,476,613,616],[97,143,157,173,613,616],[97,143,204,205,206,234,471,472,473,478,480,526,613,616],[97,143,201,202,474,613,616],[97,143,395,613,616],[97,143,157,173,184,213,379,383,384,385,386,387,393,394,526,613,616],[97,143,168,184,197,211,213,225,228,264,303,308,318,319,372,399,400,401,407,410,411,421,423,471,474,613,616],[97,143,228,234,241,254,264,322,474,613,616],[97,143,157,184,205,216,225,264,405,471,474,613,616],[97,143,425,613,616],[97,143,157,395,408,409,418,613,616],[97,143,471,474,613,616],[97,143,324,464,613,616],[97,143,225,263,366,480,613,616],[97,143,157,168,203,308,368,372,401,407,410,413,471,613,616],[97,143,157,241,254,372,414,613,616],[97,143,204,265,366,416,474,476,613,616],[97,143,157,184,387,474,613,616],[97,143,157,238,265,366,367,368,377,395,415,417,474,613,616],[91,97,143,157,263,420,478,480,613,616],[97,143,317,421,613,616],[97,143,157,168,211,214,216,217,223,225,231,240,241,254,264,267,303,305,315,318,319,366,399,400,401,402,404,406,421,423,471,480,613,616],[97,143,157,173,241,407,412,418,471,613,616],[97,143,244,245,246,247,248,249,250,251,252,253,613,616],[97,143,258,309,613,616],[97,143,311,613,616],[97,143,309,613,616],[97,143,311,312,613,616],[97,143,157,215,216,217,221,222,475,613,616],[97,143,157,168,203,205,223,227,263,266,267,301,421,471,476,478,480,613,616],[97,143,157,168,184,207,214,215,225,227,264,419,464,470,475,613,616],[97,143,334,613,616],[97,143,335,613,616],[97,143,217,228,463,613,616],[97,143,336,613,616],[97,143,210,613,616],[97,143,212,224,613,616],[97,143,157,212,216,223,613,616],[97,143,219,224,613,616],[97,143,220,613,616],[97,143,212,213,613,616],[97,143,212,268,613,616],[97,143,212,613,616],[97,143,214,258,307,613,616],[97,143,306,613,616],[97,143,211,213,214,613,616],[97,143,214,304,613,616],[97,143,211,213,613,616],[97,143,263,366,613,616],[97,143,463,613,616],[97,143,157,184,223,225,229,263,366,420,423,426,427,428,454,455,458,462,464,471,475,613,616],[97,143,277,280,282,283,296,297,613,616],[85,97,143,194,196,226,456,457,613,616],[85,97,143,194,196,226,456,457,461,613,616],[97,143,350,613,616],[97,143,236,257,262,263,327,328,329,330,331,333,346,347,349,352,420,423,474,476,613,616],[97,143,296,613,616],[97,143,157,301,471,613,616],[97,143,301,613,616],[97,143,157,223,269,298,300,302,420,471,478,480,613,616],[97,143,277,278,279,280,282,283,296,297,479,613,616],[91,97,143,157,168,184,212,213,225,231,263,264,267,366,418,419,421,471,474,475,478,613,616],[97,143,208,211,218,613,616],[97,143,262,264,396,399,613,616],[97,143,262,397,465,466,467,468,469,613,616],[97,143,157,258,474,613,616],[97,143,157,613,616],[97,143,261,346,613,616],[97,143,260,613,616],[97,143,262,315,613,616],[97,143,259,261,474,613,616],[97,143,157,207,262,396,397,398,471,474,475,613,616],[85,97,143,211,217,295,613,616],[85,97,143,209,613,616],[97,143,199,200,613,616],[85,97,143,205,613,616],[85,97,143,211,281,613,616],[85,91,97,143,263,267,478,480,613,616],[97,143,205,502,503,613,616],[85,97,143,276,613,616],[85,97,143,168,184,203,270,272,274,275,480,613,616],[97,143,211,238,475,613,616],[97,143,211,403,613,616],[85,97,143,155,157,168,201,203,276,374,478,479,613,616],[85,97,143,192,193,194,195,196,478,523,613,616],[85,86,87,88,89,97,143,613,616],[97,143,148,613,616],[97,143,369,370,371,613,616],[97,143,369,613,616],[85,89,97,143,157,159,168,191,192,193,194,195,196,197,203,231,236,413,441,476,477,480,523,613,616],[97,143,488,613,616],[97,143,490,613,616],[97,143,494,613,616],[97,143,496,613,616],[97,143,498,499,500,613,616],[97,143,504,613,616],[90,97,143,482,487,489,491,495,497,501,505,507,517,518,520,524,525,526,527,613,616],[97,143,506,613,616],[97,143,516,613,616],[97,143,272,613,616],[97,143,519,613,616],[97,142,143,262,396,397,399,465,466,468,469,521,523,613,616],[97,143,191,613,616],[97,143,173,191,613,616],[97,110,114,143,184,613,616],[97,110,143,173,184,613,616],[97,105,143,613,616],[97,107,110,143,181,184,613,616],[97,143,162,181,613,616],[97,105,143,191,613,616],[97,107,110,143,162,184,613,616],[97,102,103,106,109,143,154,173,184,613,616],[97,110,117,143,613,616],[97,102,108,143,613,616],[97,110,131,132,143,613,616],[97,106,110,143,176,184,191,613,616],[97,131,143,191,613,616],[97,104,105,143,191,613,616],[97,110,143,613,616],[97,104,105,106,107,108,109,110,111,112,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,132,133,134,135,136,137,143,613,616],[97,110,125,143,613,616],[97,110,117,118,143,613,616],[97,108,110,118,119,143,613,616],[97,109,143,613,616],[97,102,105,110,143,613,616],[97,110,114,118,119,143,613,616],[97,114,143,613,616],[97,108,110,113,143,184,613,616],[97,102,107,110,117,143,613,616],[97,143,173,613,616],[97,105,110,131,143,189,191,613,616]],"fileInfos":[{"version":"c430d44666289dae81f30fa7b2edebf186ecc91a2d4c71266ea6ae76388792e1","affectsGlobalScope":true,"impliedFormat":1},{"version":"45b7ab580deca34ae9729e97c13cfd999df04416a79116c3bfb483804f85ded4","impliedFormat":1},{"version":"3facaf05f0c5fc569c5649dd359892c98a85557e3e0c847964caeb67076f4d75","impliedFormat":1},{"version":"e44bb8bbac7f10ecc786703fe0a6a4b952189f908707980ba8f3c8975a760962","impliedFormat":1},{"version":"5e1c4c362065a6b95ff952c0eab010f04dcd2c3494e813b493ecfd4fcb9fc0d8","impliedFormat":1},{"version":"68d73b4a11549f9c0b7d352d10e91e5dca8faa3322bfb77b661839c42b1ddec7","impliedFormat":1},{"version":"5efce4fc3c29ea84e8928f97adec086e3dc876365e0982cc8479a07954a3efd4","impliedFormat":1},{"version":"feecb1be483ed332fad555aff858affd90a48ab19ba7272ee084704eb7167569","impliedFormat":1},{"version":"ee7bad0c15b58988daa84371e0b89d313b762ab83cb5b31b8a2d1162e8eb41c2","impliedFormat":1},{"version":"27bdc30a0e32783366a5abeda841bc22757c1797de8681bbe81fbc735eeb1c10","impliedFormat":1},{"version":"8fd575e12870e9944c7e1d62e1f5a73fcf23dd8d3a321f2a2c74c20d022283fe","impliedFormat":1},{"version":"2ab096661c711e4a81cc464fa1e6feb929a54f5340b46b0a07ac6bbf857471f0","impliedFormat":1},{"version":"080941d9f9ff9307f7e27a83bcd888b7c8270716c39af943532438932ec1d0b9","affectsGlobalScope":true,"impliedFormat":1},{"version":"2e80ee7a49e8ac312cc11b77f1475804bee36b3b2bc896bead8b6e1266befb43","affectsGlobalScope":true,"impliedFormat":1},{"version":"c57796738e7f83dbc4b8e65132f11a377649c00dd3eee333f672b8f0a6bea671","affectsGlobalScope":true,"impliedFormat":1},{"version":"dc2df20b1bcdc8c2d34af4926e2c3ab15ffe1160a63e58b7e09833f616efff44","affectsGlobalScope":true,"impliedFormat":1},{"version":"515d0b7b9bea2e31ea4ec968e9edd2c39d3eebf4a2d5cbd04e88639819ae3b71","affectsGlobalScope":true,"impliedFormat":1},{"version":"0559b1f683ac7505ae451f9a96ce4c3c92bdc71411651ca6ddb0e88baaaad6a3","affectsGlobalScope":true,"impliedFormat":1},{"version":"0dc1e7ceda9b8b9b455c3a2d67b0412feab00bd2f66656cd8850e8831b08b537","affectsGlobalScope":true,"impliedFormat":1},{"version":"ce691fb9e5c64efb9547083e4a34091bcbe5bdb41027e310ebba8f7d96a98671","affectsGlobalScope":true,"impliedFormat":1},{"version":"8d697a2a929a5fcb38b7a65594020fcef05ec1630804a33748829c5ff53640d0","affectsGlobalScope":true,"impliedFormat":1},{"version":"4ff2a353abf8a80ee399af572debb8faab2d33ad38c4b4474cff7f26e7653b8d","affectsGlobalScope":true,"impliedFormat":1},{"version":"fb0f136d372979348d59b3f5020b4cdb81b5504192b1cacff5d1fbba29378aa1","affectsGlobalScope":true,"impliedFormat":1},{"version":"d15bea3d62cbbdb9797079416b8ac375ae99162a7fba5de2c6c505446486ac0a","affectsGlobalScope":true,"impliedFormat":1},{"version":"68d18b664c9d32a7336a70235958b8997ebc1c3b8505f4f1ae2b7e7753b87618","affectsGlobalScope":true,"impliedFormat":1},{"version":"eb3d66c8327153d8fa7dd03f9c58d351107fe824c79e9b56b462935176cdf12a","affectsGlobalScope":true,"impliedFormat":1},{"version":"38f0219c9e23c915ef9790ab1d680440d95419ad264816fa15009a8851e79119","affectsGlobalScope":true,"impliedFormat":1},{"version":"69ab18c3b76cd9b1be3d188eaf8bba06112ebbe2f47f6c322b5105a6fbc45a2e","affectsGlobalScope":true,"impliedFormat":1},{"version":"a680117f487a4d2f30ea46f1b4b7f58bef1480456e18ba53ee85c2746eeca012","affectsGlobalScope":true,"impliedFormat":1},{"version":"2f11ff796926e0832f9ae148008138ad583bd181899ab7dd768a2666700b1893","affectsGlobalScope":true,"impliedFormat":1},{"version":"4de680d5bb41c17f7f68e0419412ca23c98d5749dcaaea1896172f06435891fc","affectsGlobalScope":true,"impliedFormat":1},{"version":"954296b30da6d508a104a3a0b5d96b76495c709785c1d11610908e63481ee667","affectsGlobalScope":true,"impliedFormat":1},{"version":"ac9538681b19688c8eae65811b329d3744af679e0bdfa5d842d0e32524c73e1c","affectsGlobalScope":true,"impliedFormat":1},{"version":"0a969edff4bd52585473d24995c5ef223f6652d6ef46193309b3921d65dd4376","affectsGlobalScope":true,"impliedFormat":1},{"version":"9e9fbd7030c440b33d021da145d3232984c8bb7916f277e8ffd3dc2e3eae2bdb","affectsGlobalScope":true,"impliedFormat":1},{"version":"811ec78f7fefcabbda4bfa93b3eb67d9ae166ef95f9bff989d964061cbf81a0c","affectsGlobalScope":true,"impliedFormat":1},{"version":"717937616a17072082152a2ef351cb51f98802fb4b2fdabd32399843875974ca","affectsGlobalScope":true,"impliedFormat":1},{"version":"d7e7d9b7b50e5f22c915b525acc5a49a7a6584cf8f62d0569e557c5cfc4b2ac2","affectsGlobalScope":true,"impliedFormat":1},{"version":"71c37f4c9543f31dfced6c7840e068c5a5aacb7b89111a4364b1d5276b852557","affectsGlobalScope":true,"impliedFormat":1},{"version":"576711e016cf4f1804676043e6a0a5414252560eb57de9faceee34d79798c850","affectsGlobalScope":true,"impliedFormat":1},{"version":"89c1b1281ba7b8a96efc676b11b264de7a8374c5ea1e6617f11880a13fc56dc6","affectsGlobalScope":true,"impliedFormat":1},{"version":"74f7fa2d027d5b33eb0471c8e82a6c87216223181ec31247c357a3e8e2fddc5b","affectsGlobalScope":true,"impliedFormat":1},{"version":"d6d7ae4d1f1f3772e2a3cde568ed08991a8ae34a080ff1151af28b7f798e22ca","affectsGlobalScope":true,"impliedFormat":1},{"version":"063600664504610fe3e99b717a1223f8b1900087fab0b4cad1496a114744f8df","affectsGlobalScope":true,"impliedFormat":1},{"version":"934019d7e3c81950f9a8426d093458b65d5aff2c7c1511233c0fd5b941e608ab","affectsGlobalScope":true,"impliedFormat":1},{"version":"52ada8e0b6e0482b728070b7639ee42e83a9b1c22d205992756fe020fd9f4a47","affectsGlobalScope":true,"impliedFormat":1},{"version":"3bdefe1bfd4d6dee0e26f928f93ccc128f1b64d5d501ff4a8cf3c6371200e5e6","affectsGlobalScope":true,"impliedFormat":1},{"version":"59fb2c069260b4ba00b5643b907ef5d5341b167e7d1dbf58dfd895658bda2867","affectsGlobalScope":true,"impliedFormat":1},{"version":"639e512c0dfc3fad96a84caad71b8834d66329a1f28dc95e3946c9b58176c73a","affectsGlobalScope":true,"impliedFormat":1},{"version":"368af93f74c9c932edd84c58883e736c9e3d53cec1fe24c0b0ff451f529ceab1","affectsGlobalScope":true,"impliedFormat":1},{"version":"af3dd424cf267428f30ccfc376f47a2c0114546b55c44d8c0f1d57d841e28d74","affectsGlobalScope":true,"impliedFormat":1},{"version":"995c005ab91a498455ea8dfb63aa9f83fa2ea793c3d8aa344be4a1678d06d399","affectsGlobalScope":true,"impliedFormat":1},{"version":"959d36cddf5e7d572a65045b876f2956c973a586da58e5d26cde519184fd9b8a","affectsGlobalScope":true,"impliedFormat":1},{"version":"965f36eae237dd74e6cca203a43e9ca801ce38824ead814728a2807b1910117d","affectsGlobalScope":true,"impliedFormat":1},{"version":"3925a6c820dcb1a06506c90b1577db1fdbf7705d65b62b99dce4be75c637e26b","affectsGlobalScope":true,"impliedFormat":1},{"version":"0a3d63ef2b853447ec4f749d3f368ce642264246e02911fcb1590d8c161b8005","affectsGlobalScope":true,"impliedFormat":1},{"version":"8cdf8847677ac7d20486e54dd3fcf09eda95812ac8ace44b4418da1bbbab6eb8","affectsGlobalScope":true,"impliedFormat":1},{"version":"8444af78980e3b20b49324f4a16ba35024fef3ee069a0eb67616ea6ca821c47a","affectsGlobalScope":true,"impliedFormat":1},{"version":"3287d9d085fbd618c3971944b65b4be57859f5415f495b33a6adc994edd2f004","affectsGlobalScope":true,"impliedFormat":1},{"version":"b4b67b1a91182421f5df999988c690f14d813b9850b40acd06ed44691f6727ad","affectsGlobalScope":true,"impliedFormat":1},{"version":"df83c2a6c73228b625b0beb6669c7ee2a09c914637e2d35170723ad49c0f5cd4","affectsGlobalScope":true,"impliedFormat":1},{"version":"436aaf437562f276ec2ddbee2f2cdedac7664c1e4c1d2c36839ddd582eeb3d0a","affectsGlobalScope":true,"impliedFormat":1},{"version":"8e3c06ea092138bf9fa5e874a1fdbc9d54805d074bee1de31b99a11e2fec239d","affectsGlobalScope":true,"impliedFormat":1},{"version":"87dc0f382502f5bbce5129bdc0aea21e19a3abbc19259e0b43ae038a9fc4e326","affectsGlobalScope":true,"impliedFormat":1},{"version":"b1cb28af0c891c8c96b2d6b7be76bd394fddcfdb4709a20ba05a7c1605eea0f9","affectsGlobalScope":true,"impliedFormat":1},{"version":"2fef54945a13095fdb9b84f705f2b5994597640c46afeb2ce78352fab4cb3279","affectsGlobalScope":true,"impliedFormat":1},{"version":"ac77cb3e8c6d3565793eb90a8373ee8033146315a3dbead3bde8db5eaf5e5ec6","affectsGlobalScope":true,"impliedFormat":1},{"version":"56e4ed5aab5f5920980066a9409bfaf53e6d21d3f8d020c17e4de584d29600ad","affectsGlobalScope":true,"impliedFormat":1},{"version":"4ece9f17b3866cc077099c73f4983bddbcb1dc7ddb943227f1ec070f529dedd1","affectsGlobalScope":true,"impliedFormat":1},{"version":"0a6282c8827e4b9a95f4bf4f5c205673ada31b982f50572d27103df8ceb8013c","affectsGlobalScope":true,"impliedFormat":1},{"version":"1c9319a09485199c1f7b0498f2988d6d2249793ef67edda49d1e584746be9032","affectsGlobalScope":true,"impliedFormat":1},{"version":"e3a2a0cee0f03ffdde24d89660eba2685bfbdeae955a6c67e8c4c9fd28928eeb","affectsGlobalScope":true,"impliedFormat":1},{"version":"811c71eee4aa0ac5f7adf713323a5c41b0cf6c4e17367a34fbce379e12bbf0a4","affectsGlobalScope":true,"impliedFormat":1},{"version":"51ad4c928303041605b4d7ae32e0c1ee387d43a24cd6f1ebf4a2699e1076d4fa","affectsGlobalScope":true,"impliedFormat":1},{"version":"60037901da1a425516449b9a20073aa03386cce92f7a1fd902d7602be3a7c2e9","affectsGlobalScope":true,"impliedFormat":1},{"version":"d4b1d2c51d058fc21ec2629fff7a76249dec2e36e12960ea056e3ef89174080f","affectsGlobalScope":true,"impliedFormat":1},{"version":"22adec94ef7047a6c9d1af3cb96be87a335908bf9ef386ae9fd50eeb37f44c47","affectsGlobalScope":true,"impliedFormat":1},{"version":"196cb558a13d4533a5163286f30b0509ce0210e4b316c56c38d4c0fd2fb38405","affectsGlobalScope":true,"impliedFormat":1},{"version":"73f78680d4c08509933daf80947902f6ff41b6230f94dd002ae372620adb0f60","affectsGlobalScope":true,"impliedFormat":1},{"version":"c5239f5c01bcfa9cd32f37c496cf19c61d69d37e48be9de612b541aac915805b","affectsGlobalScope":true,"impliedFormat":1},{"version":"8e7f8264d0fb4c5339605a15daadb037bf238c10b654bb3eee14208f860a32ea","affectsGlobalScope":true,"impliedFormat":1},{"version":"782dec38049b92d4e85c1585fbea5474a219c6984a35b004963b00beb1aab538","affectsGlobalScope":true,"impliedFormat":1},{"version":"7e29f41b158de217f94cb9676bf9cbd0cd9b5a46e1985141ed36e075c52bf6ad","affectsGlobalScope":true,"impliedFormat":1},{"version":"ac51dd7d31333793807a6abaa5ae168512b6131bd41d9c5b98477fc3b7800f9f","impliedFormat":1},{"version":"dc782ff85b2cb10075ecffc158af7bfb27ff97bf8491c917efea0c3d622d5ac4","impliedFormat":1},{"version":"acd8fd5090ac73902278889c38336ff3f48af6ba03aa665eb34a75e7ba1dccc4","impliedFormat":1},{"version":"d6258883868fb2680d2ca96bc8b1352cab69874581493e6d52680c5ffecdb6cc","impliedFormat":1},{"version":"1b61d259de5350f8b1e5db06290d31eaebebc6baafd5f79d314b5af9256d7153","impliedFormat":1},{"version":"f258e3960f324a956fc76a3d3d9e964fff2244ff5859dcc6ce5951e5413ca826","impliedFormat":1},{"version":"643f7232d07bf75e15bd8f658f664d6183a0efaca5eb84b48201c7671a266979","impliedFormat":1},{"version":"21da358700a3893281ce0c517a7a30cbd46be020d9f0c3f2834d0a8ad1f5fc75","impliedFormat":1},{"version":"70521b6ab0dcba37539e5303104f29b721bfb2940b2776da4cc818c07e1fefc1","affectsGlobalScope":true,"impliedFormat":1},{"version":"ab41ef1f2cdafb8df48be20cd969d875602483859dc194e9c97c8a576892c052","affectsGlobalScope":true,"impliedFormat":1},{"version":"d153a11543fd884b596587ccd97aebbeed950b26933ee000f94009f1ab142848","affectsGlobalScope":true,"impliedFormat":1},{"version":"21d819c173c0cf7cc3ce57c3276e77fd9a8a01d35a06ad87158781515c9a438a","impliedFormat":1},{"version":"98cffbf06d6bab333473c70a893770dbe990783904002c4f1a960447b4b53dca","affectsGlobalScope":true,"impliedFormat":1},{"version":"ba481bca06f37d3f2c137ce343c7d5937029b2468f8e26111f3c9d9963d6568d","affectsGlobalScope":true,"impliedFormat":1},{"version":"6d9ef24f9a22a88e3e9b3b3d8c40ab1ddb0853f1bfbd5c843c37800138437b61","affectsGlobalScope":true,"impliedFormat":1},{"version":"1db0b7dca579049ca4193d034d835f6bfe73096c73663e5ef9a0b5779939f3d0","affectsGlobalScope":true,"impliedFormat":1},{"version":"9798340ffb0d067d69b1ae5b32faa17ab31b82466a3fc00d8f2f2df0c8554aaa","affectsGlobalScope":true,"impliedFormat":1},{"version":"f26b11d8d8e4b8028f1c7d618b22274c892e4b0ef5b3678a8ccbad85419aef43","affectsGlobalScope":true,"impliedFormat":1},{"version":"5929864ce17fba74232584d90cb721a89b7ad277220627cc97054ba15a98ea8f","impliedFormat":1},{"version":"763fe0f42b3d79b440a9b6e51e9ba3f3f91352469c1e4b3b67bfa4ff6352f3f4","impliedFormat":1},{"version":"25c8056edf4314820382a5fdb4bb7816999acdcb929c8f75e3f39473b87e85bc","impliedFormat":1},{"version":"c464d66b20788266e5353b48dc4aa6bc0dc4a707276df1e7152ab0c9ae21fad8","impliedFormat":1},{"version":"78d0d27c130d35c60b5e5566c9f1e5be77caf39804636bc1a40133919a949f21","impliedFormat":1},{"version":"c6fd2c5a395f2432786c9cb8deb870b9b0e8ff7e22c029954fabdd692bff6195","impliedFormat":1},{"version":"1d6e127068ea8e104a912e42fc0a110e2aa5a66a356a917a163e8cf9a65e4a75","impliedFormat":1},{"version":"5ded6427296cdf3b9542de4471d2aa8d3983671d4cac0f4bf9c637208d1ced43","impliedFormat":1},{"version":"7f182617db458e98fc18dfb272d40aa2fff3a353c44a89b2c0ccb3937709bfb5","impliedFormat":1},{"version":"cadc8aced301244057c4e7e73fbcae534b0f5b12a37b150d80e5a45aa4bebcbd","impliedFormat":1},{"version":"385aab901643aa54e1c36f5ef3107913b10d1b5bb8cbcd933d4263b80a0d7f20","impliedFormat":1},{"version":"9670d44354bab9d9982eca21945686b5c24a3f893db73c0dae0fd74217a4c219","impliedFormat":1},{"version":"0b8a9268adaf4da35e7fa830c8981cfa22adbbe5b3f6f5ab91f6658899e657a7","impliedFormat":1},{"version":"11396ed8a44c02ab9798b7dca436009f866e8dae3c9c25e8c1fbc396880bf1bb","impliedFormat":1},{"version":"ba7bc87d01492633cb5a0e5da8a4a42a1c86270e7b3d2dea5d156828a84e4882","impliedFormat":1},{"version":"4893a895ea92c85345017a04ed427cbd6a1710453338df26881a6019432febdd","impliedFormat":1},{"version":"c21dc52e277bcfc75fac0436ccb75c204f9e1b3fa5e12729670910639f27343e","impliedFormat":1},{"version":"13f6f39e12b1518c6650bbb220c8985999020fe0f21d818e28f512b7771d00f9","impliedFormat":1},{"version":"9b5369969f6e7175740bf51223112ff209f94ba43ecd3bb09eefff9fd675624a","impliedFormat":1},{"version":"4fe9e626e7164748e8769bbf74b538e09607f07ed17c2f20af8d680ee49fc1da","impliedFormat":1},{"version":"24515859bc0b836719105bb6cc3d68255042a9f02a6022b3187948b204946bd2","impliedFormat":1},{"version":"ea0148f897b45a76544ae179784c95af1bd6721b8610af9ffa467a518a086a43","impliedFormat":1},{"version":"24c6a117721e606c9984335f71711877293a9651e44f59f3d21c1ea0856f9cc9","impliedFormat":1},{"version":"dd3273ead9fbde62a72949c97dbec2247ea08e0c6952e701a483d74ef92d6a17","impliedFormat":1},{"version":"405822be75ad3e4d162e07439bac80c6bcc6dbae1929e179cf467ec0b9ee4e2e","impliedFormat":1},{"version":"0db18c6e78ea846316c012478888f33c11ffadab9efd1cc8bcc12daded7a60b6","impliedFormat":1},{"version":"e61be3f894b41b7baa1fbd6a66893f2579bfad01d208b4ff61daef21493ef0a8","impliedFormat":1},{"version":"bd0532fd6556073727d28da0edfd1736417a3f9f394877b6d5ef6ad88fba1d1a","impliedFormat":1},{"version":"89167d696a849fce5ca508032aabfe901c0868f833a8625d5a9c6e861ef935d2","impliedFormat":1},{"version":"615ba88d0128ed16bf83ef8ccbb6aff05c3ee2db1cc0f89ab50a4939bfc1943f","impliedFormat":1},{"version":"a4d551dbf8746780194d550c88f26cf937caf8d56f102969a110cfaed4b06656","impliedFormat":1},{"version":"8bd86b8e8f6a6aa6c49b71e14c4ffe1211a0e97c80f08d2c8cc98838006e4b88","impliedFormat":1},{"version":"317e63deeb21ac07f3992f5b50cdca8338f10acd4fbb7257ebf56735bf52ab00","impliedFormat":1},{"version":"4732aec92b20fb28c5fe9ad99521fb59974289ed1e45aecb282616202184064f","impliedFormat":1},{"version":"2e85db9e6fd73cfa3d7f28e0ab6b55417ea18931423bd47b409a96e4a169e8e6","impliedFormat":1},{"version":"c46e079fe54c76f95c67fb89081b3e399da2c7d109e7dca8e4b58d83e332e605","impliedFormat":1},{"version":"bf67d53d168abc1298888693338cb82854bdb2e69ef83f8a0092093c2d562107","impliedFormat":1},{"version":"b52476feb4a0cbcb25e5931b930fc73cb6643fb1a5060bf8a3dda0eeae5b4b68","affectsGlobalScope":true,"impliedFormat":1},{"version":"e2677634fe27e87348825bb041651e22d50a613e2fdf6a4a3ade971d71bac37e","impliedFormat":1},{"version":"7394959e5a741b185456e1ef5d64599c36c60a323207450991e7a42e08911419","impliedFormat":1},{"version":"8c0bcd6c6b67b4b503c11e91a1fb91522ed585900eab2ab1f61bba7d7caa9d6f","impliedFormat":1},{"version":"8cd19276b6590b3ebbeeb030ac271871b9ed0afc3074ac88a94ed2449174b776","affectsGlobalScope":true,"impliedFormat":1},{"version":"696eb8d28f5949b87d894b26dc97318ef944c794a9a4e4f62360cd1d1958014b","impliedFormat":1},{"version":"3f8fa3061bd7402970b399300880d55257953ee6d3cd408722cb9ac20126460c","impliedFormat":1},{"version":"35ec8b6760fd7138bbf5809b84551e31028fb2ba7b6dc91d95d098bf212ca8b4","affectsGlobalScope":true,"impliedFormat":1},{"version":"5524481e56c48ff486f42926778c0a3cce1cc85dc46683b92b1271865bcf015a","impliedFormat":1},{"version":"68bd56c92c2bd7d2339457eb84d63e7de3bd56a69b25f3576e1568d21a162398","affectsGlobalScope":true,"impliedFormat":1},{"version":"3e93b123f7c2944969d291b35fed2af79a6e9e27fdd5faa99748a51c07c02d28","impliedFormat":1},{"version":"9d19808c8c291a9010a6c788e8532a2da70f811adb431c97520803e0ec649991","impliedFormat":1},{"version":"87aad3dd9752067dc875cfaa466fc44246451c0c560b820796bdd528e29bef40","impliedFormat":1},{"version":"4aacb0dd020eeaef65426153686cc639a78ec2885dc72ad220be1d25f1a439df","impliedFormat":1},{"version":"f0bd7e6d931657b59605c44112eaf8b980ba7f957a5051ed21cb93d978cf2f45","impliedFormat":1},{"version":"8db0ae9cb14d9955b14c214f34dae1b9ef2baee2fe4ce794a4cd3ac2531e3255","affectsGlobalScope":true,"impliedFormat":1},{"version":"15fc6f7512c86810273af28f224251a5a879e4261b4d4c7e532abfbfc3983134","impliedFormat":1},{"version":"58adba1a8ab2d10b54dc1dced4e41f4e7c9772cbbac40939c0dc8ce2cdb1d442","impliedFormat":1},{"version":"641942a78f9063caa5d6b777c99304b7d1dc7328076038c6d94d8a0b81fc95c1","impliedFormat":1},{"version":"1123a83f35cf56c97de746f0a7250012153c61a167e4a61668bf50e558162d14","impliedFormat":1},{"version":"855cd5f7eb396f5f1ab1bc0f8580339bff77b68a770f84c6b254e319bbfd1ac7","impliedFormat":1},{"version":"5650cf3dace09e7c25d384e3e6b818b938f68f4e8de96f52d9c5a1b3db068e86","impliedFormat":1},{"version":"1354ca5c38bd3fd3836a68e0f7c9f91f172582ba30ab15bb8c075891b91502b7","affectsGlobalScope":true,"impliedFormat":1},{"version":"7e20d899c28ca26a2a7afc98beaa69e63ff7fba0a8bc47b4e3bf3ede5e09e424","impliedFormat":1},{"version":"2d2fcaab481b31a5882065c7951255703ddbe1c0e507af56ea42d79ac3911201","impliedFormat":1},{"version":"a192fe8ec33f75edbc8d8f3ed79f768dfae11ff5735e7fe52bfa69956e46d78d","impliedFormat":1},{"version":"ca867399f7db82df981d6915bcbb2d81131d7d1ef683bc782b59f71dda59bc85","affectsGlobalScope":true,"impliedFormat":1},{"version":"372413016d17d804e1d139418aca0c68e47a83fb6669490857f4b318de8cccb3","affectsGlobalScope":true,"impliedFormat":1},{"version":"9e043a1bc8fbf2a255bccf9bf27e0f1caf916c3b0518ea34aa72357c0afd42ec","impliedFormat":1},{"version":"b4f70ec656a11d570e1a9edce07d118cd58d9760239e2ece99306ee9dfe61d02","impliedFormat":1},{"version":"3bc2f1e2c95c04048212c569ed38e338873f6a8593930cf5a7ef24ffb38fc3b6","impliedFormat":1},{"version":"6e70e9570e98aae2b825b533aa6292b6abd542e8d9f6e9475e88e1d7ba17c866","impliedFormat":1},{"version":"f9d9d753d430ed050dc1bf2667a1bab711ccbb1c1507183d794cc195a5b085cc","impliedFormat":1},{"version":"9eece5e586312581ccd106d4853e861aaaa1a39f8e3ea672b8c3847eedd12f6e","impliedFormat":1},{"version":"085f552d005479e2e6a7311cdbbe5d8c55c497b4d19274285df161ee9684cd9c","impliedFormat":1},{"version":"37ba7b45141a45ce6e80e66f2a96c8a5ab1bcef0fc2d0f56bb58df96ec67e972","impliedFormat":1},{"version":"45650f47bfb376c8a8ed39d4bcda5902ab899a3150029684ee4c10676d9fbaee","impliedFormat":1},{"version":"007faacc9268357caa21d24169f3f3f2497af3e9241308df2d89f6e6d9bb3f2e","affectsGlobalScope":true,"impliedFormat":1},{"version":"74cf591a0f63db318651e0e04cb55f8791385f86e987a67fd4d2eaab8191f730","impliedFormat":1},{"version":"5eab9b3dc9b34f185417342436ec3f106898da5f4801992d8ff38ab3aff346b5","impliedFormat":1},{"version":"12ed4559eba17cd977aa0db658d25c4047067444b51acfdcbf38470630642b23","affectsGlobalScope":true,"impliedFormat":1},{"version":"f3ffabc95802521e1e4bcba4c88d8615176dc6e09111d920c7a213bdda6e1d65","impliedFormat":1},{"version":"809821b8a065e3234a55b3a9d7846231ed18d66dd749f2494c66288d890daf7f","impliedFormat":1},{"version":"ae56f65caf3be91108707bd8dfbccc2a57a91feb5daabf7165a06a945545ed26","impliedFormat":1},{"version":"a136d5de521da20f31631a0a96bf712370779d1c05b7015d7019a9b2a0446ca9","impliedFormat":1},{"version":"c3b41e74b9a84b88b1dca61ec39eee25c0dbc8e7d519ba11bb070918cfacf656","affectsGlobalScope":true,"impliedFormat":1},{"version":"4737a9dc24d0e68b734e6cfbcea0c15a2cfafeb493485e27905f7856988c6b29","affectsGlobalScope":true,"impliedFormat":1},{"version":"36d8d3e7506b631c9582c251a2c0b8a28855af3f76719b12b534c6edf952748d","impliedFormat":1},{"version":"1ca69210cc42729e7ca97d3a9ad48f2e9cb0042bada4075b588ae5387debd318","impliedFormat":1},{"version":"f5ebe66baaf7c552cfa59d75f2bfba679f329204847db3cec385acda245e574e","impliedFormat":1},{"version":"ed59add13139f84da271cafd32e2171876b0a0af2f798d0c663e8eeb867732cf","affectsGlobalScope":true,"impliedFormat":1},{"version":"b7c5e2ea4a9749097c347454805e933844ed207b6eefec6b7cfd418b5f5f7b28","impliedFormat":1},{"version":"b1810689b76fd473bd12cc9ee219f8e62f54a7d08019a235d07424afbf074d25","impliedFormat":1},{"version":"2beff543f6e9a9701df88daeee3cdd70a34b4a1c11cb4c734472195a5cb2af54","impliedFormat":1},{"version":"2e07abf27aa06353d46f4448c0bbac73431f6065eef7113128a5cd804d0c384d","impliedFormat":1},{"version":"be1cc4d94ea60cbe567bc29ed479d42587bf1e6cba490f123d329976b0fe4ee5","impliedFormat":1},{"version":"42bc0e1a903408137c3df2b06dfd7e402cdab5bbfa5fcfb871b22ebfdb30bd0b","impliedFormat":1},{"version":"9894dafe342b976d251aac58e616ac6df8db91fb9d98934ff9dd103e9e82578f","impliedFormat":1},{"version":"413df52d4ea14472c2fa5bee62f7a40abd1eb49be0b9722ee01ee4e52e63beb2","impliedFormat":1},{"version":"db6d2d9daad8a6d83f281af12ce4355a20b9a3e71b82b9f57cddcca0a8964a96","impliedFormat":1},{"version":"446a50749b24d14deac6f8843e057a6355dd6437d1fac4f9e5ce4a5071f34bff","impliedFormat":1},{"version":"182e9fcbe08ac7c012e0a6e2b5798b4352470be29a64fdc114d23c2bab7d5106","impliedFormat":1},{"version":"2f4e6b4d39426a1b85ecf4bdeb9dddbf4d9b3397d95d8555d46f925c9519ec7d","impliedFormat":1},{"version":"78a2869ad0cbf3f9045dda08c0d4562b7e1b2bfe07b19e0db072f5c3c56e9584","impliedFormat":1},{"version":"89d5d28d4f57e000b836ac273079be1b75710e28ce14750d081fb420d37e2ca5","impliedFormat":1},{"version":"fd4e24ccff3966390600d7f5d6aa1fed5a512e92ada735ea5fbc933d313ad3d3","impliedFormat":1},{"version":"b7cddfe1aa6b86b5fad3c9ccb30d05b3ccb165aebbf112f48d2d8a5f69dd98b1","impliedFormat":1},{"version":"a86f82d646a739041d6702101afa82dcb935c416dd93cbca7fd754fd0282ce1f","impliedFormat":1},{"version":"ad0d1d75d129b1c80f911be438d6b61bfa8703930a8ff2be2f0e1f8a91841c64","impliedFormat":1},{"version":"bd2c7ada3dee03653d3f601011d30072194bc3970cd93208f9588fbdc0c69347","impliedFormat":1},{"version":"e480da45d32313e7174b265674da504f075f59ef326852f0c5a5d863b438ae85","impliedFormat":1},{"version":"ad54850f61fcf5d014e11be80d2f46fea9265cfa7e77456da876f7833ef81769","impliedFormat":1},{"version":"6f7c9e8bd2b5b6a080b07080065f94900bd3c7e5ebbd3047bc33fcce2fab1dd8","impliedFormat":1},{"version":"3e7efde639c6a6c3edb9847b3f61e308bf7a69685b92f665048c45132f51c218","impliedFormat":1},{"version":"df45ca1176e6ac211eae7ddf51336dc075c5314bc5c253651bae639defd5eec5","impliedFormat":1},{"version":"8a0e762ceb20c7e72504feef83d709468a70af4abccb304f32d6b9bac1129b2c","impliedFormat":1},{"version":"da5950ee2a90721df6f3fba45f5d05308f7e4c35835392215dd2cd404505e2de","impliedFormat":1},{"version":"ce75b1aebb33d510ff28af960a9221410a3eaf7f18fc5f21f9404075fba77256","impliedFormat":1},{"version":"f42d5fed19610d485c646a0c430e768115567d078c7fc855c57b0c578b3d6cd3","impliedFormat":1},{"version":"ee8df1cb8d0faaca4013a1b442e99130769ce06f438d18d510fed95890067563","impliedFormat":1},{"version":"d5630f2ad9b4541e5ce891648121022f9412ecdca1820baa1f0104f70fd7eff7","impliedFormat":1},{"version":"4d15375ab13497104bc8fe56fdef2b5fd6853f29255737d23a33fa306ff7fd69","impliedFormat":1},{"version":"2cd3fc1d0d6a1e85baffd2d4f50f5efb192b5446eef567e97c94765402f0aad4","impliedFormat":1},{"version":"e4cbf2f1e89ecccaddd2c045e600ae41b732295953fb06247c7dcbc2d281ed30","impliedFormat":1},{"version":"6dcedaef57dff0d79a05ab0ab602cde74db803d1e765468bf91263786a383e1b","impliedFormat":1},{"version":"8c1697d90c394a6fd955b98eae01238eff628e129b987a68aea10f898a48e7da","impliedFormat":1},{"version":"7580e62139cb2b44a0270c8d01abcbfcba2819a02514a527342447fa69b34ef1","impliedFormat":1},{"version":"b838d4c72740eb0afd284bf7575b74c624b105eff2e8c7b4aeead57e7ac320ff","impliedFormat":1},{"version":"f374cb24e93e7798c4d9e83ff872fa52d2cdb36306392b840a6ddf46cb925cb6","impliedFormat":1},{"version":"d10d63718e1646c2279e3b33831f82c60e31f622b2b7020f1196409ca4c09242","impliedFormat":1},{"version":"106c6025f1d99fd468fd8bf6e5bda724e11e5905a4076c5d29790b6c3745e50c","impliedFormat":1},{"version":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","impliedFormat":1},{"version":"148679c6d0f449210a96e7d2e562d589e56fcde87f843a92808b3ff103f1a774","impliedFormat":1},{"version":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","impliedFormat":1},{"version":"02436d7e9ead85e09a2f8e27d5f47d9464bced31738dec138ca735390815c9f0","impliedFormat":1},{"version":"f8d5ff8eafd37499f2b6a98659dd9b45a321de186b8db6b6142faed0fea3de77","impliedFormat":1},{"version":"c86fe861cf1b4c46a0fb7d74dffe596cf679a2e5e8b1456881313170f092e3fa","impliedFormat":1},{"version":"a22dd55aa4d39906252000ab8e8a1b83b195eef7f4274eb51e457c1f11cf6580","impliedFormat":1},{"version":"540cc83ab772a2c6bc509fe1354f314825b5dba3669efdfbe4693ecd3048e34f","impliedFormat":1},{"version":"121b0696021ab885c570bbeb331be8ad82c6efe2f3b93a6e63874901bebc13e3","impliedFormat":1},{"version":"612d9da66bb046a9c1e2e8d026245ded881fc4b9f98cbfae714415d57ee0ae0b","impliedFormat":1},{"version":"32c2ad9494dad5d11b0564a619fee18f388db6c1e9e2cd3c360b3122549691eb","impliedFormat":1},{"version":"6c301d40aec56a74ec7bd7324e31a728dadf9bfba3e96def02938d3d973534ec","impliedFormat":1},{"version":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","impliedFormat":1},{"version":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","impliedFormat":1},{"version":"8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881","impliedFormat":1},{"version":"8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881","impliedFormat":1},{"version":"aa14cee20aa0db79f8df101fc027d929aec10feb5b8a8da3b9af3895d05b7ba2","impliedFormat":1},{"version":"493c700ac3bd317177b2eb913805c87fe60d4e8af4fb39c41f04ba81fae7e170","impliedFormat":1},{"version":"aeb554d876c6b8c818da2e118d8b11e1e559adbe6bf606cc9a611c1b6c09f670","impliedFormat":1},{"version":"acf5a2ac47b59ca07afa9abbd2b31d001bf7448b041927befae2ea5b1951d9f9","impliedFormat":1},{"version":"8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881","impliedFormat":1},{"version":"d71291eff1e19d8762a908ba947e891af44749f3a2cbc5bd2ec4b72f72ea795f","impliedFormat":1},{"version":"c0480e03db4b816dff2682b347c95f2177699525c54e7e6f6aa8ded890b76be7","impliedFormat":1},{"version":"25a5f6fd3a2243c859eddc99ab5fba11d970af2fe7a5df9c32b7668f76f97b01","impliedFormat":1},{"version":"8d207e1f9d2c30d6f77dfa693f3827c3fbf0d89240297e10bdfe1041d433df68","impliedFormat":1},{"version":"b620391fe8060cf9bedc176a4d01366e6574d7a71e0ac0ab344a4e76576fcbb8","impliedFormat":1},{"version":"6ac6715916fa75a1f7ebdfeacac09513b4d904b667d827b7535e84ff59679aff","impliedFormat":1},{"version":"2652448ac55a2010a1f71dd141f828b682298d39728f9871e1cdf8696ef443fd","impliedFormat":1},{"version":"d682336018141807fb602709e2d95a192828fcb8d5ba06dda3833a8ea98f69e3","impliedFormat":1},{"version":"6124e973eab8c52cabf3c07575204efc1784aca6b0a30c79eb85fe240a857efa","impliedFormat":1},{"version":"0d891735a21edc75df51f3eb995e18149e119d1ce22fd40db2b260c5960b914e","impliedFormat":1},{"version":"3b414b99a73171e1c4b7b7714e26b87d6c5cb03d200352da5342ab4088a54c85","impliedFormat":1},{"version":"4fbd3116e00ed3a6410499924b6403cc9367fdca303e34838129b328058ede40","impliedFormat":1},{"version":"9c82171d836c47486074e4ca8e059735bf97b205e70b196535b5efd40cbe1bc5","impliedFormat":1},{"version":"48dcc919f76c040a999c0d46d2bf25ab089645ca21b837f120b222f56a86cd76","impliedFormat":1},{"version":"2f9c89cbb29d362290531b48880a4024f258c6033aaeb7e59fbc62db26819650","impliedFormat":1},{"version":"a365c4d3bed3be4e4e20793c999c51f5cd7e6792322f14650949d827fbcd170f","impliedFormat":1},{"version":"c5426dbfc1cf90532f66965a7aa8c1136a78d4d0f96d8180ecbfc11d7722f1a5","impliedFormat":1},{"version":"65a15fc47900787c0bd18b603afb98d33ede930bed1798fc984d5ebb78b26cf9","impliedFormat":1},{"version":"9d202701f6e0744adb6314d03d2eb8fc994798fc83d91b691b75b07626a69801","impliedFormat":1},{"version":"de9d2df7663e64e3a91bf495f315a7577e23ba088f2949d5ce9ec96f44fba37d","impliedFormat":1},{"version":"c7af78a2ea7cb1cd009cfb5bdb48cd0b03dad3b54f6da7aab615c2e9e9d570c5","impliedFormat":1},{"version":"1ee45496b5f8bdee6f7abc233355898e5bf9bd51255db65f5ff7ede617ca0027","impliedFormat":1},{"version":"273782b8454e78f6a8b30d2cfbf6860499c930595095fcc1689637115f0eddda","affectsGlobalScope":true,"impliedFormat":1},{"version":"3fbdd025f9d4d820414417eeb4107ffa0078d454a033b506e22d3a23bc3d9c41","affectsGlobalScope":true,"impliedFormat":1},{"version":"dba114fb6a32b355a9cfc26ca2276834d72fe0e94cd2c3494005547025015369","impliedFormat":1},{"version":"a8f8e6ab2fa07b45251f403548b78eaf2022f3c2254df3dc186cb2671fe4996d","affectsGlobalScope":true,"impliedFormat":1},{"version":"fa6c12a7c0f6b84d512f200690bfc74819e99efae69e4c95c4cd30f6884c526e","impliedFormat":1},{"version":"f1c32f9ce9c497da4dc215c3bc84b722ea02497d35f9134db3bb40a8d918b92b","impliedFormat":1},{"version":"b73c319af2cc3ef8f6421308a250f328836531ea3761823b4cabbd133047aefa","affectsGlobalScope":true,"impliedFormat":1},{"version":"e433b0337b8106909e7953015e8fa3f2d30797cea27141d1c5b135365bb975a6","impliedFormat":1},{"version":"9f9bb6755a8ce32d656ffa4763a8144aa4f274d6b69b59d7c32811031467216e","impliedFormat":1},{"version":"5c32bdfbd2d65e8fffbb9fbda04d7165e9181b08dad61154961852366deb7540","impliedFormat":1},{"version":"ddff7fc6edbdc5163a09e22bf8df7bef75f75369ebd7ecea95ba55c4386e2441","impliedFormat":1},{"version":"0c05e9842ec4f8b7bfebfd3ca61604bb8c914ba8da9b5337c4f25da427a005f2","impliedFormat":1},{"version":"faed7a5153215dbd6ebe76dfdcc0af0cfe760f7362bed43284be544308b114cf","impliedFormat":1},{"version":"7029e566b8df176f703fb59fd437a38670c7a0e02c58b2d66dfb5b2e2b2defdb","impliedFormat":1},{"version":"7f2aa4d4989a82530aaac3f72b3dceca90e9c25bee0b1a327e8a08a1262435ad","impliedFormat":1},{"version":"d96b39301d0ded3f1a27b47759676a33a02f6f5049bfcbde81e533fd10f50dcb","impliedFormat":1},{"version":"e9f147ecca73d9346a4c073432843c159ccbe50bdcb678a78f6da10eae2cecf4","impliedFormat":1},{"version":"de061f7d72bd65c06fc1419f841dfdcb29a8e22fe6fa527d1e6eb20b897d4de0","impliedFormat":1},{"version":"663beafc2446079574570cba86e9b15f986f908ddb1b01274509970126fee945","impliedFormat":1},{"version":"a3102887d5058bf4cb5b37fa6964c09e9527c42053b3b5c642b89878620748de","impliedFormat":1},{"version":"0aaaa1727edd29673d85c9b26d7ca4d54e5407a48586903c51b48b7f7d196f61","impliedFormat":1},{"version":"d35bca0b261bff02635758c48e8ab99c61c420d0dfabbcf467e847171d876b7d","impliedFormat":1},{"version":"3bc12c40d90c342ff88a3d876996c555ed5cbee5fe8c3308a240b321f401ee46","impliedFormat":1},{"version":"ba130768aae855a5477e9e148e5c879548e6e7ccbcc56fd1934c8a18ea5b7569","impliedFormat":1},{"version":"2e4f37ffe8862b14d8e24ae8763daaa8340c0df0b859d9a9733def0eee7562d9","impliedFormat":1},{"version":"d38530db0601215d6d767f280e3a3c54b2a83b709e8d9001acb6f61c67e965fc","impliedFormat":1},{"version":"6ac6715916fa75a1f7ebdfeacac09513b4d904b667d827b7535e84ff59679aff","impliedFormat":1},{"version":"b499af2054a037a162b3b72cd886f48bbf32a3502c865c6e29fac7d2ab3ce0b5","impliedFormat":1},{"version":"b83cb14474fa60c5f3ec660146b97d122f0735627f80d82dd03e8caa39b4388c","impliedFormat":1},{"version":"48773ca557b0319c2ee62ae249cf52a81709e8be139920d6479a66274de7c4ed","impliedFormat":1},{"version":"7274fbffbd7c9589d8d0ffba68157237afd5cecff1e99881ea3399127e60572f","impliedFormat":1},{"version":"b73cbf0a72c8800cf8f96a9acfe94f3ad32ca71342a8908b8ae484d61113f647","impliedFormat":1},{"version":"bae6dd176832f6423966647382c0d7ba9e63f8c167522f09a982f086cd4e8b23","impliedFormat":1},{"version":"20865ac316b8893c1a0cc383ccfc1801443fbcc2a7255be166cf90d03fac88c9","impliedFormat":1},{"version":"c9958eb32126a3843deedda8c22fb97024aa5d6dd588b90af2d7f2bfac540f23","impliedFormat":1},{"version":"461d0ad8ae5f2ff981778af912ba71b37a8426a33301daa00f21c6ccb27f8156","impliedFormat":1},{"version":"e927c2c13c4eaf0a7f17e6022eee8519eb29ef42c4c13a31e81a611ab8c95577","impliedFormat":1},{"version":"fcafff163ca5e66d3b87126e756e1b6dfa8c526aa9cd2a2b0a9da837d81bbd72","impliedFormat":1},{"version":"70246ad95ad8a22bdfe806cb5d383a26c0c6e58e7207ab9c431f1cb175aca657","impliedFormat":1},{"version":"f00f3aa5d64ff46e600648b55a79dcd1333458f7a10da2ed594d9f0a44b76d0b","impliedFormat":1},{"version":"772d8d5eb158b6c92412c03228bd9902ccb1457d7a705b8129814a5d1a6308fc","impliedFormat":1},{"version":"802e797bcab5663b2c9f63f51bdf67eff7c41bc64c0fd65e6da3e7941359e2f7","impliedFormat":1},{"version":"b01bd582a6e41457bc56e6f0f9de4cb17f33f5f3843a7cf8210ac9c18472fb0f","impliedFormat":1},{"version":"8b4327413e5af38cd8cb97c59f48c3c866015d5d642f28518e3a891c469f240e","impliedFormat":1},{"version":"4cceef18d7f088e797a463e90b7a9dad10c6bc667724b7686e3e740ae00122be","impliedFormat":1},{"version":"7ee86fbb3754388e004de0ef9e6505485ddfb3be7640783d6d015711c03d302d","impliedFormat":1},{"version":"cc1954b539604b1e562319119ac7e888172208b32ca873f9a357a92c826bd046","impliedFormat":1},{"version":"a67b87d0281c97dfc1197ef28dfe397fc2c865ccd41f7e32b53f647184cc7307","impliedFormat":1},{"version":"771ffb773f1ddd562492a6b9aaca648192ac3f056f0e1d997678ff97dbb6bf9b","impliedFormat":1},{"version":"43e96a3d5d1411ab40ba2f61d6a3192e58177bcf3b133a80ad2a16591611726d","impliedFormat":1},{"version":"232f70c0cf2b432f3a6e56a8dc3417103eb162292a9fd376d51a3a9ea5fbbf6f","impliedFormat":1},{"version":"bb8f2dbc03533abca2066ce4655c119bff353dd4514375beb93c08590c03e023","impliedFormat":1},{"version":"706dd95827e7ebaabda91d5db2b755233e0952d98570e9c032b0f066a15c1177","affectsGlobalScope":true,"impliedFormat":1},{"version":"0b103e9abfe82d14c0ad06a55d9f91d6747154ef7cacc73cf27ecad2bfb3afcf","impliedFormat":1},{"version":"cd9304972e6d616197fb44fce00540a904f38b54306a1951b5dbeaf3c01ab5bd","impliedFormat":1},{"version":"77438e2c397a3db78407621cfc57241a305b310ddea2c185f1d555248297f587","impliedFormat":1},{"version":"120599fd965257b1f4d0ff794bc696162832d9d8467224f4665f713a3119078b","impliedFormat":1},{"version":"43ba4f2fa8c698f5c304d21a3ef596741e8e85a810b7c1f9b692653791d8d97a","impliedFormat":1},{"version":"5433f33b0a20300cca35d2f229a7fc20b0e8477c44be2affeb21cb464af60c76","impliedFormat":1},{"version":"db036c56f79186da50af66511d37d9fe77fa6793381927292d17f81f787bb195","impliedFormat":1},{"version":"a6805fcafed712aea7759f8bc731014f9d22738c1d6ef9d43b8091d1d48346d5","impliedFormat":1},{"version":"c49469a5349b3cc1965710b5b0f98ed6c028686aa8450bcb3796728873eb923e","impliedFormat":1},{"version":"4a889f2c763edb4d55cb624257272ac10d04a1cad2ed2948b10ed4a7fda2a428","impliedFormat":1},{"version":"7bb79aa2fead87d9d56294ef71e056487e848d7b550c9a367523ee5416c44cfa","impliedFormat":1},{"version":"d88ea80a6447d7391f52352ec97e56b52ebec934a4a4af6e2464cfd8b39c3ba8","impliedFormat":1},{"version":"142617b3cdf902b69c6464c9fbd942b60ab3e733ca18c032b19e0f7e2adbefe8","impliedFormat":1},{"version":"0b603555f1881f87256ffd6344d3e3ed6d466c2e701eabf381f28be8c2125892","impliedFormat":1},{"version":"897e4f7662488e3ecc79e743bdd3b78f13bdb69a97851afa5b440c4211e32ea9","impliedFormat":1},{"version":"e2e1c6d3b2d93add5200bd7bc1a8cccb4e446836b2111ece45db8683a2c765de","impliedFormat":1},{"version":"251b03d5cd243854ce870d9a9a39f491faf69898c5d6b5eee28cc7649c57417b","impliedFormat":1},{"version":"27ff4196654e6373c9af16b6165120e2dd2169f9ad6abb5c935af5abd8c7938c","impliedFormat":1},{"version":"2c4de79f406d137390608e8c0a44fba2ff8e00bacfcae7c9d1781fef10e9440d","impliedFormat":1},{"version":"07ba23a10465791be5d22deaf5ef7de7658774ddff53721e5ea17fedea1bc721","impliedFormat":1},{"version":"dca8c645c5afeb03b1ecedbf16323f33e7d0afaa6256c8e047e6e38087a97f53","impliedFormat":1},{"version":"775f181bd4a533d6f8b5e55ec1d9f1624559720ae8a70e9432258da26b38d27c","impliedFormat":1},{"version":"796273b2edc72e78a04e86d7c58ae94d370ab93a0ddf40b1aa85a37a1c29ecd7","impliedFormat":1},{"version":"5df15a69187d737d6d8d066e189ae4f97e41f4d53712a46b2710ff9f8563ec9f","impliedFormat":1},{"version":"7715134a0cf07dd41a9da2895d708625a3a303a0385e355ecaaf0b8bfaef2550","impliedFormat":1},{"version":"6ac6715916fa75a1f7ebdfeacac09513b4d904b667d827b7535e84ff59679aff","impliedFormat":1},{"version":"622694a8522b46f6310c2a9b5d2530dde1e2854cb5829354e6d1ff8f371cf469","impliedFormat":1},{"version":"cd8ce8d68567f62dd580b3c3c37777ac3f5b81944c7417f5ea83030eab533385","impliedFormat":1},{"version":"e5c939d896565dcac0f6fbdbada11284e7728ef26a069561c09aa5aa4a788393","impliedFormat":1},{"version":"9e2739b32f741859263fdba0244c194ca8e96da49b430377930b8f721d77c000","impliedFormat":1},{"version":"a9e6c0ff3f8186fccd05752cf75fc94e147c02645087ac6de5cc16403323d870","impliedFormat":1},{"version":"49af4b52f0d4d2304c5f2c6fe5fab3e153e0acc38830d0202821b877c097dd02","impliedFormat":1},{"version":"49c346823ba6d4b12278c12c977fb3a31c06b9ca719015978cb145eb86da1c61","impliedFormat":1},{"version":"bfac6e50eaa7e73bb66b7e052c38fdc8ccfc8dbde2777648642af33cf349f7f1","impliedFormat":1},{"version":"92f7c1a4da7fbfd67a2228d1687d5c2e1faa0ba865a94d3550a3941d7527a45d","impliedFormat":1},{"version":"f53b120213a9289d9a26f5af90c4c686dd71d91487a0aa5451a38366c70dc64b","impliedFormat":1},{"version":"e68b8e5a1df7c1be2bc105141456ecba70215806e1c28bfbc5c12bfce4be6e68","impliedFormat":1},{"version":"511c8f02329808d47d00b859c532ae9115590048b17325a946c74dac48428650","impliedFormat":1},{"version":"57d67b72e06059adc5e9454de26bbfe567d412b962a501d263c75c2db430f40e","impliedFormat":1},{"version":"b5f9e66625783eefcbe3d2da074b2e7ba2066d61ce3fc6ef4f22805ad946cab4","impliedFormat":1},{"version":"e37115962d284b9f7a37c2bdd2add50f88365dde41f5e0ff591ffc48a8ec7575","impliedFormat":1},{"version":"6459054aabb306821a043e02b89d54da508e3a6966601a41e71c166e4ea1474f","impliedFormat":1},{"version":"bb37588926aba35c9283fe8d46ebf4e79ffe976343105f5c6d45f282793352b2","impliedFormat":1},{"version":"f89488602bec98a142072fae7ea5ba99431a569ff580c64b7be39896474799d8","impliedFormat":1},{"version":"bbbc47961f39a57df103cf4ca3bb8f8732b4b6678a18225a0aa76d59c466956c","impliedFormat":1},{"version":"2e6114a7dd6feeef85b2c80120fdbfb59a5529c0dcc5bfa8447b6996c97a69f5","impliedFormat":1},{"version":"2ffb043dc5163458e473b7010859f86e01dc4edffcae0a93d885d028b426a546","impliedFormat":1},{"version":"c8f004e6036aa1c764ad4ec543cf89a5c1893a9535c80ef3f2b653e370de45e6","impliedFormat":1},{"version":"dd80b1e600d00f5c6a6ba23f455b84a7db121219e68f89f10552c54ba46e4dc9","impliedFormat":1},{"version":"b064c36f35de7387d71c599bfcf28875849a1dbc733e82bd26cae3d1cd060521","impliedFormat":1},{"version":"05c7280d72f3ed26f346cbe7cbbbb002fb7f15739197cbbee6ab3fd1a6cb9347","impliedFormat":1},{"version":"8de9fe97fa9e00ec00666fa77ab6e91b35d25af8ca75dabcb01e14ad3299b150","impliedFormat":1},{"version":"04b7b2e0832dfd3c31e81df3975e8d8fda28e7ff999b0aa2932608a8f6661d5c","impliedFormat":1},{"version":"ca2d34c6ed5cbd3070b8b6f32f42ae54adcc6499c1e4b99f0a5798b3f27cc653","impliedFormat":1},{"version":"9ec68995e66dd6b9dac834bf5ae85fde802714ea2e82151a5d1d53ef01b463ef","impliedFormat":1},{"version":"5c4d626b4902f2ef8a1cc146d761d276cef988016dc674e3b98fbad70e64bc9f","impliedFormat":1},{"version":"fdfaa0aad899524962e2955287b5b991ffe3be50f64e02eb60c933ca44644a94","impliedFormat":1},{"version":"53c972a0f9bc3a4ec70fff7314123ea8cfcf75b3703046f767d2dc1eea87b2fb","impliedFormat":1},{"version":"f974e4a06953682a2c15d5bd5114c0284d5abf8bc0fe4da25cb9159427b70072","impliedFormat":1},{"version":"50256e9c31318487f3752b7ac12ff365c8949953e04568009c8705db802776fb","impliedFormat":1},{"version":"7d73b24e7bf31dfb8a931ca6c4245f6bb0814dfae17e4b60c9e194a631fe5f7b","impliedFormat":1},{"version":"d130c5f73768de51402351d5dc7d1b36eaec980ca697846e53156e4ea9911476","impliedFormat":1},{"version":"413586add0cfe7369b64979d4ec2ed56c3f771c0667fbde1bf1f10063ede0b08","impliedFormat":1},{"version":"06472528e998d152375ad3bd8ebcb69ff4694fd8d2effaf60a9d9f25a37a097a","impliedFormat":1},{"version":"7303b45138d2511035056a5901a1490ebdcbf055cbb1276f8629c5121cbe733e","impliedFormat":1},{"version":"27f874cd5327507eeff699a74567f60c1215b94509f4308633a7b01922471ed2","impliedFormat":1},{"version":"a401617604fa1f6ce437b81689563dfdc377069e4c58465dbd8d16069aede0a5","impliedFormat":1},{"version":"2c6cf04bc525caf6546e859e8ef10bfb9573837ec0bc5ec7b53a7b1b8ca72781","impliedFormat":1},{"version":"8695dec09ad439b0ceef3776ea68a232e381135b516878f0901ed2ea114fd0fe","impliedFormat":1},{"version":"304b44b1e97dd4c94697c3313df89a578dca4930a104454c99863f1784a54357","impliedFormat":1},{"version":"0a437ae178f999b46b6153d79095b60c42c996bc0458c04955f1c996dc68b971","impliedFormat":1},{"version":"74b2a5e5197bd0f2e0077a1ea7c07455bbea67b87b0869d9786d55104006784f","impliedFormat":1},{"version":"4a7baeb6325920044f66c0f8e5e6f1f52e06e6d87588d837bdf44feb6f35c664","impliedFormat":1},{"version":"87cc05fe13108f02e12da7e3efd8e360fef78d96a0c9e11408ea1b1b9fb3e03d","impliedFormat":1},{"version":"1abbf67c218d23c2ce76887caac2df6c7dab3d97ba2b65348432b876f510002a","impliedFormat":1},{"version":"1a82deef4c1d39f6882f28d275cad4c01f907b9b39be9cbc472fcf2cf051e05b","impliedFormat":1},{"version":"4b20fcf10a5413680e39f5666464859fc56b1003e7dfe2405ced82371ebd49b6","impliedFormat":1},{"version":"c06ef3b2569b1c1ad99fcd7fe5fba8d466e2619da5375dfa940a94e0feea899b","impliedFormat":1},{"version":"f7d628893c9fa52ba3ab01bcb5e79191636c4331ee5667ecc6373cbccff8ae12","impliedFormat":1},{"version":"1d879125d1ec570bf04bc1f362fdbe0cb538315c7ac4bcfcdf0c1e9670846aa6","impliedFormat":1},{"version":"5a16e93d5d53d987dddda1ec606c9821f6bd31d1bdf0635e05e3841312cefa8b","impliedFormat":1},{"version":"a6dba407fc287f1e25454e75028c91bbc00675f2d1c4e8b3edcc36c08611a486","impliedFormat":1},{"version":"d663134457d8d669ae0df34eabd57028bddc04fc444c4bc04bc5215afc91e1f4","impliedFormat":1},{"version":"e91f7b1344577a02f051b9b471f33044fef8334a76dc9e1de003d17595a5219b","impliedFormat":1},{"version":"c0723195c85e19656d6b5b9fdb81d3f3403c1ae4679e722c6ea058c516b38d12","impliedFormat":1},{"version":"b55eb9f72166093b5460d34b34f5d8699c968de3bc3fc696e40f2c93f2ebf650","impliedFormat":1},{"version":"71d9eb4c4e99456b78ae182fb20a5dfc20eb1667f091dbb9335b3c017dd1c783","impliedFormat":1},{"version":"cfa846a7b7847a1d973605fbb8c91f47f3a0f0643c18ac05c47077ebc72e71c7","impliedFormat":1},{"version":"1594da19968752a22b2ac48c2d0e60575700e745c577a8a4a676b841238ad5bb","impliedFormat":1},{"version":"e0cee12109e0a10a4c3d6769fcc7644b7c1ea7f52365bea51728f5af29f8a137","impliedFormat":1},{"version":"7d4254b4c6c67a29d5e7f65e67d72540480ac2cfb041ca484847f5ae70480b62","impliedFormat":1},{"version":"3536968defef8a75514f547ead5e2e9c1e984820290ec9b00c5fdfb6ef786535","impliedFormat":1},{"version":"d83773870080c30a230e322ce13a9c6f3398e8dacea4ea8a83e26370f3bac23e","impliedFormat":1},{"version":"dcfeaf98d66314fec29a9076c4290e45d0b196a65827becc19138e9c7b855f37","impliedFormat":1},{"version":"6849fe9210fe4946d5f085bfed36758f33dc6ae15a751338d178dd4daa017c46","impliedFormat":1},{"version":"888cda0fa66d7f74e985a3f7b1af1f64b8ff03eb3d5e80d051c3cbdeb7f32ab7","impliedFormat":1},{"version":"60681e13f3545be5e9477acb752b741eae6eaf4cc01658a25ec05bff8b82a2ef","impliedFormat":1},{"version":"ffae4e1e06aa848a1e4bcef162cd1c48e5909b26223515981310af9c036bdfc7","impliedFormat":1},{"version":"a57b1802794433adec9ff3fed12aa79d671faed86c49b09e02e1ac41b4f1d33a","impliedFormat":1},{"version":"34e16eb7c31768a11a08aebcfb3d70d7b8f0b016197e98d8419e566ceae6d6c8","impliedFormat":1},{"version":"f94ec1f7e4b709d26960306c9082a7a1b728a6e13089346aa48ba57c74cbf47e","impliedFormat":1},{"version":"9a11cb4033405e96c247cd5aa29790212aaffdd127869e8a5219103f0b389fd5","impliedFormat":1},{"version":"01479d9d5a5dda16d529b91811375187f61a06e74be294a35ecce77e0b9e8d6c","impliedFormat":1},{"version":"aff5213585cb72e94054dfe17250ff315f3569b3919d1ef1ad235f37c4ee894e","impliedFormat":1},{"version":"fb2ea35e1be6388d722d7725e2b49c697d34d9c890c3b96758faaeb86d35cef8","impliedFormat":1},{"version":"ce0df82a9ae6f914ba08409d4d883983cc08e6d59eb2df02d8e4d68309e7848b","impliedFormat":1},{"version":"1a4dc28334a926d90ba6a2d811ba0ff6c22775fcc13679521f034c124269fd40","impliedFormat":1},{"version":"f05315ff85714f0b87cc0b54bcd3dde2716e5a6b99aedcc19cad02bf2403e08c","impliedFormat":1},{"version":"5fad3b31fc17a5bc58095118a8b160f5260964787c52e7eb51e3d4fcf5d4a6f0","impliedFormat":1},{"version":"72105519d0390262cf0abe84cf41c926ade0ff475d35eb21307b2f94de985778","impliedFormat":1},{"version":"456006a6975b26c0a1785feddae165f6d307e2d601ffde27e21fc4a790e448a4","impliedFormat":1},{"version":"c857e0aae3f5f444abd791ec81206020fbcc1223e187316677e026d1c1d6fe08","impliedFormat":1},{"version":"ccf6dd45b708fb74ba9ed0f2478d4eb9195c9dfef0ff83a6092fa3cf2ff53b4f","impliedFormat":1},{"version":"1fe0d18b111e1145a7e7601855bccd4ca20f24e3b9a5aba6bb1fa9d1a7059170","impliedFormat":1},{"version":"5632c3c26d420c063eebe64c45b1248b9492a67bf44f1d0c57e9dc8f6cf449bb","impliedFormat":1},{"version":"0df5aa619ab12993a39ea6dae062ee46eadbb4d738916460e636ada52bced75b","impliedFormat":1},{"version":"8fca3039857709484e5893c05c1f9126ab7451fa6c29e19bb8c2411a2e937345","impliedFormat":1},{"version":"35069c2c417bd7443ae7c7cafd1de02f665bf015479fec998985ffbbf500628c","impliedFormat":1},{"version":"10ab7be91f87ebe8916b62cf28af2e45b5601fc7b0e311adf838f912c6b31dd8","impliedFormat":1},{"version":"bc636fbc08e0979ceb7eb0731a33000283d77a33b62e1f71ee65be50394e40ba","impliedFormat":1},{"version":"7e0b7f91c5ab6e33f511efc640d36e6f933510b11be24f98836a20a2dc914c2d","impliedFormat":1},{"version":"045b752f44bf9bbdcaffd882424ab0e15cb8d11fa94e1448942e338c8ef19fba","impliedFormat":1},{"version":"2894c56cad581928bb37607810af011764a2f511f575d28c9f4af0f2ef02d1ab","impliedFormat":1},{"version":"0a72186f94215d020cb386f7dca81d7495ab6c17066eb07d0f44a5bf33c1b21a","impliedFormat":1},{"version":"75bbd3be047d539988a0ff0b56384ef7a6a25f3b676ad96bee547d44c31622a7","impliedFormat":1},{"version":"42960001a776b089ade681ab5cfddc936e0afb0615133ec1841f3dee89d3e1bf","impliedFormat":1},{"version":"0aedb02516baf3e66b2c1db9fef50666d6ed257edac0f866ea32f1aa05aa474f","impliedFormat":1},{"version":"da47712b394d944328245482603bc6f416d3949b67c9392279caab595076b510","affectsGlobalScope":true,"impliedFormat":1},{"version":"37d0071d8f0a06dc55c2c5e0ec3391affd4fd107c53410bf358196ec0bf3923f","impliedFormat":1},{"version":"b213dad76ca37fd552274c9499056e1c0d9c1bd38a55bb7f68b22ba6b84c3ad7","impliedFormat":1},{"version":"c30436b130b6218b7714314dc41d3f459590db4bdf099eecd51cb1bda32109a8","impliedFormat":1},{"version":"20fa37b636fdcc1746ea0738f733d0aed17890d1cd7cb1b2f37010222c23f13e","impliedFormat":1},{"version":"d90b9f1520366d713a73bd30c5a9eb0040d0fb6076aff370796bc776fd705943","impliedFormat":1},{"version":"bc03c3c352f689e38c0ddd50c39b1e65d59273991bfc8858a9e3c0ebb79c023b","impliedFormat":1},{"version":"19df3488557c2fc9b4d8f0bac0fd20fb59aa19dec67c81f93813951a81a867f8","affectsGlobalScope":true,"impliedFormat":1},{"version":"b25350193e103ae90423c5418ddb0ad1168dc9c393c9295ef34980b990030617","affectsGlobalScope":true,"impliedFormat":1},{"version":"bef86adb77316505c6b471da1d9b8c9e428867c2566270e8894d4d773a1c4dc2","impliedFormat":1},{"version":"5a49adaef698b7ad7e6127949fa1b0bbd3d46b7cbd11c54e392a4dcdd51f5190","impliedFormat":1},{"version":"6ee598cdfdd0fa52039dca135b3dfff7b49035dc13292143e0a93843e3861967","impliedFormat":1},{"version":"27be6622e2922a1b412eb057faa854831b95db9db5035c3f6d4b677b902ab3b7","impliedFormat":1},{"version":"5c634644d45a1b6bc7b05e71e05e52ec04f3d73d9ac85d5927f647a5f965181a","impliedFormat":1},{"version":"2489bf04d77dc025ba67f49f1a56eb24b9db477d5ff88123d887e163ed1776aa","impliedFormat":1},{"version":"63a7595a5015e65262557f883463f934904959da563b4f788306f699411e9bac","impliedFormat":1},{"version":"4ba137d6553965703b6b55fd2000b4e07ba365f8caeb0359162ad7247f9707a6","impliedFormat":1},{"version":"0b77b819b5417775fccb20c678293cf614c054a5b1a65421a5b933a9124ba998","impliedFormat":1},{"version":"eb5acb58487367e502d994b57e2c58255d8241f481ea8efa8e79af23af3f41c2","impliedFormat":1},{"version":"9252d498a77517aab5d8d4b5eb9d71e4b225bbc7123df9713e08181de63180f6","impliedFormat":1},{"version":"b1f1d57fde8247599731b24a733395c880a6561ec0c882efaaf20d7df968c5af","impliedFormat":1},{"version":"5757b78830c681b3124af568b94c269259ea5e8171a4316508ef67310c2ed1ed","impliedFormat":1},{"version":"35e6379c3f7cb27b111ad4c1aa69538fd8e788ab737b8ff7596a1b40e96f4f90","impliedFormat":1},{"version":"1fffe726740f9787f15b532e1dc870af3cd964dbe29e191e76121aa3dd8693f2","impliedFormat":1},{"version":"5a3ea721d03a361ccbdd7390ccd75f6e84cbca3a3f01f4b331ecc9af31890c49","impliedFormat":1},{"version":"e7dfaee4af38d45b1cab8a1ee0b3bc1f85ddcf64545ed391d675d78ae6526274","affectsGlobalScope":true,"impliedFormat":1},{"version":"e8daa443eaf9a27fd382cc1f8ebe30330c0f4d89511cfb469166874806751d35","impliedFormat":1},{"version":"af48e58339188d5737b608d41411a9c054685413d8ae88b8c1d0d9bfabdf6e7e","impliedFormat":1},{"version":"616775f16134fa9d01fc677ad3f76e68c051a056c22ab552c64cc281a9686790","impliedFormat":1},{"version":"65c24a8baa2cca1de069a0ba9fba82a173690f52d7e2d0f1f7542d59d5eb4db0","impliedFormat":1},{"version":"f9fe6af238339a0e5f7563acee3178f51db37f32a2e7c09f85273098cee7ec49","impliedFormat":1},{"version":"1de8c302fd35220d8f29dea378a4ae45199dc8ff83ca9923aca1400f2b28848a","impliedFormat":1},{"version":"77e71242e71ebf8528c5802993697878f0533db8f2299b4d36aa015bae08a79c","impliedFormat":1},{"version":"98a787be42bd92f8c2a37d7df5f13e5992da0d967fab794adbb7ee18370f9849","impliedFormat":1},{"version":"332248ee37cca52903572e66c11bef755ccc6e235835e63d3c3e60ddda3e9b93","impliedFormat":1},{"version":"94e8cc88ae2ef3d920bb3bdc369f48436db123aa2dc07f683309ad8c9968a1e1","impliedFormat":1},{"version":"4545c1a1ceca170d5d83452dd7c4994644c35cf676a671412601689d9a62da35","impliedFormat":1},{"version":"320f4091e33548b554d2214ce5fc31c96631b513dffa806e2e3a60766c8c49d9","impliedFormat":1},{"version":"a2d648d333cf67b9aeac5d81a1a379d563a8ffa91ddd61c6179f68de724260ff","impliedFormat":1},{"version":"d90d5f524de38889d1e1dbc2aeef00060d779f8688c02766ddb9ca195e4a713d","impliedFormat":1},{"version":"07ed3ddab975995eea41b22f3010506fb9f5fb301d04820b07d7a1aee5477d7c","impliedFormat":1},{"version":"969d8b0965849f4bae7cab0ba90bd1e1220e95999c2c6f01117fa7500901c017","impliedFormat":1},{"version":"6ec840ee5e2bc103f557fe38b1d585ee250540468713d7634ee066de372bf332","impliedFormat":1},{"version":"b0309e1eda99a9e76f87c18992d9c3689b0938266242835dd4611f2b69efe456","impliedFormat":1},{"version":"47699512e6d8bebf7be488182427189f999affe3addc1c87c882d36b7f2d0b0e","impliedFormat":1},{"version":"6ceb10ca57943be87ff9debe978f4ab73593c0c85ee802c051a93fc96aaf7a20","impliedFormat":1},{"version":"1de3ffe0cc28a9fe2ac761ece075826836b5a02f340b412510a59ba1d41a505a","impliedFormat":1},{"version":"e46d6cc08d243d8d0d83986f609d830991f00450fb234f5b2f861648c42dc0d8","impliedFormat":1},{"version":"1c0a98de1323051010ce5b958ad47bc1c007f7921973123c999300e2b7b0ecc0","impliedFormat":1},{"version":"ff863d17c6c659440f7c5c536e4db7762d8c2565547b2608f36b798a743606ca","impliedFormat":1},{"version":"5412ad0043cd60d1f1406fc12cb4fb987e9a734decbdd4db6f6acf71791e36fe","impliedFormat":1},{"version":"ad036a85efcd9e5b4f7dd5c1a7362c8478f9a3b6c3554654ca24a29aa850a9c5","impliedFormat":1},{"version":"fedebeae32c5cdd1a85b4e0504a01996e4a8adf3dfa72876920d3dd6e42978e7","impliedFormat":1},{"version":"e297c0a524edee7677939122f90027bfbe5f2698939d9a85728e5044b39c7124","impliedFormat":1},{"version":"cdf21eee8007e339b1b9945abf4a7b44930b1d695cc528459e68a3adc39a622e","impliedFormat":1},{"version":"bc9ee0192f056b3d5527bcd78dc3f9e527a9ba2bdc0a2c296fbc9027147df4b2","impliedFormat":1},{"version":"b62381cae176db34f003cc6172ee8f3e0122014889d66391aa73698105cf4934","impliedFormat":1},{"version":"1d9c0a9a6df4e8f29dc84c25c5aa0bb1da5456ebede7a03e03df08bb8b27bae6","impliedFormat":1},{"version":"84380af21da938a567c65ef95aefb5354f676368ee1a1cbb4cae81604a4c7d17","impliedFormat":1},{"version":"1af3e1f2a5d1332e136f8b0b95c0e6c0a02aaabd5092b36b64f3042a03debf28","impliedFormat":1},{"version":"30d8da250766efa99490fc02801047c2c6d72dd0da1bba6581c7e80d1d8842a4","impliedFormat":1},{"version":"03566202f5553bd2d9de22dfab0c61aa163cabb64f0223c08431fb3fc8f70280","impliedFormat":1},{"version":"41eb514d9ce0a6e87957f08a4b7af70d93f87637f37dee706e2d92a6601c25a9","impliedFormat":1},{"version":"e7765aa8bcb74a38b3230d212b4547686eb9796621ffb4367a104451c3f9614f","impliedFormat":1},{"version":"1de80059b8078ea5749941c9f863aa970b4735bdbb003be4925c853a8b6b4450","impliedFormat":1},{"version":"1d079c37fa53e3c21ed3fa214a27507bda9991f2a41458705b19ed8c2b61173d","impliedFormat":1},{"version":"5bf5c7a44e779790d1eb54c234b668b15e34affa95e78eada73e5757f61ed76a","impliedFormat":1},{"version":"5835a6e0d7cd2738e56b671af0e561e7c1b4fb77751383672f4b009f4e161d70","impliedFormat":1},{"version":"4b7f74b772140395e7af67c4841be1ab867c11b3b82a51b1aeb692822b76c872","impliedFormat":1},{"version":"7bd01f0f28cd3aeb2046274d85208e245965f6f2948edf4f7b2057bcf9f22ccc","impliedFormat":99},{"version":"d2f2cf2b8cc92bea913cda4a076e0f790b23a21e84f989d12f0116a7fe3906e0","impliedFormat":99},{"version":"6de125ea94866c736c6d58d68eb15272cf7d1020a5b459fea1c660027eca9a90","affectsGlobalScope":true,"impliedFormat":1},{"version":"f5b20bc288ee49989c95b20847fc93b96bf61cc0845598897a6a53a967dd7d07","affectsGlobalScope":true,"impliedFormat":1},{"version":"064ac1c2ac4b2867c2ceaa74bbdce0cb6a4c16e7c31a6497097159c18f74aa7c","impliedFormat":1},{"version":"3dc14e1ab45e497e5d5e4295271d54ff689aeae00b4277979fdd10fa563540ae","impliedFormat":1},{"version":"d3b315763d91265d6b0e7e7fa93cfdb8a80ce7cdd2d9f55ba0f37a22db00bdb8","impliedFormat":1},{"version":"b789bf89eb19c777ed1e956dbad0925ca795701552d22e68fd130a032008b9f9","impliedFormat":1},{"version":"2fe49b7e08bea323f00dce20a38e20202b83af98c44b8feff26f2a8c4f7e277f","affectsGlobalScope":true},"7ad303e40d4fddf44f156129e397511953a71481c5cfd86b1862649aaaf240cc",{"version":"614bce25b089c3f19b1e17a6346c74b858034040154c6621e7d35303004767cc","signature":"435a1e418e8338be3f39614b96b81a9aa2700bc8c27bc6b98f064ff9ce17c363"},{"version":"5a6237f90ea7b312ce8e331ad5ab88661ca01c64aad1fdfa4d8a9f2f64caf57d","impliedFormat":1},{"version":"3b60785a15e0a0c942cfceaa26c338425c6606fe025643efb54b900a8c3744d3","impliedFormat":1},{"version":"a3628f430f8d502a5c026a0c932a5c41e6361d8e0248287872cd8999bc534399","impliedFormat":1},{"version":"e0955fb05a28dceb694e499e3a828ac2fc2f24fd6bfd4a9f3edb8550c05779b3","impliedFormat":99},{"version":"5a800cb44fd70e436adf02e020dea317b0026786910e4bbc7ca014208c894ffd","impliedFormat":1},{"version":"2b6c6039f4d2f656904d66f82231488f4852f861d27147884895097f74e3e812","impliedFormat":1},{"version":"1621da3c4da45c37b79d6d361f7de9f0ea40b171dd11ef1ef1bb026665965fc9","impliedFormat":1},{"version":"3878700a966f0201a3e2b9aea8b75cc65008741c359889314e7b0c56c0c07b56","impliedFormat":1},{"version":"f040575209f695a7616fba0045e6a0c88d19d77b246a0098caeb4c9384447d15","impliedFormat":1},{"version":"1fcc4bb6d083b31e1587711ab5a8b0467b52a125f9735467774285bc8cc127e6","impliedFormat":1},{"version":"2193f35e13aee12b162670006604b914edb47fa0e391f39a8fe94a5402b60139","impliedFormat":1},{"version":"0e085cc503ad1332728d56244e9f7a603404beca17c0c5b2d815ed29e0727d4b","impliedFormat":1},{"version":"deda38d3245acb0404dd845dae172547c895c99c442082f176071cbb40d092f3","impliedFormat":1},{"version":"89659dc89f3a21d2a29c898297c96d56ef49f25eee0ee54aace7bd00758b6334","impliedFormat":1},{"version":"df4e0cf0d4a4ea996065de24fb0f621f96321f048869fbf4ef58a55593084d16","impliedFormat":1},{"version":"e6f3d02d69394dae0771c088b3c0b982cf15b6a91678c59f1d5fbd7c5e6ad8f8","impliedFormat":1},{"version":"ef182902b33ac9b9ad90c163b313722d2bc9d8c2cfefeb418b3205d70504a486","impliedFormat":1},{"version":"4868d3290ec2ee01d1b5d0f003d0cafd88febc985653b4ba40f4216ad9cf72ac","impliedFormat":1},{"version":"95bdd836ed77c23e530fcd3a0823df8fd611035590dfd8d38ee164c56f2bd2c4","impliedFormat":1},{"version":"f96537f0fcfd0379e3254479573ffebc8a67c13a2cd3144c744b032af33800b9","impliedFormat":1},{"version":"c2d50e73c775fee10c2361880cd227f3497a67677536208cd0e8a5d5ab562a0d","impliedFormat":1},{"version":"6af18d77b9656786783ce0f1296403e1f998ec8af4c1d16fe3728a3b2ec5751f","impliedFormat":1},{"version":"435279e408da8dba444c8ba93bbefddcae9e99b33acfc9a7c3318583e8f4a745","impliedFormat":1},{"version":"447b6a80636a59c918ed18af1019de1efa94109a086e8fd8f3d20eb9b9a6937b","impliedFormat":99},{"version":"541b6ece6e4191ef7d4f8865ae34246a0a78b4dc54017149742da44bc9353a1e","impliedFormat":99},{"version":"05c9c065eadecdce0ee370455e3c36674bfb08673f1a268a398002a0d2d801b7","impliedFormat":1},{"version":"3f94e04c73c5ffd66fecf2ab2a199372a5321739ac4a3a6e286e39b62430dc49","impliedFormat":1},{"version":"0eae63800777384563d5727e572982c220d47acf736dcdb569a2749a32378f19","impliedFormat":1},{"version":"9bf41a89bd0bbd4f8a23a7925d04f99267cb84a5a5b239185f3320edea329b9c","impliedFormat":1},{"version":"c8699f2b983bbc3117260c84d2f9f11c83eb2b396ea881a69d4cf10ac73a339f","impliedFormat":1},{"version":"b688a3daef72eae05635460146810781dab458476b855c4366371e17f1a0b546","impliedFormat":1},{"version":"9280a569eb85c1dab325f5fcd8dae26557147d8f5781f57b49a65570d51313c3","impliedFormat":1},{"version":"964de3d129316ff79eccce67973270c01d0ed9c61947535ff8f35509a46fe536","impliedFormat":1},{"version":"e444a4edd02caac4c129adb1033df87601f443a38b3b505ab368da6b9c5c5560","impliedFormat":1},{"version":"572fb2a517241d42d3fee85ec193f099303793305a8d988c9ea1574d0866fb9e","impliedFormat":1},{"version":"170decb46fc69c7e82174fe44f308115628d033f11ee51c9d554f5ca735353f3","impliedFormat":1},{"version":"5a2c66c68291a04dd668558d7f23ebf128d253ded80f61da746ad145d9f1f44a","impliedFormat":1},{"version":"4ae9b50481136302de9c77668621ed3a0b34998f3e091ca3701426f4fe369c8a","impliedFormat":1},{"version":"9ba9ecc57d2f52b3ed3ac229636ee9a36e92e18b80eeae11ffb546c12e56d5e5","impliedFormat":1},{"version":"8f9bd109c51a702d1dbae7d0ef356765679726e4af5ad0e61afbf7ac6ae19b3d","impliedFormat":1},{"version":"d182d419bb30a1408784ed95fbabd973dde7517641e04525f0ce761df5d193a5","impliedFormat":1},{"version":"95907cde646ba4005f68148eb8840f275865556b231d781b434f9258b1f230b1","impliedFormat":99},{"version":"bc45ca7ccef9585e83a4c16024ac35dde2965b1c17fbce6ad62561629986e2ac","signature":"21b3439d278d4bc5530437128c65748bd57de2b046bca786056c605f61c6eb83"},{"version":"4e35f7e80e9a9f60d6aa29a6b0e8a851973bcb252974df22d38f6a7cb63ee1aa","signature":"d6305d85351f4add01ff0568a48265e0b3390ef26d6fa0829c52b80164d37414"},{"version":"f94c7e31970a6ae2a3ec7922aad25cbecdb6fc338b630984ffb0d828f67cb4d8","signature":"45ce3eedff9ffed441a0192223ad86da104a52abc117b9be3479dc693285c4d1"},{"version":"5d87addf472946fd345b0b56e81a0da34fbe010b28a3bb9785a93e55c07e887a","signature":"512f8326104bbf84bda380571002beefac83a19bb31239d58b4fd358ab0610bd"},{"version":"e75811e6b0c520c7bfb2a0eeee7f8f5e2b2b5ca1a232cc7ae89667b751c0290e","signature":"e6857809b725e958fc01125d02517b7852474ea968f788a299d6ec8456c3c44e"},{"version":"d55a6155658932117862c7a22ff72ed4f760abc2071013fbe569fd0e51e76b5e","signature":"4e36e3ceeaa0b69851f7d51dce98327af3a707ec67e65e26160a9dd800c410c9"},{"version":"44898fc933e91b7dae4d4b3061d730afd8d57f2e0ec53c9c18a921882c8d1980","signature":"4f8b0d80dcd985d31984c73940375b8e3ea28700fa97d560ba6f4e48d08ce68f"},{"version":"ec12b98a05da16dcdc118f6aa5fde31f1164eeaaecf651701cbbf7e6d5f1c5c4","signature":"42d7707902d8424a856268f88ff902b27cfeb7daa30984cc59f58bbd39b79bbc"},{"version":"29ad3ff5e86ffe4ef220361532e1785287fa181e73a8dad2a1d91ba84aeae54e","signature":"42d7707902d8424a856268f88ff902b27cfeb7daa30984cc59f58bbd39b79bbc"},{"version":"2e241f305d0f275587af046b0996d2d434b1269611633d7f4dc36b72d8b14771","signature":"42d7707902d8424a856268f88ff902b27cfeb7daa30984cc59f58bbd39b79bbc"},{"version":"9872b70f0d59325447d498fc32215dda19d5b2c8e4d6737bceefaba47adcb808","signature":"42d7707902d8424a856268f88ff902b27cfeb7daa30984cc59f58bbd39b79bbc"},{"version":"1d26147d4e905d760db8bbe0e5c3670247db1a341fda020edca3a7a65b47a2ed","signature":"eaa20ac0e1c9ac580d4c8f1656a1df78713f3b7eff0cee0dfc96ce849fe31396"},{"version":"056e096e6880398a2c429f31319ff7fcfc6afdf62668941be6b1cb1a6439b214","signature":"dbbf19593ce7cb4c948fbc823a74edb26a0ef11335250c4394017d94d3d68887"},{"version":"6d29d98a4bf6ec541e002adbce68f08aa997152dcadef0c47347eff7d7930e6f","signature":"ec3920cc1afe52199f60ce63421573e1a6cad058c8199c3bf53d734e0750fe27"},{"version":"8c5d57507ed34eec130154cf3e28a928b3ee65eb02ce6910b14bac4b73dea4dc","signature":"a5996e2c4c03896a1964a958b1e1fdb1476f978830718844628ca69454945750"},{"version":"aaeb468bbe8bab5d9b4f3556468b212bbd8f1997810e3be6848dbd0eb12f30b6","signature":"4bce33869b40daf47f62b16f613e4828611989d07624fd1cc0ce1b3a48cc7d88"},{"version":"0d7a776ec04b84520bf5e774ef2d0bfb8a4b1de6e3fe0fa083ac706eb1cd712b","signature":"66fd3c9355ab42b38725840bc163a49598ffb931ca581005c0f0766ef3a3f7f9"},{"version":"834bdb3926b8a25bb7995123ee1bb032ddf79e431fee4ab1b84ad93cd9b5752e","signature":"3b33e7100fa2c27c8d0e70ba2f0c0286228f3952ec652ea228e3fbd4b5ce65fe"},{"version":"0609afeff81bcf57ff11d184c2debea5148f47355af68ad00a0e4a74ee33a019","signature":"0d35686ecac1e35629a3c69d240c3980de75146434854db5e75645c457be5567"},{"version":"9436602188104148a161e37e7d90bf322e5e5b11080abb949005d005c9afd10e","signature":"b621b119def0f4563b7de95e85703e884e3317e0e0e811fbbc40702afd99a264"},{"version":"85ce590f81ebda685b2fe995caa9fe0581ea604f48482b4348cb62274c0b388c","signature":"2dcc50c46dcccaadb05bc414e290fd1a75298fcadb47c77c1af84945ec8b6b01"},{"version":"bf779fe393c8021c6881db6702eaf5837c1f431d85844c7f44fb51c3bbcc0cc2","signature":"9031dd00c94b0f4ba7ec0a244ea27f4d530e6a9c9573f37ed9dbb7c5f7281596"},{"version":"eef504fc2172a91ad21d4af08c6d53ff1372def7ae4de6cc559a5b0bb5de5f04","signature":"9b37defc1cf2817877d82929745263a4741c10b95e7ad1ae1b2386ec1056dc7f"},{"version":"4d5eb32e76b2dfc36ec3be9340425833c3b3cbcb4b57887bd9aa70109480d6d2","signature":"37a99d01a85a4f1272255f7a3e21a0dd04286cbdbba27fd77bb17eeb603a4734"},{"version":"66fbb558da8bd43cc389785a0c42ac9ac6ba2b5bf65bd8e02c9c5912fa71e2bd","signature":"aa5fdbfd931126e88ae344ed36ae7bbc4e527910b285610e0e41c18581e1ca87"},{"version":"fa5bbd184a8dcfbb9737c2ef929d04c9b61be228445cba0aa573d3ff94838a99","signature":"6035484166ccfdf28701961cb5ffbd87ac5e80fe7f69bcee8f95f449f659e197"},{"version":"6973d64e040ffb46c2c3fed9caaea4cf37448056737bfa2ddcb5ef471bc078e6","signature":"036123b9345a96584fb50686e1029debed6955aa623548ed841b82d72e4b20c4"},{"version":"9f28e81620684a392b02a414ec3c70a14c2224df4d6d9cbd6c29d2822dc5d393","signature":"60a663e9e57434348288fa77c43b8d7e57fe36859c497a1bce837f42f3988e52"},{"version":"fe0672d799a32680ae1b6eb2a8de93c1c6f2452360e99c85fad6128202b9104c","signature":"7386e8d29c70abdbff62defcc2e3028a50c6d70f7ca131239e0bace41c0e3d51"},{"version":"88dac0f07a38639ed62bf16afb479f94c1c779d8163371e5c6b64d005f283b96","signature":"f184dc470a3c3516f27cfdc73432fa02c1cce21b2178e2b1c68c2a1981124238"},{"version":"121a567d7497e3bb02e2558352392d0b1737761d0016402acafec86ac334ab7f","signature":"b4df131954cee9915fbf881c86b2ee20acea3ba7014a53a4e658563fe41953b5"},{"version":"d9c92c5045171e2e68d4bf3aca66fa36d3c913b0217a9944c85f3d234a73b9b5","signature":"566c8be8016873a214eb2943cfba1d6930f52210b4fbf87844f80c82dc9815da"},{"version":"9e16189f8e08e9ee3c766933b2b119d3a1520ee0623e609592db80f922603061","signature":"239fcef72bd1083d0bcac04706129fd3024e0f6578c8f62c77604097fe6afc05"},{"version":"e2880f4b088de032560d8671953c1b2b275284aa40c92844a6679097b2828a67","signature":"dc00b018cb4198078e226437782626513d95ae3a15f0eab46c03bbf430a1cb00"},{"version":"fff8e7a171a6bb5668a4637b344cb0d82fff7db78be78e98eb7bca971297a68b","signature":"1e27db8e328f7852f995fa57b7e497dc7d14e9d84592eaf4ecd1c8ee318b8218"},{"version":"c654522b3641390b9bc8b3dd1f943b7031e23ff6321d65ae00e483c4dbb2fe65","signature":"321d15561dcb873c4b0a7c7b5910e59a07ba63d052a7ec9792ea656609f53f7f"},{"version":"83db752d4d9089645b786a2d8eab5f6fc5a0ccaf55c7d68c06178457b95417e0","signature":"a13118733a589d6e08a408e5c867623a292b66d7f8b96c0786f2298fffd9fa47"},{"version":"5ee291de978c83d5ef4363be5bab19f58ba3169cd94331d1d6473406cc7467c9","signature":"c57cfabe70e1e875e2a79c824f8d7f350892c11ef6b960b7a0bd08e0b25b5819"},"d1986184a09a52db8228cb2bb2a61a8c05c9354e5b93cec8e2628d8579c892d7",{"version":"2fe49b7e08bea323f00dce20a38e20202b83af98c44b8feff26f2a8c4f7e277f","affectsGlobalScope":true},{"version":"0d3aea41464b63e0241edac60a8d34094f41d53674fea73172b1b6246d47cf67","signature":"8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"},"d1986184a09a52db8228cb2bb2a61a8c05c9354e5b93cec8e2628d8579c892d7",{"version":"e6dcd49c9ba560162a364cd35e158e5066091702d55880cdb4c686e4b43f5a71","signature":"8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"},{"version":"751764bb94219b4ce8f5475dc35d3de2e432fea01a0c9610cd7f69ad05e398c6","impliedFormat":1},{"version":"f3d8c757e148ad968f0d98697987db363070abada5f503da3c06aefd9d4248c1","impliedFormat":1},{"version":"96d14f21b7652903852eef49379d04dbda28c16ed36468f8c9fa08f7c14c9538","impliedFormat":1}],"root":[[530,532],[576,617]],"options":{"allowJs":true,"esModuleInterop":true,"jsx":4,"module":99,"skipLibCheck":true,"strict":true,"target":4},"referencedMap":[[616,1],[530,2],[617,3],[613,4],[614,2],[615,5],[601,6],[600,7],[602,8],[599,6],[579,9],[603,10],[582,11],[583,11],[584,11],[585,11],[586,12],[587,13],[588,14],[604,6],[605,15],[589,16],[606,17],[608,18],[607,19],[609,20],[610,19],[595,21],[597,22],[611,23],[612,24],[596,25],[594,26],[592,25],[593,27],[598,25],[591,25],[590,28],[576,29],[581,30],[578,31],[580,32],[575,32],[577,33],[531,34],[532,35],[374,2],[570,36],[571,37],[569,38],[564,39],[573,40],[558,2],[559,41],[568,42],[563,43],[572,2],[567,44],[560,2],[561,2],[566,45],[562,42],[565,43],[534,46],[535,47],[533,2],[545,48],[539,2],[548,49],[540,2],[546,50],[544,50],[547,51],[543,52],[542,2],[541,53],[536,2],[555,54],[550,55],[538,2],[537,2],[549,56],[553,57],[554,58],[552,2],[551,59],[557,60],[574,61],[618,2],[619,2],[620,2],[140,62],[141,62],[142,63],[97,64],[143,65],[144,66],[145,67],[92,2],[95,68],[93,2],[94,2],[146,69],[147,70],[148,71],[149,72],[150,73],[151,74],[152,74],[153,75],[154,76],[155,77],[156,78],[98,2],[96,2],[157,79],[158,80],[159,81],[191,82],[160,83],[161,84],[162,85],[163,86],[164,87],[165,88],[166,89],[167,90],[168,91],[169,92],[170,92],[171,93],[172,2],[173,94],[175,95],[174,96],[176,97],[177,98],[178,99],[179,100],[180,101],[181,102],[182,103],[183,104],[184,105],[185,106],[186,107],[187,108],[188,109],[99,2],[100,2],[101,2],[139,110],[189,111],[190,112],[195,113],[459,114],[196,115],[194,116],[461,117],[460,118],[192,119],[457,2],[193,120],[83,2],[85,121],[456,114],[226,114],[84,2],[556,2],[482,122],[487,123],[494,124],[477,125],[230,2],[238,126],[378,127],[381,128],[353,2],[366,129],[373,130],[255,2],[355,2],[236,2],[352,131],[398,132],[237,2],[228,133],[380,134],[382,135],[383,136],[454,137],[347,138],[300,139],[360,140],[361,141],[359,142],[358,2],[354,143],[379,144],[239,145],[424,2],[425,146],[266,147],[240,148],[267,147],[303,147],[206,147],[376,149],[375,2],[365,150],[472,2],[215,2],[493,151],[432,152],[433,153],[429,154],[511,2],[330,2],[434,25],[430,155],[516,156],[515,157],[510,2],[281,2],[333,158],[332,2],[509,159],[431,114],[286,160],[293,161],[295,162],[285,2],[290,163],[292,164],[294,165],[289,166],[287,2],[291,167],[512,2],[508,2],[514,168],[513,2],[284,169],[503,170],[506,171],[274,172],[273,173],[272,174],[519,114],[271,175],[260,2],[521,2],[522,114],[523,176],[198,2],[362,177],[363,178],[364,179],[202,2],[367,2],[222,180],[197,2],[446,114],[204,181],[445,182],[444,183],[435,2],[436,2],[443,2],[438,2],[441,184],[437,2],[439,185],[442,186],[440,185],[235,2],[232,2],[233,147],[387,2],[392,187],[393,188],[391,189],[389,190],[390,191],[385,2],[452,25],[227,25],[481,192],[488,193],[492,194],[321,195],[320,2],[315,2],[468,196],[476,197],[348,198],[349,199],[427,200],[337,2],[450,201],[325,114],[342,202],[453,203],[338,2],[341,204],[339,2],[451,205],[448,206],[447,2],[449,2],[345,2],[423,207],[210,208],[323,209],[327,210],[343,211],[346,212],[335,213],[328,214],[475,215],[401,216],[319,217],[207,218],[474,219],[203,220],[394,221],[386,2],[395,222],[412,223],[384,2],[411,224],[91,2],[406,225],[231,2],[426,226],[402,2],[216,2],[218,2],[357,2],[410,227],[234,2],[258,228],[344,229],[264,230],[324,2],[409,2],[388,2],[414,231],[415,232],[356,2],[417,233],[419,234],[418,235],[368,2],[408,218],[421,236],[318,237],[407,238],[413,239],[243,2],[247,2],[246,2],[245,2],[250,2],[244,2],[253,2],[252,2],[249,2],[248,2],[251,2],[254,240],[242,2],[310,241],[309,2],[314,242],[311,243],[313,244],[316,242],[312,243],[223,245],[302,246],[471,247],[469,2],[498,248],[500,249],[464,250],[499,251],[211,252],[208,252],[241,2],[225,253],[224,254],[220,255],[221,256],[229,257],[257,257],[268,257],[304,258],[269,258],[213,259],[212,2],[308,260],[307,261],[306,262],[305,263],[214,264],[455,265],[256,266],[463,267],[428,268],[458,269],[462,270],[351,271],[350,272],[331,273],[317,274],[299,275],[301,276],[298,277],[420,278],[322,2],[486,2],[219,279],[422,280],[470,281],[329,2],[259,282],[336,283],[334,284],[261,285],[396,286],[465,2],[262,287],[397,287],[484,2],[483,2],[485,2],[467,2],[466,2],[399,288],[326,2],[296,289],[217,290],[275,2],[201,291],[263,2],[490,114],[200,2],[502,292],[283,114],[496,25],[282,293],[479,294],[280,292],[205,2],[504,295],[278,114],[279,114],[270,2],[199,2],[277,296],[276,297],[265,298],[340,91],[400,91],[416,2],[404,299],[403,2],[288,169],[209,2],[297,114],[473,180],[480,300],[86,114],[89,301],[90,302],[87,114],[88,2],[377,303],[372,304],[371,2],[370,305],[369,2],[478,306],[489,307],[491,308],[495,309],[497,310],[501,311],[529,312],[505,312],[528,313],[507,314],[517,315],[518,316],[520,317],[524,318],[527,180],[526,2],[525,319],[405,320],[81,2],[82,2],[13,2],[14,2],[16,2],[15,2],[2,2],[17,2],[18,2],[19,2],[20,2],[21,2],[22,2],[23,2],[24,2],[3,2],[25,2],[26,2],[4,2],[27,2],[31,2],[28,2],[29,2],[30,2],[32,2],[33,2],[34,2],[5,2],[35,2],[36,2],[37,2],[38,2],[6,2],[42,2],[39,2],[40,2],[41,2],[43,2],[7,2],[44,2],[49,2],[50,2],[45,2],[46,2],[47,2],[48,2],[8,2],[54,2],[51,2],[52,2],[53,2],[55,2],[9,2],[56,2],[57,2],[58,2],[60,2],[59,2],[61,2],[62,2],[10,2],[63,2],[64,2],[65,2],[11,2],[66,2],[67,2],[68,2],[69,2],[70,2],[1,2],[71,2],[72,2],[12,2],[76,2],[74,2],[79,2],[78,2],[73,2],[77,2],[75,2],[80,2],[117,321],[127,322],[116,321],[137,323],[108,324],[107,325],[136,319],[130,326],[135,327],[110,328],[124,329],[109,330],[133,331],[105,332],[104,319],[134,333],[106,334],[111,335],[112,2],[115,335],[102,2],[138,336],[128,337],[119,338],[120,339],[122,340],[118,341],[121,342],[131,319],[113,343],[114,344],[123,345],[103,346],[126,337],[125,335],[129,2],[132,347]],"affectedFilesPendingEmit":[617,615,601,600,602,599,579,603,582,583,584,585,586,587,588,604,605,589,606,608,607,609,610,595,597,611,612,596,594,592,593,598,591,590,576,581,578,580,575,577,532],"version":"5.9.3"}
 ```
