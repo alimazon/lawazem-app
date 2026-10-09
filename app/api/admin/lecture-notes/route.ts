@@ -1,6 +1,7 @@
 // app/api/admin/lecture-notes/route.ts
 import { NextResponse } from 'next/server';
 import { adminGuard, jsonError, safeOptionalString, safeString } from '@/lib/api-server';
+import { notifyNewLectureNote } from '@/lib/telegram-notifications';
 import type { Track } from '@/lib/types';
 
 function parseLectureNumber(value: unknown): number | null {
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
       const lecture_number = parseLectureNumber(body.lecture_number);
       const track = parseTrack(body.track);
       const tags = parseTags(body.tags);
-      const year = parseYear(body.year);                    // ← جديد
+      const year = parseYear(body.year);
       const file_path = safeString(body.file_path, 2000);
 
       if (!subject_id) return jsonError('اختر المادة');
@@ -78,23 +79,51 @@ export async function POST(request: Request) {
       if (!track) return jsonError('اختر نظري أو عملي');
       if (!file_path) return jsonError('رابط الملف مطلوب');
 
-      const { error } = await supabaseAdmin.from('lecture_notes').insert({
-        subject_id,
-        title,
-        professor_name,
-        lecture_number,
-        track,
-        tags,
-        year,                                                // ← جديد
-        file_path,
-        status: 'approved',
-      });
+      const { data: inserted, error } = await supabaseAdmin
+        .from('lecture_notes')
+        .insert({
+          subject_id,
+          title,
+          professor_name,
+          lecture_number,
+          track,
+          tags,
+          year,
+          file_path,
+          status: 'approved',
+        })
+        .select('id')
+        .single<{ id: string }>();
 
-      if (error) {
-        console.error('lecture-notes add error:', error.message);
+      if (error || !inserted) {
+        console.error('lecture-notes add error:', error?.message);
         return jsonError('فشل إضافة الملزمة', 500);
       }
-      return NextResponse.json({ success: true });
+
+      // 🔔 إشعار المشتركين — fire-and-forget
+      void (async () => {
+        try {
+          const { data: subject } = await supabaseAdmin
+            .from('subjects')
+            .select('name, stage')
+            .eq('id', subject_id)
+            .maybeSingle<{ name: string; stage: string }>();
+
+          if (subject) {
+            await notifyNewLectureNote({
+              id: inserted.id,
+              title,
+              subject_name: subject.name,
+              professor_name,
+              stage: subject.stage,
+            });
+          }
+        } catch (err) {
+          console.error('[notify] add notification error:', err);
+        }
+      })();
+
+      return NextResponse.json({ success: true, id: inserted.id });
     }
 
     // ==================== edit ====================
@@ -106,7 +135,7 @@ export async function POST(request: Request) {
       const lecture_number = parseLectureNumber(body.lecture_number);
       const track = parseTrack(body.track);
       const tags = parseTags(body.tags);
-      const year = parseYear(body.year);                    // ← جديد
+      const year = parseYear(body.year);
       const file_path = safeString(body.file_path, 2000);
 
       if (!id) return jsonError('id مطلوب');
@@ -124,7 +153,7 @@ export async function POST(request: Request) {
           lecture_number,
           track,
           tags,
-          year,                                              // ← جديد
+          year,
           file_path,
         })
         .eq('id', id);
@@ -153,7 +182,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true });
     }
 
-    // ==================== reports_list (جديد) ====================
+    // ==================== reports_list ====================
     case 'reports_list': {
       const { data, error } = await supabaseAdmin
         .from('lecture_note_reports')
@@ -185,7 +214,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ reports: data ?? [] });
     }
 
-    // ==================== report_resolve (جديد) ====================
+    // ==================== report_resolve ====================
     case 'report_resolve': {
       const id = safeString(body.id, 100);
       const resolved_action = body.resolved_action === 'deleted' ? 'deleted' : 'ignored';
@@ -207,7 +236,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true });
     }
 
-    // ==================== reports_resolve_all_for_note (جديد) ====================
+    // ==================== reports_resolve_all_for_note ====================
     case 'reports_resolve_all_for_note': {
       const lecture_note_id = safeString(body.lecture_note_id, 100);
       const resolved_action = body.resolved_action === 'deleted' ? 'deleted' : 'ignored';
