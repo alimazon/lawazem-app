@@ -1,7 +1,14 @@
 // app/lawazem/page.tsx
 'use client';
 
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { useStudentStage } from '@/hooks/useStudentStage';
@@ -9,10 +16,42 @@ import { useBookmarks } from '@/hooks/useBookmarks';
 import { useRecentViews } from '@/hooks/useRecentViews';
 import { Input } from '@/components/ui/Field';
 import { ReportModal } from '@/components/ReportModal';
+import { PullToRefresh } from '@/components/PullToRefresh';
 import { postJson } from '@/lib/api-client';
-import type { LectureNote, Subject, Track } from '@/lib/types';
+import {
+  IconArrowRight,
+  IconBook,
+  IconBookmark,
+  IconClose,
+  IconDoc,
+  IconFlag,
+  IconInbox,
+  IconSearch,
+  IconTelegram,
+} from '@/components/ui/Icons';
+import type { LectureNote, Track } from '@/lib/types';
 
-type SubjectWithNotes = Subject & { lecture_notes: LectureNote[] };
+// ==================== Types ====================
+interface LatestNote {
+  title: string;
+  professor: string | null;
+  createdAt: string | null;
+}
+
+interface SubjectMeta {
+  id: string;
+  name: string;
+  units: number | null;
+  noteCount: number;
+  latest: LatestNote | null;
+}
+
+interface DoctorGroup {
+  name: string;
+  notes: LectureNote[];
+}
+
+const NO_DOCTOR = 'غير محدد';
 
 // ==================== Track View (fire-and-forget) ====================
 function trackView(noteId: string) {
@@ -34,134 +73,67 @@ function trackView(noteId: string) {
   }
 }
 
-// ==================== Tag Colors ====================
-const TAG_COLORS: Record<string, string> = {
-  'نظري': 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300',
-  'عملي': 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300',
-  'محاضرة': 'bg-teal/10 text-teal',
-  'ملخص': 'bg-amber/15 text-amber-800 dark:bg-amber/20 dark:text-amber-300',
-  'أساسيات': 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
-  'مراجعة': 'bg-pink-50 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300',
-  'سلايدات': 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300',
-  'امتحان': 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300',
-  'واجب': 'bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300',
-  'فاينل': 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300',
-};
+// ==================== Helpers ====================
+const rtf =
+  typeof Intl !== 'undefined' && 'RelativeTimeFormat' in Intl
+    ? new Intl.RelativeTimeFormat('ar-u-nu-latn', { numeric: 'auto' })
+    : null;
 
-function getTagColor(tag: string): string {
-  return TAG_COLORS[tag] || 'bg-ink/5 text-ink/60';
-}
-
-// ==================== Icons ====================
-function IconSearch() {
-  return (
-    <svg className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
-    </svg>
-  );
-}
-function IconArrowLeft() {
-  return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M11 17l-5-5m0 0l5-5m-5 5h12" />
-    </svg>
-  );
-}
-function IconFolder({ open }: { open: boolean }) {
-  return open ? (
-    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9h18" />
-    </svg>
-  ) : (
-    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-    </svg>
-  );
-}
-function IconChevron({ open }: { open: boolean }) {
-  return (
-    <svg className={`h-5 w-5 flex-shrink-0 text-ink/40 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-    </svg>
-  );
-}
-function IconDoc() {
-  return (
-    <svg className="h-4 w-4 flex-shrink-0 text-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    </svg>
-  );
-}
-function IconEmpty() {
-  return (
-    <svg className="mx-auto h-12 w-12 text-ink/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    </svg>
-  );
-}
-function IconTelegram() {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
-    </svg>
-  );
-}
-function IconDoctor() {
-  return (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-    </svg>
-  );
-}
-function IconClose() {
-  return (
-    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-    </svg>
-  );
-}
-function IconBookmark({ filled }: { filled: boolean }) {
-  return (
-    <svg className="h-4 w-4" fill={filled ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-    </svg>
-  );
-}
-function IconFlag() {
-  return (
-    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
-    </svg>
-  );
+function timeAgo(iso: string | null | undefined): string {
+  if (!iso || !rtf) return '';
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return '';
+  const days = Math.floor((Date.now() - t) / 86_400_000);
+  if (days < 1) return 'اليوم';
+  if (days < 7) return rtf.format(-days, 'day');
+  if (days < 30) return rtf.format(-Math.floor(days / 7), 'week');
+  if (days < 365) return rtf.format(-Math.floor(days / 30), 'month');
+  return rtf.format(-Math.floor(days / 365), 'year');
 }
 
-// ==================== Skeleton ====================
-function Skeleton() {
-  return (
-    <div className="space-y-4">
-      {[0, 1, 2].map((i) => (
-        <div key={i} className="rounded-3xl border border-line bg-white/80 p-5 backdrop-blur-sm dark:bg-paper/80">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 skeleton-shimmer rounded-lg" />
-            <div className="h-5 w-40 skeleton-shimmer rounded" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+/** ألوان أيقونات المواضيع (مثل Topics في تيليجرام) */
+const TOPIC_COLORS: readonly string[] = [
+  'bg-teal/15 text-teal',
+  'bg-gold/15 text-gold-ink',
+  'bg-success/15 text-success-ink',
+  'bg-navy/15 text-navy-ink',
+  'bg-warning/20 text-warning-ink',
+];
+
+function topicColor(id: string): string {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return TOPIC_COLORS[h % TOPIC_COLORS.length];
 }
 
-function BackLink() {
-  return (
-    <Link href="/" className="group inline-flex items-center gap-1.5 text-sm font-bold text-teal/70 transition-colors hover:text-teal">
-      <span className="transition-transform duration-200 group-hover:translate-x-1"><IconArrowLeft /></span>
-      رجوع إلى لوحة الأقسام
-    </Link>
-  );
+function topicInitial(name: string): string {
+  const clean = name.trim().replace(/^ال/, '');
+  return (clean || name.trim()).charAt(0) || '؟';
 }
 
-// ==================== Sorting ====================
+function countLabel(n: number): string {
+  return `${n} ${n === 1 ? 'ملزمة' : 'ملازم'}`;
+}
+
+function noteMatches(
+  note: LectureNote,
+  term: string,
+  tag: string | null,
+): boolean {
+  const noteTags = Array.isArray(note.tags) ? note.tags : [];
+  if (tag && !noteTags.includes(tag)) return false;
+  if (term) {
+    const lower = term.toLowerCase();
+    const inTitle = note.title.toLowerCase().includes(lower);
+    const inDoctor =
+      note.professor_name?.toLowerCase().includes(lower) ?? false;
+    const inTrack = note.track?.toLowerCase().includes(lower) ?? false;
+    const inTags = noteTags.some((t) => t.toLowerCase().includes(lower));
+    if (!inTitle && !inDoctor && !inTrack && !inTags) return false;
+  }
+  return true;
+}
+
 function sortNotes(notes: LectureNote[]): LectureNote[] {
   return [...notes].sort((a, b) => {
     const aNum = a.lecture_number ?? Number.POSITIVE_INFINITY;
@@ -171,120 +143,149 @@ function sortNotes(notes: LectureNote[]): LectureNote[] {
   });
 }
 
-// ==================== Doctor Group ====================
-interface DoctorGroup {
-  name: string;
-  notes: LectureNote[];
-  totalNotes: number;
-  subjectName: string;
-}
-
-function groupByDoctor(notes: LectureNote[], subjectName: string): DoctorGroup[] {
+function groupByDoctor(notes: LectureNote[]): DoctorGroup[] {
   const groups: Record<string, LectureNote[]> = {};
   for (const note of notes) {
-    const doctor = note.professor_name?.trim() || 'غير محدد';
-    if (!groups[doctor]) groups[doctor] = [];
-    groups[doctor].push(note);
+    const doctor = note.professor_name?.trim() || NO_DOCTOR;
+    (groups[doctor] ??= []).push(note);
   }
   return Object.entries(groups)
-    .map(([name, notes]) => ({
-      name,
-      notes: sortNotes(notes),
-      totalNotes: notes.length,
-      subjectName,
-    }))
+    .map(([name, list]) => ({ name, notes: sortNotes(list) }))
     .sort((a, b) => {
-      if (a.name === 'غير محدد') return 1;
-      if (b.name === 'غير محدد') return -1;
+      if (a.name === NO_DOCTOR) return 1;
+      if (b.name === NO_DOCTOR) return -1;
       return a.name.localeCompare(b.name, 'ar');
     });
 }
 
-// ==================== Track Badge ====================
-function TrackBadge({ track }: { track: Track | null }) {
-  if (!track) return null;
-  const styles =
-    track === 'نظري'
-      ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'
-      : 'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300';
-  return (
-    <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${styles}`}>
-      {track}
-    </span>
-  );
+function doctorLabel(name: string): string {
+  return name === NO_DOCTOR ? 'بدون دكتور' : `د. ${name}`;
 }
 
-// ==================== Doctor Accordion ====================
-function DoctorAccordion({
-  doctor,
-  isOpen,
-  onToggle,
-  reportCounts,
-  onReport,
-}: {
-  doctor: DoctorGroup;
-  isOpen: boolean;
-  onToggle: () => void;
-  reportCounts: Record<string, number>;
-  onReport: (note: LectureNote) => void;
-}) {
-  const initial = doctor.name === 'غير محدد' ? '?' : doctor.name.trim().charAt(0);
-
+// ==================== Skeletons ====================
+function TopicsSkeleton() {
   return (
-    <div className={`overflow-hidden rounded-2xl border bg-white transition-all duration-300 dark:bg-paper ${
-      isOpen ? 'border-teal/30 shadow-[0_4px_16px_rgba(14,74,74,0.08)]' : 'border-line'
-    }`}>
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={isOpen}
-        className="flex w-full items-center gap-3 p-4 text-right transition-colors hover:bg-ink/[0.02] dark:hover:bg-white/[0.03]"
-      >
-        <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-sm font-black transition-all duration-300 ${
-          isOpen
-            ? 'bg-amber text-ink shadow-[0_4px_14px_rgba(224,166,58,0.30)]'
-            : 'bg-amber/15 text-amber-800'
-        }`}>
-          {doctor.name === 'غير محدد' ? <IconDoctor /> : initial}
-        </span>
-
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-extrabold text-ink">
-            {doctor.name === 'غير محدد' ? 'بدون دكتور' : `د. ${doctor.name}`}
-          </h3>
-          <p className="mt-0.5 text-xs font-bold text-ink/50">
-            {doctor.totalNotes} {doctor.totalNotes === 1 ? 'ملزمة' : 'ملازم'}
-          </p>
-        </div>
-
-        <IconChevron open={isOpen} />
-      </button>
-
-      <div className={`grid transition-all duration-300 ease-out ${
-        isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-      }`}>
-        <div className="overflow-hidden">
-          <div className="border-t border-line/60 bg-paper/40 px-4 py-3 dark:bg-white/[0.02]">
-            <ul className="space-y-1.5">
-              {doctor.notes.map((note) => (
-                <LectureItem
-                  key={note.id}
-                  note={note}
-                  subjectName={doctor.subjectName}
-                  reportCount={reportCounts[note.id] ?? 0}
-                  onReport={() => onReport(note)}
-                />
-              ))}
-            </ul>
+    <div aria-hidden="true">
+      {[0, 1, 2, 3, 4].map((i) => (
+        <div key={i} className="flex items-center gap-3 px-4 py-3">
+          <div className="h-12 w-12 flex-shrink-0 skeleton-shimmer rounded-full" />
+          <div className="flex-1 space-y-2">
+            <div className="h-4 w-1/2 skeleton-shimmer rounded" />
+            <div className="h-3 w-4/5 skeleton-shimmer rounded" />
           </div>
         </div>
-      </div>
+      ))}
     </div>
   );
 }
 
-// ==================== Lecture Item ====================
-function LectureItem({
+function NotesSkeleton() {
+  return (
+    <div className="space-y-3 p-3 sm:p-4" aria-hidden="true">
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          className="flex gap-3 rounded-2xl rounded-ss-md border border-line bg-paper-soft p-3"
+        >
+          <div className="h-11 w-11 flex-shrink-0 skeleton-shimmer rounded-full" />
+          <div className="flex-1 space-y-2 pt-1">
+            <div className="h-4 w-3/4 skeleton-shimmer rounded" />
+            <div className="h-3 w-1/3 skeleton-shimmer rounded" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ==================== Topic Avatar ====================
+function TopicAvatar({
+  subject,
+  className = 'h-12 w-12 text-lg',
+}: {
+  subject: SubjectMeta;
+  className?: string;
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`flex flex-shrink-0 items-center justify-center rounded-full font-display font-bold ${topicColor(
+        subject.id,
+      )} ${className}`}
+    >
+      {topicInitial(subject.name)}
+    </span>
+  );
+}
+
+// ==================== Topic Row (قائمة المواضيع) ====================
+function TopicRow({
+  subject,
+  active,
+  count,
+  isResultCount,
+  onOpen,
+}: {
+  subject: SubjectMeta;
+  active: boolean;
+  count: number;
+  isResultCount: boolean;
+  onOpen: () => void;
+}) {
+  const { latest } = subject;
+  const when = timeAgo(latest?.createdAt);
+
+  let preview = 'لا توجد ملازم بعد';
+  if (isResultCount) {
+    preview = `${count} ${count === 1 ? 'نتيجة مطابقة' : 'نتائج مطابقة'}`;
+  } else if (latest) {
+    const prof = latest.professor?.trim();
+    preview = `${prof ? `د. ${prof}: ` : ''}${latest.title}`;
+  }
+
+  return (
+    <li className="[&:last-child_.row-line]:border-b-0">
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-current={active ? 'true' : undefined}
+        className={`flex w-full items-center gap-3 ps-4 text-start transition-colors duration-150 hover:bg-ink/[0.04] active:bg-ink/[0.07] focus-visible:outline-offset-[-2px] ${
+          active ? 'bg-teal/10 hover:bg-teal/10' : ''
+        }`}
+      >
+        <TopicAvatar subject={subject} />
+
+        <div className="row-line min-w-0 flex-1 border-b border-line-soft py-3 pe-4">
+          <div className="flex items-baseline justify-between gap-2">
+            <h2 className="truncate font-display text-[15px] font-bold text-ink">
+              {subject.name}
+            </h2>
+            {when && !isResultCount && (
+              <span className="flex-shrink-0 text-[11px] text-ink-muted">
+                {when}
+              </span>
+            )}
+          </div>
+          <div className="mt-0.5 flex items-center justify-between gap-2">
+            <p className="truncate text-[13px] text-ink-muted">{preview}</p>
+            {count > 0 && (
+              <span
+                className={`num flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${
+                  active ? 'bg-teal text-on-teal' : 'bg-teal/15 text-teal'
+                }`}
+              >
+                {count}
+              </span>
+            )}
+          </div>
+        </div>
+      </button>
+    </li>
+  );
+}
+
+// ==================== Note Bubble (الملزمة كرسالة) ====================
+function NoteBubble({
   note,
   subjectName,
   reportCount,
@@ -302,7 +303,6 @@ function LectureItem({
   const hasLecture = note.lecture_number != null;
   const isTelegram = note.file_path.includes('t.me');
   const noteTags = Array.isArray(note.tags) ? note.tags : [];
-  const hasWarning = reportCount >= 3;
 
   function handleOpen() {
     addView({
@@ -315,419 +315,820 @@ function LectureItem({
   }
 
   return (
-    <li>
-      <div className="group flex items-start gap-2 rounded-xl border border-transparent p-3 transition-all duration-200 hover:border-teal/20 hover:bg-white hover:shadow-[0_2px_8px_rgba(14,74,74,0.06)] dark:hover:bg-paper">
-        {/* المحتوى */}
+    <li className="defer-item">
+      <div className="max-w-full rounded-2xl rounded-ss-md border border-line bg-paper-soft p-2.5 shadow-xs md:max-w-xl">
         <a
           href={note.file_path}
           target="_blank"
           rel="noopener noreferrer"
           onClick={handleOpen}
-          className="flex min-w-0 flex-1 flex-col gap-2"
+          className="group flex items-start gap-3 rounded-xl p-1 transition-colors hover:bg-ink/[0.03]"
         >
-          <div className="flex items-center gap-3">
-            <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg font-mono text-sm font-black transition-all duration-200 ${
+          <span
+            className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full transition-colors ${
               hasLecture
-                ? 'bg-teal/10 text-teal group-hover:bg-teal group-hover:text-white'
-                : 'bg-ink/5 text-ink/40'
-            }`}>
-              {hasLecture ? note.lecture_number : '—'}
-            </span>
-
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <IconDoc />
-                <span className="truncate font-bold text-ink transition-colors group-hover:text-teal">
-                  {note.title}
-                </span>
-                <TrackBadge track={note.track} />
-                {note.year != null && (
-                  <span className="rounded-md bg-ink/5 px-1.5 py-0.5 font-mono text-[10px] font-bold text-ink/50 dark:bg-white/10">
-                    {note.year}
-                  </span>
-                )}
-                {hasWarning && (
-                  <span
-                    className="inline-flex items-center gap-1 rounded-md bg-red-100 px-1.5 py-0.5 text-[10px] font-black text-red-700 dark:bg-red-950/50 dark:text-red-300"
-                    title={`${reportCount} بلاغ`}
-                  >
-                    🚩 {reportCount}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <span className="flex-shrink-0 text-ink/30 transition-all duration-200 group-hover:text-teal group-hover:translate-x-[-2px]">
-              {isTelegram ? <IconTelegram /> : (
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-              )}
-            </span>
-          </div>
-
-          {noteTags.length > 0 && (
-            <div className="flex flex-wrap gap-1 pr-12">
-              {noteTags.map((tag, i) => (
-                <span
-                  key={i}
-                  className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${getTagColor(tag)}`}
-                >
-                  #{tag}
-                </span>
-              ))}
-            </div>
-          )}
-        </a>
-
-        {/* الأزرار */}
-        <div className="flex flex-shrink-0 flex-col gap-1">
-          <button
-            type="button"
-            onClick={() => toggle(note.id)}
-            aria-label={bookmarked ? 'إزالة من المفضلة' : 'حفظ في المفضلة'}
-            title={bookmarked ? 'إزالة من المفضلة' : 'حفظ في المفضلة'}
-            className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200 active:scale-95 ${
-              bookmarked
-                ? 'bg-amber/20 text-amber-700'
-                : 'text-ink/30 hover:bg-ink/5 hover:text-ink/60'
+                ? 'num bg-teal text-base font-bold text-on-teal'
+                : 'bg-teal/15 text-teal'
             }`}
           >
-            <IconBookmark filled={bookmarked} />
-          </button>
-          <button
-            type="button"
-            onClick={onReport}
-            aria-label="بلّغ عن مشكلة"
-            title="بلّغ عن مشكلة"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-ink/20 transition-all duration-200 hover:bg-amber/10 hover:text-amber-700 active:scale-95 dark:hover:text-amber-400"
-          >
-            <IconFlag />
-          </button>
+            {hasLecture ? note.lecture_number : <IconDoc className="h-5 w-5" />}
+          </span>
+
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-bold leading-snug text-ink group-hover:text-teal">
+              {note.title}
+            </span>
+            <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-muted">
+              {note.track && <TrackText track={note.track} />}
+              {note.year != null && <span className="num">{note.year}</span>}
+              {isTelegram && (
+                <span className="inline-flex items-center gap-1">
+                  <IconTelegram className="h-3 w-3" />
+                  تيليجرام
+                </span>
+              )}
+            </span>
+          </span>
+        </a>
+
+        {noteTags.length > 0 && (
+          <p className="mt-1.5 flex flex-wrap gap-x-2.5 gap-y-0.5 px-1 text-xs font-medium text-teal">
+            {noteTags.map((tag, i) => (
+              <span key={`${tag}-${i}`}>#{tag}</span>
+            ))}
+          </p>
+        )}
+
+        <div className="mt-1.5 flex items-center gap-1 border-t border-line-soft pt-1">
+          {reportCount >= 3 && (
+            <span
+              className="inline-flex items-center gap-1 rounded-chip bg-coral/15 px-2 py-0.5 text-[11px] font-bold text-coral-ink"
+              title={`${reportCount} بلاغ`}
+            >
+              <IconFlag className="h-3 w-3" />
+              <span className="num">{reportCount}</span>
+            </span>
+          )}
+
+          <div className="ms-auto flex items-center">
+            <button
+              type="button"
+              onClick={() => toggle(note.id)}
+              aria-label={bookmarked ? 'إزالة من المفضلة' : 'حفظ في المفضلة'}
+              aria-pressed={bookmarked}
+              className={`flex h-10 w-10 items-center justify-center rounded-full active:scale-95 ${
+                bookmarked
+                  ? 'text-gold-ink'
+                  : 'text-ink-muted hover:bg-ink/5 hover:text-ink'
+              }`}
+            >
+              <IconBookmark filled={bookmarked} className="h-[18px] w-[18px]" />
+            </button>
+            <button
+              type="button"
+              onClick={onReport}
+              aria-label="بلّغ عن مشكلة"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-ink-muted hover:bg-ink/5 hover:text-gold-ink active:scale-95"
+            >
+              <IconFlag className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
     </li>
   );
 }
 
-// ==================== Subject Folder ====================
-function SubjectFolder({
+function TrackText({ track }: { track: Track }) {
+  return (
+    <span
+      className={`font-bold ${track === 'نظري' ? 'text-teal' : 'text-gold-ink'}`}
+    >
+      {track}
+    </span>
+  );
+}
+
+// ==================== Topic Pane (محتوى الموضوع) ====================
+function TopicPane({
   subject,
-  isOpen,
-  onToggle,
-  forceOpen,
+  notes,
+  isLoaded,
+  isLoading,
+  isFiltering,
+  filterLabel,
+  onClearFilter,
   reportCounts,
   onReport,
+  onBack,
 }: {
-  subject: SubjectWithNotes;
-  isOpen: boolean;
-  onToggle: () => void;
-  forceOpen: boolean;
+  subject: SubjectMeta;
+  notes: LectureNote[];
+  isLoaded: boolean;
+  isLoading: boolean;
+  isFiltering: boolean;
+  filterLabel: string;
+  onClearFilter: () => void;
   reportCounts: Record<string, number>;
   onReport: (note: LectureNote) => void;
+  onBack: () => void;
 }) {
-  const notesCount = subject.lecture_notes.length;
-  const open = isOpen || forceOpen;
-  const doctorGroups = useMemo(
-    () => groupByDoctor(subject.lecture_notes, subject.name),
-    [subject.lecture_notes, subject.name]
-  );
-  const [expandedDoctors, setExpandedDoctors] = useState<Record<string, boolean>>({});
+  const [doctor, setDoctor] = useState<string | null>(null);
 
-  function toggleDoctor(name: string) {
-    setExpandedDoctors((prev) => ({ ...prev, [name]: !prev[name] }));
-  }
+  const groups = useMemo(() => groupByDoctor(notes), [notes]);
+  const activeDoctor =
+    doctor && groups.some((g) => g.name === doctor) ? doctor : null;
+  const visibleGroups = activeDoctor
+    ? groups.filter((g) => g.name === activeDoctor)
+    : groups;
+
+  const subtitle = isLoaded
+    ? notes.length === 0
+      ? 'لا توجد ملفات'
+      : `${countLabel(notes.length)} · ${groups.length} ${
+          groups.length === 1 ? 'دكتور' : 'دكاترة'
+        }`
+    : countLabel(subject.noteCount);
 
   return (
-    <div className={`overflow-hidden rounded-3xl border bg-white/80 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm transition-all duration-300 dark:bg-paper/80 ${
-      open
-        ? 'border-teal/30 shadow-[0_8px_24px_rgba(14,74,74,0.08)]'
-        : 'border-line hover:border-teal/20 hover:shadow-[0_4px_16px_rgba(14,74,74,0.06)]'
-    }`}>
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        className="flex w-full items-center gap-3 p-5 text-right transition-colors hover:bg-ink/[0.02] dark:hover:bg-white/[0.03]"
-      >
-        <span className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl transition-all duration-300 ${
-          open ? 'bg-teal text-white shadow-[0_4px_14px_rgba(14,74,74,0.30)]' : 'bg-teal/8 text-teal'
-        }`}>
-          <IconFolder open={open} />
-        </span>
+    <div className="flex min-h-0 flex-1 flex-col md:overflow-y-auto md:bg-paper">
+      {/* ===== رأس الموضوع ===== */}
+      <header className="nav-glass sticky top-[var(--nav-h)] z-[var(--z-sticky)] md:top-0">
+        <div className="flex items-center gap-2 px-2 py-2 sm:px-3">
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="رجوع إلى المواضيع"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-ink-soft hover:bg-ink/5 md:hidden"
+          >
+            <IconArrowRight className="h-5 w-5" />
+          </button>
 
-        <div className="min-w-0 flex-1">
-          <h2 className="truncate text-lg font-extrabold text-ink sm:text-xl">{subject.name}</h2>
-          <p className="mt-0.5 text-xs font-bold text-ink/50">
-            {notesCount === 0
-              ? 'لا توجد ملفات حالياً'
-              : `${notesCount} ${notesCount === 1 ? 'ملزمة' : 'ملازم'} · ${doctorGroups.length} ${doctorGroups.length === 1 ? 'دكتور' : 'دكاترة'}`}
-          </p>
-        </div>
+          <TopicAvatar subject={subject} className="h-10 w-10 text-base" />
 
-        <IconChevron open={open} />
-      </button>
-
-      <div className={`grid transition-all duration-300 ease-out ${
-        open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-      }`}>
-        <div className="overflow-hidden">
-          <div className="space-y-2 border-t border-line/60 bg-paper/40 px-4 py-4 dark:bg-white/[0.02]">
-            {notesCount === 0 ? (
-              <p className="py-2 text-center text-sm text-ink/40">لا توجد ملفات حالياً.</p>
-            ) : (
-              doctorGroups.map((doc, idx) => (
-                <DoctorAccordion
-                  key={doc.name}
-                  doctor={doc}
-                  isOpen={expandedDoctors[doc.name] ?? idx === 0}
-                  onToggle={() => toggleDoctor(doc.name)}
-                  reportCounts={reportCounts}
-                  onReport={onReport}
-                />
-              ))
-            )}
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate font-display text-base font-bold text-ink">
+              {subject.name}
+            </h2>
+            <p className="truncate text-xs text-ink-muted">{subtitle}</p>
           </div>
         </div>
-      </div>
+
+        {(groups.length > 1 || isFiltering) && (
+          <div className="flex items-center gap-2 overflow-x-auto px-3 pb-2 scrollbar-none">
+            {isFiltering && (
+              <button
+                type="button"
+                onClick={onClearFilter}
+                data-compact
+                className="inline-flex min-h-8 flex-shrink-0 items-center gap-1 rounded-chip border border-teal/40 bg-teal/10 px-3 py-1.5 text-xs font-bold text-teal active:scale-95"
+              >
+                {filterLabel}
+                <IconClose className="h-3 w-3" />
+              </button>
+            )}
+            {groups.length > 1 && (
+              <>
+                <Chip
+                  active={activeDoctor === null}
+                  onClick={() => setDoctor(null)}
+                >
+                  الكل
+                </Chip>
+                {groups.map((g) => (
+                  <Chip
+                    key={g.name}
+                    active={activeDoctor === g.name}
+                    onClick={() =>
+                      setDoctor(activeDoctor === g.name ? null : g.name)
+                    }
+                  >
+                    {doctorLabel(g.name)}
+                    <span className="num ms-1 opacity-70">{g.notes.length}</span>
+                  </Chip>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+      </header>
+
+      {/* ===== الرسائل (الملازم) ===== */}
+      {!isLoaded && isLoading && <NotesSkeleton />}
+
+      {isLoaded && notes.length === 0 && (
+        <div className="px-6 py-16 text-center">
+          <IconInbox className="mx-auto h-10 w-10 text-ink-muted/40" />
+          <p className="mt-3 text-sm font-bold text-ink-soft">
+            {isFiltering ? 'لا توجد نتائج في هذا الموضوع' : 'لا توجد ملفات حالياً'}
+          </p>
+        </div>
+      )}
+
+      {isLoaded && notes.length > 0 && (
+        <div className="space-y-5 px-3 py-4 pb-24 sm:px-4 md:pb-6">
+          {visibleGroups.map((g) => (
+            <section key={g.name} aria-label={doctorLabel(g.name)}>
+              <div className="mb-3 flex justify-center">
+                <span className="rounded-chip bg-ink/[0.07] px-3 py-1 text-xs font-bold text-ink-soft dark:bg-white/10">
+                  {doctorLabel(g.name)}
+                </span>
+              </div>
+              <ul className="space-y-2">
+                {g.notes.map((note) => (
+                  <NoteBubble
+                    key={note.id}
+                    note={note}
+                    subjectName={subject.name}
+                    reportCount={reportCounts[note.id] ?? 0}
+                    onReport={() => onReport(note)}
+                  />
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
     </div>
+  );
+}
+
+function Chip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      data-compact
+      className={`inline-flex min-h-8 flex-shrink-0 items-center whitespace-nowrap rounded-chip px-3 py-1.5 text-xs font-bold active:scale-95 ${
+        active
+          ? 'bg-teal text-on-teal'
+          : 'bg-ink/5 text-ink-soft hover:bg-ink/10'
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
 // ==================== Page ====================
 export default function LawazemPage() {
   const { stage, ready } = useStudentStage();
-  const [subjects, setSubjects] = useState<SubjectWithNotes[]>([]);
+
+  const [subjects, setSubjects] = useState<SubjectMeta[]>([]);
+  const [allTags, setAllTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const [notesBySubject, setNotesBySubject] = useState<
+    Map<string, LectureNote[]>
+  >(new Map());
+  const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [reportCounts, setReportCounts] = useState<Record<string, number>>({});
   const [reportingNote, setReportingNote] = useState<LectureNote | null>(null);
 
+  const [eagerLoading, setEagerLoading] = useState(false);
+  const [eagerLoaded, setEagerLoaded] = useState(false);
+
+  // Pull-to-refresh state
+  const [reloadKey, setReloadKey] = useState(0);
+  const [silentReload, setSilentReload] = useState(false);
+  const refreshResolverRef = useRef<(() => void) | null>(null);
+
+  const notesRef = useRef<Map<string, LectureNote[]>>(new Map());
+  const loadingRef = useRef<Set<string>>(new Set());
+
+  const pendingReportIdsRef = useRef<Set<string>>(new Set());
+  const reportTimerRef = useRef<number | null>(null);
+  const autoOpenedRef = useRef(false);
+  // رقم دورة التحميل: يُبطل نتائج الطلبات القديمة عند إعادة التحميل
+  const loadGenRef = useRef(0);
+  const eagerStartedRef = useRef(false);
+
   const deferredSearch = useDeferredValue(searchTerm);
   const term = deferredSearch.trim().toLowerCase();
+  const isFiltering = term !== '' || selectedTag !== null;
 
-  // ===== تحميل البيانات =====
+  // ==================== Initial load ====================
   useEffect(() => {
     if (!stage) return;
     let cancelled = false;
+    const isSilent = silentReload;
 
-    async function loadData() {
-      setLoading(true);
+    function settleRefresh() {
+      if (refreshResolverRef.current) {
+        const resolve = refreshResolverRef.current;
+        refreshResolverRef.current = null;
+        resolve();
+      }
+    }
+
+    async function loadInitial() {
+      if (!isSilent) setLoading(true);
       setError('');
-      const { data, error: fetchError } = await supabase
+
+      loadGenRef.current += 1;
+      eagerStartedRef.current = false;
+      notesRef.current = new Map();
+      loadingRef.current = new Set();
+      setNotesBySubject(new Map());
+      setLoadingIds(new Set());
+      setEagerLoaded(false);
+      setEagerLoading(false);
+      setReportCounts({});
+
+      const { data: subjectsData, error: subjectsErr } = await supabase
         .from('subjects')
-        .select('*, lecture_notes(*)')
+        .select('id, name, units')
         .eq('stage', stage)
         .order('name');
 
       if (cancelled) return;
-      if (fetchError) {
-        setError(fetchError.message);
+
+      if (subjectsErr) {
+        setError(subjectsErr.message);
         setSubjects([]);
+        setAllTags([]);
         setLoading(false);
+        setSilentReload(false);
+        settleRefresh();
         return;
       }
 
-      const list = (data ?? []) as SubjectWithNotes[];
-      setSubjects(list);
+      const rawSubjects = (subjectsData ?? []) as Array<{
+        id: string;
+        name: string;
+        units: number | null;
+      }>;
+
+      if (rawSubjects.length === 0) {
+        setSubjects([]);
+        setAllTags([]);
+        setLoading(false);
+        setSilentReload(false);
+        settleRefresh();
+        return;
+      }
+
+      const ids = rawSubjects.map((s) => s.id);
+
+      // نجلب بيانات خفيفة تكفي للعدّاد ومعاينة "آخر ملزمة"
+      const { data: metaData } = await supabase
+        .from('lecture_notes')
+        .select('subject_id, tags, title, professor_name, created_at')
+        .in('subject_id', ids)
+        .limit(2000);
+
+      if (cancelled) return;
+
+      const countMap = new Map<string, number>();
+      const latestMap = new Map<string, LatestNote>();
+      const tagSet = new Set<string>();
+
+      for (const row of (metaData ?? []) as Array<{
+        subject_id: string;
+        tags: string[] | null;
+        title: string;
+        professor_name: string | null;
+        created_at: string | null;
+      }>) {
+        countMap.set(row.subject_id, (countMap.get(row.subject_id) ?? 0) + 1);
+
+        const cur = latestMap.get(row.subject_id);
+        if (!cur || (row.created_at ?? '') >= (cur.createdAt ?? '')) {
+          latestMap.set(row.subject_id, {
+            title: row.title,
+            professor: row.professor_name,
+            createdAt: row.created_at,
+          });
+        }
+
+        if (Array.isArray(row.tags)) {
+          for (const t of row.tags) tagSet.add(t);
+        }
+      }
+
+      setSubjects(
+        rawSubjects.map((s) => ({
+          id: s.id,
+          name: s.name,
+          units: s.units,
+          noteCount: countMap.get(s.id) ?? 0,
+          latest: latestMap.get(s.id) ?? null,
+        })),
+      );
+      setAllTags(Array.from(tagSet).sort((a, b) => a.localeCompare(b, 'ar')));
       setLoading(false);
+      setSilentReload(false);
+      settleRefresh();
+    }
 
-      const allIds: string[] = [];
-      for (const s of list) {
-        for (const n of s.lecture_notes) allIds.push(n.id);
+    void loadInitial();
+
+    return () => {
+      cancelled = true;
+      settleRefresh();
+    };
+  }, [stage, reloadKey, silentReload]);
+
+  const handleRefresh = useCallback((): Promise<void> => {
+    return new Promise<void>((resolve) => {
+      refreshResolverRef.current = resolve;
+      setSilentReload(true);
+      setReloadKey((k) => k + 1);
+    });
+  }, []);
+
+  // ==================== Reports batching ====================
+  const scheduleReportsFetch = useCallback(() => {
+    if (reportTimerRef.current !== null) {
+      window.clearTimeout(reportTimerRef.current);
+    }
+    reportTimerRef.current = window.setTimeout(() => {
+      reportTimerRef.current = null;
+      const ids = Array.from(pendingReportIdsRef.current);
+      pendingReportIdsRef.current.clear();
+      if (ids.length === 0) return;
+
+      void postJson<{ counts: Record<string, number> }>('/api/reports', {
+        action: 'counts',
+        lecture_note_ids: ids,
+      })
+        .then((res) => {
+          if (res.counts) {
+            setReportCounts((prev) => ({ ...prev, ...res.counts }));
+          }
+        })
+        .catch(() => {
+          /* silent */
+        });
+    }, 300);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (reportTimerRef.current !== null) {
+        window.clearTimeout(reportTimerRef.current);
       }
+    };
+  }, []);
 
-      if (allIds.length > 0) {
-        try {
-          const res = await postJson<{ counts: Record<string, number> }>(
-            '/api/reports',
-            { action: 'counts', lecture_note_ids: allIds }
-          );
-          if (!cancelled) setReportCounts(res.counts ?? {});
-        } catch {
-          /* فشل صامت */
+  // ==================== Load one subject's notes ====================
+  const loadSubjectNotes = useCallback(
+    async (subjectId: string) => {
+      if (notesRef.current.has(subjectId)) return;
+      if (loadingRef.current.has(subjectId)) return;
+
+      const gen = loadGenRef.current;
+      loadingRef.current.add(subjectId);
+      setLoadingIds(new Set(loadingRef.current));
+
+      try {
+        const { data, error: fetchErr } = await supabase
+          .from('lecture_notes')
+          .select('*')
+          .eq('subject_id', subjectId);
+
+        // دورة تحميل جديدة بدأت أثناء الانتظار — تجاهل هذه النتيجة
+        if (gen !== loadGenRef.current) return;
+
+        if (fetchErr) {
+          console.error('load notes error:', fetchErr.message);
+          return;
+        }
+
+        const notes = (data ?? []) as LectureNote[];
+        notesRef.current.set(subjectId, notes);
+        setNotesBySubject(new Map(notesRef.current));
+
+        for (const n of notes) pendingReportIdsRef.current.add(n.id);
+        if (notes.length > 0) scheduleReportsFetch();
+      } finally {
+        if (gen === loadGenRef.current) {
+          loadingRef.current.delete(subjectId);
+          setLoadingIds(new Set(loadingRef.current));
         }
       }
-    }
-    loadData();
-    return () => { cancelled = true; };
-  }, [stage]);
+    },
+    [scheduleReportsFetch],
+  );
 
-  // ===== فلترة =====
+  // تحميل ملازم الموضوع المفتوح
+  useEffect(() => {
+    if (activeId) void loadSubjectNotes(activeId);
+  }, [activeId, loadSubjectNotes]);
+
+  // ==================== Eager load (search / tag) ====================
+  useEffect(() => {
+    if (!isFiltering) return;
+    if (eagerLoaded || eagerStartedRef.current) return;
+    if (subjects.length === 0) return;
+
+    eagerStartedRef.current = true;
+    const gen = loadGenRef.current;
+    setEagerLoading(true);
+
+    void Promise.all(subjects.map((s) => loadSubjectNotes(s.id))).finally(() => {
+      if (gen !== loadGenRef.current) return;
+      setEagerLoading(false);
+      setEagerLoaded(true);
+    });
+  }, [isFiltering, subjects, eagerLoaded, loadSubjectNotes]);
+
+  // ==================== Navigation (موضوع مفتوح + زر الرجوع) ====================
+  const openTopic = useCallback((id: string) => {
+    setActiveId(id);
+    try {
+      const st = window.history.state as { lawazimTopic?: string } | null;
+      if (st?.lawazimTopic) {
+        window.history.replaceState({ lawazimTopic: id }, '');
+      } else {
+        window.history.pushState({ lawazimTopic: id }, '');
+      }
+      window.scrollTo({ top: 0 });
+    } catch {
+      /* تجاهل */
+    }
+  }, []);
+
+  const closeTopic = useCallback(() => {
+    try {
+      const st = window.history.state as { lawazimTopic?: string } | null;
+      if (st?.lawazimTopic) {
+        window.history.back();
+        return;
+      }
+    } catch {
+      /* تجاهل */
+    }
+    setActiveId(null);
+  }, []);
+
+  // استعادة الموضوع المفتوح بعد إعادة تحميل الصفحة (history.state يبقى محفوظاً)
+  useEffect(() => {
+    try {
+      const id = (window.history.state as { lawazimTopic?: unknown } | null)
+        ?.lawazimTopic;
+      if (typeof id === 'string') setActiveId(id);
+    } catch {
+      /* تجاهل */
+    }
+  }, []);
+
+  useEffect(() => {
+    function onPop(e: PopStateEvent) {
+      const id = (e.state as { lawazimTopic?: unknown } | null)?.lawazimTopic;
+      setActiveId(typeof id === 'string' ? id : null);
+    }
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  // على الشاشات الكبيرة: افتح أول موضوع تلقائياً (مثل تيليجرام ديسكتوب)
+  useEffect(() => {
+    if (autoOpenedRef.current || loading || subjects.length === 0) return;
+    autoOpenedRef.current = true;
+    if (window.matchMedia('(min-width: 768px)').matches) {
+      setActiveId((prev) => prev ?? subjects[0].id);
+    }
+  }, [loading, subjects]);
+
+  // ==================== Derived ====================
   const filteredSubjects = useMemo(() => {
-    return subjects.map((s) => ({
-      ...s,
-      lecture_notes: s.lecture_notes.filter((n) => {
-        const noteTags = Array.isArray(n.tags) ? n.tags : [];
-        if (selectedTag && !noteTags.includes(selectedTag)) return false;
-        if (term) {
-          const inTitle = n.title.toLowerCase().includes(term);
-          const inDoctor = n.professor_name?.toLowerCase().includes(term) ?? false;
-          const inTrack = n.track?.toLowerCase().includes(term) ?? false;
-          const inTags = noteTags.some((t) => t.toLowerCase().includes(term));
-          if (!inTitle && !inDoctor && !inTrack && !inTags) return false;
-        }
-        return true;
-      }),
-    }));
-  }, [subjects, term, selectedTag]);
+    return subjects.map((s) => {
+      const notes = notesBySubject.get(s.id) ?? [];
+      const isLoaded = notesBySubject.has(s.id);
+      const filtered = isFiltering
+        ? notes.filter((n) => noteMatches(n, term, selectedTag))
+        : notes;
+      return { subject: s, notes: filtered, isLoaded };
+    });
+  }, [subjects, notesBySubject, term, selectedTag, isFiltering]);
 
-  const allTags = useMemo(() => {
-    const tagSet = new Set<string>();
-    for (const s of subjects) {
-      for (const n of s.lecture_notes) {
-        if (Array.isArray(n.tags)) {
-          for (const t of n.tags) tagSet.add(t);
-        }
-      }
-    }
-    return Array.from(tagSet).sort((a, b) => a.localeCompare(b, 'ar'));
-  }, [subjects]);
+  const subjectsToRender = useMemo(() => {
+    if (!isFiltering) return filteredSubjects;
+    return filteredSubjects.filter((fs) => fs.isLoaded && fs.notes.length > 0);
+  }, [filteredSubjects, isFiltering]);
 
   const totalNotes = useMemo(
-    () => subjects.reduce((sum, s) => sum + s.lecture_notes.length, 0),
-    [subjects]
+    () => subjects.reduce((sum, s) => sum + s.noteCount, 0),
+    [subjects],
   );
 
-  const forceOpenIds = useMemo(() => {
-    if (!term && !selectedTag) return new Set<string>();
-    return new Set(filteredSubjects.filter((s) => s.lecture_notes.length > 0).map((s) => s.id));
-  }, [term, selectedTag, filteredSubjects]);
+  const activeEntry = activeId
+    ? (filteredSubjects.find((fs) => fs.subject.id === activeId) ?? null)
+    : null;
+  // إن لم يطابق activeId أي موضوع نبقى على القائمة بدل شاشة فارغة
+  const hasActive = activeEntry !== null;
 
-  const visibleCount = useMemo(
-    () => filteredSubjects.reduce((sum, s) => sum + s.lecture_notes.length, 0),
-    [filteredSubjects]
-  );
+  const filterLabel = selectedTag
+    ? `#${selectedTag}`
+    : searchTerm.trim()
+      ? `«${searchTerm.trim()}»`
+      : '';
 
-  function toggle(id: string) {
-    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+  function clearFilters() {
+    setSearchTerm('');
+    setSelectedTag(null);
   }
 
+  // ==================== Render ====================
   if (!ready) {
     return (
-      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
-        <Skeleton />
-      </main>
+      <div className="mx-auto w-full max-w-6xl md:px-6 md:py-6">
+        <TopicsSkeleton />
+      </div>
     );
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10">
-      <BackLink />
-
-      <div className="mt-6 animate-slide-up">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
-          {stage}
-        </span>
-        <h1 className="mt-3 text-3xl font-black leading-tight text-ink sm:text-4xl">الملازم والمصادر</h1>
-        {!loading && totalNotes > 0 && (
-          <p className="mt-2 text-sm text-ink/50">
-            <span className="font-bold text-teal">{totalNotes}</span> ملزمة موزعة على{' '}
-            <span className="font-bold text-teal">{subjects.length}</span> مادة
-          </p>
-        )}
-      </div>
-
-      {totalNotes > 0 && (
-        <div className="relative mt-6 animate-slide-up" style={{ animationDelay: '100ms' }}>
-          <IconSearch />
-          <Input
-            type="text"
-            placeholder="ابحث باسم الملزمة، الدكتور، أو وسم..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="py-3 pr-11 shadow-[0_2px_8px_rgba(26,33,31,0.04)]"
-            aria-label="بحث في الملازم"
-          />
-        </div>
-      )}
-
-      {allTags.length > 0 && (
-        <div className="mt-4 mb-8 flex flex-wrap items-center gap-1.5 animate-slide-up" style={{ animationDelay: '150ms' }}>
-          <span className="text-xs font-bold text-ink/50">تصفية:</span>
-          <button
-            type="button"
-            onClick={() => setSelectedTag(null)}
-            className={`rounded-full px-2.5 py-1 text-xs font-bold transition-all duration-150 active:scale-95 ${
-              !selectedTag
-                ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.20)]'
-                : 'bg-ink/5 text-ink/60 hover:bg-ink/10'
-            }`}
+    <div className="mx-auto w-full max-w-6xl md:px-6 md:py-6">
+      <PullToRefresh onRefresh={handleRefresh} disabled={hasActive}>
+        <div className="md:grid md:h-[calc(100dvh-var(--nav-h)-3rem)] md:min-h-[30rem] md:grid-cols-[22rem_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:overflow-hidden md:rounded-card md:border md:border-line md:bg-paper-soft lg:grid-cols-[24rem_minmax(0,1fr)]">
+          {/* ==================== قائمة المواضيع ==================== */}
+          <aside
+            className={`${
+              hasActive ? 'hidden md:flex' : 'flex'
+            } min-h-0 flex-col md:border-e md:border-line`}
+            aria-label="مواضيع الملازم"
           >
-            الكل
-          </button>
-          {allTags.map((tag) => {
-            const isSelected = selectedTag === tag;
-            return (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => setSelectedTag(isSelected ? null : tag)}
-                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold transition-all duration-150 active:scale-95 ${
-                  isSelected
-                    ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.20)]'
-                    : 'bg-ink/5 text-ink/60 hover:bg-ink/10'
-                }`}
-              >
-                #{tag}
-                {isSelected && <IconClose />}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {loading && <Skeleton />}
-
-      {!loading && error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 animate-slide-up dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
-          <p className="font-bold">خطأ في الاتصال بقاعدة البيانات</p>
-          <p className="mt-1 text-red-600/80">{error}</p>
-        </div>
-      )}
-
-      {!loading && !error && subjects.length === 0 && (
-        <div className="rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up dark:bg-paper/80">
-          <IconEmpty />
-          <p className="mt-4 font-bold text-ink/70">لا توجد مواد مضافة لمرحلتك حالياً.</p>
-        </div>
-      )}
-
-      {!loading && !error && subjects.length > 0 && (term || selectedTag) && visibleCount === 0 && (
-        <div className="rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up dark:bg-paper/80">
-          <IconSearch />
-          <p className="mt-4 font-bold text-ink/70">لا توجد نتائج مطابقة</p>
-          <p className="mt-1 text-sm text-ink/50">
-            {selectedTag ? `الوسم: #${selectedTag}` : `البحث: «${searchTerm}»`}
-          </p>
-        </div>
-      )}
-
-      {!loading && !error && (
-        <div className="space-y-3">
-          {filteredSubjects.map((s, idx) => {
-            if ((term || selectedTag) && s.lecture_notes.length === 0) return null;
-            return (
-              <div key={s.id} style={{ animationDelay: `${idx * 50}ms` }} className="animate-slide-up">
-                <SubjectFolder
-                  subject={s}
-                  isOpen={!!expanded[s.id]}
-                  onToggle={() => toggle(s.id)}
-                  forceOpen={forceOpenIds.has(s.id)}
-                  reportCounts={reportCounts}
-                  onReport={(note) => setReportingNote(note)}
-                />
+            <div className="px-4 pb-2 pt-5 md:pt-4">
+              <div className="flex items-center justify-between gap-2">
+                <h1 className="font-display text-2xl font-bold text-ink">
+                  الملازم
+                </h1>
+                {stage && <span className="stage-badge">{stage}</span>}
               </div>
-            );
-          })}
-        </div>
-      )}
+              {!loading && totalNotes > 0 && (
+                <p className="mt-1 text-sm text-ink-muted">
+                  <span className="num font-bold text-teal">{totalNotes}</span>{' '}
+                  ملزمة في{' '}
+                  <span className="num font-bold text-teal">
+                    {subjects.length}
+                  </span>{' '}
+                  مادة
+                </p>
+              )}
 
-      {/* Report Modal */}
+              {totalNotes > 0 && (
+                <div className="relative mt-3">
+                  <IconSearch className="pointer-events-none absolute end-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
+                  <Input
+                    type="search"
+                    inputMode="search"
+                    placeholder="ابحث عن ملزمة أو دكتور أو وسم"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="!rounded-full !bg-ink/[0.05] !border-transparent py-2.5 pe-10 [&::-webkit-search-cancel-button]:hidden"
+                    aria-label="بحث في الملازم"
+                  />
+                </div>
+              )}
+            </div>
+
+            {allTags.length > 0 && (
+              <div
+                className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-none"
+                role="group"
+                aria-label="تصفية بالوسوم"
+              >
+                <Chip
+                  active={selectedTag === null}
+                  onClick={() => setSelectedTag(null)}
+                >
+                  الكل
+                </Chip>
+                {allTags.map((tag) => (
+                  <Chip
+                    key={tag}
+                    active={selectedTag === tag}
+                    onClick={() =>
+                      setSelectedTag(selectedTag === tag ? null : tag)
+                    }
+                  >
+                    #{tag}
+                  </Chip>
+                ))}
+              </div>
+            )}
+
+            <div className="min-h-0 flex-1 border-t border-line-soft pb-24 md:overflow-y-auto md:pb-0">
+              {isFiltering && eagerLoading && (
+                <p className="flex items-center gap-2 px-4 py-3 text-xs text-ink-muted">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-teal" />
+                  جاري البحث في كل المواد...
+                </p>
+              )}
+
+              {loading && <TopicsSkeleton />}
+
+              {!loading && error && (
+                <div className="m-4 rounded-card border border-coral/30 bg-coral/5 p-4 text-sm text-coral-ink">
+                  <p className="font-bold">خطأ في الاتصال بقاعدة البيانات</p>
+                  <p className="mt-1 opacity-80">{error}</p>
+                </div>
+              )}
+
+              {!loading && !error && subjects.length === 0 && (
+                <div className="px-6 py-16 text-center">
+                  <IconInbox className="mx-auto h-12 w-12 text-ink-muted/40" />
+                  <p className="mt-4 font-bold text-ink-soft">
+                    لا توجد مواد مضافة لمرحلتك حالياً.
+                  </p>
+                </div>
+              )}
+
+              {!loading &&
+                !error &&
+                subjects.length > 0 &&
+                isFiltering &&
+                !eagerLoading &&
+                subjectsToRender.length === 0 && (
+                  <div className="px-6 py-16 text-center">
+                    <IconSearch className="mx-auto h-8 w-8 text-ink-muted/40" />
+                    <p className="mt-4 font-bold text-ink-soft">
+                      لا توجد نتائج مطابقة
+                    </p>
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="mt-3 text-sm font-bold text-teal"
+                    >
+                      مسح البحث
+                    </button>
+                  </div>
+                )}
+
+              {!loading && !error && subjects.length > 0 && (
+                <ul role="list">
+                  {subjectsToRender.map((fs) => (
+                    <TopicRow
+                      key={fs.subject.id}
+                      subject={fs.subject}
+                      active={fs.subject.id === activeId}
+                      count={isFiltering ? fs.notes.length : fs.subject.noteCount}
+                      isResultCount={isFiltering}
+                      onOpen={() => openTopic(fs.subject.id)}
+                    />
+                  ))}
+                </ul>
+              )}
+            </div>
+          </aside>
+
+          {/* ==================== محتوى الموضوع ==================== */}
+          <section
+            className={`${
+              hasActive ? 'flex' : 'hidden md:flex'
+            } min-h-0 min-w-0 flex-col`}
+            aria-label="ملازم الموضوع"
+          >
+            {activeEntry ? (
+              <TopicPane
+                key={activeEntry.subject.id}
+                subject={activeEntry.subject}
+                notes={activeEntry.notes}
+                isLoaded={activeEntry.isLoaded}
+                isLoading={loadingIds.has(activeEntry.subject.id)}
+                isFiltering={isFiltering}
+                filterLabel={filterLabel}
+                onClearFilter={clearFilters}
+                reportCounts={reportCounts}
+                onReport={(note) => setReportingNote(note)}
+                onBack={closeTopic}
+              />
+            ) : (
+              <div className="hidden flex-1 flex-col items-center justify-center gap-3 bg-paper px-6 text-center md:flex">
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-ink/5 text-ink-muted">
+                  <IconBook className="h-6 w-6" />
+                </span>
+                <p className="text-sm font-bold text-ink-soft">
+                  اختر مادة من القائمة لعرض ملازمها
+                </p>
+                <Link
+                  href="/"
+                  className="text-xs font-bold text-teal hover:underline"
+                >
+                  العودة للرئيسية
+                </Link>
+              </div>
+            )}
+          </section>
+        </div>
+      </PullToRefresh>
+
       <ReportModal
         note={reportingNote}
         onClose={() => setReportingNote(null)}
@@ -740,6 +1141,6 @@ export default function LawazemPage() {
           }
         }}
       />
-    </main>
+    </div>
   );
 }

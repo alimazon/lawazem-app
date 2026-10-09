@@ -10,15 +10,23 @@ import { MaterialsSection } from './_components/MaterialsSection';
 import { ChannelsSection } from './_components/ChannelsSection';
 import { SchedulesSection } from './_components/SchedulesSection';
 import { ReportsSection } from './_components/ReportsSection';
+import { AnnouncementsSection } from './_components/AnnouncementsSection';
 
-type Tab = 'subjects' | 'materials' | 'channels' | 'schedules' | 'reports';
+type Tab =
+  | 'subjects'
+  | 'materials'
+  | 'channels'
+  | 'schedules'
+  | 'reports'
+  | 'announcements';
 
 const TABS: ReadonlyArray<{ id: Tab; label: string; icon: React.ReactNode }> = [
   { id: 'subjects', label: 'المواد', icon: <IconBook /> },
   { id: 'materials', label: 'الملازم', icon: <IconDoc /> },
   { id: 'channels', label: 'القنوات', icon: <IconChat /> },
   { id: 'schedules', label: 'الجدول', icon: <IconCalendar /> },
-  { id: 'reports', label: 'البلاغات', icon: <IconReport /> },   // ← جديد
+  { id: 'reports', label: 'البلاغات', icon: <IconReport /> },
+  { id: 'announcements', label: 'تبليغات البوت', icon: <IconMegaphone /> },
 ];
 
 // ==================== Icons ====================
@@ -57,6 +65,14 @@ function IconReport() {
     </svg>
   );
 }
+function IconMegaphone() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 11l18-8v18l-18-8v-2z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
+    </svg>
+  );
+}
 function IconLock() {
   return (
     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -85,8 +101,8 @@ function LoginScreen({
   const [pw, setPw] = useState('');
 
   return (
-    <main className="relative mx-auto flex min-h-[calc(100vh-70px)] max-w-sm flex-col items-center justify-center px-6 py-16">
-      <div className="w-full rounded-3xl border border-line bg-white/80 p-8 shadow-[0_8px_30px_rgba(14,74,74,0.08)] backdrop-blur-sm animate-slide-up dark:bg-paper/80 dark:shadow-[0_8px_30px_rgba(0,0,0,0.40)]">
+    <main className="relative mx-auto flex min-h-[calc(100dvh-var(--nav-h))] max-w-sm flex-col items-center justify-center px-4 py-16 sm:px-6">
+      <div className="w-full rounded-3xl border border-line bg-white/80 p-6 shadow-[0_8px_30px_rgba(14,74,74,0.08)] backdrop-blur-sm animate-slide-up dark:bg-paper/80 dark:shadow-[0_8px_30px_rgba(0,0,0,0.40)] sm:p-8">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-teal/10 text-teal">
           <IconLock />
         </div>
@@ -137,25 +153,25 @@ export default function AdminPage() {
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
-      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 animate-slide-up">
-        <div>
+        <div className="min-w-0">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
             مشرف
           </span>
-          <h1 className="mt-3 text-3xl font-black text-ink sm:text-4xl">لوحة التحكم</h1>
+          <h1 className="mt-3 text-2xl font-black text-ink sm:text-3xl md:text-4xl">
+            لوحة التحكم
+          </h1>
         </div>
         <Button variant="secondary" size="sm" onClick={logout} icon={<IconLogout />}>
           تسجيل الخروج
         </Button>
       </div>
 
-      {/* Tabs */}
       <div
         role="tablist"
         aria-label="أقسام لوحة التحكم"
-        className="mt-6 flex gap-1.5 overflow-x-auto rounded-2xl border border-line bg-white/60 p-1.5 backdrop-blur-sm [-ms-overflow-style:none] [scrollbar-width:none] sm:overflow-visible dark:bg-white/[0.04] [&::-webkit-scrollbar]:hidden animate-slide-up"
+        className="scrollbar-none mt-6 -mx-4 flex gap-1.5 overflow-x-auto rounded-2xl border border-line bg-white/60 p-1.5 backdrop-blur-sm sm:mx-0 sm:overflow-visible dark:bg-white/[0.04] animate-slide-up"
         style={{ animationDelay: '80ms' }}
       >
         {TABS.map((t) => {
@@ -167,20 +183,19 @@ export default function AdminPage() {
               aria-selected={active}
               aria-controls={`panel-${t.id}`}
               onClick={() => setTab(t.id)}
-              className={`flex flex-shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 ${
+              className={`flex flex-shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition-all duration-200 sm:px-4 ${
                 active
                   ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.30)]'
                   : 'text-ink/60 hover:bg-ink/5 hover:text-ink dark:hover:bg-white/5'
               }`}
             >
               {t.icon}
-              {t.label}
+              <span className="whitespace-nowrap">{t.label}</span>
             </button>
           );
         })}
       </div>
 
-      {/* Panel */}
       <div
         role="tabpanel"
         id={`panel-${tab}`}
@@ -193,6 +208,7 @@ export default function AdminPage() {
         {tab === 'channels' && <ChannelsSection password={password} />}
         {tab === 'schedules' && <SchedulesSection password={password} />}
         {tab === 'reports' && <ReportsSection password={password} />}
+        {tab === 'announcements' && <AnnouncementsSection password={password} />}
       </div>
     </main>
   );

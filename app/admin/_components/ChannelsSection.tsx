@@ -108,7 +108,7 @@ function PasswordField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         maxLength={200}
-        className="min-w-[160px] flex-1 font-mono"
+        className="min-w-0 flex-1 basis-full font-mono sm:basis-auto"
       />
       <Button
         type="button"
@@ -218,13 +218,13 @@ export function ChannelsSection({ password }: Props) {
             placeholder="اسم القناة"
             required
             maxLength={200}
-            className="min-w-[200px] flex-1"
+            className="min-w-0 flex-1 basis-full sm:basis-auto"
           />
           <Select
             value={newForm.stage}
             onChange={(e) => setNewForm({ ...newForm, stage: e.target.value as Stage | '' })}
             required
-            className="w-44"
+            className="w-full sm:w-44"
             aria-label="المرحلة"
           >
             <option value="">اختر المرحلة</option>
@@ -251,7 +251,14 @@ export function ChannelsSection({ password }: Props) {
           onChange={(v) => setNewForm({ ...newForm, channel_password: v })}
           placeholder="كلمة مرور القناة"
         />
-        <Button type="submit" loading={adding} disabled={!isFormValid(newForm)}>إضافة قناة</Button>
+        <Button
+          type="submit"
+          loading={adding}
+          disabled={!isFormValid(newForm)}
+          className="w-full sm:w-auto"
+        >
+          إضافة قناة
+        </Button>
       </form>
 
       {loading ? (
@@ -282,13 +289,13 @@ export function ChannelsSection({ password }: Props) {
                         value={editForm.name}
                         onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                         maxLength={200}
-                        className="min-w-[180px] flex-1"
+                        className="min-w-0 flex-1 basis-full sm:basis-auto"
                         autoFocus
                       />
                       <Select
                         value={editForm.stage}
                         onChange={(e) => setEditForm({ ...editForm, stage: e.target.value as Stage | '' })}
-                        className="w-44"
+                        className="w-full sm:w-44"
                         aria-label="المرحلة"
                       >
                         {STAGES.map((st) => <option key={st} value={st}>{st}</option>)}
@@ -313,7 +320,7 @@ export function ChannelsSection({ password }: Props) {
                       onChange={(v) => setEditForm({ ...editForm, channel_password: v })}
                       placeholder="كلمة مرور القناة"
                     />
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <Button size="sm" onClick={() => saveEdit(c.id)} loading={saving} disabled={!isFormValid(editForm)}>حفظ</Button>
                       <Button size="sm" variant="secondary" onClick={cancelEdit} disabled={saving}>إلغاء</Button>
                     </div>
@@ -334,19 +341,19 @@ export function ChannelsSection({ password }: Props) {
                         href={c.telegram_link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-1 inline-block break-all text-sm font-medium text-teal underline decoration-teal/40 underline-offset-4 hover:text-teal/80"
+                        className="mt-1 inline-block break-anywhere text-sm font-medium text-teal underline decoration-teal/40 underline-offset-4 hover:text-teal/80"
                       >
                         {c.telegram_link}
                       </a>
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                         <span className="font-bold text-ink/50">كلمة المرور:</span>
-                        <code className="rounded-md bg-ink/5 px-2 py-0.5 font-mono text-ink/80 dark:bg-white/10 dark:text-ink/90">
+                        <code className="break-anywhere rounded-md bg-ink/5 px-2 py-0.5 font-mono text-ink/80 dark:bg-white/10 dark:text-ink/90">
                           {c.channel_password || 'غير محددة'}
                         </code>
                         {c.channel_password && <CopyButton value={c.channel_password} />}
                       </div>
                     </div>
-                    <div className="flex flex-shrink-0 gap-1.5">
+                    <div className="flex flex-shrink-0 flex-wrap gap-1.5">
                       <Button size="sm" variant="secondary" onClick={() => startEdit(c)} icon={<IconEdit />}>
                         تعديل
                       </Button>

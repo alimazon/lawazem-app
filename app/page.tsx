@@ -2,206 +2,188 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import type { CSSProperties } from 'react';
+import Image from 'next/image';
 import { STAGES, STORAGE_KEYS } from '@/lib/constants';
-import { AnimatedBackground } from '@/components/AnimatedBackground';
+import { BackgroundPattern } from '@/components/BackgroundPattern';
 import { RecentViewsCard } from '@/components/RecentViewsCard';
 import { ContinueCard } from '@/components/ContinueCard';
-import { LiveFeed } from '@/components/LiveFeed';
-import { DailyCompanion } from '@/components/DailyCompanion';
 import { TrendingNotes } from '@/components/TrendingNotes';
+import { BotChannelCard } from '@/components/BotChannelCard';
+import { Masthead } from './_components/Masthead';
+import { SectionTile, SectionTileGrid } from './_components/SectionTile';
+import type { TileSize, TileVariant } from './_components/SectionTile';
 import type { Stage } from '@/lib/types';
+import {
+  IconArrowLeft,
+  IconBook,
+  IconCalendar,
+  IconChannels,
+  IconChart,
+  IconHealth,
+  IconSparkles,
+  IconSwap,
+} from '@/components/ui/Icons';
 
-// ==================== Icons ====================
-function IconBook() {
-  return (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-    </svg>
-  );
+// ==================== Helpers ====================
+type RevealStyle = CSSProperties & { '--i'?: number };
+
+function reveal(i: number): RevealStyle {
+  return { '--i': i };
 }
-function IconChat() {
-  return (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-    </svg>
-  );
-}
-function IconCalendar() {
-  return (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-    </svg>
-  );
-}
-function IconSparkles() {
-  return (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-    </svg>
-  );
-}
-function IconChart() {
-  return (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-    </svg>
-  );
-}
-function IconSwap() {
-  return (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-    </svg>
-  );
-}
-function IconActivity() {
-  return (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 12h4l3-9 4 18 3-9h4" />
-    </svg>
-  );
-}
-function IconArrowLeft() {
-  return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M11 17l-5-5m0 0l5-5m-5 5h12" />
-    </svg>
-  );
-}
-function IconCheck() {
-  return (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-    </svg>
-  );
-}
-function IconLock() {
-  return (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-    </svg>
-  );
+
+function isStage(value: string | null): value is Stage {
+  return value !== null && (STAGES as readonly string[]).includes(value);
 }
 
 // ==================== Section Config ====================
 interface Section {
-  title: string;
-  description: string;
   href: string;
+  title: string;
+  kicker: string;
+  description: string;
   icon: React.ReactNode;
-  accent: 'teal' | 'amber';
-  requiresStage?: Stage;
+  variant: Exclude<TileVariant, 'locked'>;
+  size: TileSize;
+  ctaLabel?: string;
+  badge?: string;
+  /** مقفل دائماً (قريباً) */
+  locked?: boolean;
 }
 
 const SECTIONS: Section[] = [
-  { title: 'الملازم', description: 'ملازم الدكاترة مرتبة حسب المادة', href: '/lawazem', icon: <IconBook />, accent: 'teal' },
-  { title: 'القنوات الدراسية', description: 'دليل قنوات التليكرام الدراسية', href: '/channels', icon: <IconChat />, accent: 'teal' },
-  { title: 'الجدول', description: 'جدول المحاضرات الأسبوعي لمرحلتك', href: '/schedule', icon: <IconCalendar />, accent: 'amber' },
-  { title: 'جات الدراسة', description: 'برومبت ذكي يدرس معك بالـAI', href: '/study-prompt', icon: <IconSparkles />, accent: 'amber' },
-  { title: 'المعدل', description: 'احفظ درجاتك واحسب معدلك الموزون حسب وحدات موادك', href: '/gpa', icon: <IconChart />, accent: 'teal' },
-  { title: 'صحتك الدراسية', description: 'تحليل شخصي لعادات مذاكرتك — قوة وضعف وأنماط', href: '/study-health', icon: <IconActivity />, accent: 'teal' },
   {
-    title: 'تبديل الكروبات',
-    description: 'تبديل كروبات العملي — متاح للمرحلة الثانية فقط',
-    href: '/group-swap',
-    icon: <IconSwap />,
-    accent: 'amber',
-    requiresStage: 'المرحلة الثانية',
+    href: '/lawazem',
+    title: 'الملازم والمصادر',
+    kicker: 'المكتبة',
+    description: 'ملازم الدكاترة مرتبة حسب المادة والدكتور، مع وسوم للتصفية السريعة.',
+    icon: <IconBook />,
+    variant: 'featured',
+    size: 'lg',
+    ctaLabel: 'تصفّح الملازم',
+  },
+  {
+    href: '/channels',
+    title: 'القنوات',
+    kicker: 'الانضمام',
+    description: 'دليل قنوات التليكرام لكل مادة.',
+    icon: <IconChannels />,
+    variant: 'teal',
+    size: 'sm',
+  },
+  {
+    href: '/schedule',
+    title: 'الجدول',
+    kicker: 'التنظيم',
+    description: 'جدول محاضراتك الأسبوعي.',
+    icon: <IconCalendar />,
+    variant: 'gold',
+    size: 'sm',
+  },
+  {
+    href: '/study-prompt',
+    title: 'جات الدراسة',
+    kicker: 'أدوات AI',
+    description: 'برومبت ذكي يولّد لك شرحاً تفاعلياً لمحاضراتك، مع بطاقات وأسئلة.',
+    icon: <IconSparkles />,
+    variant: 'navy',
+    size: 'wide',
+  },
+  {
+    href: '/gpa',
+    title: 'المعدل',
+    kicker: 'التتبع',
+    description: 'احسب معدلك واعرف كم تحتاج للنجاح.',
+    icon: <IconChart />,
+    variant: 'coral',
+    size: 'sm',
+  },
+  {
+    href: '/study-health',
+    title: 'صحتك الدراسية',
+    kicker: 'التحليل',
+    description: 'تحليل شخصي لعاداتك الدراسية.',
+    icon: <IconHealth />,
+    variant: 'teal',
+    size: 'sm',
   },
 ];
 
-// ==================== Stage Card ====================
-function StageCard({ stage, index, onClick }: { stage: string; index: number; onClick: () => void }) {
+const GROUP_SWAP_SECTION: Section = {
+  href: '/group-swap',
+  title: 'تبديل الكروبات',
+  kicker: 'العملي',                                          // ← وصف بدل "قريباً"
+  description: 'بدّل كروبك العملي بسهولة — مغلق حالياً.',        // ← تصحيح طفيف
+  icon: <IconSwap />,
+  variant: 'gold',
+  size: 'wide',
+  // badge: 'قريباً',                                        // ← احذف هذا السطر
+  locked: true,
+};
+
+// ==================== Section Heading ====================
+function SectionHeading({
+  id,
+  kicker,
+  title,
+  index,
+}: {
+  id: string;
+  kicker: string;
+  title: string;
+  index: number;
+}) {
   return (
-    <button
-      onClick={onClick}
-      style={{ animationDelay: `${index * 80}ms` }}
-      className="group relative w-full overflow-hidden rounded-2xl border-2 border-line bg-white/80 p-6 text-right shadow-[0_2px_8px_rgba(26,33,31,0.05)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-teal hover:shadow-[0_12px_30px_rgba(14,74,74,0.15)] active:scale-[0.98] animate-slide-up dark:bg-paper/80"
-    >
-      <div className="absolute inset-x-0 top-0 h-1 origin-right scale-x-0 bg-gradient-to-l from-teal via-teal-light to-teal transition-transform duration-500 group-hover:scale-x-100" />
-      <div className="flex items-center justify-between">
-        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal/8 text-teal transition-all duration-300 group-hover:bg-teal group-hover:text-white group-hover:shadow-[0_4px_14px_rgba(14,74,74,0.30)]">
-          <IconBook />
-        </span>
-        <span className="font-mono text-xs uppercase tracking-widest text-ink/30">0{index + 1}</span>
-      </div>
-      <h3 className="mt-4 text-lg font-black text-ink">{stage}</h3>
-      <div className="mt-2 flex items-center gap-1 text-sm font-bold text-teal opacity-70 transition-all duration-300 group-hover:gap-2 group-hover:opacity-100">
-        <span>اختر</span>
-        <span className="transition-transform duration-300 group-hover:-translate-x-1"><IconArrowLeft /></span>
-      </div>
-    </button>
+    <div className="mb-5 ink-reveal" style={reveal(index)}>
+      <p className="kicker">{kicker}</p>
+      <h2
+        id={id}
+        className="mt-2 font-display text-xl font-bold leading-tight text-ink sm:text-2xl"
+      >
+        {title}
+      </h2>
+    </div>
   );
 }
 
-// ==================== Section Card ====================
-function SectionCard({
-  section,
+// ==================== Stage Card ====================
+function StageCard({
+  stage,
   index,
-  currentStage,
+  onClick,
 }: {
-  section: Section;
+  stage: string;
   index: number;
-  currentStage: Stage;
+  onClick: () => void;
 }) {
-  const isTeal = section.accent === 'teal';
-  const accentText = isTeal ? 'text-teal' : 'text-amber-700 dark:text-amber-300';
-  const isLocked = !!section.requiresStage && section.requiresStage !== currentStage;
-
-  if (isLocked) {
-    return (
-      <div
-        style={{ animationDelay: `${index * 60}ms` }}
-        className="group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-white/40 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.02)] backdrop-blur-sm animate-slide-up dark:bg-paper/40"
-        aria-disabled="true"
-      >
-        <div className="relative">
-          <div className="flex items-start justify-between">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-ink/5 text-ink/30 dark:bg-white/5">
-              {section.icon}
-            </div>
-            <span className="flex h-7 items-center gap-1 rounded-full bg-ink/5 px-2.5 text-[10px] font-black text-ink/40 dark:bg-white/5">
-              <IconLock />
-              مقفل
-            </span>
-          </div>
-          <h2 className="mt-4 text-base font-extrabold text-ink/50">{section.title}</h2>
-          <p className="mt-1 text-sm leading-relaxed text-ink/35">{section.description}</p>
-          <div className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-ink/30">
-            <span>متاح فقط للمرحلة الثانية</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const gradient = isTeal
-    ? 'from-teal/8 to-teal/4 group-hover:from-teal/12 group-hover:to-teal/6'
-    : 'from-amber/12 to-amber/6 group-hover:from-amber/18 group-hover:to-amber/10';
-  const iconBg = isTeal
-    ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] group-hover:shadow-[0_6px_18px_rgba(14,74,74,0.34)]'
-    : 'bg-amber text-ink shadow-[0_2px_8px_rgba(224,166,58,0.30)] group-hover:shadow-[0_6px_18px_rgba(224,166,58,0.42)]';
+  const number = String(index + 1).padStart(2, '0');
 
   return (
-    <Link
-      href={section.href}
-      style={{ animationDelay: `${index * 60}ms` }}
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-teal/30 hover:shadow-[0_12px_30px_rgba(14,74,74,0.10)] active:scale-[0.99] animate-slide-up dark:bg-paper/80 dark:hover:shadow-[0_12px_30px_rgba(0,0,0,0.40)]"
-    >
-      <div className={`pointer-events-none absolute inset-0 bg-gradient-to-bl opacity-0 transition-opacity duration-300 ${gradient} group-hover:opacity-100`} />
-      <div className="relative">
-        <div className={`flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110 ${iconBg}`}>
-          {section.icon}
-        </div>
-        <h2 className="mt-4 text-base font-extrabold text-ink">{section.title}</h2>
-        <p className="mt-1 text-sm leading-relaxed text-ink/55">{section.description}</p>
-        <div className={`mt-4 inline-flex items-center gap-1.5 text-sm font-bold ${accentText} transition-all duration-300 group-hover:gap-2.5`}>
-          <span>فتح</span>
-          <span className="transition-transform duration-300 group-hover:-translate-x-1"><IconArrowLeft /></span>
-        </div>
-      </div>
-    </Link>
+    <div className="ink-reveal" style={reveal(index + 3)}>
+      <button
+        type="button"
+        onClick={onClick}
+        className="group relative block w-full overflow-hidden rounded-card border border-line bg-paper-soft p-6 text-start transition-all duration-200 hover:-translate-y-1 hover:border-teal hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+      >
+        <div className="absolute inset-x-0 top-0 h-[3px] origin-center scale-x-0 bg-gold transition-transform duration-500 group-hover:scale-x-100 motion-reduce:transition-none" />
+
+        <span
+          aria-hidden="true"
+          className="absolute end-4 top-4 font-mono text-xs font-medium text-ink-muted"
+        >
+          {number}
+        </span>
+
+        <span className="relative block font-display text-2xl font-bold text-ink">
+          {stage}
+        </span>
+
+        <span className="relative mt-6 flex items-center gap-1.5 text-sm font-semibold text-teal">
+          <span>اختر</span>
+          <IconArrowLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1 motion-reduce:transition-none" />
+        </span>
+      </button>
+    </div>
   );
 }
 
@@ -211,108 +193,196 @@ export default function HomePage() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.studentStage) as Stage | null;
-    if (saved) setStage(saved);
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.studentStage);
+      if (isStage(saved)) setStage(saved);
+    } catch {
+      /* تجاهل */
+    }
     setLoaded(true);
   }, []);
 
   function chooseStage(s: Stage) {
-    localStorage.setItem(STORAGE_KEYS.studentStage, s);
+    try {
+      localStorage.setItem(STORAGE_KEYS.studentStage, s);
+    } catch {
+      /* تجاهل */
+    }
     setStage(s);
+    window.dispatchEvent(new Event('student-stage-change'));
   }
+
   function changeStage() {
-    localStorage.removeItem(STORAGE_KEYS.studentStage);
+    try {
+      localStorage.removeItem(STORAGE_KEYS.studentStage);
+    } catch {
+      /* تجاهل */
+    }
     setStage(null);
+    window.dispatchEvent(new Event('student-stage-change'));
   }
 
-  if (!loaded) return <main className="min-h-screen bg-paper" />;
+  // ==================== Loading ====================
+  if (!loaded) {
+    return <main className="min-h-dvh bg-paper" aria-busy="true" />;
+  }
 
-  return (
-    <>
-      <AnimatedBackground />
-
-      {!stage ? (
-        <main className="relative mx-auto flex min-h-[calc(100vh-70px)] max-w-2xl flex-col items-center justify-center px-6 py-16 text-center">
-          <div className="relative animate-slide-up">
-            <span className="inline-flex items-center gap-2 rounded-full border border-teal/20 bg-teal/5 px-4 py-1.5 font-mono text-xs uppercase tracking-widest text-teal backdrop-blur-sm dark:border-teal/30 dark:bg-teal/15">
-              <IconCheck />
+  // ==================== Stage Selection ====================
+  if (!stage) {
+    return (
+      <>
+        <BackgroundPattern />
+        <main className="relative mx-auto flex min-h-[calc(100dvh-var(--nav-h))] max-w-3xl flex-col items-center justify-center px-4 py-12 text-center sm:px-6 sm:py-16">
+          <div className="ink-reveal">
+            <span className="inline-flex items-center gap-2 rounded-chip border border-line bg-paper-soft px-4 py-1.5 font-mono text-[11px] font-medium uppercase tracking-widest text-ink-soft">
+              <span className="h-1.5 w-1.5 rounded-full bg-teal" aria-hidden="true" />
               منصة لطلبة جامعة العميد
             </span>
           </div>
 
-          <h1 className="mt-6 text-3xl font-black leading-tight text-ink sm:text-4xl animate-slide-up" style={{ animationDelay: '80ms' }}>
+          <h1
+            id="stage-heading"
+            className="mt-8 font-display text-4xl font-bold leading-tight text-ink sm:text-5xl ink-reveal"
+            style={reveal(1)}
+          >
             اختر مرحلتك الدراسية
           </h1>
-          <p className="mt-3 max-w-md text-base leading-relaxed text-ink/60 animate-slide-up" style={{ animationDelay: '160ms' }}>
+
+          <p
+            className="mt-4 max-w-md text-base leading-relaxed text-ink-soft ink-reveal"
+            style={reveal(2)}
+          >
             في لوازم نعرض لك المحتوى المناسب لمرحلتك — قنوات، جداول، وكل ما تحتاجه.
           </p>
 
-          <div className="relative mt-12 grid w-full gap-4 sm:grid-cols-3">
+          <div
+            role="group"
+            aria-labelledby="stage-heading"
+            className="relative mt-12 grid w-full gap-4 sm:grid-cols-3"
+          >
             {STAGES.map((s, i) => (
               <StageCard key={s} stage={s} index={i} onClick={() => chooseStage(s)} />
             ))}
           </div>
 
-          <p className="mt-10 text-xs text-ink/40 animate-slide-up" style={{ animationDelay: '400ms' }}>
+          <p className="mt-10 text-xs text-ink-muted ink-reveal" style={reveal(6)}>
             يمكنك تغييرها لاحقاً
           </p>
         </main>
-      ) : (
-        <main className="relative mx-auto max-w-5xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10">
-          <div className="flex flex-wrap items-end justify-between gap-3 animate-slide-up">
-            <div>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal backdrop-blur-sm dark:border-teal/30 dark:bg-teal/15">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
-                {stage}
-              </span>
-              <h1 className="mt-3 text-3xl font-black leading-tight text-ink sm:text-4xl">ماذا تحتاج اليوم؟</h1>
-              <p className="mt-2 text-sm text-ink/50">كل شيء في مكان واحد — اختر القسم الذي تحتاجه</p>
+      </>
+    );
+  }
+
+  // ==================== Dashboard ====================
+  const sections = [...SECTIONS, GROUP_SWAP_SECTION];
+
+  return (
+    <>
+      <BackgroundPattern />
+
+      <main className="relative mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-6 sm:pb-12 sm:pt-8">
+        <h1 className="sr-only">لوازم — الصفحة الرئيسية</h1>
+
+        {/* ==================== Masthead ==================== */}
+        <Masthead stage={stage} onChangeStage={changeStage} />
+
+        {/* ==================== Continue Reading ==================== */}
+        <div className="mt-2 ink-reveal">
+          <ContinueCard />
+        </div>
+
+        {/* ==================== Sections (Bento) ==================== */}
+        <section aria-labelledby="sections-heading" className="mt-12">
+          <SectionHeading
+            id="sections-heading"
+            kicker="الأقسام"
+            title="كل ما تحتاجه في مكان واحد"
+            index={1}
+          />
+
+          <div className="ink-reveal" style={reveal(2)}>
+            <SectionTileGrid>
+              {sections.map((sec) => {
+                const isLocked = sec.locked === true;
+                const size: TileSize = sec.size;
+
+                return (
+                  <SectionTile
+                    key={sec.href}
+                    href={sec.href}
+                    title={sec.title}
+                    kicker={sec.kicker}
+                    description={sec.description}
+                    icon={sec.icon}
+                    variant={sec.variant}
+                    size={size}
+                    badge={sec.badge}
+                    ctaLabel={sec.ctaLabel}
+                    locked={isLocked}
+                    lockedLabel={isLocked ? 'قريباً' : undefined}
+                  />
+                );
+              })}
+            </SectionTileGrid>
+          </div>
+        </section>
+
+        {/* ==================== Community: Bot + Trending ==================== */}
+        <section aria-labelledby="community-heading" className="mt-20">
+          <div
+            className="mx-auto mb-10 max-w-2xl text-center ink-reveal"
+            style={reveal(3)}
+          >
+            <div className="flex justify-center">
+              <p className="kicker">تابعنا</p>
             </div>
-            <button
-              onClick={changeStage}
-              className="rounded-lg border border-line bg-white/80 px-3.5 py-2 text-xs font-bold text-ink/70 shadow-[0_1px_2px_rgba(26,33,31,0.04)] backdrop-blur-sm transition-all duration-200 hover:border-ink/20 hover:bg-paper hover:text-ink active:scale-95 dark:bg-paper/80"
+
+            <h2
+              id="community-heading"
+              className="mt-3 font-display text-2xl font-bold leading-tight text-ink sm:text-3xl"
             >
-              تغيير المرحلة
-            </button>
+              ابقَ على اطلاع
+            </h2>
+
+            <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-ink-soft sm:text-base">
+              كل جديد يصلك مباشرة — بدون ما تفتح الموقع كل يوم.
+            </p>
           </div>
 
-          {/* ✨ ماذا أفعل الآن؟ */}
-          <div className="mt-6">
-            <DailyCompanion />
+          <div className="mx-auto flex max-w-5xl flex-wrap justify-center gap-4">
+            <div className="w-full lg:w-[58%]">
+              <BotChannelCard />
+            </div>
+            <div className="w-full empty:hidden lg:w-[38%]">
+              <TrendingNotes stage={stage} />
+            </div>
           </div>
+        </section>
 
-          {/* تابع من حيث توقفت */}
-          <div className="mt-4">
-            <ContinueCard />
+        {/* ==================== Recent Views ==================== */}
+        <div className="mt-16">
+          <RecentViewsCard />
+        </div>
+
+        {/* ==================== Footer ==================== */}
+        <footer className="mt-20 border-t border-line pt-8 pb-4">
+          <div className="flex flex-col items-center gap-4 text-center">
+            <Image
+              src="/logo.png"
+              alt=""
+              width={32}
+              height={32}
+              className="h-8 w-8 object-contain opacity-60"
+            />
+            <p className="text-xs leading-relaxed text-ink-soft sm:text-sm">
+              صُنع بكل حب لطلاب كلية الطب · جامعة العميد
+            </p>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-ink-muted">
+              علي مازن — @E_W_9
+            </p>
           </div>
-
-          {/* شبكة الأقسام */}
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {SECTIONS.map((sec, i) => (
-              <SectionCard key={sec.href} section={sec} index={i} currentStage={stage} />
-            ))}
-          </div>
-
-          {/* آخر التحديثات */}
-          <div className="mt-8">
-            <LiveFeed stage={stage} />
-          </div>
-
-          {/* الأكثر إقبالاً هذا الأسبوع */}
-          <div className="mt-6">
-            <TrendingNotes stage={stage} />
-          </div>
-
-          {/* آخر ما زرته */}
-          <div className="mt-6">
-            <RecentViewsCard />
-          </div>
-
-          <p className="mt-12 text-center text-xs text-ink/40 animate-slide-up" style={{ animationDelay: '400ms' }}>
-            صُنع بكل حب لطلاب كلية الطب · جامعة العميد · برمجة وإعداد الطالب: علي مازن @E_W_9
-          </p>
-        </main>
-      )}
+        </footer>
+      </main>
     </>
   );
 }

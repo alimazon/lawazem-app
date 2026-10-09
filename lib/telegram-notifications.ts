@@ -1,6 +1,8 @@
 // lib/telegram-notifications.ts
 import { getSupabaseAdmin } from './supabaseAdmin';
 import { sendMessage, escapeHtml, type InlineKeyboardMarkup } from './telegram';
+import { listSuperAdmins } from './telegram-admins';
+import type { Group } from './types';
 
 // ==================== Base URL ====================
 function getBaseUrl(): string {
@@ -18,6 +20,7 @@ interface SubscriberLite {
   chat_id: number;
   stage: string | null;
   subjects: string[];
+  group_name: Group | null;
 }
 
 export interface NewNoteInfo {
@@ -26,9 +29,10 @@ export interface NewNoteInfo {
   subject_name: string;
   professor_name: string | null;
   stage: string;
+  group_name: Group | null; // ← جديد
 }
 
-// ==================== Batching Helper ====================
+// ==================== Batching ====================
 const BATCH_SIZE = 25;
 const BATCH_DELAY_MS = 1000;
 
@@ -36,18 +40,17 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function groupLabel(g: Group): string {
+  return g === 'A' ? 'كروب A' : 'كروب B';
+}
+
 // ==================== Notify: New Note ====================
-/**
- * يُستدعى بعد إضافة ملزمة جديدة.
- * Fire-and-forget — لا يوقف الرد على المشرف.
- */
 export async function notifyNewLectureNote(info: NewNoteInfo): Promise<void> {
   const supabaseAdmin = getSupabaseAdmin();
 
-  // 1. اجلب كل المشتركين لهذه المرحلة
   const { data: subs, error } = await supabaseAdmin
     .from('telegram_subscribers')
-    .select('chat_id, stage, subjects')
+    .select('chat_id, stage, subjects, group_name')
     .eq('stage', info.stage)
     .eq('notify_new_note', true);
 
@@ -58,15 +61,18 @@ export async function notifyNewLectureNote(info: NewNoteInfo): Promise<void> {
 
   if (!subs || subs.length === 0) return;
 
-  // 2. فلترة حسب المواد (إذا المستخدم اختار مواد معينة)
   const subscribers = (subs as SubscriberLite[]).filter((s) => {
-    if (!s.subjects || s.subjects.length === 0) return true; // الكل
+    // فلترة الكروب: إن كانت الملزمة محددة لكروب معيّن، نرسلها لأصحابه فقط
+    if (info.group_name !== null) {
+      if (s.group_name !== info.group_name) return false;
+    }
+    // فلترة المادة
+    if (!s.subjects || s.subjects.length === 0) return true;
     return s.subjects.includes(info.subject_name);
   });
 
   if (subscribers.length === 0) return;
 
-  // 3. جهّز الرسالة
   const baseUrl = getBaseUrl();
   const lines: string[] = [];
   lines.push('📚 <b>ملزمة جديدة!</b>');
@@ -78,9 +84,12 @@ export async function notifyNewLectureNote(info: NewNoteInfo): Promise<void> {
     lines.push(`👨‍🏫 د. ${escapeHtml(info.professor_name)}`);
   }
 
+  if (info.group_name) {
+    lines.push(`👥 ${groupLabel(info.group_name)}`);
+  }
+
   const text = lines.join('\n');
 
-  // 4. أرسل على دفعات
   for (let i = 0; i < subscribers.length; i += BATCH_SIZE) {
     const batch = subscribers.slice(i, i + BATCH_SIZE);
 
@@ -101,7 +110,6 @@ export async function notifyNewLectureNote(info: NewNoteInfo): Promise<void> {
       })
     );
 
-    // انتظر بين الدفعات لتجنب rate limit
     if (i + BATCH_SIZE < subscribers.length) {
       await delay(BATCH_DELAY_MS);
     }
@@ -111,20 +119,15 @@ export async function notifyNewLectureNote(info: NewNoteInfo): Promise<void> {
 }
 
 // ==================== Morning Digest ====================
-/**
- * موجز صباحي — يُشغَّل من cron كل يوم 7 صباحاً.
- * يرسل ملخص الملازم المضافة خلال آخر 24 ساعة.
- */
 export async function sendMorningDigest(): Promise<{ sent: number }> {
   const supabaseAdmin = getSupabaseAdmin();
   const baseUrl = getBaseUrl();
 
-  // 1. الملازم المضافة خلال آخر 24 ساعة، مجمّعة حسب المرحلة
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
   const { data: notes, error: notesErr } = await supabaseAdmin
     .from('lecture_notes')
-    .select('id, title, professor_name, created_at, subjects!inner(name, stage)')
+    .select('id, title, professor_name, created_at, group_name, subjects!inner(name, stage)')
     .gte('created_at', since)
     .order('created_at', { ascending: false })
     .limit(50);
@@ -139,7 +142,6 @@ export async function sendMorningDigest(): Promise<{ sent: number }> {
     return { sent: 0 };
   }
 
-  // 2. رتّب حسب المرحلة
   function pickRelation(rel: unknown): { name: string; stage: string } {
     if (Array.isArray(rel) && rel[0]) {
       const first = rel[0] as { name?: unknown; stage?: unknown };
@@ -158,23 +160,28 @@ export async function sendMorningDigest(): Promise<{ sent: number }> {
     return { name: '', stage: '' };
   }
 
-  const byStage: Record<string, { title: string; subject: string }[]> = {};
+  // نبني فهرساً حسب المرحلة + الكروب
+  const byStageGroup: Record<string, { title: string; subject: string; group: Group | null }[]> = {};
   for (const n of notes as Array<{
     id: string;
     title: string;
     professor_name: string | null;
+    group_name: Group | null;
     subjects: unknown;
   }>) {
     const rel = pickRelation(n.subjects);
     if (!rel.stage) continue;
-    if (!byStage[rel.stage]) byStage[rel.stage] = [];
-    byStage[rel.stage].push({ title: n.title, subject: rel.name });
+    if (!byStageGroup[rel.stage]) byStageGroup[rel.stage] = [];
+    byStageGroup[rel.stage].push({
+      title: n.title,
+      subject: rel.name,
+      group: n.group_name,
+    });
   }
 
-  // 3. اجلب المشتركين
   const { data: subs, error: subsErr } = await supabaseAdmin
     .from('telegram_subscribers')
-    .select('chat_id, stage, subjects')
+    .select('chat_id, stage, subjects, group_name')
     .eq('notify_morning', true)
     .not('stage', 'is', null);
 
@@ -185,7 +192,6 @@ export async function sendMorningDigest(): Promise<{ sent: number }> {
 
   if (!subs || subs.length === 0) return { sent: 0 };
 
-  // 4. أرسل لكل مشترك
   let sent = 0;
   const subscribers = subs as SubscriberLite[];
 
@@ -195,14 +201,20 @@ export async function sendMorningDigest(): Promise<{ sent: number }> {
     await Promise.allSettled(
       batch.map(async (sub) => {
         if (!sub.stage) return;
-        const stageNotes = byStage[sub.stage] ?? [];
-        if (stageNotes.length === 0) return;
+        const stageNotes = byStageGroup[sub.stage] ?? [];
 
-        // فلترة حسب المواد
+        // فلترة حسب الكروب أولاً
+        const groupFiltered = stageNotes.filter((n) => {
+          if (n.group === null) return true; // للكل
+          return n.group === sub.group_name;
+        });
+
+        if (groupFiltered.length === 0) return;
+
         const filtered =
           sub.subjects && sub.subjects.length > 0
-            ? stageNotes.filter((n) => sub.subjects.includes(n.subject))
-            : stageNotes;
+            ? groupFiltered.filter((n) => sub.subjects.includes(n.subject))
+            : groupFiltered;
 
         if (filtered.length === 0) return;
 
@@ -220,7 +232,8 @@ export async function sendMorningDigest(): Promise<{ sent: number }> {
         lines.push('');
 
         for (const n of preview) {
-          lines.push(`• <b>${escapeHtml(n.subject)}</b>: ${escapeHtml(n.title)}`);
+          const g = n.group ? ` <i>(${groupLabel(n.group)})</i>` : '';
+          lines.push(`• <b>${escapeHtml(n.subject)}</b>: ${escapeHtml(n.title)}${g}`);
         }
 
         if (extra > 0) {
@@ -250,20 +263,12 @@ export async function sendMorningDigest(): Promise<{ sent: number }> {
 }
 
 // ==================== Streak Reminder ====================
-/**
- * تنبيه مسائي — يُشغَّل من cron كل يوم 9 مساءً.
- * يُذكّر المشتركين اللي عندهم ستريك ولا زالوا ما فتحوا اليوم.
- */
 export async function sendStreakReminder(): Promise<{ sent: number }> {
   const supabaseAdmin = getSupabaseAdmin();
   const baseUrl = getBaseUrl();
 
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const today = new Date().toISOString().split('T')[0];
 
-  // 1. اجلب المشتركين اللي:
-  //    - عندهم تنبيه الستريك مفعّل
-  //    - عندهم ستريك > 0
-  //    - ما فتحوا ملزمة اليوم
   const { data: subs, error } = await supabaseAdmin
     .from('telegram_subscribers')
     .select('chat_id, streak_count, last_streak_date, stage')
@@ -279,7 +284,6 @@ export async function sendStreakReminder(): Promise<{ sent: number }> {
 
   if (!subs || subs.length === 0) return { sent: 0 };
 
-  // 2. أرسل التذكيرات
   let sent = 0;
   const subscribers = subs as Array<{
     chat_id: number;
@@ -306,7 +310,6 @@ export async function sendStreakReminder(): Promise<{ sent: number }> {
         const keyboard: InlineKeyboardMarkup = {
           inline_keyboard: [
             [{ text: '📚 تصفح الملازم', url: `${baseUrl}/lawazem` }],
-            [{ text: '🔥 عرض سلسلتي', url: 'https://t.me/' }], // سيُستبدل بـusername البوت
           ],
         };
 
@@ -326,21 +329,27 @@ export async function sendStreakReminder(): Promise<{ sent: number }> {
   return { sent };
 }
 
-// ==================== Stats (للمشرف) ====================
+// ==================== Stats ====================
 export async function getBotStats(): Promise<{
   total: number;
   byStage: Record<string, number>;
+  byGroup: Record<string, number>;
   streaks: { avg: number; max: number; active: number };
 }> {
   const supabaseAdmin = getSupabaseAdmin();
 
   const { data } = await supabaseAdmin
     .from('telegram_subscribers')
-    .select('stage, streak_count');
+    .select('stage, group_name, streak_count');
 
-  const subs = (data ?? []) as Array<{ stage: string | null; streak_count: number }>;
+  const subs = (data ?? []) as Array<{
+    stage: string | null;
+    group_name: Group | null;
+    streak_count: number;
+  }>;
 
   const byStage: Record<string, number> = {};
+  const byGroup: Record<string, number> = { A: 0, B: 0, 'غير محدد': 0 };
   let totalStreak = 0;
   let maxStreak = 0;
   let activeStreaks = 0;
@@ -348,6 +357,10 @@ export async function getBotStats(): Promise<{
   for (const s of subs) {
     const stage = s.stage ?? 'غير محدد';
     byStage[stage] = (byStage[stage] ?? 0) + 1;
+
+    const g = s.group_name ?? 'غير محدد';
+    byGroup[g] = (byGroup[g] ?? 0) + 1;
+
     const st = s.streak_count ?? 0;
     totalStreak += st;
     if (st > maxStreak) maxStreak = st;
@@ -357,10 +370,154 @@ export async function getBotStats(): Promise<{
   return {
     total: subs.length,
     byStage,
+    byGroup,
     streaks: {
       avg: subs.length > 0 ? Math.round((totalStreak / subs.length) * 10) / 10 : 0,
       max: maxStreak,
       active: activeStreaks,
     },
   };
+}
+
+// ==================== Announcements ====================
+export interface AnnouncementResult {
+  sent: number;
+  failed: number;
+  error?: string;
+}
+
+export async function sendAnnouncement(
+  announcementId: string
+): Promise<AnnouncementResult> {
+  const supabaseAdmin = getSupabaseAdmin();
+  const baseUrl = getBaseUrl();
+
+  const { data: ann, error: fetchError } = await supabaseAdmin
+    .from('telegram_announcements')
+    .select('id, title, body, stage, link_url, link_label')
+    .eq('id', announcementId)
+    .maybeSingle<{
+      id: string;
+      title: string;
+      body: string;
+      stage: string | null;
+      link_url: string | null;
+      link_label: string | null;
+    }>();
+
+  if (fetchError || !ann) {
+    return { sent: 0, failed: 0, error: 'التبليغ غير موجود' };
+  }
+
+  let query = supabaseAdmin
+    .from('telegram_subscribers')
+    .select('chat_id')
+    .eq('notify_announcements', true);
+
+  if (ann.stage) {
+    query = query.eq('stage', ann.stage);
+  }
+
+  const { data: subs, error: subsError } = await query;
+
+  if (subsError) {
+    return { sent: 0, failed: 0, error: subsError.message };
+  }
+
+  const subscribers = (subs ?? []) as Array<{ chat_id: number }>;
+  if (subscribers.length === 0) {
+    return { sent: 0, failed: 0 };
+  }
+
+  const lines: string[] = [];
+  lines.push('📢 <b>تبليغ إداري</b>');
+  lines.push('');
+  lines.push(`<b>${escapeHtml(ann.title)}</b>`);
+  lines.push('');
+  lines.push(escapeHtml(ann.body));
+
+  const text = lines.join('\n');
+
+  const keyboard: InlineKeyboardMarkup = {
+    inline_keyboard: [],
+  };
+
+  if (ann.link_url) {
+    keyboard.inline_keyboard.push([
+      {
+        text: ann.link_label?.trim() || 'المزيد',
+        url: ann.link_url,
+      },
+    ]);
+  }
+
+  keyboard.inline_keyboard.push([
+    { text: '🌐 فتح المنصة', url: baseUrl },
+  ]);
+
+  let sent = 0;
+  let failed = 0;
+
+  for (let i = 0; i < subscribers.length; i += BATCH_SIZE) {
+    const batch = subscribers.slice(i, i + BATCH_SIZE);
+
+    const results = await Promise.allSettled(
+      batch.map((sub) =>
+        sendMessage(sub.chat_id, text, { reply_markup: keyboard })
+      )
+    );
+
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value === true) sent++;
+      else failed++;
+    }
+
+    if (i + BATCH_SIZE < subscribers.length) {
+      await delay(BATCH_DELAY_MS);
+    }
+  }
+
+  console.log(
+    `[announcement] id=${announcementId} sent=${sent} failed=${failed}`
+  );
+  return { sent, failed };
+}
+// ==================== Notify Super Admins (new announcement) ====================
+export async function notifySuperAdminsNewAnnouncement(info: {
+  id: string;
+  title: string;
+  body: string;
+  stage: string | null;
+  created_by: string;
+}): Promise<void> {
+  const supers = await listSuperAdmins();
+  if (supers.length === 0) return;
+
+  const lines: string[] = [];
+  lines.push('📢 <b>تبليغ جديد بانتظار المراجعة</b>');
+  lines.push('');
+  lines.push(`👤 من: ${escapeHtml(info.created_by)}`);
+  lines.push(`🎯 ${info.stage ? escapeHtml(info.stage) : 'كل المراحل'}`);
+  lines.push('');
+  lines.push(`<b>${escapeHtml(info.title)}</b>`);
+  lines.push('');
+  lines.push(escapeHtml(info.body));
+
+  const keyboard: InlineKeyboardMarkup = {
+    inline_keyboard: [
+      [
+        { text: '✅ موافقة وإرسال', callback_data: `ann_approve:${info.id}` },
+        { text: '❌ رفض', callback_data: `ann_reject:${info.id}` },
+      ],
+      [{ text: '🗑 حذف', callback_data: `ann_delete:${info.id}` }],
+    ],
+  };
+
+  for (const s of supers) {
+    try {
+      await sendMessage(s.chat_id, lines.join('\n'), { reply_markup: keyboard });
+    } catch {
+      /* تجاهل */
+    }
+  }
 }

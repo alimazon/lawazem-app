@@ -128,21 +128,29 @@ export function useRecentViews() {
 
   // إضافة زيارة جديدة
   const addView = useCallback((view: Omit<RecentView, 'viewed_at'>) => {
-    setRecent((prev) => {
-      // إزالة الزيارة السابقة لنفس الملزمة (لتحديث وقتها)
-      const filtered = prev.filter((v) => v.id !== view.id);
-      const next = [{ ...view, viewed_at: Date.now() }, ...filtered].slice(
-        0,
-        MAX_ITEMS
-      );
-
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        /* تجاهل */
+    // نقرأ من localStorage وقت الكتابة (كل نسخة hook لها state خاصة)
+    let prev: RecentView[] = [];
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) prev = parsed;
       }
-      return next;
-    });
+    } catch {
+      /* تجاهل */
+    }
+
+    const next: RecentView[] = [
+      { ...view, viewed_at: Date.now() },
+      ...prev.filter((v) => v.id !== view.id),
+    ].slice(0, MAX_ITEMS);
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      /* تجاهل */
+    }
+    setRecent(next);
 
     // سجّل الإحصائيات (fire and forget)
     try {

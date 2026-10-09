@@ -6,6 +6,11 @@ import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Field';
 import { useToast } from '@/components/ui/Toast';
 import { postJson } from '@/lib/api-client';
+import {
+  IconFlag,
+  IconClose,
+  IconCheck,
+} from '@/components/ui/Icons';
 import type { LectureNote, ReportReason } from '@/lib/types';
 
 const FP_KEY = 'device_fingerprint';
@@ -55,7 +60,6 @@ export function ReportModal({ note, onClose, onReported }: ReportModalProps) {
 
   if (!note) return null;
 
-  // ✅ حفظ المرجع لتضييق النوع داخل الـclosures
   const currentNote = note;
 
   async function handleSubmit(e: React.FormEvent) {
@@ -98,54 +102,56 @@ export function ReportModal({ note, onClose, onReported }: ReportModalProps) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-3xl border border-line bg-paper p-6 shadow-[0_24px_60px_rgba(26,33,31,0.30)] animate-scale-in dark:shadow-[0_24px_60px_rgba(0,0,0,0.60)]"
+        className="w-full max-w-md rounded-card border border-line bg-paper p-6 shadow-xl animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
         {done ? (
           <div className="py-4 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-teal/10 text-teal dark:bg-teal/20">
-              <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-card bg-teal/10 text-teal dark:bg-teal/20">
+              <IconCheck className="h-8 w-8" />
             </div>
-            <h3 className="mt-4 text-lg font-black text-ink">شكراً لك</h3>
-            <p className="mt-1 text-sm text-ink/60">وصلنا بلاغك وسيراجعه المشرف قريباً.</p>
+            <h3 className="mt-4 text-lg font-bold text-ink">شكراً لك</h3>
+            <p className="mt-1 text-sm text-ink-soft">
+              وصلنا بلاغك وسيراجعه المشرف قريباً.
+            </p>
           </div>
         ) : (
           <>
             {/* Header */}
             <div className="flex items-start gap-3">
-              <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-amber/15 text-amber-700 dark:bg-amber/25 dark:text-amber-300">
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
-                </svg>
+              <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-field bg-gold/15 text-gold-ink">
+                <IconFlag className="h-5 w-5" />
               </span>
               <div className="min-w-0 flex-1">
-                <h3 className="text-lg font-black text-ink">الإبلاغ عن مشكلة</h3>
-                <p className="mt-0.5 truncate text-xs text-ink/50">{currentNote.title}</p>
+                <h3 className="text-lg font-bold text-ink">الإبلاغ عن مشكلة</h3>
+                <p className="mt-0.5 truncate text-xs text-ink-muted">
+                  {currentNote.title}
+                </p>
               </div>
               <button
                 type="button"
                 onClick={onClose}
                 aria-label="إغلاق"
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-ink/40 transition-colors hover:bg-ink/5 hover:text-ink"
+                className="flex h-8 w-8 items-center justify-center rounded-field text-ink-muted transition-colors hover:bg-ink/5 hover:text-ink"
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <IconClose className="h-4 w-4" />
               </button>
             </div>
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="mt-5 space-y-4">
               <fieldset>
-                <legend className="mb-2 text-sm font-bold text-ink/70">ما المشكلة؟</legend>
+                <legend className="mb-2 text-sm font-bold text-ink">
+                  ما المشكلة؟
+                </legend>
                 <div className="space-y-2">
-                  <label className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
-                    reason === 'dead_link'
-                      ? 'border-teal bg-teal/5 text-ink dark:bg-teal/15'
-                      : 'border-line bg-white text-ink/80 hover:border-teal/40 dark:bg-white/[0.03]'
-                  }`}>
+                  <label
+                    className={`flex cursor-pointer items-center gap-3 rounded-field border px-4 py-3 text-sm font-medium transition-all ${
+                      reason === 'dead_link'
+                        ? 'border-teal bg-teal/5 text-ink dark:bg-teal/15'
+                        : 'border-line bg-paper-soft text-ink-soft hover:border-teal/40'
+                    }`}
+                  >
                     <input
                       type="radio"
                       name="reason"
@@ -155,16 +161,22 @@ export function ReportModal({ note, onClose, onReported }: ReportModalProps) {
                       className="h-4 w-4 accent-teal"
                     />
                     <span className="flex-1">
-                      <span className="block font-bold">الرابط لا يعمل</span>
-                      <span className="text-xs text-ink/50">الرابط لا يفتح أو محذوف من تيليكرام</span>
+                      <span className="block font-bold text-ink">
+                        الرابط لا يعمل
+                      </span>
+                      <span className="text-xs text-ink-muted">
+                        الرابط لا يفتح أو محذوف من تيليكرام
+                      </span>
                     </span>
                   </label>
 
-                  <label className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
-                    reason === 'outdated'
-                      ? 'border-teal bg-teal/5 text-ink dark:bg-teal/15'
-                      : 'border-line bg-white text-ink/80 hover:border-teal/40 dark:bg-white/[0.03]'
-                  }`}>
+                  <label
+                    className={`flex cursor-pointer items-center gap-3 rounded-field border px-4 py-3 text-sm font-medium transition-all ${
+                      reason === 'outdated'
+                        ? 'border-teal bg-teal/5 text-ink dark:bg-teal/15'
+                        : 'border-line bg-paper-soft text-ink-soft hover:border-teal/40'
+                    }`}
+                  >
                     <input
                       type="radio"
                       name="reason"
@@ -174,16 +186,24 @@ export function ReportModal({ note, onClose, onReported }: ReportModalProps) {
                       className="h-4 w-4 accent-teal"
                     />
                     <span className="flex-1">
-                      <span className="block font-bold">الملزمة قديمة</span>
-                      <span className="text-xs text-ink/50">المحتوى قديم أو من سنة سابقة</span>
+                      <span className="block font-bold text-ink">
+                        الملزمة قديمة
+                      </span>
+                      <span className="text-xs text-ink-muted">
+                        المحتوى قديم أو من سنة سابقة
+                      </span>
                     </span>
                   </label>
                 </div>
               </fieldset>
 
               <div>
-                <label htmlFor="report-note" className="mb-2 block text-sm font-bold text-ink/70">
-                  ملاحظة إضافية <span className="text-ink/40">(اختياري)</span>
+                <label
+                  htmlFor="report-note"
+                  className="mb-2 block text-sm font-bold text-ink"
+                >
+                  ملاحظة إضافية{' '}
+                  <span className="text-ink-muted">(اختياري)</span>
                 </label>
                 <Textarea
                   id="report-note"

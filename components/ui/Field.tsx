@@ -8,87 +8,140 @@ import {
   type TextareaHTMLAttributes,
   type ReactNode,
 } from 'react';
+import { IconChevronDown } from '@/components/ui/Icons';
 
-const BASE =
-  'w-full rounded-xl border-2 border-line bg-white px-4 py-2.5 text-sm text-ink placeholder:text-ink/35 transition-all duration-200 focus:border-teal focus:bg-white focus:outline-none focus:shadow-[0_0_0_4px_rgba(14,74,74,0.10)] hover:border-ink/20 disabled:cursor-not-allowed disabled:bg-paper disabled:opacity-60 dark:bg-white/[0.06] dark:text-ink dark:placeholder:text-ink/40 dark:hover:bg-white/[0.08] dark:hover:border-ink/30 dark:focus:bg-white/[0.08] dark:focus:border-teal dark:focus:shadow-[0_0_0_4px_rgba(77,184,184,0.15)] dark:disabled:bg-white/[0.02]';
+// ==================== Shared Base ====================
+const BASE = 'field-editorial';
 
+// أنماط مشتركة لبطاقة Checkbox / Radio
+const CHOICE_LABEL = [
+  'flex cursor-pointer items-center gap-3',
+  'rounded-field border border-field-border bg-paper-soft px-4 py-3',
+  'text-sm font-medium text-ink-soft',
+  'transition-colors duration-200',
+  'hover:border-teal/40 hover:bg-paper',
+  'has-[:checked]:border-teal/60 has-[:checked]:bg-teal/5 has-[:checked]:text-ink',
+  'has-[:disabled]:cursor-not-allowed has-[:disabled]:bg-disabled has-[:disabled]:text-disabled-ink has-[:disabled]:hover:border-field-border',
+].join(' ');
+
+const CHOICE_INPUT =
+  'peer h-5 w-5 cursor-pointer appearance-none border-2 border-field-border bg-paper-soft ' +
+  'transition-all duration-200 focus-visible:outline-offset-2 disabled:cursor-not-allowed';
+
+// ==================== Input ====================
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   function Input({ className = '', ...rest }, ref) {
     return <input ref={ref} className={`${BASE} ${className}`} {...rest} />;
   }
 );
 
+// ==================== Select ====================
 export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(
   function Select({ className = '', children, ...rest }, ref) {
     return (
       <div className="relative">
         <select
           ref={ref}
-          className={`${BASE} cursor-pointer appearance-none pl-10 pr-4 ${className}`}
+          className={`${BASE} cursor-pointer appearance-none ps-4 pe-10 ${className}`}
           {...rest}
         >
           {children}
         </select>
-        <svg
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          aria-hidden="true"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
+        <IconChevronDown className="pointer-events-none absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
       </div>
     );
   }
 );
 
+// ==================== Textarea ====================
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(
   function Textarea({ className = '', ...rest }, ref) {
     return (
       <textarea
         ref={ref}
-        className={`${BASE} resize-none leading-relaxed ${className}`}
+        className={`${BASE} resize-none leading-[1.8] ${className}`}
         {...rest}
       />
     );
   }
 );
 
-export function FieldGroup({ children, className = '' }: { children: ReactNode; className?: string }) {
+// ==================== FieldGroup ====================
+export function FieldGroup({
+  children,
+  className = '',
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <div
-      className={`space-y-3 rounded-2xl border border-line bg-white/70 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] dark:bg-white/[0.03] ${className}`}
+      className={`space-y-3 rounded-card border border-line bg-paper-soft p-5 ${className}`}
     >
       {children}
     </div>
   );
 }
 
-export function Checkbox({
-  checked,
-  onChange,
+// ==================== Label ====================
+export function Label({
+  htmlFor,
   children,
+  hint,
+  required,
   className = '',
 }: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
+  htmlFor?: string;
   children: ReactNode;
+  hint?: string;
+  required?: boolean;
   className?: string;
 }) {
   return (
     <label
-      className={`group flex cursor-pointer items-center gap-3 rounded-xl border border-line bg-white px-4 py-3 text-sm font-medium text-ink/80 transition-all duration-200 hover:border-teal/40 has-[:checked]:border-teal has-[:checked]:bg-teal/5 has-[:checked]:text-ink dark:bg-white/[0.03] dark:hover:bg-white/[0.06] dark:hover:border-teal/40 dark:has-[:checked]:bg-teal/15 ${className}`}
+      htmlFor={htmlFor}
+      className={`mb-2 flex items-baseline gap-1.5 text-sm font-bold text-ink ${className}`}
     >
+      <span>{children}</span>
+      {required && (
+        <span className="text-coral-strong" aria-hidden="true">
+          *
+        </span>
+      )}
+      {hint && (
+        <span className="text-xs font-normal text-ink-muted">— {hint}</span>
+      )}
+    </label>
+  );
+}
+
+// ==================== Checkbox ====================
+type ChoiceProps = Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  'onChange' | 'checked' | 'type'
+>;
+
+export const Checkbox = forwardRef<
+  HTMLInputElement,
+  ChoiceProps & {
+    checked: boolean;
+    onChange: (v: boolean) => void;
+    children: ReactNode;
+  }
+>(function Checkbox({ checked, onChange, children, className = '', ...rest }, ref) {
+  return (
+    <label className={`${CHOICE_LABEL} ${className}`}>
       <span className="relative flex h-5 w-5 flex-shrink-0 items-center justify-center">
         <input
+          ref={ref}
           type="checkbox"
           checked={checked}
           onChange={(e) => onChange(e.target.checked)}
-          className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border-2 border-line bg-white transition-all duration-200 checked:border-teal checked:bg-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/30 focus-visible:ring-offset-2 dark:bg-white/[0.06] dark:border-line"
+          className={`${CHOICE_INPUT} rounded-[6px] checked:border-teal checked:bg-teal`}
+          {...rest}
         />
         <svg
-          className="pointer-events-none absolute h-3 w-3 scale-0 text-white opacity-0 transition-all duration-150 peer-checked:scale-100 peer-checked:opacity-100"
+          className="pointer-events-none absolute h-3 w-3 scale-0 text-on-teal opacity-0 transition-all duration-150 peer-checked:scale-100 peer-checked:opacity-100"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -98,7 +151,43 @@ export function Checkbox({
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
         </svg>
       </span>
-      <span className="flex-1">{children}</span>
+
+      <span className="flex-1 leading-relaxed">{children}</span>
+    </label>
+  );
+});
+
+// ==================== Radio ====================
+export function Radio<T extends string>({
+  name,
+  value,
+  checked,
+  onChange,
+  children,
+  className = '',
+  ...rest
+}: Omit<ChoiceProps, 'name' | 'value'> & {
+  name: string;
+  value: T;
+  checked: boolean;
+  onChange: (v: T) => void;
+  children: ReactNode;
+}) {
+  return (
+    <label className={`${CHOICE_LABEL} ${className}`}>
+      <span className="relative flex h-5 w-5 flex-shrink-0 items-center justify-center">
+        <input
+          type="radio"
+          name={name}
+          value={value}
+          checked={checked}
+          onChange={() => onChange(value)}
+          className={`${CHOICE_INPUT} rounded-full checked:border-[6px] checked:border-teal`}
+          {...rest}
+        />
+      </span>
+
+      <span className="flex-1 leading-relaxed">{children}</span>
     </label>
   );
 }

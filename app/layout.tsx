@@ -31,9 +31,10 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
+  viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#F7F6F2' },
-    { media: '(prefers-color-scheme: dark)', color: '#131918' },
+    { media: '(prefers-color-scheme: light)', color: '#F4F2EC' },
+    { media: '(prefers-color-scheme: dark)', color: '#141A1E' },
   ],
 };
 
@@ -61,12 +62,12 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
-      <body className="min-h-screen bg-paper">
+      <body className="min-h-dvh bg-paper">
         <ThemeProvider>
           <ToastProvider>
             <ConfirmProvider>
               <NavBar />
-              <main className="pb-20 md:pb-0">{children}</main>
+              <div id="main-content" className="pb-20 md:pb-0">{children}</div>
               <MobileBottomNav />
               <PWARegister />
             </ConfirmProvider>

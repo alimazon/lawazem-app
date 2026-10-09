@@ -86,6 +86,18 @@ async function assertContentOwnership(
   return data.channel_id === channelId;
 }
 
+function parseIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const out = new Set<string>();
+  for (const v of value) {
+    if (typeof v !== 'string') continue;
+    const t = v.trim();
+    if (t && t.length <= 100) out.add(t);
+    if (out.size >= 100) break;
+  }
+  return Array.from(out);
+}
+
 // ==================== Route ====================
 
 export async function POST(request: Request) {
@@ -289,6 +301,82 @@ export async function POST(request: Request) {
       if (error) {
         console.error('channel change_password error:', error.message);
         return jsonError('فشل تغيير كلمة المرور', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // ==================== duplicate ====================
+    case 'duplicate': {
+      const id = safeString(body.id, 100);
+      if (!id) return jsonError('id مطلوب');
+
+      const { data: src, error: srcError } = await supabaseAdmin
+        .from('channel_content')
+        .select('channel_id, content_type, title, description, due_date, folder, file_urls')
+        .eq('id', id)
+        .eq('channel_id', channel.id)
+        .maybeSingle<{
+          channel_id: string;
+          content_type: string;
+          title: string;
+          description: string | null;
+          due_date: string | null;
+          folder: string | null;
+          file_urls: unknown;
+        }>();
+
+      if (srcError || !src) return jsonError('غير مصرح', 403);
+
+      const { error } = await supabaseAdmin.from('channel_content').insert({
+        channel_id: channel.id,
+        content_type: src.content_type,
+        title: `${src.title} (نسخة)`.slice(0, 300),
+        description: src.description,
+        due_date: src.due_date,
+        folder: src.folder,
+        file_urls: src.file_urls,
+        pinned: false,
+      });
+
+      if (error) {
+        console.error('channel content duplicate error:', error.message);
+        return jsonError('فشل نسخ المنشور', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // ==================== bulk_delete ====================
+    case 'bulk_delete': {
+      const ids = parseIds(body.ids);
+      if (ids.length === 0) return jsonError('لم يتم تحديد منشورات');
+
+      const { error } = await supabaseAdmin
+        .from('channel_content')
+        .delete()
+        .eq('channel_id', channel.id)
+        .in('id', ids);
+
+      if (error) {
+        console.error('channel content bulk_delete error:', error.message);
+        return jsonError('فشل حذف المنشورات', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // ==================== bulk_pin ====================
+    case 'bulk_pin': {
+      const ids = parseIds(body.ids);
+      if (ids.length === 0) return jsonError('لم يتم تحديد منشورات');
+
+      const { error } = await supabaseAdmin
+        .from('channel_content')
+        .update({ pinned: !!body.pinned })
+        .eq('channel_id', channel.id)
+        .in('id', ids);
+
+      if (error) {
+        console.error('channel content bulk_pin error:', error.message);
+        return jsonError('فشل تحديث التثبيت', 500);
       }
       return NextResponse.json({ success: true });
     }

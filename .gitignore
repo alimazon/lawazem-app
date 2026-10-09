@@ -39,3 +39,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Backup folders (لا ترفع أبداً)
+.backup/
+*.backup
+
+# Project exports (تحتوي على أسرار)
+project-export.md
+project-export*.md
+*-export.md
+
+# ZIP files
+*.zip
+
+# Local temp
+_tmp_*/

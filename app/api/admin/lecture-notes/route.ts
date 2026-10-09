@@ -2,8 +2,9 @@
 import { NextResponse } from 'next/server';
 import { adminGuard, jsonError, safeOptionalString, safeString } from '@/lib/api-server';
 import { notifyNewLectureNote } from '@/lib/telegram-notifications';
-import type { Track } from '@/lib/types';
+import type { Group, Track } from '@/lib/types';
 
+// ==================== Parsers ====================
 function parseLectureNumber(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return null;
   const n = Number(value);
@@ -24,6 +25,12 @@ function parseTrack(value: unknown): Track | null {
   return null;
 }
 
+function parseGroup(value: unknown): Group | null {
+  if (value === null || value === undefined || value === '') return null;
+  if (value === 'A' || value === 'B') return value;
+  return null;
+}
+
 function parseTags(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   const cleaned = value
@@ -34,6 +41,7 @@ function parseTags(value: unknown): string[] {
   return Array.from(new Set(cleaned));
 }
 
+// ==================== Route ====================
 export async function POST(request: Request) {
   let body: Record<string, unknown>;
   try {
@@ -72,6 +80,7 @@ export async function POST(request: Request) {
       const track = parseTrack(body.track);
       const tags = parseTags(body.tags);
       const year = parseYear(body.year);
+      const group_name = parseGroup(body.group_name);
       const file_path = safeString(body.file_path, 2000);
 
       if (!subject_id) return jsonError('اختر المادة');
@@ -89,6 +98,7 @@ export async function POST(request: Request) {
           track,
           tags,
           year,
+          group_name,
           file_path,
           status: 'approved',
         })
@@ -116,6 +126,7 @@ export async function POST(request: Request) {
               subject_name: subject.name,
               professor_name,
               stage: subject.stage,
+              group_name,
             });
           }
         } catch (err) {
@@ -136,6 +147,7 @@ export async function POST(request: Request) {
       const track = parseTrack(body.track);
       const tags = parseTags(body.tags);
       const year = parseYear(body.year);
+      const group_name = parseGroup(body.group_name);
       const file_path = safeString(body.file_path, 2000);
 
       if (!id) return jsonError('id مطلوب');
@@ -154,6 +166,7 @@ export async function POST(request: Request) {
           track,
           tags,
           year,
+          group_name,
           file_path,
         })
         .eq('id', id);

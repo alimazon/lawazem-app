@@ -178,3 +178,23 @@ export const STAGE_REVERSE: Record<string, string> = {
 export function stageLabel(code: string): string {
   return STAGE_MAP[code] ?? code;
 }
+// ==================== Helper: getAdminChatIds ====================
+// (يُستخدم من telegram-admins.ts، لا يحتاج تعديل الملف)
+
+// ==================== Message Helpers ====================
+export function bold(text: string): string {
+  return `<b>${text}</b>`;
+}
+
+export function code(text: string): string {
+  return `<code>${text}</code>`;
+}
+
+export function italic(text: string): string {
+  return `<i>${text}</i>`;
+}
+
+export function truncate(text: string, max = 3500): string {
+  if (text.length <= max) return text;
+  return text.slice(0, max - 1) + '…';
+}

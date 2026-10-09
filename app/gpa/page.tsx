@@ -1,13 +1,30 @@
 // app/gpa/page.tsx
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { useStudentStage } from '@/hooks/useStudentStage';
 import { Button } from '@/components/ui/Button';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { Input } from '@/components/ui/Field';
+import {
+  IconArrowRight,
+  IconChart,
+  IconCheck,
+  IconChevronDown,
+  IconTarget,
+  IconTrending,
+  IconWarning,
+} from '@/components/ui/Icons';
 import type { Subject } from '@/lib/types';
 
 // ==================== Constants ====================
@@ -25,21 +42,26 @@ const COMPONENTS: readonly ComponentDef[] = [
   { key: 'finalPractical', label: 'الفاينل (عملي)', defaultMax: 20 },
 ] as const;
 
-// أهداف النجاح / التقدير
 interface TargetDef {
   value: number;
   label: string;
   short: string;
 }
 
+// ✅ 5 تقديرات عراقية: مقبول / متوسط / جيد / جيد جداً / امتياز
 const TARGETS: readonly TargetDef[] = [
-  { value: 50, label: 'النجاح', short: 'نجاح' },
-  { value: 60, label: 'جيد', short: 'جيد' },
-  { value: 70, label: 'جيد جداً', short: 'جيد جداً' },
-  { value: 80, label: 'امتياز', short: 'امتياز' },
+  { value: 50, label: 'مقبول', short: 'مقبول' },
+  { value: 60, label: 'متوسط', short: 'متوسط' },
+  { value: 70, label: 'جيد', short: 'جيد' },
+  { value: 80, label: 'جيد جداً', short: 'جيد جداً' },
+  { value: 90, label: 'امتياز', short: 'امتياز' },
 ] as const;
 
 const TARGET_KEY_PREFIX = 'gpa_target_';
+const SCORES_KEY_PREFIX = 'gpa_scores_';
+
+/** هامش صغير لتفادي أخطاء الفاصلة العائمة */
+const EPS = 1e-9;
 
 // ==================== Types ====================
 interface ComponentData {
@@ -48,11 +70,6 @@ interface ComponentData {
 }
 type SubjectScores = Record<string, ComponentData>;
 type AllScores = Record<string, SubjectScores>;
-
-interface SubjectWithPercentage extends Subject {
-  percentage: number | null;
-  targetAnalysis: TargetAnalysis;
-}
 
 interface TargetAnalysis {
   currentScore: number;
@@ -66,6 +83,29 @@ interface TargetAnalysis {
   allEntered: boolean;
 }
 
+interface ComponentIssues {
+  max: string | null;
+  score: string | null;
+}
+
+// ==================== Storage helpers ====================
+function readStorage(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeStorage(key: string, value: string): boolean {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // ==================== Helpers ====================
 function defaultSubjectScores(): SubjectScores {
   const obj: SubjectScores = {};
@@ -73,13 +113,83 @@ function defaultSubjectScores(): SubjectScores {
   return obj;
 }
 
-function safeParseScores(raw: string | null): AllScores {
+function toStringValue(v: unknown, fallback: string): string {
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' && Number.isFinite(v)) return String(v);
+  return fallback;
+}
+
+function sanitizeSubjectScores(raw: unknown): SubjectScores {
+  const defaults = defaultSubjectScores();
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return defaults;
+  const source = raw as Record<string, unknown>;
+  const result: SubjectScores = {};
+  for (const c of COMPONENTS) {
+    const fallback = defaults[c.key];
+    const item = source[c.key];
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      result[c.key] = fallback;
+      continue;
+    }
+    const rec = item as Record<string, unknown>;
+    result[c.key] = {
+      max: toStringValue(rec.max, fallback.max),
+      score: toStringValue(rec.score, fallback.score),
+    };
+  }
+  return result;
+}
+
+function safeParseScores(raw: string | null): Record<string, unknown> {
   if (!raw) return {};
   try {
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed as AllScores;
-  } catch {}
+    const parsed: unknown = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
+      return parsed as Record<string, unknown>;
+  } catch {
+    /* تجاهل */
+  }
   return {};
+}
+
+function normalizeNumericInput(raw: string): string {
+  let s = raw
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/[\u066B\u066C,\u060C]/g, '.')
+    .replace(/[^\d.]/g, '');
+  const firstDot = s.indexOf('.');
+  if (firstDot !== -1) {
+    s = s.slice(0, firstDot + 1) + s.slice(firstDot + 1).replace(/\./g, '');
+  }
+  return s.slice(0, 6);
+}
+
+function fmtNum(n: number): string {
+  const r = Math.round(n * 10) / 10;
+  return Number.isInteger(r) ? String(r) : r.toFixed(1);
+}
+
+function fmtNeed(n: number): string {
+  return fmtNum(Math.ceil(n * 10 - EPS) / 10);
+}
+
+function getComponentIssues(comp: ComponentData): ComponentIssues {
+  const maxNum = Number(comp.max);
+  const maxInvalid =
+    comp.max.trim() === '' || Number.isNaN(maxNum) || maxNum <= 0;
+  const max = maxInvalid ? 'الدرجة العظمى يجب أن تكون أكبر من صفر' : null;
+
+  let score: string | null = null;
+  if (comp.score !== '') {
+    const scoreNum = Number(comp.score);
+    if (Number.isNaN(scoreNum)) {
+      score = 'أدخل رقماً صحيحاً';
+    } else if (!maxInvalid && scoreNum > maxNum + EPS) {
+      score = `الدرجة أكبر من الحد الأقصى (${fmtNum(maxNum)})`;
+    }
+  }
+  return { max, score };
 }
 
 function calculatePercentage(subjectScores: SubjectScores | undefined): number | null {
@@ -103,7 +213,6 @@ function calculatePercentage(subjectScores: SubjectScores | undefined): number |
   return (totalScore / totalMax) * 100;
 }
 
-// ✅ تحليل الوضع بالنسبة للهدف
 function analyzeForTarget(
   subjectScores: SubjectScores | undefined,
   targetPercent: number
@@ -152,8 +261,8 @@ function analyzeForTarget(
 
   const targetScore = (targetPercent / 100) * totalMax;
   const needFromRemaining = targetScore - currentScore;
-  const achieved = needFromRemaining <= 0;
-  const impossible = !achieved && needFromRemaining > remainingMax;
+  const achieved = needFromRemaining <= EPS;
+  const impossible = !achieved && needFromRemaining > remainingMax + EPS;
   const noData = enteredCount === 0;
   const allEntered = remainingMax === 0;
 
@@ -170,67 +279,41 @@ function analyzeForTarget(
   };
 }
 
-// ==================== Icons ====================
-function IconArrowLeft() {
-  return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M11 17l-5-5m0 0l5-5m-5 5h12" />
-    </svg>
-  );
+function getScoreColor(pct: number): string {
+  if (pct >= 85) return 'bg-teal/10 text-teal dark:bg-teal/20';
+  if (pct >= 70) return 'bg-teal/8 text-teal';
+  if (pct >= 50) return 'bg-gold/15 text-gold-ink dark:bg-gold/25';
+  return 'bg-coral/15 text-coral-ink dark:bg-coral/25';
 }
-function IconChevron({ open }: { open: boolean }) {
-  return (
-    <svg className={`h-4 w-4 flex-shrink-0 text-ink/40 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-    </svg>
-  );
+
+// ✅ التقدير العراقي حسب 5 مستويات
+function getGradeLabel(pct: number): string {
+  if (pct >= 90) return 'امتياز';
+  if (pct >= 80) return 'جيد جداً';
+  if (pct >= 70) return 'جيد';
+  if (pct >= 60) return 'متوسط';
+  if (pct >= 50) return 'مقبول';
+  return 'دون النجاح';
 }
-function IconChart() {
-  return (
-    <svg className="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-    </svg>
-  );
-}
-function IconTarget() {
-  return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <circle cx="12" cy="12" r="10" />
-      <circle cx="12" cy="12" r="6" />
-      <circle cx="12" cy="12" r="2" />
-    </svg>
-  );
-}
-function IconCheck() {
-  return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-    </svg>
-  );
-}
-function IconWarning() {
-  return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-    </svg>
-  );
-}
-function IconTrendingUp() {
-  return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-    </svg>
-  );
+
+function hasAnyScore(scores: SubjectScores | undefined): boolean {
+  if (!scores) return false;
+  return COMPONENTS.some((c) => (scores[c.key]?.score ?? '') !== '');
 }
 
 // ==================== Skeleton ====================
 function Skeleton() {
   return (
-    <div className="mt-6 space-y-2">
+    <div className="mt-6 space-y-2" role="status" aria-busy="true">
+      <span className="sr-only">جارٍ التحميل…</span>
       {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="flex items-center justify-between rounded-2xl border border-line bg-white/80 p-4 backdrop-blur-sm dark:bg-paper/80">
+        <div
+          key={i}
+          aria-hidden="true"
+          className="flex items-center justify-between rounded-card border border-line bg-paper-soft p-4"
+        >
           <div className="h-4 w-40 skeleton-shimmer rounded" />
-          <div className="h-6 w-16 skeleton-shimmer rounded-full" />
+          <div className="h-6 w-16 skeleton-shimmer rounded-chip" />
         </div>
       ))}
     </div>
@@ -239,19 +322,16 @@ function Skeleton() {
 
 function BackLink() {
   return (
-    <Link href="/" className="group inline-flex items-center gap-1.5 text-sm font-bold text-teal/70 transition-colors hover:text-teal">
-      <span className="transition-transform duration-200 group-hover:translate-x-1"><IconArrowLeft /></span>
+    <Link
+      href="/"
+      className="group inline-flex items-center gap-1.5 text-sm font-bold text-teal transition-colors hover:text-teal-hover"
+    >
+      <span className="transition-transform duration-200 motion-reduce:transition-none rtl:group-hover:translate-x-1 ltr:group-hover:-translate-x-1">
+        <IconArrowRight className="h-4 w-4 ltr:rotate-180" />
+      </span>
       رجوع إلى لوحة الأقسام
     </Link>
   );
-}
-
-// ==================== Score Color ====================
-function getScoreColor(pct: number): string {
-  if (pct >= 85) return 'bg-teal/10 text-teal dark:bg-teal/20 dark:text-teal';
-  if (pct >= 70) return 'bg-teal/8 text-teal-light dark:bg-teal/15 dark:text-teal';
-  if (pct >= 50) return 'bg-amber/15 text-amber-800 dark:bg-amber/25 dark:text-amber-300';
-  return 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300';
 }
 
 // ==================== Target Selector ====================
@@ -263,18 +343,30 @@ function TargetSelector({
   onChange: (v: number) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-line bg-white/80 p-4 dark:bg-paper/80">
+    <div
+      className="rounded-card border border-line bg-paper-soft p-4"
+      role="group"
+      aria-labelledby="gpa-target-title"
+    >
       <div className="mb-3 flex items-center gap-2">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal/10 text-teal dark:bg-teal/20">
-          <IconTarget />
+        <span
+          aria-hidden="true"
+          className="flex h-8 w-8 items-center justify-center rounded-field bg-teal/10 text-teal"
+        >
+          <IconTarget className="h-4 w-4" />
         </span>
         <div>
-          <p className="text-sm font-bold text-ink">هدفي في كل مادة</p>
-          <p className="text-[11px] text-ink/50">اختر هدفك، وسنخبرك بكم تحتاج في المتبقي</p>
+          <p id="gpa-target-title" className="text-sm font-bold text-ink">
+            هدفي في كل مادة
+          </p>
+          <p className="text-[11px] text-ink-muted">
+            اختر هدفك، وسنخبرك بكم تحتاج في المتبقي
+          </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-1.5">
+      {/* ✅ 5 أزرار */}
+      <div className="grid grid-cols-5 gap-1.5">
         {TARGETS.map((t) => {
           const active = target === t.value;
           return (
@@ -282,17 +374,29 @@ function TargetSelector({
               key={t.value}
               type="button"
               onClick={() => onChange(t.value)}
-              className={`rounded-xl border px-2 py-2.5 text-center transition-all duration-200 active:scale-95 ${
+              aria-pressed={active}
+              aria-label={`${t.label}، ${t.value} بالمئة`}
+              className={`rounded-field border px-1 py-2.5 text-center transition-all duration-200 motion-reduce:transition-none active:scale-95 ${
                 active
-                  ? 'border-teal bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)]'
-                  : 'border-line bg-white text-ink/70 hover:border-teal/40 dark:bg-white/[0.04]'
+                  ? 'border-teal bg-teal text-on-teal shadow-sm'
+                  : 'border-line bg-paper text-ink-soft hover:border-teal/40'
               }`}
             >
-              <p className={`font-mono text-lg font-black leading-none ${active ? '' : 'text-ink'}`}>
+              <p
+                aria-hidden="true"
+                className={`font-mono text-base font-bold leading-none ${
+                  active ? '' : 'text-ink'
+                }`}
+              >
                 {t.value}
-                <span className="text-xs">%</span>
+                <span className="text-[10px]">%</span>
               </p>
-              <p className={`mt-0.5 text-[10px] font-bold ${active ? 'text-white/90' : 'text-ink/50'}`}>
+              <p
+                aria-hidden="true"
+                className={`mt-0.5 truncate text-[9px] font-bold ${
+                  active ? 'text-on-teal/90' : 'text-ink-muted'
+                }`}
+              >
                 {t.short}
               </p>
             </button>
@@ -313,26 +417,29 @@ function TargetAnalysisCard({
   target: number;
   subjectName: string;
 }) {
-  // لا درجات مُدخلة
   if (analysis.noData) {
     return (
-      <div className="rounded-2xl border border-line bg-paper/60 p-4 text-center dark:bg-white/[0.03]">
-        <p className="text-sm text-ink/50">أدخل أي درجة لتظهر لك التوقعات</p>
+      <div className="rounded-card border border-line bg-paper p-4 text-center">
+        <p className="text-sm text-ink-muted">أدخل أي درجة لتظهر لك التوقعات</p>
       </div>
     );
   }
 
-  // حقق الهدف
   if (analysis.achieved) {
     return (
-      <div className="rounded-2xl border border-teal/30 bg-teal/[0.04] p-4 dark:border-teal/40 dark:bg-teal/10">
+      <div className="rounded-card border border-teal/30 bg-teal/5 p-4">
         <div className="flex items-start gap-3">
-          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-teal text-white">
-            <IconCheck />
+          <span
+            aria-hidden="true"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-field bg-teal text-on-teal"
+          >
+            <IconCheck className="h-4 w-4" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-black text-teal">🎉 ضمنت {target}% في {subjectName}</p>
-            <p className="mt-0.5 text-xs text-ink/60">
+            <p className="text-sm font-bold text-teal">
+              ضمنت {getGradeLabel(target)} في {subjectName}
+            </p>
+            <p className="mt-0.5 text-xs text-ink-soft">
               حتى لو جبت صفر في المتبقي، لسا محقق هدفك.
             </p>
           </div>
@@ -341,20 +448,23 @@ function TargetAnalysisCard({
     );
   }
 
-  // مستحيل
   if (analysis.impossible) {
     return (
-      <div className="rounded-2xl border border-red-300 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/40">
+      <div className="rounded-card border border-coral/30 bg-coral/5 p-4">
         <div className="flex items-start gap-3">
-          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-red-500 text-white">
-            <IconWarning />
+          <span
+            aria-hidden="true"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-field bg-coral text-on-coral"
+          >
+            <IconWarning className="h-4 w-4" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-black text-red-700 dark:text-red-300">
-              صعب تحقيق {target}% في {subjectName}
+            <p className="text-sm font-bold text-coral-ink">
+              صعب تحقيق {getGradeLabel(target)} في {subjectName}
             </p>
-            <p className="mt-0.5 text-xs text-ink/60">
-              تحتاج {analysis.needFromRemaining.toFixed(1)} درجة، والحد الأقصى المتبقي {analysis.remainingMax} فقط.
+            <p className="mt-0.5 text-xs text-ink-soft">
+              تحتاج {fmtNeed(analysis.needFromRemaining)} درجة، والحد الأقصى
+              المتبقي {fmtNum(analysis.remainingMax)} فقط.
             </p>
           </div>
         </div>
@@ -362,33 +472,45 @@ function TargetAnalysisCard({
     );
   }
 
-  // تحتاج نقاط
+  const progressPct =
+    analysis.targetScore > 0
+      ? Math.min(100, Math.max(0, (analysis.currentScore / analysis.targetScore) * 100))
+      : 0;
+
   return (
-    <div className="rounded-2xl border border-amber/30 bg-amber/8 p-4 dark:border-amber/40 dark:bg-amber/15">
+    <div className="rounded-card border border-gold/30 bg-gold/5 p-4">
       <div className="flex items-start gap-3">
-        <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-amber text-ink">
-          <IconTrendingUp />
+        <span
+          aria-hidden="true"
+          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-field bg-gold text-on-gold"
+        >
+          <IconTrending className="h-4 w-4" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black text-ink">
-            تحتاج <span className="text-lg text-amber-800 dark:text-amber-300">{analysis.needFromRemaining.toFixed(1)}</span> درجة
+          <p className="text-sm font-bold text-ink">
+            تحتاج{' '}
+            <span className="text-lg text-gold-ink">
+              {fmtNeed(analysis.needFromRemaining)}
+            </span>{' '}
+            درجة
           </p>
-          <p className="mt-0.5 text-xs text-ink/60">
-            من أصل <strong>{analysis.remainingMax}</strong> متبقية لتحقق هدف {target}% في {subjectName}
+          <p className="mt-0.5 text-xs text-ink-soft">
+            من أصل <strong>{fmtNum(analysis.remainingMax)}</strong> متبقية لتحقق
+            تقدير {getGradeLabel(target)} في {subjectName}
           </p>
 
-          {/* Progress bar */}
           <div className="mt-3">
-            <div className="mb-1 flex items-center justify-between text-[10px] font-bold text-ink/50">
-              <span>حالياً: {analysis.currentScore.toFixed(1)}</span>
-              <span>الهدف: {analysis.targetScore.toFixed(1)}</span>
+            <div className="mb-1 flex items-center justify-between text-[10px] font-bold text-ink-muted">
+              <span>حالياً: {fmtNum(analysis.currentScore)}</span>
+              <span>الهدف: {fmtNum(analysis.targetScore)}</span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-ink/8 dark:bg-white/10">
+            <div
+              aria-hidden="true"
+              className="h-2 overflow-hidden rounded-chip bg-ink/8 dark:bg-white/10"
+            >
               <div
-                className="h-full rounded-full bg-gradient-to-l from-amber to-amber-soft transition-all duration-500"
-                style={{
-                  width: `${Math.min(100, (analysis.currentScore / analysis.targetScore) * 100)}%`,
-                }}
+                className="h-full rounded-chip bg-gradient-to-l from-gold to-gold-light transition-all duration-500 motion-reduce:transition-none"
+                style={{ width: `${progressPct}%` }}
               />
             </div>
           </div>
@@ -398,35 +520,255 @@ function TargetAnalysisCard({
   );
 }
 
-// ==================== Status Chip (للـheader) ====================
-function StatusChip({ analysis, target }: { analysis: TargetAnalysis; target: number }) {
+// ==================== Status Chip ====================
+function StatusChip({
+  analysis,
+  target,
+}: {
+  analysis: TargetAnalysis;
+  target: number;
+}) {
   if (analysis.noData) return null;
 
   if (analysis.achieved) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-teal/15 px-2 py-0.5 text-[10px] font-black text-teal dark:bg-teal/25">
-        <IconCheck />
-        ضمنت {target}%
+      <span className="inline-flex items-center gap-1 rounded-chip bg-teal/15 px-2 py-0.5 text-[10px] font-bold text-teal">
+        <IconCheck className="h-3 w-3" />
+        ضمنت {getGradeLabel(target)}
       </span>
     );
   }
 
   if (analysis.impossible) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-black text-red-700 dark:bg-red-950/50 dark:text-red-300">
-        <IconWarning />
-        {target}% صعب
+      <span className="inline-flex items-center gap-1 rounded-chip bg-coral/15 px-2 py-0.5 text-[10px] font-bold text-coral-ink">
+        <IconWarning className="h-3 w-3" />
+        {getGradeLabel(target)} صعب
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-amber/20 px-2 py-0.5 text-[10px] font-black text-amber-800 dark:bg-amber/30 dark:text-amber-300">
-      <IconTrendingUp />
-      تحتاج {analysis.needFromRemaining.toFixed(1)} لـ{target}%
+    <span className="inline-flex items-center gap-1 rounded-chip bg-gold/20 px-2 py-0.5 text-[10px] font-bold text-gold-ink">
+      <IconTrending className="h-3 w-3" />
+      تحتاج {fmtNeed(analysis.needFromRemaining)} لـ{getGradeLabel(target)}
     </span>
   );
 }
+
+// ==================== Subject Row (memo) ====================
+interface SubjectRowProps {
+  subject: Subject;
+  index: number;
+  scores: SubjectScores | undefined;
+  target: number;
+  isOpen: boolean;
+  onToggle: (subjectId: string) => void;
+  onUpdate: (
+    subjectId: string,
+    componentKey: string,
+    field: 'max' | 'score',
+    value: string
+  ) => void;
+  onClear: (subjectId: string, subjectName: string) => void;
+}
+
+const SubjectRow = memo(function SubjectRow({
+  subject,
+  index,
+  scores,
+  target,
+  isOpen,
+  onToggle,
+  onUpdate,
+  onClear,
+}: SubjectRowProps) {
+  const percentage = useMemo(() => calculatePercentage(scores), [scores]);
+  const analysis = useMemo(() => analyzeForTarget(scores, target), [scores, target]);
+  const scoreColor = percentage !== null ? getScoreColor(percentage) : '';
+  const panelId = `gpa-panel-${subject.id}`;
+  const triggerId = `gpa-trigger-${subject.id}`;
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'Enter') return;
+    const el = e.target;
+    if (!(el instanceof HTMLInputElement) || !el.hasAttribute('data-gpa-score')) return;
+    e.preventDefault();
+    const inputs = Array.from(
+      e.currentTarget.querySelectorAll<HTMLInputElement>('input[data-gpa-score]')
+    );
+    const next = inputs[inputs.indexOf(el) + 1];
+    if (next) next.focus();
+    else el.blur();
+  };
+
+  return (
+    <div
+      style={{ animationDelay: `${index * 40}ms` }}
+      className="overflow-hidden rounded-card border border-line bg-paper-soft transition-all duration-200 motion-reduce:transition-none animate-slide-up motion-reduce:animate-none"
+    >
+      <button
+        id={triggerId}
+        type="button"
+        onClick={() => onToggle(subject.id)}
+        aria-expanded={isOpen}
+        aria-controls={panelId}
+        className="flex w-full items-center justify-between gap-3 p-4 text-start transition-colors hover:bg-paper"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-bold text-ink">{subject.name}</span>
+            {subject.units != null && (
+              <span className="text-xs text-ink-muted">({subject.units} وحدة)</span>
+            )}
+          </div>
+          <div className="mt-1">
+            <StatusChip analysis={analysis} target={target} />
+          </div>
+        </div>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          {percentage !== null ? (
+            <span
+              className={`rounded-chip px-3 py-1 text-sm font-bold ${scoreColor}`}
+              aria-label={`النسبة ${percentage.toFixed(1)} بالمئة`}
+            >
+              {percentage.toFixed(1)}%
+            </span>
+          ) : (
+            <span className="text-sm text-ink-muted" aria-label="لم تُدخل درجات بعد">
+              —
+            </span>
+          )}
+          <IconChevronDown
+            aria-hidden="true"
+            className={`h-4 w-4 flex-shrink-0 text-ink-muted transition-transform duration-200 motion-reduce:transition-none ${
+              isOpen ? 'rotate-180' : ''
+            }`}
+          />
+        </div>
+      </button>
+
+      <div
+        id={panelId}
+        role="region"
+        aria-labelledby={triggerId}
+        inert={!isOpen}
+        className={`grid transition-all duration-300 motion-reduce:transition-none ease-[var(--ease-editorial)] ${
+          isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div
+            className="space-y-4 border-t border-line bg-paper/40 p-4"
+            onKeyDown={handleKeyDown}
+          >
+            <TargetAnalysisCard
+              analysis={analysis}
+              target={target}
+              subjectName={subject.name}
+            />
+
+            <div className="space-y-3">
+              {COMPONENTS.map((c) => {
+                const comp: ComponentData = scores?.[c.key] ?? { max: '', score: '' };
+                const issues = getComponentIssues(comp);
+                const issueText = issues.score ?? issues.max;
+                const scoreId = `${subject.id}-${c.key}-score`;
+                const maxId = `${subject.id}-${c.key}-max`;
+                const errId = `${subject.id}-${c.key}-err`;
+                return (
+                  <div
+                    key={c.key}
+                    role="group"
+                    aria-label={c.label}
+                    className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1"
+                  >
+                    <label
+                      htmlFor={scoreId}
+                      className="w-full text-sm font-medium text-ink-soft sm:w-28"
+                    >
+                      {c.label}
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id={scoreId}
+                        type="text"
+                        inputMode="decimal"
+                        dir="ltr"
+                        autoComplete="off"
+                        enterKeyHint="next"
+                        data-gpa-score=""
+                        value={comp.score}
+                        onChange={(e) =>
+                          onUpdate(
+                            subject.id,
+                            c.key,
+                            'score',
+                            normalizeNumericInput(e.target.value)
+                          )
+                        }
+                        onFocus={(e) => e.currentTarget.select()}
+                        placeholder="درجتك"
+                        aria-invalid={issues.score !== null}
+                        aria-describedby={issueText ? errId : undefined}
+                        className="w-20 text-center"
+                      />
+                      <span className="text-sm text-ink-muted" aria-hidden="true">
+                        من
+                      </span>
+                      <Input
+                        id={maxId}
+                        type="text"
+                        inputMode="decimal"
+                        dir="ltr"
+                        autoComplete="off"
+                        value={comp.max}
+                        onChange={(e) =>
+                          onUpdate(
+                            subject.id,
+                            c.key,
+                            'max',
+                            normalizeNumericInput(e.target.value)
+                          )
+                        }
+                        onFocus={(e) => e.currentTarget.select()}
+                        aria-label={`الدرجة العظمى لـ${c.label}`}
+                        aria-invalid={issues.max !== null}
+                        aria-describedby={issues.max ? errId : undefined}
+                        className="w-16 text-center"
+                      />
+                    </div>
+                    {issueText && (
+                      <p
+                        id={errId}
+                        className="basis-full text-xs font-medium text-coral-ink"
+                      >
+                        {issueText}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {hasAnyScore(scores) && (
+              <div className="flex justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onClear(subject.id, subject.name)}
+                  className="text-coral-ink hover:bg-coral/10"
+                >
+                  مسح درجات هذه المادة
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
 
 // ==================== Page ====================
 export default function GpaPage() {
@@ -439,11 +781,25 @@ export default function GpaPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [target, setTarget] = useState<number>(50);
+  const [storageFailed, setStorageFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const storageKey = stage ? `gpa_scores_${stage}` : '';
+  const storageKey = stage ? `${SCORES_KEY_PREFIX}${stage}` : '';
   const targetKey = stage ? `${TARGET_KEY_PREFIX}${stage}` : '';
 
-  // ===== تحميل =====
+  const dirtyRef = useRef(false);
+  const orphansRef = useRef<Record<string, unknown>>({});
+
+  // ---- تحميل الهدف المحفوظ ----
+  useEffect(() => {
+    if (!targetKey) return;
+    const saved = Number(readStorage(targetKey));
+    if (Number.isFinite(saved) && TARGETS.some((t) => t.value === saved)) {
+      setTarget(saved);
+    }
+  }, [targetKey]);
+
+  // ---- تحميل المواد + الدرجات ----
   useEffect(() => {
     if (!stage) return;
     let cancelled = false;
@@ -451,12 +807,6 @@ export default function GpaPage() {
     async function loadData() {
       setLoading(true);
       setError('');
-
-      // تحميل الهدف
-      const savedTarget = Number(localStorage.getItem(`${TARGET_KEY_PREFIX}${stage}`));
-      if (!Number.isNaN(savedTarget) && TARGETS.some((t) => t.value === savedTarget)) {
-        setTarget(savedTarget);
-      }
 
       const { data, error: fetchError } = await supabase
         .from('subjects')
@@ -472,100 +822,139 @@ export default function GpaPage() {
       }
 
       const subjectList = (data ?? []) as Subject[];
-      setSubjects(subjectList);
-      const saved = safeParseScores(localStorage.getItem(`gpa_scores_${stage}`));
+      const saved = safeParseScores(readStorage(`${SCORES_KEY_PREFIX}${stage}`));
+      const ids = new Set(subjectList.map((s) => s.id));
+
       const merged: AllScores = {};
-      for (const s of subjectList) {
-        merged[s.id] = { ...defaultSubjectScores(), ...(saved[s.id] ?? {}) };
+      for (const s of subjectList) merged[s.id] = sanitizeSubjectScores(saved[s.id]);
+
+      const orphans: Record<string, unknown> = {};
+      for (const [id, value] of Object.entries(saved)) {
+        if (!ids.has(id)) orphans[id] = value;
       }
+
+      orphansRef.current = orphans;
+      dirtyRef.current = false;
+      setSubjects(subjectList);
       setScores(merged);
       setLoading(false);
     }
     loadData();
-    return () => { cancelled = true; };
-  }, [stage]);
+    return () => {
+      cancelled = true;
+    };
+  }, [stage, reloadKey]);
 
-  const persistScores = useCallback((next: AllScores) => {
-    if (!storageKey) return;
-    try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch {}
-  }, [storageKey]);
+  // ---- حفظ الدرجات ----
+  useEffect(() => {
+    if (!storageKey || !dirtyRef.current) return;
+    const ok = writeStorage(
+      storageKey,
+      JSON.stringify({ ...orphansRef.current, ...scores })
+    );
+    setStorageFailed((prev) => (prev === !ok ? prev : !ok));
+  }, [scores, storageKey]);
 
-  const persistTarget = useCallback((value: number) => {
-    if (!targetKey) return;
-    try { localStorage.setItem(targetKey, String(value)); } catch {}
-  }, [targetKey]);
-
-  const handleTargetChange = useCallback((value: number) => {
-    setTarget(value);
-    persistTarget(value);
-  }, [persistTarget]);
+  const handleTargetChange = useCallback(
+    (value: number) => {
+      setTarget(value);
+      if (targetKey) writeStorage(targetKey, String(value));
+    },
+    [targetKey]
+  );
 
   const updateComponent = useCallback(
-    (subjectId: string, componentKey: string, field: 'max' | 'score', value: string) => {
+    (
+      subjectId: string,
+      componentKey: string,
+      field: 'max' | 'score',
+      value: string
+    ) => {
+      dirtyRef.current = true;
       setScores((prev) => {
-        const next: AllScores = {
+        const subject = prev[subjectId] ?? defaultSubjectScores();
+        const current: ComponentData = subject[componentKey] ?? { max: '', score: '' };
+        return {
           ...prev,
           [subjectId]: {
-            ...prev[subjectId],
-            [componentKey]: {
-              ...prev[subjectId]?.[componentKey],
-              [field]: value,
-            } as ComponentData,
+            ...subject,
+            [componentKey]: { ...current, [field]: value },
           },
         };
-        persistScores(next);
-        return next;
       });
     },
-    [persistScores]
+    []
   );
 
   const toggleExpand = useCallback((subjectId: string) => {
     setExpanded((prev) => ({ ...prev, [subjectId]: !prev[subjectId] }));
   }, []);
 
+  const clearSubject = useCallback(
+    async (subjectId: string, subjectName: string) => {
+      const ok = await confirm(`حذف كل درجات مادة «${subjectName}». هل أنت متأكد؟`, {
+        variant: 'danger',
+        confirmLabel: 'حذف',
+      });
+      if (!ok) return;
+      dirtyRef.current = true;
+      setScores((prev) => ({ ...prev, [subjectId]: defaultSubjectScores() }));
+    },
+    [confirm]
+  );
+
   const resetScores = useCallback(async () => {
-    const ok = await confirm(
-      'حذف كل الدرجات المدخلة لهذه المرحلة. هل أنت متأكد؟',
-      { variant: 'danger', confirmLabel: 'حذف' }
-    );
+    const ok = await confirm('حذف كل الدرجات المدخلة لهذه المرحلة. هل أنت متأكد؟', {
+      variant: 'danger',
+      confirmLabel: 'حذف',
+    });
     if (!ok) return;
     const cleared: AllScores = {};
     for (const s of subjects) cleared[s.id] = defaultSubjectScores();
+    orphansRef.current = {};
+    dirtyRef.current = true;
     setScores(cleared);
-    persistScores(cleared);
-  }, [confirm, subjects, persistScores]);
+  }, [confirm, subjects]);
 
-  // ===== الحسابات =====
-  const subjectsWithPercentage: SubjectWithPercentage[] = useMemo(
-    () =>
-      subjects.map((s) => ({
-        ...s,
-        percentage: calculatePercentage(scores[s.id]),
-        targetAnalysis: analyzeForTarget(scores[s.id], target),
-      })),
-    [subjects, scores, target]
-  );
-
-  const entered = useMemo(
-    () => subjectsWithPercentage.filter((s) => s.percentage !== null),
-    [subjectsWithPercentage]
-  );
-
+  // ---- إحصاءات المعدل ----
   const stats = useMemo(() => {
-    let totalUnits = 0;
     let weightedSum = 0;
-    for (const s of entered) {
+    let totalUnits = 0;
+    let simpleSum = 0;
+    let enteredCount = 0;
+    let withoutUnits = 0;
+
+    for (const s of subjects) {
+      const pct = calculatePercentage(scores[s.id]);
+      if (pct === null) continue;
+      enteredCount++;
+      simpleSum += pct;
       const units = Number(s.units ?? 0);
-      if (!Number.isFinite(units) || units <= 0) continue;
-      totalUnits += units;
-      weightedSum += units * (s.percentage as number);
+      if (Number.isFinite(units) && units > 0) {
+        totalUnits += units;
+        weightedSum += units * pct;
+      } else {
+        withoutUnits++;
+      }
     }
-    const average = totalUnits > 0 ? weightedSum / totalUnits : null;
-    const allFilled = subjects.length > 0 && entered.length === subjects.length;
-    const progress = subjects.length > 0 ? (entered.length / subjects.length) * 100 : 0;
-    return { average, allFilled, progress, enteredCount: entered.length };
-  }, [entered, subjects.length]);
+
+    const usedSimple = enteredCount > 0 && totalUnits === 0;
+    const average =
+      totalUnits > 0
+        ? weightedSum / totalUnits
+        : usedSimple
+          ? simpleSum / enteredCount
+          : null;
+
+    return {
+      average,
+      usedSimple,
+      skippedUnits: usedSimple ? 0 : withoutUnits,
+      allFilled: subjects.length > 0 && enteredCount === subjects.length,
+      progress: subjects.length > 0 ? (enteredCount / subjects.length) * 100 : 0,
+      enteredCount,
+    };
+  }, [subjects, scores]);
 
   if (!ready) {
     return (
@@ -579,174 +968,164 @@ export default function GpaPage() {
     <main className="mx-auto max-w-2xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10">
       <BackLink />
 
-      <div className="mt-6 animate-slide-up">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
-          {stage}
-        </span>
-        <h1 className="mt-3 text-3xl font-black leading-tight text-ink sm:text-4xl">المعدل</h1>
-        <p className="mt-2 text-sm leading-relaxed text-ink/55">
-          افتح كل مادة وأدخل درجاتك. سنحسب معدلك، وسنخبرك بكم تحتاج في المتبقي لتحقيق هدفك.
+      <div className="mt-6 animate-slide-up motion-reduce:animate-none">
+        <span className="stage-badge">{stage}</span>
+        <h1 className="mt-3 font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">
+          المعدل
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+          افتح كل مادة وأدخل درجاتك. سنحسب معدلك، وسنخبرك بكم تحتاج في المتبقي
+          لتحقيق هدفك.
         </p>
       </div>
 
       {loading && <Skeleton />}
 
       {!loading && error && (
-        <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 animate-slide-up dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
+        <div
+          role="alert"
+          className="mt-6 rounded-card border border-coral/30 bg-coral/5 p-4 text-sm text-coral-ink animate-slide-up motion-reduce:animate-none"
+        >
           <p className="font-bold">خطأ في الاتصال بقاعدة البيانات</p>
-          <p className="mt-1 text-red-600/80 dark:text-red-300/80">{error}</p>
+          <p className="mt-1 opacity-80">{error}</p>
+          <div className="mt-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="text-coral-ink hover:bg-coral/10"
+            >
+              إعادة المحاولة
+            </Button>
+          </div>
         </div>
       )}
 
       {!loading && !error && subjects.length === 0 && (
-        <div className="mt-6 rounded-3xl border border-line bg-white/80 p-10 text-center backdrop-blur-sm animate-slide-up dark:bg-paper/80">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-teal/8 text-teal dark:bg-teal/15">
-            <IconChart />
+        <div className="mt-6 rounded-card border border-line bg-paper-soft p-10 text-center animate-slide-up motion-reduce:animate-none">
+          <div
+            aria-hidden="true"
+            className="mx-auto flex h-20 w-20 items-center justify-center rounded-card bg-teal/8 text-teal"
+          >
+            <IconChart className="h-10 w-10" />
           </div>
-          <p className="mt-4 font-bold text-ink/70">لا توجد مواد مضافة لمرحلتك حالياً.</p>
+          <p className="mt-4 font-bold text-ink-soft">
+            لا توجد مواد مضافة لمرحلتك حالياً.
+          </p>
         </div>
       )}
 
       {!loading && !error && subjects.length > 0 && (
         <>
-          {/* ===== الهدف ===== */}
-          <div className="mt-6 animate-slide-up" style={{ animationDelay: '80ms' }}>
+          {storageFailed && (
+            <div
+              role="alert"
+              className="mt-6 flex items-start gap-2 rounded-card border border-gold/30 bg-gold/5 p-3 text-xs text-ink-soft animate-slide-up motion-reduce:animate-none"
+            >
+              <IconWarning
+                aria-hidden="true"
+                className="mt-0.5 h-4 w-4 flex-shrink-0 text-gold-ink"
+              />
+              <p>
+                تعذّر حفظ درجاتك على هذا الجهاز (التخزين ممتلئ أو معطّل). ستبقى
+                ظاهرة ما دمت في الصفحة فقط.
+              </p>
+            </div>
+          )}
+
+          <div className="mt-6 animate-slide-up motion-reduce:animate-none">
             <TargetSelector target={target} onChange={handleTargetChange} />
           </div>
 
-          {/* شريط التقدم */}
           {stats.enteredCount > 0 && !stats.allFilled && (
-            <div className="mt-6 animate-slide-up">
-              <div className="mb-1.5 flex items-center justify-between text-xs font-bold text-ink/60">
-                <span>التقدم</span>
-                <span>{stats.enteredCount} من {subjects.length} مادة</span>
+            <div className="mt-6 animate-slide-up motion-reduce:animate-none">
+              <div className="mb-1.5 flex items-center justify-between text-xs font-bold text-ink-muted">
+                <span id="gpa-progress-label">التقدم</span>
+                <span>
+                  {stats.enteredCount} من {subjects.length} مادة
+                </span>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-ink/8 dark:bg-white/10">
+              <div
+                role="progressbar"
+                aria-labelledby="gpa-progress-label"
+                aria-valuemin={0}
+                aria-valuemax={subjects.length}
+                aria-valuenow={stats.enteredCount}
+                aria-valuetext={`${stats.enteredCount} من ${subjects.length} مادة`}
+                className="h-2 overflow-hidden rounded-chip bg-ink/8 dark:bg-white/10"
+              >
                 <div
-                  className="h-full rounded-full bg-gradient-to-l from-teal to-teal-light transition-all duration-500"
+                  className="h-full rounded-chip bg-gradient-to-l from-teal to-teal-light transition-all duration-500 motion-reduce:transition-none"
                   style={{ width: `${stats.progress}%` }}
                 />
               </div>
             </div>
           )}
 
-          {/* قائمة المواد */}
           <div className="mt-6 space-y-2">
-            {subjectsWithPercentage.map((s, idx) => {
-              const isOpen = !!expanded[s.id];
-              const subjectScores = scores[s.id];
-              const scoreColor = s.percentage !== null ? getScoreColor(s.percentage) : '';
-
-              return (
-                <div
-                  key={s.id}
-                  style={{ animationDelay: `${idx * 40}ms` }}
-                  className="overflow-hidden rounded-2xl border border-line bg-white/80 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 animate-slide-up dark:bg-paper/80"
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggleExpand(s.id)}
-                    aria-expanded={isOpen}
-                    className="flex w-full items-center justify-between gap-3 p-4 text-right transition-colors hover:bg-ink/[0.02] dark:hover:bg-white/[0.03]"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-bold text-ink">{s.name}</span>
-                        {s.units != null && (
-                          <span className="text-xs text-ink/40">({s.units} وحدة)</span>
-                        )}
-                      </div>
-                      {/* Status Chip */}
-                      <div className="mt-1">
-                        <StatusChip analysis={s.targetAnalysis} target={target} />
-                      </div>
-                    </div>
-                    <div className="flex flex-shrink-0 items-center gap-2">
-                      {s.percentage !== null ? (
-                        <span className={`rounded-full px-3 py-1 text-sm font-bold ${scoreColor}`}>
-                          {s.percentage.toFixed(1)}%
-                        </span>
-                      ) : (
-                        <span className="text-sm text-ink/40">—</span>
-                      )}
-                      <IconChevron open={isOpen} />
-                    </div>
-                  </button>
-
-                  {isOpen && (
-                    <div className="space-y-4 border-t border-line/60 bg-paper/40 p-4 dark:bg-white/[0.03]">
-                      {/* Target Analysis Card */}
-                      <TargetAnalysisCard
-                        analysis={s.targetAnalysis}
-                        target={target}
-                        subjectName={s.name}
-                      />
-
-                      {/* Components */}
-                      <div className="space-y-3">
-                        {COMPONENTS.map((c) => {
-                          const comp = subjectScores?.[c.key] ?? { max: '', score: '' };
-                          return (
-                            <div key={c.key} className="flex flex-wrap items-center justify-between gap-3">
-                              <label htmlFor={`${s.id}-${c.key}-score`} className="w-28 text-sm font-medium text-ink/70">
-                                {c.label}
-                              </label>
-                              <div className="flex items-center gap-2">
-                                <Input
-                                  id={`${s.id}-${c.key}-score`}
-                                  type="number"
-                                  inputMode="decimal"
-                                  min={0}
-                                  value={comp.score}
-                                  onChange={(e) => updateComponent(s.id, c.key, 'score', e.target.value)}
-                                  placeholder="درجتك"
-                                  className="w-20 text-center"
-                                />
-                                <span className="text-sm text-ink/40">من</span>
-                                <Input
-                                  type="number"
-                                  inputMode="decimal"
-                                  min={0}
-                                  value={comp.max}
-                                  onChange={(e) => updateComponent(s.id, c.key, 'max', e.target.value)}
-                                  aria-label={`الدرجة العظمى لـ${c.label}`}
-                                  className="w-16 text-center"
-                                />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {subjects.map((s, idx) => (
+              <SubjectRow
+                key={s.id}
+                subject={s}
+                index={idx}
+                scores={scores[s.id]}
+                target={target}
+                isOpen={!!expanded[s.id]}
+                onToggle={toggleExpand}
+                onUpdate={updateComponent}
+                onClear={clearSubject}
+              />
+            ))}
           </div>
 
-          {/* المعدل */}
-          <div className="mt-6 overflow-hidden rounded-3xl border border-line bg-gradient-to-bl from-teal/5 via-teal/3 to-amber/5 p-6 text-center shadow-[0_4px_16px_rgba(14,74,74,0.06)] animate-slide-up dark:from-teal/10 dark:via-teal/5 dark:to-amber/10 dark:shadow-[0_4px_16px_rgba(0,0,0,0.30)]">
+          <div
+            aria-live="polite"
+            className="mt-6 overflow-hidden rounded-card border border-line bg-gradient-to-bl from-teal/5 via-teal/3 to-gold/5 p-6 text-center shadow-sm animate-slide-up motion-reduce:animate-none"
+          >
             {stats.average !== null ? (
               <>
-                <p className="text-sm font-bold text-ink/60">
+                <p className="text-sm font-bold text-ink-soft">
                   {stats.allFilled ? 'معدلك النهائي' : 'معدلك الحالي (جزئي)'}
                 </p>
-                <p className="mt-2 bg-gradient-to-l from-teal to-teal-light bg-clip-text text-5xl font-black text-transparent">
+                <p
+                  dir="ltr"
+                  className="mt-2 bg-gradient-to-l from-teal to-teal-light bg-clip-text font-mono text-5xl font-bold text-transparent"
+                >
                   {stats.average.toFixed(2)}
+                  <span className="text-2xl">%</span>
                 </p>
-                <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/60 px-3 py-1 text-xs font-bold text-ink/60 dark:bg-white/10">
-                  <IconTarget />
-                  هدفك: {target}% في كل مادة
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-chip bg-paper px-3 py-1 text-xs font-bold text-ink-soft">
+                    التقدير: {getGradeLabel(stats.average)}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-chip bg-paper px-3 py-1 text-xs font-bold text-ink-soft">
+                    <IconTarget aria-hidden="true" className="h-3.5 w-3.5 text-teal" />
+                    هدفك: {getGradeLabel(target)}
+                  </span>
                 </div>
+                {stats.usedSimple && (
+                  <p className="mt-3 text-[11px] text-ink-muted">
+                    لم تُحدَّد وحدات المواد، فاحتُسب المتوسط البسيط.
+                  </p>
+                )}
+                {stats.skippedUnits > 0 && (
+                  <p className="mt-3 text-[11px] text-ink-muted">
+                    {stats.skippedUnits} مادة بلا وحدات لم تدخل في حساب المعدل.
+                  </p>
+                )}
               </>
             ) : (
-              <p className="text-sm text-ink/50">أدخل درجاتك ليظهر معدلك.</p>
+              <p className="text-sm text-ink-muted">أدخل درجاتك ليظهر معدلك.</p>
             )}
           </div>
 
           <div className="mt-4 text-center">
-            <Button variant="ghost" size="sm" onClick={resetScores} className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={resetScores}
+              className="text-coral-ink hover:bg-coral/10"
+            >
               مسح كل الدرجات
             </Button>
           </div>

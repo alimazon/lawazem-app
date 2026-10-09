@@ -1,11 +1,18 @@
 // lib/constants.ts
-import type { ContentType, Stage } from './types';
+import type { ContentType, Group, MedicalCategory, Stage } from './types';
 
 export const STAGES: readonly Stage[] = [
   'المرحلة الأولى',
   'المرحلة الثانية',
   'المرحلة الثالثة',
 ] as const;
+
+export const GROUPS: readonly Group[] = ['A', 'B'] as const;
+
+export const GROUP_LABELS: Record<Group, string> = {
+  A: 'كروب A',
+  B: 'كروب B',
+};
 
 export const CONTENT_TYPES: readonly ContentType[] = [
   'assignment',
@@ -26,6 +33,8 @@ export const STORAGE_KEYS = {
   adminPassword: 'admin_password',
   channelId: 'channel_id',
   channelPassword: 'channel_password',
+  publisherPassword: 'publisher_password',
+  publisherName: 'publisher_name',
 } as const;
 
 export const STORAGE_BUCKETS = {
@@ -68,3 +77,46 @@ export const MATERIAL_METHODS = [
     label: 'نسخ ولصق نص الملزمة على أجزاء',
   },
 ] as const;
+
+// ==================== Dictionary v2 ====================
+export const MEDICAL_CATEGORIES: readonly MedicalCategory[] = [
+  'general',
+  'anatomy',
+  'physiology',
+  'pathology',
+  'pharmacology',
+  'microbiology',
+  'biochemistry',
+  'histology',
+  'embryology',
+  'immunology',
+  'clinical',
+] as const;
+
+export const MEDICAL_CATEGORY_LABELS: Record<MedicalCategory, string> = {
+  general: 'عام',
+  anatomy: 'تشريح',
+  physiology: 'فسلجة',
+  pathology: 'أمراض',
+  pharmacology: 'أدوية',
+  microbiology: 'أحياء دقيقة',
+  biochemistry: 'كيمياء حيوية',
+  histology: 'أنسجة',
+  embryology: 'أجنة',
+  immunology: 'مناعة',
+  clinical: 'سريري',
+};
+
+export const MEDICAL_CATEGORY_EMOJIS: Record<MedicalCategory, string> = {
+  general: '📚',
+  anatomy: '🦴',
+  physiology: '⚙️',
+  pathology: '🦠',
+  pharmacology: '💊',
+  microbiology: '🧫',
+  biochemistry: '🧬',
+  histology: '🔬',
+  embryology: '👶',
+  immunology: '🛡️',
+  clinical: '🩺',
+};

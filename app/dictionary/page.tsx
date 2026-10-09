@@ -1,10 +1,41 @@
 // app/dictionary/page.tsx
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+  type RefObject,
+} from 'react';
 import Link from 'next/link';
 import { useToast } from '@/components/ui/Toast';
 import { postJson } from '@/lib/api-client';
+import {
+  MEDICAL_CATEGORIES,
+  MEDICAL_CATEGORY_LABELS,
+  MEDICAL_CATEGORY_EMOJIS,
+} from '@/lib/constants';
+import type {
+  DictionaryDeepExplanation,
+  MedicalCategory,
+} from '@/lib/types';
+import {
+  IconSearch,
+  IconArrowLeft,
+  IconDoctor,
+  IconBook,
+  IconSparkles,
+  IconTrending,
+  IconClock,
+  IconCopy,
+  IconCheck,
+  IconClose,
+  IconWarning,
+} from '@/components/ui/Icons';
 
 // ==================== Types ====================
 interface DictionaryResult {
@@ -15,6 +46,7 @@ interface DictionaryResult {
   root_breakdown: string | null;
   clinical_note: string | null;
   similar_terms: string[];
+  category: MedicalCategory;
   hit_count: number;
 }
 
@@ -22,213 +54,812 @@ interface PopularTerm {
   term: string;
   arabic_translation: string;
   hit_count: number;
+  category: MedicalCategory;
+}
+
+interface CategoryStat {
+  category: MedicalCategory;
+  count: number;
 }
 
 const RECENT_KEY = 'dictionary_recent_terms';
 const MAX_RECENT = 8;
+const MIN_TERM_LENGTH = 2;
 
-// ==================== Icons ====================
-function IconSearch() {
-  return (
-    <svg className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
-    </svg>
-  );
-}
-function IconArrowLeft() {
-  return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M11 17l-5-5m0 0l5-5m-5 5h12" />
-    </svg>
-  );
-}
-function IconStethoscope() {
-  return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4.8 2.3A.3.3 0 105 2H4a2 2 0 00-2 2v5a6 6 0 006 6v0a6 6 0 006-6V4a2 2 0 00-2-2h-1a.2.2 0 10.3.3M8 15v1a6 6 0 006 6v0a6 6 0 006-6v-4" />
-      <circle cx="20" cy="10" r="2" />
-    </svg>
-  );
-}
-function IconBook() {
-  return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-    </svg>
-  );
-}
-function IconSparkles() {
-  return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-    </svg>
-  );
-}
-function IconTrending() {
-  return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-    </svg>
-  );
-}
-function IconClock() {
-  return (
-    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  );
-}
-function IconCopy() {
-  return (
-    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-    </svg>
-  );
-}
-function IconCheck() {
-  return (
-    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-    </svg>
-  );
-}
-function IconWarning() {
-  return (
-    <svg className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-    </svg>
-  );
+// ==================== Normalizers ====================
+function str(v: unknown): string {
+  return typeof v === 'string' ? v.trim() : '';
 }
 
-// ==================== Recent Storage ====================
+function normalizeTerm(raw: string): string {
+  return raw.replace(/\s+/g, ' ').trim();
+}
+
+function parseCategory(v: unknown): MedicalCategory {
+  const s = str(v);
+  return (MEDICAL_CATEGORIES as readonly string[]).includes(s)
+    ? (s as MedicalCategory)
+    : 'general';
+}
+
+function normalizeResult(raw: unknown): DictionaryResult | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const r = raw as Record<string, unknown>;
+
+  const term = str(r.term);
+  const meaning = str(r.meaning);
+  if (!term || !meaning) return null;
+
+  const similar = Array.isArray(r.similar_terms)
+    ? r.similar_terms
+        .filter((t): t is string => typeof t === 'string')
+        .map((t) => t.trim())
+        .filter(Boolean)
+    : [];
+
+  const hits =
+    typeof r.hit_count === 'number' && Number.isFinite(r.hit_count)
+      ? Math.max(0, Math.floor(r.hit_count))
+      : 0;
+
+  return {
+    id: typeof r.id === 'string' ? r.id : undefined,
+    term,
+    arabic_translation: str(r.arabic_translation),
+    meaning,
+    root_breakdown: str(r.root_breakdown) || null,
+    clinical_note: str(r.clinical_note) || null,
+    similar_terms: Array.from(new Set(similar)),
+    category: parseCategory(r.category),
+    hit_count: hits,
+  };
+}
+
+function normalizePopular(raw: unknown): PopularTerm[] {
+  if (!Array.isArray(raw)) return [];
+  const out: PopularTerm[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const r = item as Record<string, unknown>;
+    const term = str(r.term);
+    if (!term) continue;
+    out.push({
+      term,
+      arabic_translation: str(r.arabic_translation),
+      hit_count:
+        typeof r.hit_count === 'number' && Number.isFinite(r.hit_count)
+          ? r.hit_count
+          : 0,
+      category: parseCategory(r.category),
+    });
+  }
+  return out;
+}
+
+function normalizeDeep(raw: unknown): DictionaryDeepExplanation | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const r = raw as Record<string, unknown>;
+  const overview = str(r.overview);
+  const mechanism = str(r.mechanism);
+  const clinical = str(r.clinical);
+  if (!overview || !mechanism || !clinical) return null;
+
+  return {
+    overview,
+    mechanism,
+    clinical,
+    confusions: Array.isArray(r.confusions)
+      ? r.confusions
+          .filter((c): c is string => typeof c === 'string')
+          .map((c) => c.trim())
+          .filter(Boolean)
+          .slice(0, 3)
+      : [],
+    mnemonic: str(r.mnemonic) || null,
+  };
+}
+
+// ==================== Storage ====================
 function loadRecent(): string[] {
   try {
     const saved = localStorage.getItem(RECENT_KEY);
     if (!saved) return [];
-    const parsed = JSON.parse(saved);
+    const parsed: unknown = JSON.parse(saved);
     if (Array.isArray(parsed)) {
-      return parsed.filter((t): t is string => typeof t === 'string').slice(0, MAX_RECENT);
+      return parsed
+        .filter((t): t is string => typeof t === 'string' && t.trim() !== '')
+        .slice(0, MAX_RECENT);
     }
-  } catch {}
+  } catch {
+    /* ignore */
+  }
   return [];
 }
 
-function saveRecent(term: string) {
+function saveRecent(term: string): string[] {
+  const current = loadRecent().filter(
+    (t) => t.toLowerCase() !== term.toLowerCase()
+  );
+  const next = [term, ...current].slice(0, MAX_RECENT);
   try {
-    const current = loadRecent().filter((t) => t.toLowerCase() !== term.toLowerCase());
-    const next = [term, ...current].slice(0, MAX_RECENT);
     localStorage.setItem(RECENT_KEY, JSON.stringify(next));
-  } catch {}
+  } catch {
+    /* ignore */
+  }
+  return next;
+}
+
+function clearRecentStorage(): void {
+  try {
+    localStorage.removeItem(RECENT_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+// ==================== Clipboard ====================
+async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    /* fallback */
+  }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '0';
+    ta.style.left = '-9999px';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+function buildCopyText(result: DictionaryResult): string {
+  const catLabel = MEDICAL_CATEGORY_LABELS[result.category];
+  return [
+    `المصطلح: ${result.term}`,
+    `التصنيف: ${catLabel}`,
+    result.arabic_translation ? `الترجمة: ${result.arabic_translation}` : '',
+    `المعنى: ${result.meaning}`,
+    result.root_breakdown ? `تفكيك الكلمة: ${result.root_breakdown}` : '',
+    result.clinical_note ? `ملاحظة سريرية: ${result.clinical_note}` : '',
+    result.similar_terms.length > 0
+      ? `مصطلحات مشابهة: ${result.similar_terms.join(' · ')}`
+      : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+// ==================== Speech ====================
+function useSpeech() {
+  const [speaking, setSpeaking] = useState(false);
+  const [supported, setSupported] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setSupported('speechSynthesis' in window);
+    return () => {
+      // أوقف أي نطق عند الخروج
+      try {
+        window.speechSynthesis?.cancel();
+      } catch {
+        /* ignore */
+      }
+    };
+  }, []);
+
+  const speak = useCallback((text: string) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      return false;
+    }
+
+    try {
+      window.speechSynthesis.cancel();
+    } catch {
+      /* ignore */
+    }
+
+    // اختر صوتاً إنجليزياً إن توفّر
+    const voices = window.speechSynthesis.getVoices();
+    const preferred =
+      voices.find((v) => v.lang === 'en-US' && v.localService) ||
+      voices.find((v) => v.lang === 'en-US') ||
+      voices.find((v) => v.lang.startsWith('en')) ||
+      null;
+
+    const utter = new SpeechSynthesisUtterance(text);
+    if (preferred) utter.voice = preferred;
+    utter.lang = preferred?.lang ?? 'en-US';
+    utter.rate = 0.9;
+    utter.pitch = 1;
+
+    utter.onstart = () => setSpeaking(true);
+    utter.onend = () => setSpeaking(false);
+    utter.onerror = () => setSpeaking(false);
+
+    window.speechSynthesis.speak(utter);
+    return true;
+  }, []);
+
+  const stop = useCallback(() => {
+    try {
+      window.speechSynthesis?.cancel();
+    } catch {
+      /* ignore */
+    }
+    setSpeaking(false);
+  }, []);
+
+  return { speak, stop, speaking, supported };
+}
+
+// ==================== Small components ====================
+function BackLink() {
+  return (
+    <Link
+      href="/"
+      className="group inline-flex items-center gap-1.5 rounded-field text-sm font-semibold text-teal transition-colors hover:text-teal-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+    >
+      <span className="transition-transform duration-200 group-hover:-translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0">
+        <IconArrowLeft aria-hidden="true" className="h-4 w-4" />
+      </span>
+      رجوع إلى لوحة الأقسام
+    </Link>
+  );
+}
+
+function HitCount({ count }: { count: number }) {
+  if (count <= 0) return null;
+  let content: React.ReactNode;
+  if (count === 1) content = 'بُحث عنه مرة واحدة';
+  else if (count === 2) content = 'بُحث عنه مرتين';
+  else {
+    content = (
+      <>
+        بُحث عنه <span className="num-inline font-mono">{count}</span>{' '}
+        {count <= 10 ? 'مرات' : 'مرة'}
+      </>
+    );
+  }
+  return (
+    <footer className="flex items-center gap-2 border-t border-line-soft pt-3 text-xs text-ink-muted">
+      <IconTrending aria-hidden="true" className="h-3.5 w-3.5" />
+      <span>{content}</span>
+    </footer>
+  );
+}
+
+function CategoryBadge({ category }: { category: MedicalCategory }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-chip bg-navy-soft px-2.5 py-0.5 text-[11px] font-bold text-navy-ink">
+      <span aria-hidden="true">{MEDICAL_CATEGORY_EMOJIS[category]}</span>
+      {MEDICAL_CATEGORY_LABELS[category]}
+    </span>
+  );
+}
+
+// ==================== Pronunciation Button ====================
+function SpeakButton({
+  text,
+  speaking,
+  supported,
+  onSpeak,
+  onStop,
+}: {
+  text: string;
+  speaking: boolean;
+  supported: boolean;
+  onSpeak: (t: string) => void;
+  onStop: () => void;
+}) {
+  if (!supported) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={() => (speaking ? onStop() : onSpeak(text))}
+      aria-label={speaking ? 'إيقاف النطق' : `نطق ${text}`}
+      title={speaking ? 'إيقاف النطق' : 'نطق المصطلح'}
+      className={[
+        'flex h-9 shrink-0 items-center gap-1.5 rounded-field border px-3',
+        'text-xs font-semibold',
+        'transition-colors duration-200 motion-reduce:transition-none',
+        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal',
+        speaking
+          ? 'border-teal/50 bg-teal-tint text-teal'
+          : 'border-line bg-paper-soft text-ink-soft hover:border-teal/40 hover:text-teal',
+      ].join(' ')}
+    >
+      {speaking ? (
+        <svg
+          aria-hidden="true"
+          className="h-3.5 w-3.5"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <rect x="6" y="6" width="12" height="12" rx="2" />
+        </svg>
+      ) : (
+        <svg
+          aria-hidden="true"
+          className="h-3.5 w-3.5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M11 5L6 9H2v6h4l5 4V5z" />
+          <path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" />
+        </svg>
+      )}
+      <span>{speaking ? 'إيقاف' : 'نطق'}</span>
+    </button>
+  );
+}
+
+// ==================== Deep Dive Card ====================
+function DeepDiveCard({
+  term,
+  onClose,
+}: {
+  term: string;
+  onClose: () => void;
+}) {
+  const toast = useToast();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [deep, setDeep] = useState<DictionaryDeepExplanation | null>(null);
+  const cardRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setError('');
+      try {
+        const data = await postJson<{ deep?: unknown }>('/api/dictionary', {
+          action: 'deep',
+          term,
+        });
+        if (cancelled) return;
+        const normalized = normalizeDeep(data.deep);
+        if (!normalized) {
+          setError('وصل رد غير مفهوم. جرّب مرة ثانية.');
+          return;
+        }
+        setDeep(normalized);
+      } catch (err) {
+        if (cancelled) return;
+        setError(
+          err instanceof Error && err.message
+            ? err.message
+            : 'فشل توليد الشرح'
+        );
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [term]);
+
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    const reduceMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)'
+    ).matches;
+    el.scrollIntoView({
+      behavior: reduceMotion ? 'auto' : 'smooth',
+      block: 'start',
+    });
+  }, []);
+
+  return (
+    <section
+      ref={cardRef}
+      aria-labelledby="deep-heading"
+      className="mt-4 scroll-mt-6 overflow-hidden rounded-card border border-gold/40 bg-gold-tint/40 animate-slide-up motion-reduce:animate-none"
+    >
+      <header className="flex items-center justify-between gap-2 border-b border-gold/30 bg-gold-tint px-4 py-2.5">
+        <h3
+          id="deep-heading"
+          className="flex items-center gap-2 font-display text-sm font-bold text-gold-ink"
+        >
+          <IconSparkles aria-hidden="true" className="h-4 w-4" />
+          شرح عميق — {term}
+        </h3>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="إغلاق الشرح"
+          className="flex h-7 w-7 items-center justify-center rounded-field text-gold-ink transition-colors hover:bg-gold/20 motion-reduce:transition-none"
+        >
+          <IconClose aria-hidden="true" className="h-3.5 w-3.5" />
+        </button>
+      </header>
+
+      <div className="p-4 sm:p-5">
+        {loading && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex items-center gap-3 text-sm text-ink-soft"
+          >
+            <svg
+              className="h-4 w-4 animate-spin text-gold-ink"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="3"
+                opacity="0.25"
+              />
+              <path
+                d="M22 12a10 10 0 0 1-10 10"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
+            </svg>
+            <span>جاري توليد شرح عميق…</span>
+          </div>
+        )}
+
+        {error && !loading && (
+          <div
+            role="alert"
+            className="rounded-field border border-coral/30 bg-coral/5 p-3 text-sm text-coral-ink"
+          >
+            <p className="font-bold">تعذّر توليد الشرح</p>
+            <p className="mt-0.5 text-xs opacity-80">{error}</p>
+          </div>
+        )}
+
+        {deep && !loading && (
+          <div className="space-y-4 text-sm leading-relaxed">
+            <section>
+              <h4 className="mb-1 flex items-center gap-1.5 text-xs font-bold text-gold-ink">
+                <span aria-hidden="true">🌐</span>
+                نظرة عامة
+              </h4>
+              <p className="break-anywhere text-ink-soft">{deep.overview}</p>
+            </section>
+
+            <section>
+              <h4 className="mb-1 flex items-center gap-1.5 text-xs font-bold text-gold-ink">
+                <span aria-hidden="true">⚙️</span>
+                الآلية والوظيفة
+              </h4>
+              <p className="break-anywhere text-ink-soft">{deep.mechanism}</p>
+            </section>
+
+            <section>
+              <h4 className="mb-1 flex items-center gap-1.5 text-xs font-bold text-gold-ink">
+                <span aria-hidden="true">🩺</span>
+                الأهمية السريرية
+              </h4>
+              <p className="break-anywhere text-ink-soft">{deep.clinical}</p>
+            </section>
+
+            {deep.confusions.length > 0 && (
+              <section>
+                <h4 className="mb-2 flex items-center gap-1.5 text-xs font-bold text-gold-ink">
+                  <span aria-hidden="true">⚠️</span>
+                  يختلط مع
+                </h4>
+                <ul className="space-y-2">
+                  {deep.confusions.map((c, i) => (
+                    <li
+                      key={i}
+                      className="break-anywhere rounded-field border border-gold/20 bg-paper-soft/70 px-3 py-2 text-xs leading-relaxed text-ink-soft"
+                    >
+                      {c}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {deep.mnemonic && (
+              <section className="rounded-field border border-teal/30 bg-teal-tint p-3">
+                <h4 className="mb-1 flex items-center gap-1.5 text-xs font-bold text-teal">
+                  <span aria-hidden="true">🧠</span>
+                  طريقة للحفظ
+                </h4>
+                <p className="break-anywhere text-xs leading-relaxed text-ink-soft">
+                  {deep.mnemonic}
+                </p>
+              </section>
+            )}
+
+            <p className="text-[11px] leading-relaxed text-ink-muted">
+              ⚠️ الشرح العميق مولّد بالذكاء الاصطناعي — للتذكير الدراسي فقط،
+              راجع المصادر الرسمية.
+            </p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
 }
 
 // ==================== Result Card ====================
-function ResultCard({ result }: { result: DictionaryResult }) {
+function ResultCard({
+  result,
+  headingRef,
+  onSelectTerm,
+}: {
+  result: DictionaryResult;
+  headingRef: RefObject<HTMLHeadingElement | null>;
+  onSelectTerm: (term: string) => void;
+}) {
   const toast = useToast();
   const [copied, setCopied] = useState(false);
+  const [showDeep, setShowDeep] = useState(false);
+  const timerRef = useRef<number | null>(null);
+  const speech = useSpeech();
 
-  async function handleCopy() {
-    try {
-      const text = [
-        `📖 ${result.term}`,
-        `🇮🇶 ${result.arabic_translation}`,
-        `📝 ${result.meaning}`,
-        result.root_breakdown ? `🧬 ${result.root_breakdown}` : '',
-        result.clinical_note ? `🩺 ${result.clinical_note}` : '',
-        result.similar_terms.length > 0
-          ? `🔗 مشابهة: ${result.similar_terms.join(' · ')}`
-          : '',
-      ]
-        .filter(Boolean)
-        .join('\n');
+  useEffect(() => {
+    return () => {
+      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    };
+  }, []);
 
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      toast.show('تم نسخ المصطلح', 'success');
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
+  // أوقف النطق عند تغيير المصطلح
+  useEffect(() => {
+    speech.stop();
+    setShowDeep(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result.term]);
+
+  const handleCopy = useCallback(async () => {
+    const ok = await copyText(buildCopyText(result));
+    if (!ok) {
       toast.show('فشل النسخ', 'error');
+      return;
     }
-  }
+    setCopied(true);
+    toast.show('تم نسخ المصطلح', 'success');
+    if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    timerRef.current = window.setTimeout(() => setCopied(false), 1500);
+  }, [result, toast]);
 
   return (
-    <div className="rounded-3xl border border-line bg-white/80 shadow-[0_2px_12px_rgba(26,33,31,0.06)] backdrop-blur-sm dark:bg-paper/80 dark:shadow-[0_2px_12px_rgba(0,0,0,0.30)] animate-slide-up">
+    <article
+      aria-labelledby="result-heading"
+      className="card-editorial animate-slide-up motion-reduce:animate-none"
+    >
       {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line/60 px-6 py-5">
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-5 py-4 sm:px-6">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-teal/10 text-teal dark:bg-teal/20">
-              <IconStethoscope />
+            <span
+              aria-hidden="true"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-field bg-teal-soft text-teal"
+            >
+              <IconDoctor className="h-4 w-4" />
             </span>
-            <h2 className="text-2xl font-black text-ink">{result.term}</h2>
+            <h2
+              id="result-heading"
+              ref={headingRef}
+              tabIndex={-1}
+              className="break-anywhere rounded-field font-display text-xl font-bold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal sm:text-2xl"
+            >
+              <bdi>{result.term}</bdi>
+            </h2>
+            <CategoryBadge category={result.category} />
           </div>
-          <p className="mt-2 text-lg font-bold text-teal">{result.arabic_translation}</p>
+          {result.arabic_translation && (
+            <p className="mt-2 break-anywhere text-base font-semibold text-teal">
+              <bdi>{result.arabic_translation}</bdi>
+            </p>
+          )}
         </div>
 
-        <button
-          type="button"
-          onClick={handleCopy}
-          aria-label="نسخ المصطلح"
-          className="flex h-9 items-center gap-1.5 rounded-lg border border-line bg-white px-3 text-xs font-bold text-ink/60 transition-all hover:border-teal/30 hover:text-teal active:scale-95 dark:bg-white/[0.06]"
-        >
-          {copied ? <IconCheck /> : <IconCopy />}
-          {copied ? 'تم' : 'نسخ'}
-        </button>
-      </div>
+        <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+          <SpeakButton
+            text={result.term}
+            speaking={speech.speaking}
+            supported={speech.supported}
+            onSpeak={speech.speak}
+            onStop={speech.stop}
+          />
+          <button
+            type="button"
+            onClick={handleCopy}
+            aria-label={copied ? 'تم النسخ' : 'نسخ المصطلح'}
+            className="flex h-9 shrink-0 items-center gap-1.5 rounded-field border border-line bg-paper-soft px-3 text-xs font-semibold text-ink-soft transition-colors hover:border-teal/40 hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+          >
+            {copied ? (
+              <IconCheck aria-hidden="true" className="h-3.5 w-3.5" />
+            ) : (
+              <IconCopy aria-hidden="true" className="h-3.5 w-3.5" />
+            )}
+            <span>{copied ? 'تم' : 'نسخ'}</span>
+          </button>
+        </div>
+      </header>
 
-      {/* Content */}
-      <div className="space-y-5 p-6">
-        <div>
-          <div className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/50">
-            <IconBook />
+      {/* Body */}
+      <div className="space-y-5 p-5 sm:p-6">
+        <section>
+          <h3 className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-ink-muted">
+            <IconBook aria-hidden="true" className="h-3.5 w-3.5" />
             المعنى
-          </div>
-          <p className="text-sm leading-relaxed text-ink/80">{result.meaning}</p>
-        </div>
+          </h3>
+          <p className="break-anywhere text-sm leading-relaxed text-ink-soft">
+            {result.meaning}
+          </p>
+        </section>
 
         {result.root_breakdown && (
-          <div>
-            <div className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/50">
-              <IconSparkles />
+          <section>
+            <h3 className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-ink-muted">
+              <IconSparkles aria-hidden="true" className="h-3.5 w-3.5" />
               تفكيك الكلمة
-            </div>
-            <p className="text-sm leading-relaxed text-ink/80">{result.root_breakdown}</p>
-          </div>
+            </h3>
+            <p className="break-anywhere text-sm leading-relaxed text-ink-soft">
+              {result.root_breakdown}
+            </p>
+          </section>
         )}
 
         {result.clinical_note && (
-          <div className="rounded-2xl border border-amber/30 bg-amber/8 p-4 dark:bg-amber/15">
-            <div className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
-              <IconStethoscope />
+          <section className="rounded-field border border-gold/30 bg-gold-tint p-4">
+            <h3 className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-gold-ink">
+              <IconDoctor aria-hidden="true" className="h-3.5 w-3.5" />
               ملاحظة سريرية
-            </div>
-            <p className="text-sm leading-relaxed text-ink/80">{result.clinical_note}</p>
-          </div>
+            </h3>
+            <p className="break-anywhere text-sm leading-relaxed text-ink-soft">
+              {result.clinical_note}
+            </p>
+          </section>
         )}
 
         {result.similar_terms.length > 0 && (
-          <div>
-            <div className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/50">
-              <IconSparkles />
+          <section>
+            <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-ink-muted">
+              <IconSparkles aria-hidden="true" className="h-3.5 w-3.5" />
               مصطلحات مشابهة
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {result.similar_terms.map((t, i) => (
-                <span
-                  key={i}
-                  className="rounded-full bg-ink/5 px-3 py-1 text-xs font-bold text-ink/70 dark:bg-white/10"
-                >
-                  {t}
-                </span>
+            </h3>
+            <ul className="flex flex-wrap gap-1.5">
+              {result.similar_terms.map((t) => (
+                <li key={t}>
+                  <button
+                    type="button"
+                    onClick={() => onSelectTerm(t)}
+                    aria-label={`ابحث عن ${t}`}
+                    className="badge badge-neutral cursor-pointer transition-colors hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+                  >
+                    <bdi>{t}</bdi>
+                  </button>
+                </li>
               ))}
-            </div>
-          </div>
+            </ul>
+          </section>
         )}
 
-        <div className="flex items-center gap-2 border-t border-line/40 pt-3 text-[11px] text-ink/40">
-          <IconTrending />
-          <span>بُحث عنه {result.hit_count} {result.hit_count === 1 ? 'مرة' : 'مرات'}</span>
-        </div>
+        {/* Deep dive button */}
+        {!showDeep && (
+          <button
+            type="button"
+            onClick={() => setShowDeep(true)}
+            className="group inline-flex items-center gap-2 rounded-field border-2 border-gold/40 bg-gold-tint px-4 py-2.5 text-sm font-bold text-gold-ink transition-all duration-200 hover:border-gold/70 hover:bg-gold-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold motion-reduce:transition-none"
+          >
+            <IconSparkles
+              aria-hidden="true"
+              className="h-4 w-4 transition-transform duration-300 group-hover:rotate-12 motion-reduce:transition-none"
+            />
+            اشرح لي أكثر
+            <span className="rounded-chip bg-gold/20 px-1.5 py-0.5 text-[10px] font-mono">
+              AI
+            </span>
+          </button>
+        )}
+
+        {showDeep && (
+          <DeepDiveCard term={result.term} onClose={() => setShowDeep(false)} />
+        )}
+
+        <HitCount count={result.hit_count} />
       </div>
+    </article>
+  );
+}
+
+// ==================== Skeleton ====================
+function ResultSkeleton() {
+  return (
+    <div
+      role="status"
+      aria-label="جارٍ البحث"
+      className="space-y-3 rounded-card border border-line bg-paper-soft p-6"
+    >
+      <div className="h-7 w-40 skeleton-shimmer rounded" />
+      <div className="h-5 w-32 skeleton-shimmer rounded" />
+      <div className="mt-4 h-4 w-full skeleton-shimmer rounded" />
+      <div className="h-4 w-3/4 skeleton-shimmer rounded" />
+    </div>
+  );
+}
+
+// ==================== Category Filter ====================
+function CategoryFilter({
+  selected,
+  stats,
+  onSelect,
+}: {
+  selected: MedicalCategory | null;
+  stats: CategoryStat[];
+  onSelect: (c: MedicalCategory | null) => void;
+}) {
+  const total = useMemo(
+    () => stats.reduce((sum, s) => sum + s.count, 0),
+    [stats]
+  );
+
+  const sortedStats = useMemo(
+    () => [...stats].sort((a, b) => b.count - a.count),
+    [stats]
+  );
+
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-1.5">
+      <button
+        type="button"
+        onClick={() => onSelect(null)}
+        className={`rounded-chip px-2.5 py-1 text-xs font-bold transition-all duration-150 active:scale-95 ${
+          selected === null
+            ? 'bg-teal text-on-teal shadow-sm'
+            : 'bg-ink/5 text-ink-soft hover:bg-ink/10 dark:bg-white/5 dark:hover:bg-white/10'
+        }`}
+      >
+        الكل
+        <span className="mr-1 font-mono text-[10px] opacity-70">{total}</span>
+      </button>
+      {sortedStats.map((s) => {
+        const active = selected === s.category;
+        return (
+          <button
+            key={s.category}
+            type="button"
+            onClick={() => onSelect(active ? null : s.category)}
+            className={`inline-flex items-center gap-1 rounded-chip px-2.5 py-1 text-xs font-bold transition-all duration-150 active:scale-95 ${
+              active
+                ? 'bg-teal text-on-teal shadow-sm'
+                : 'bg-ink/5 text-ink-soft hover:bg-ink/10 dark:bg-white/5 dark:hover:bg-white/10'
+            }`}
+          >
+            <span aria-hidden="true">{MEDICAL_CATEGORY_EMOJIS[s.category]}</span>
+            {MEDICAL_CATEGORY_LABELS[s.category]}
+            <span className="font-mono text-[10px] opacity-70">{s.count}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -239,214 +870,457 @@ export default function DictionaryPage() {
   const [term, setTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DictionaryResult | null>(null);
+  const [error, setError] = useState('');
   const [popular, setPopular] = useState<PopularTerm[]>([]);
+  const [popularCategory, setPopularCategory] = useState<MedicalCategory | null>(
+    null
+  );
+  const [categoryStats, setCategoryStats] = useState<CategoryStat[]>([]);
   const [recent, setRecent] = useState<string[]>([]);
-  const [mounted, setMounted] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
 
+  const inputRef = useRef<HTMLInputElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const requestIdRef = useRef(0);
+
+  // ===== تحميل أولي =====
   useEffect(() => {
     setRecent(loadRecent());
-    setMounted(true);
+
+    let cancelled = false;
+
+    async function loadCategories() {
+      try {
+        const data = await postJson<{ counts?: unknown }>(
+          '/api/dictionary',
+          { action: 'categories_stats' }
+        );
+        if (cancelled) return;
+        const counts = (data.counts ?? {}) as Record<string, number>;
+        const arr: CategoryStat[] = [];
+        for (const [k, v] of Object.entries(counts)) {
+          const cat = parseCategory(k);
+          if (Number.isFinite(v) && v > 0) arr.push({ category: cat, count: v });
+        }
+        setCategoryStats(arr);
+      } catch {
+        /* silent */
+      }
+    }
+
+    void loadCategories();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // ===== تحميل الأكثر بحثاً (يُعاد عند تغيير التصنيف) =====
+  useEffect(() => {
+    let cancelled = false;
 
     async function loadPopular() {
       try {
-        const data = await postJson<{ terms: PopularTerm[] }>('/api/dictionary', {
-          action: 'popular',
-        });
-        setPopular(data.terms ?? []);
+        const data = await postJson<{ terms?: unknown }>(
+          '/api/dictionary',
+          {
+            action: 'popular',
+            category: popularCategory,
+          }
+        );
+        if (!cancelled) setPopular(normalizePopular(data.terms));
       } catch {
-        /* تجاهل */
+        /* silent */
       }
     }
-    loadPopular();
+
+    void loadPopular();
+    return () => {
+      cancelled = true;
+    };
+  }, [popularCategory]);
+
+  // إلغاء أي طلب معلّق عند مغادرة الصفحة
+  useEffect(() => {
+    return () => {
+      requestIdRef.current += 1;
+    };
   }, []);
 
+  // نقل التركيز إلى عنوان النتيجة
+  useEffect(() => {
+    if (result && !loading) headingRef.current?.focus();
+  }, [result, loading]);
+
+  // ===== البحث =====
   const handleLookup = useCallback(
     async (searchTerm: string) => {
-      const trimmed = searchTerm.trim();
-      if (!trimmed || trimmed.length < 2) {
+      const trimmed = normalizeTerm(searchTerm);
+      if (trimmed.length < MIN_TERM_LENGTH) {
         toast.show('أدخل مصطلحاً طبياً (حرفان على الأقل)', 'error');
         return;
       }
 
+      const requestId = ++requestIdRef.current;
       setLoading(true);
       setResult(null);
+      setError('');
 
       try {
-        const data = await postJson<{ result: DictionaryResult; cached: boolean }>(
-          '/api/dictionary',
-          { action: 'lookup', term: trimmed }
-        );
-        setResult(data.result);
+        const data = await postJson<{ result?: unknown }>('/api/dictionary', {
+          action: 'lookup',
+          term: trimmed,
+        });
+        if (requestId !== requestIdRef.current) return;
 
-        saveRecent(trimmed);
-        setRecent(loadRecent());
+        const normalized = normalizeResult(data.result);
+        if (!normalized) {
+          setError('وصلت استجابة غير مفهومة من الخادم. جرّب مرة أخرى.');
+          return;
+        }
+        setResult(normalized);
+        setRecent(saveRecent(trimmed));
+
+        // حدّث إحصاءات التصنيفات (اختياري، fire-and-forget)
+        void postJson<{ counts?: unknown }>('/api/dictionary', {
+          action: 'categories_stats',
+        })
+          .then((d) => {
+            if (requestId !== requestIdRef.current) return;
+            const counts = (d.counts ?? {}) as Record<string, number>;
+            const arr: CategoryStat[] = [];
+            for (const [k, v] of Object.entries(counts)) {
+              const cat = parseCategory(k);
+              if (Number.isFinite(v) && v > 0) arr.push({ category: cat, count: v });
+            }
+            setCategoryStats(arr);
+          })
+          .catch(() => {});
       } catch (err) {
-        toast.show(err instanceof Error ? err.message : 'فشل البحث', 'error');
+        if (requestId !== requestIdRef.current) return;
+        setError(
+          err instanceof Error && err.message ? err.message : 'فشل البحث'
+        );
       } finally {
-        setLoading(false);
+        if (requestId === requestIdRef.current) setLoading(false);
       }
     },
     [toast]
   );
 
-  function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    handleLookup(term);
-  }
+    void handleLookup(term);
+  };
 
-  function quickSearch(t: string) {
-    setTerm(t);
-    handleLookup(t);
-    inputRef.current?.blur();
-  }
+  const quickSearch = useCallback(
+    (t: string) => {
+      setTerm(t);
+      void handleLookup(t);
+      inputRef.current?.blur();
+    },
+    [handleLookup]
+  );
 
-  if (!mounted) {
-    return (
-      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
-        <div className="h-32 skeleton-shimmer rounded-3xl" />
-      </main>
-    );
-  }
+  const clearInput = () => {
+    setTerm('');
+    inputRef.current?.focus();
+  };
+
+  const handleInputKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape' && term) {
+      e.preventDefault();
+      setTerm('');
+    }
+  };
+
+  const clearRecent = () => {
+    clearRecentStorage();
+    setRecent([]);
+  };
+
+  const normalizedLength = normalizeTerm(term).length;
+  const showHints = !result && !loading && !error;
+  const canSubmit = !loading && normalizedLength >= MIN_TERM_LENGTH;
+  const showLengthHint =
+    normalizedLength > 0 && normalizedLength < MIN_TERM_LENGTH;
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10">
-      <Link
-        href="/"
-        className="group inline-flex items-center gap-1.5 text-sm font-bold text-teal/70 transition-colors hover:text-teal"
-      >
-        <span className="transition-transform duration-200 group-hover:translate-x-1">
-          <IconArrowLeft />
-        </span>
-        رجوع إلى لوحة الأقسام
-      </Link>
+      <BackLink />
 
-      <div className="mt-6 animate-slide-up">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
+      {/* Header */}
+      <header className="mt-6 animate-slide-up motion-reduce:animate-none">
+        <span className="inline-flex items-center gap-1.5 rounded-chip border border-teal/20 bg-teal-tint px-3 py-1 font-mono text-xs text-teal">
+          <span
+            aria-hidden="true"
+            className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal motion-reduce:animate-none"
+          />
           أداة طبية
         </span>
-        <h1 className="mt-3 flex items-center gap-2 text-3xl font-black leading-tight text-ink sm:text-4xl">
-          <IconStethoscope />
+
+        <h1 className="mt-3 flex items-center gap-2.5 font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">
+          <span
+            aria-hidden="true"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-field bg-teal-soft text-teal"
+          >
+            <IconDoctor className="h-5 w-5" />
+          </span>
           قاموس المصطلحات الطبية
         </h1>
-        <p className="mt-2 text-sm leading-relaxed text-ink/55">
-          اكتب أي مصطلح طبي بالعربية أو الإنجليزية، وسنشرحه لك بمستوى طالب الطب:
-          المعنى، تفكيك الكلمة، ملاحظة سريرية، ومصطلحات مشابهة.
-        </p>
-      </div>
 
-      <form onSubmit={handleSubmit} className="mt-6 animate-slide-up" style={{ animationDelay: '80ms' }}>
-        <div className="relative">
-          <IconSearch />
-          <input
-            ref={inputRef}
-            type="text"
-            value={term}
-            onChange={(e) => setTerm(e.target.value)}
-            placeholder="مثال: Dyspnea, Myocardial, ضيق النفس..."
-            maxLength={100}
-            autoComplete="off"
-            className="w-full rounded-2xl border-2 border-line bg-white py-4 pr-12 pl-32 text-base text-ink placeholder:text-ink/35 transition-all duration-200 focus:border-teal focus:bg-white focus:outline-none focus:shadow-[0_0_0_4px_rgba(14,74,74,0.10)] dark:bg-white/[0.06] dark:focus:bg-white/[0.08] dark:focus:shadow-[0_0_0_4px_rgba(77,184,184,0.15)]"
-            dir="auto"
-          />
+        <p className="mt-3 text-sm leading-relaxed text-ink-soft">
+          اكتب أي مصطلح طبي، وسنشرحه لك بمستوى طالب الطب: المعنى، تفكيك
+          الكلمة، ملاحظة سريرية، ومصطلحات مشابهة. يمكنك أيضاً الاستماع للنطق
+          وطلب شرح أعمق.
+        </p>
+      </header>
+
+      {/* Search form */}
+      <form
+        role="search"
+        onSubmit={handleSubmit}
+        className="mt-6 animate-slide-up motion-reduce:animate-none"
+        style={{ animationDelay: '80ms' }}
+      >
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="relative flex-1">
+            <IconSearch
+              aria-hidden="true"
+              className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
+            />
+            <input
+              ref={inputRef}
+              type="text"
+              inputMode="search"
+              enterKeyHint="search"
+              value={term}
+              onChange={(e) => setTerm(e.target.value)}
+              onKeyDown={handleInputKeyDown}
+              placeholder="مثال: Dyspnea, Myocardial, ضيق النفس..."
+              maxLength={100}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              dir="auto"
+              aria-label="أدخل المصطلح الطبي"
+              aria-describedby={showLengthHint ? 'term-hint' : undefined}
+              className="field-editorial w-full ps-10 pe-10 text-base"
+            />
+            {term && (
+              <button
+                type="button"
+                onClick={clearInput}
+                aria-label="مسح النص"
+                className="absolute end-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-field text-ink-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+              >
+                <IconClose aria-hidden="true" className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
           <button
             type="submit"
-            disabled={loading || term.trim().length < 2}
-            className="absolute left-2 top-1/2 flex h-12 -translate-y-1/2 items-center gap-1.5 rounded-xl bg-teal px-5 text-sm font-bold text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] transition-all duration-200 hover:bg-teal-light active:scale-95 disabled:opacity-40 disabled:active:scale-100"
+            disabled={!canSubmit}
+            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-field bg-teal px-6 text-sm font-semibold text-on-teal transition-colors hover:bg-teal-hover active:bg-teal-active focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal disabled:pointer-events-none disabled:bg-disabled disabled:text-disabled-ink motion-reduce:transition-none"
           >
             {loading ? (
               <>
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
-                  <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                <svg
+                  className="h-4 w-4 animate-spin"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    opacity="0.25"
+                  />
+                  <path
+                    d="M22 12a10 10 0 0 1-10 10"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
                 </svg>
-                جاري البحث
+                <span>جاري البحث</span>
               </>
             ) : (
               <>
-                <IconSearch />
-                ابحث
+                <IconSearch aria-hidden="true" className="h-4 w-4" />
+                <span>ابحث</span>
               </>
             )}
           </button>
         </div>
+
+        {showLengthHint && (
+          <p id="term-hint" className="mt-1.5 text-xs text-ink-muted">
+            اكتب حرفين على الأقل للبحث.
+          </p>
+        )}
       </form>
 
-      {loading && (
-        <div className="mt-6 space-y-3 rounded-3xl border border-line bg-white/80 p-6 dark:bg-paper/80">
-          <div className="h-8 w-40 skeleton-shimmer rounded" />
-          <div className="h-6 w-32 skeleton-shimmer rounded" />
-          <div className="mt-4 h-4 w-full skeleton-shimmer rounded" />
-          <div className="h-4 w-3/4 skeleton-shimmer rounded" />
-        </div>
-      )}
-
-      {result && !loading && (
-        <div className="mt-6">
-          <ResultCard result={result} />
-        </div>
-      )}
-
-      {recent.length > 0 && !result && !loading && (
-        <div className="mt-6 animate-slide-up" style={{ animationDelay: '120ms' }}>
-          <div className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/50">
-            <IconClock />
-            آخر ما بحثت عنه
+      {/* Results area */}
+      <div aria-busy={loading}>
+        {loading && (
+          <div className="mt-6">
+            <ResultSkeleton />
           </div>
-          <div className="flex flex-wrap gap-1.5">
+        )}
+
+        {error && !loading && (
+          <div
+            role="alert"
+            className="mt-6 flex items-start gap-3 rounded-card border border-coral/30 bg-coral/5 p-4 animate-slide-up motion-reduce:animate-none"
+          >
+            <span
+              aria-hidden="true"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-field bg-coral text-on-coral"
+            >
+              <IconWarning className="h-4 w-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-coral-ink">
+                تعذّر إتمام البحث
+              </p>
+              <p className="mt-0.5 break-anywhere text-xs text-ink-soft">
+                {error}
+              </p>
+              <button
+                type="button"
+                onClick={() => void handleLookup(term)}
+                disabled={normalizedLength < MIN_TERM_LENGTH}
+                className="mt-2 rounded-field border border-line bg-paper-soft px-3 py-1.5 text-xs font-semibold text-ink-soft transition-colors hover:border-teal/40 hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none"
+              >
+                إعادة المحاولة
+              </button>
+            </div>
+          </div>
+        )}
+
+        {result && !loading && (
+          <div className="mt-6">
+            <ResultCard
+              result={result}
+              headingRef={headingRef}
+              onSelectTerm={quickSearch}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Recent */}
+      {showHints && recent.length > 0 && (
+        <section
+          aria-labelledby="recent-heading"
+          className="mt-6 animate-slide-up motion-reduce:animate-none"
+          style={{ animationDelay: '120ms' }}
+        >
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h2
+              id="recent-heading"
+              className="flex items-center gap-1.5 text-xs font-semibold text-ink-muted"
+            >
+              <IconClock aria-hidden="true" className="h-3.5 w-3.5" />
+              آخر ما بحثت عنه
+            </h2>
+            <button
+              type="button"
+              onClick={clearRecent}
+              className="rounded-field px-2 py-1 text-xs font-semibold text-ink-muted transition-colors hover:text-coral-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+            >
+              مسح السجل
+            </button>
+          </div>
+          <ul className="flex flex-wrap gap-1.5">
             {recent.map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => quickSearch(t)}
-                className="rounded-full border border-line bg-white px-3 py-1.5 text-sm font-bold text-ink/70 transition-all hover:border-teal/40 hover:bg-teal/5 hover:text-teal active:scale-95 dark:bg-white/[0.06]"
-              >
-                {t}
-              </button>
+              <li key={t}>
+                <button
+                  type="button"
+                  onClick={() => quickSearch(t)}
+                  className="break-anywhere rounded-chip border border-line bg-paper-soft px-3 py-1.5 text-sm font-semibold text-ink-soft transition-colors hover:border-teal/40 hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+                >
+                  <bdi>{t}</bdi>
+                </button>
+              </li>
             ))}
-          </div>
-        </div>
+          </ul>
+        </section>
       )}
 
-      {popular.length > 0 && !result && !loading && (
-        <div className="mt-8 animate-slide-up" style={{ animationDelay: '160ms' }}>
-          <div className="mb-3 flex items-center gap-1.5 text-sm font-bold text-ink">
-            <IconTrending />
+      {/* Popular */}
+      {showHints && popular.length > 0 && (
+        <section
+          aria-labelledby="popular-heading"
+          className="mt-8 animate-slide-up motion-reduce:animate-none"
+          style={{ animationDelay: '160ms' }}
+        >
+          <h2
+            id="popular-heading"
+            className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-ink"
+          >
+            <IconTrending aria-hidden="true" className="h-4 w-4" />
             الأكثر بحثاً على المنصة
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
+          </h2>
+
+          {categoryStats.length > 0 && (
+            <CategoryFilter
+              selected={popularCategory}
+              stats={categoryStats}
+              onSelect={setPopularCategory}
+            />
+          )}
+
+          <ul className="grid gap-2 sm:grid-cols-2">
             {popular.map((t) => (
-              <button
-                key={t.term}
-                type="button"
-                onClick={() => quickSearch(t.term)}
-                className="group flex items-center justify-between gap-3 rounded-2xl border border-line bg-white/80 px-4 py-3 text-right transition-all duration-200 hover:-translate-y-0.5 hover:border-teal/30 hover:shadow-[0_4px_16px_rgba(14,74,74,0.08)] active:scale-[0.98] dark:bg-paper/80"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-ink transition-colors group-hover:text-teal">
-                    {t.term}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-ink/50">{t.arabic_translation}</p>
-                </div>
-                <span className="flex-shrink-0 rounded-full bg-ink/5 px-2 py-0.5 text-[10px] font-bold text-ink/50 dark:bg-white/10">
-                  {t.hit_count}
-                </span>
-              </button>
+              <li key={t.term}>
+                <button
+                  type="button"
+                  onClick={() => quickSearch(t.term)}
+                  className="group flex w-full items-center justify-between gap-3 rounded-card border border-line bg-paper-soft px-4 py-3 text-start transition-all duration-200 hover:-translate-y-0.5 hover:border-teal/40 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="flex items-center gap-1.5 truncate text-sm font-bold text-ink transition-colors group-hover:text-teal">
+                      <span aria-hidden="true">
+                        {MEDICAL_CATEGORY_EMOJIS[t.category]}
+                      </span>
+                      <bdi>{t.term}</bdi>
+                    </p>
+                    {t.arabic_translation && (
+                      <p className="mt-0.5 truncate text-xs text-ink-muted">
+                        <bdi>{t.arabic_translation}</bdi>
+                      </p>
+                    )}
+                  </div>
+                  {t.hit_count > 0 && (
+                    <span
+                      className="shrink-0 rounded-chip bg-paper-deep px-2 py-0.5 font-mono text-[10px] font-bold text-ink-muted"
+                      aria-label={`${t.hit_count} عملية بحث`}
+                    >
+                      <span className="num-inline">{t.hit_count}</span>
+                    </span>
+                  )}
+                </button>
+              </li>
             ))}
-          </div>
-        </div>
+          </ul>
+        </section>
       )}
 
-      <div className="mt-10 flex items-start gap-2 rounded-2xl border border-amber/30 bg-amber/8 p-4 text-xs text-ink/70 dark:bg-amber/15">
-        <span className="text-amber">
-          <IconWarning />
+      {/* Disclaimer */}
+      <aside className="mt-10 flex items-start gap-2 rounded-field border border-gold/30 bg-gold-tint p-4 text-xs text-ink-soft">
+        <span aria-hidden="true" className="shrink-0 text-gold-ink">
+          <IconWarning className="h-4 w-4" />
         </span>
         <p className="leading-relaxed">
-          <strong>ملاحظة:</strong> هذا القاموس مساعد دراسي وليس مرجعاً طبياً. 
-          الملاحظات السريرية اختيارية، ولا يُنصح بالاعتماد عليه وحده في قرارات سريرية حقيقية.
+          <strong className="font-semibold text-ink">ملاحظة:</strong> هذا
+          القاموس مساعد دراسي وليس مرجعاً طبياً. الملاحظات السريرية والشرح
+          العميق مولّدة بالذكاء الاصطناعي — راجع دائماً المصادر الرسمية.
         </p>
-      </div>
+      </aside>
     </main>
   );
 }

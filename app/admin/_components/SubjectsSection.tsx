@@ -126,7 +126,7 @@ export function SubjectsSection({ password }: Props) {
           value={stage}
           onChange={(e) => setStage(e.target.value as Stage | '')}
           required
-          className="w-44"
+          className="w-full sm:w-44"
           aria-label="المرحلة"
         >
           <option value="">اختر المرحلة</option>
@@ -169,7 +169,7 @@ export function SubjectsSection({ password }: Props) {
                     <Select
                       value={editStage}
                       onChange={(e) => setEditStage(e.target.value as Stage | '')}
-                      className="w-44"
+                      className="w-full sm:w-44"
                       aria-label="المرحلة"
                     >
                       {STAGES.map((st) => <option key={st} value={st}>{st}</option>)}

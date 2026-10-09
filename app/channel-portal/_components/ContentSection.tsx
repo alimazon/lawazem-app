@@ -473,7 +473,7 @@ function FiltersBar({
       <Select
         value={typeFilter}
         onChange={(e) => onTypeFilterChange(e.target.value as 'all' | ContentType)}
-        className="w-40"
+        className="w-full sm:w-40"
         aria-label="فلترة حسب النوع"
       >
         <option value="all">كل الأنواع</option>
@@ -488,7 +488,7 @@ function FiltersBar({
             e.target.value as 'all' | 'pinned' | 'upcoming' | 'expired'
           )
         }
-        className="w-40"
+        className="w-full sm:w-40"
         aria-label="فلترة حسب الحالة"
       >
         <option value="all">كل الحالات</option>
@@ -613,7 +613,7 @@ function ItemCard({
             onChange={(e) =>
               onEditFormChange({ ...editForm, content_type: e.target.value as ContentType })
             }
-            className="w-36"
+            className="w-full sm:w-36"
             aria-label="نوع المحتوى"
           >
             {CONTENT_TYPES.map((t) => (
@@ -632,7 +632,7 @@ function ItemCard({
             type="date"
             value={editForm.due_date}
             onChange={(e) => onEditFormChange({ ...editForm, due_date: e.target.value })}
-            className="w-40"
+            className="w-full sm:w-40"
             aria-label="تاريخ التسليم"
           />
         </div>
@@ -1082,7 +1082,7 @@ export function ContentSection({ channelId, password }: Props) {
           <Select
             value={newForm.content_type}
             onChange={(e) => setNewForm({ ...newForm, content_type: e.target.value as ContentType })}
-            className="w-36"
+            className="w-full sm:w-36"
             aria-label="نوع المحتوى"
           >
             {CONTENT_TYPES.map((t) => (
@@ -1102,7 +1102,7 @@ export function ContentSection({ channelId, password }: Props) {
             type="date"
             value={newForm.due_date}
             onChange={(e) => setNewForm({ ...newForm, due_date: e.target.value })}
-            className="w-40"
+            className="w-full sm:w-40"
             aria-label="تاريخ التسليم"
           />
         </div>

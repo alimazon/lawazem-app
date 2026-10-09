@@ -2,9 +2,24 @@
 
 export type Stage = 'المرحلة الأولى' | 'المرحلة الثانية' | 'المرحلة الثالثة';
 
+export type Group = 'A' | 'B';
+
 export type ContentType = 'assignment' | 'lecture_note' | 'summary' | 'task';
 
 export type Track = 'نظري' | 'عملي';
+
+export type MedicalCategory =
+  | 'general'
+  | 'anatomy'
+  | 'physiology'
+  | 'pathology'
+  | 'pharmacology'
+  | 'microbiology'
+  | 'biochemistry'
+  | 'histology'
+  | 'embryology'
+  | 'immunology'
+  | 'clinical';
 
 export interface Subject {
   id: string;
@@ -22,7 +37,8 @@ export interface LectureNote {
   lecture_number: number | null;
   track: Track | null;
   tags: string[];
-  year: number | null;                 // ← جديد
+  year: number | null;
+  group_name: Group | null;
   file_path: string;
   status?: string;
   created_at?: string;
@@ -91,4 +107,13 @@ export interface Schedule {
 export interface ChannelListItem {
   id: string;
   name: string;
+}
+
+// ==================== Dictionary v2 ====================
+export interface DictionaryDeepExplanation {
+  overview: string;
+  mechanism: string;
+  clinical: string;
+  confusions: string[];
+  mnemonic: string | null;
 }
