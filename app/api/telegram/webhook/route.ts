@@ -1427,7 +1427,7 @@ async function handleCallback(cb: TelegramCallbackQuery, baseUrl: string) {
     await editMessageText(
       chatId,
       messageId,
-      `📚 <b>${escapeHtml(stage)}</b>\n\nالآن اختر كروبك العملي:`,
+      `📚 <b>${escapeHtml(stage)}</b>\n\nالآن اختر كروبك النظري:`,
       { reply_markup: groupKeyboard() },
     );
     return;
