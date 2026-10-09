@@ -2,9 +2,9 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { ThemeToggle } from './ThemeToggle';
-import { LawazemLogo } from './LawazemLogo';
 
 const NAV = [
   { href: '/lawazem', label: 'الملازم' },
@@ -26,7 +26,14 @@ export function NavBar() {
           href="/"
           className="group flex flex-shrink-0 items-center gap-2 transition-transform active:scale-95"
         >
-          <LawazemLogo className="h-8 w-8 transition-transform group-hover:scale-105" />
+          <Image
+            src="/logo.png"
+            alt="لوازم"
+            width={36}
+            height={36}
+            priority
+            className="h-9 w-9 object-contain transition-transform group-hover:scale-105"
+          />
           <span className="text-base font-black text-ink sm:text-lg">لوازم</span>
         </Link>
 
