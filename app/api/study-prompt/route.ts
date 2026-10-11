@@ -13,14 +13,27 @@ interface StudyPromptBody {
 const VALID_FORMATS = new Set<string>(STUDY_FORMATS);
 const VALID_METHODS = new Set<string>(MATERIAL_METHODS.map((m) => m.value));
 
+// ==================== Helper: detect colloquial request ====================
+function hasColloquialFormat(formats: string[]): boolean {
+  return formats.some((f) => f.includes('اللهجة العراقية'));
+}
+
+// ==================== Helper: is incremental? ====================
+function isIncrementalMethod(method: string): boolean {
+  return (
+    method.includes('سلايد بكل رسالة') ||
+    method.includes('جزء بعد جزء')
+  );
+}
+
+// ==================== Prompt Builder ====================
 function buildSystemPrompt(
   materialMethod: string,
   formats: string[],
-  language: 'ar' | 'en'
+  language: 'ar' | 'en',
 ): string {
-  const isIncremental =
-    materialMethod.includes('سلايد بكل رسالة') ||
-    materialMethod.includes('جزء بعد جزء');
+  const isIncremental = isIncrementalMethod(materialMethod);
+  const hasColloquial = hasColloquialFormat(formats);
 
   const incrementalRules = isIncremental
     ? `
@@ -30,6 +43,67 @@ function buildSystemPrompt(
     : `
 - The student sends the whole material at once, so you can give one normal, appropriately sized response covering everything without per-slide restrictions.`;
 
+  const colloquialRules = hasColloquial
+    ? `
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 CRITICAL RULE FOR THE COLLOQUIAL IRAQI SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The student requested "ملخص باللهجة العراقية العامية" (Iraqi colloquial summary).
+When producing THIS specific format, follow these rules strictly:
+
+1. LANGUAGE: Write in NATURAL IRAQI DIALECT (اللهجة العراقية العامية).
+   - NOT Modern Standard Arabic (الفصحى)
+   - NOT Gulf / Egyptian / Levantine dialects
+   - If you don't know a word in Iraqi dialect, use the closest everyday Iraqi expression instead of MSA.
+
+2. TONE: Like an Iraqi medical student explaining to his close friends before an exam — casual, warm, motivating, no formality.
+
+3. APPROVED STYLE MARKERS (use these freely):
+   • "شنو تعرفون عن..."
+   • "المهم هنا إن..."
+   • "بالمختصر..."
+   • "زبدة الموضوع..."
+   • "خلي نكون صريحين..."
+   • "بنقطة وحدة:..."
+   • "لا تفوتونها لأن..."
+   • "هذا الجزء صعب شوية، لكن تخيلوا..."
+   • "شدوا حيلكم..."
+   • "لا تخافون..."
+
+4. FORBIDDEN WORDS & STYLE (never use these):
+   • "فإن" / "لذلك" / "يُعد" / "يتناول" / "يتميز" / "بالإضافة إلى ذلك"
+   • "المريض يعاني من..." (فصحى) — instead: "المريض يجيه..."
+   • "يمكن القول إن..." — instead: "باختصار..."
+   • Formal verbs ending in "ـات" like "يتضمن" — use "يشمل" or "بيه"
+
+5. STRUCTURE:
+   • Open with a hooking question or short observation
+   • 2-4 short paragraphs maximum, each focusing on ONE idea
+   • If a concept is clinically important, mark it: "⚠️ مهم للفاينل" or "🔥 ركزوا هنا"
+   • End with a motivational or memorable line
+
+6. LENGTH: Keep it SHORT and punchy. Around 150-250 words total. Do NOT pad.
+
+7. If the topic is complex, use simple metaphors:
+   • "الفكرة مثل..." / "تخيلوا إن..."
+
+8. Do NOT invent clinical facts. If unsure, skip the detail.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXAMPLE OF DESIRED OUTPUT STYLE (for reference only):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"شنو تعرفون عن الالتهاب؟ 🤔
+
+الفكرة الأساسية إن الجسم يشتغل مثل رجل إطفاء — يشتعل المكان بس لإصلاح الأضرار. العملية نفسها تخرب، بس الهدف إن الجسم يرجع مثل أول.
+
+بنقطة مهمة: السيتوكينات هي الرسائل يلي تتحكم بهذي العملية، وتفرزها خلايا المناعة.
+
+⚠️ مهم للفاينل: نفس الالتهاب يلي يحميك، لو زاد عن حده يصير هو سبب المرض — لهذا أمراض المناعة الذاتية خطيرة.
+
+شدوا حيلكم، هذي أساس كل شي جاي بعده 🔥"`
+    : '';
+
   return `You are an expert prompt engineer specializing in medical education. Your ONLY job is to write a single, detailed, professional, ready-to-use prompt that a medical student can paste into any AI assistant (such as ChatGPT or Claude) to study a specific subject effectively.
 
 Context about how the student will interact with the target AI right after pasting your prompt:
@@ -38,7 +112,7 @@ Context about how the student will interact with the target AI right after pasti
 If this method is incremental (one slide or one part sent per message, repeated across many messages until the lecture is done), your prompt MUST explicitly instruct the target AI to:${incrementalRules}
 
 The requested response formats the student wants from the target AI (apply the per-slide quantity rule above to each, except any comprehensive-review format):
-- ${formats.join('\n- ')}
+- ${formats.join('\n- ')}${colloquialRules}
 
 Rules you must follow strictly:
 - Do NOT answer the subject yourself. Do NOT explain the medical content. Do NOT provide any medical information directly — you only produce the prompt text.
@@ -48,6 +122,7 @@ Rules you must follow strictly:
 - Write the prompt itself in ${language === 'en' ? 'English' : 'Arabic'}.`;
 }
 
+// ==================== Route ====================
 export async function POST(request: Request) {
   let body: StudyPromptBody;
   try {
@@ -104,7 +179,7 @@ Requested formats: ${formats.join('، ')}`;
           { role: 'user', content: userMessage },
         ],
         temperature: 0.7,
-        max_tokens: 1500,
+        max_tokens: 1800,
       }),
     });
 

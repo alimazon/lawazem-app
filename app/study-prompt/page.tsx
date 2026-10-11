@@ -86,12 +86,18 @@ const PRESETS_KEY = 'lawazem_sp_presets_v1';
 const MAX_HISTORY = 5;
 const COPY_FEEDBACK_MS = 1500;
 
-// كاش على مستوى الوحدة لمنع إعادة التحميل عند التنقل
 const subjectsCache = new Map<string, SubjectOption[]>();
 const arabicCollator = new Intl.Collator('ar');
 
 // ==================== Presets الافتراضية ====================
 const DEFAULT_PRESETS: Preset[] = [
+  {
+    id: 'iraqi-summary',
+    label: 'ملخص عامي عراقي',
+    emoji: '🇮🇶',
+    formats: ['ملخص باللهجة العراقية العامية (سريع ومختصر)'],
+    methodIndex: 1,
+  },
   {
     id: 'quick-review',
     label: 'مراجعة سريعة',
@@ -248,7 +254,6 @@ function writePresets(presets: Preset[]): void {
   }
 }
 
-// نسخ مع بديل للسياقات غير الآمنة
 async function copyText(text: string): Promise<boolean> {
   try {
     if (navigator.clipboard?.writeText) {
@@ -377,8 +382,12 @@ const ErrorState = memo(function ErrorState({
   );
 });
 
-// ==================== Format Card ====================
+// ==================== Format Meta ====================
 const FORMAT_META: Record<StudyFormat, { emoji: string; hint: string }> = {
+  'ملخص باللهجة العراقية العامية (سريع ومختصر)': {
+    emoji: '🇮🇶',
+    hint: 'شرح بالعامي العراقي — سهل وممتع',
+  },
   'شرح مبسط وواضح لمحتوى السلايد خطوة بخطوة': {
     emoji: '📖',
     hint: 'كل سلايد يُشرح بلغة سهلة',
@@ -405,6 +414,7 @@ const FORMAT_META: Record<StudyFormat, { emoji: string; hint: string }> = {
   },
 };
 
+// ==================== Format Card ====================
 function FormatCard({
   format,
   selected,
@@ -416,6 +426,7 @@ function FormatCard({
 }) {
   const meta = FORMAT_META[format];
   const label = STUDY_FORMAT_LABELS[format];
+  const isColloquial = format.includes('اللهجة العراقية');
 
   return (
     <button
@@ -428,7 +439,9 @@ function FormatCard({
         'transition-all duration-200 ease-[var(--ease-editorial)] motion-reduce:transition-none',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal',
         selected
-          ? 'border-teal bg-teal-tint shadow-sm'
+          ? isColloquial
+            ? 'border-gold bg-gold-tint shadow-sm'
+            : 'border-teal bg-teal-tint shadow-sm'
           : 'border-line bg-paper-soft hover:border-teal/40 hover:bg-paper',
       ].join(' ')}
     >
@@ -437,7 +450,11 @@ function FormatCard({
         className={[
           'flex h-9 w-9 shrink-0 items-center justify-center rounded-field text-lg',
           'transition-colors duration-200 motion-reduce:transition-none',
-          selected ? 'bg-teal text-on-teal' : 'bg-paper-deep',
+          selected
+            ? isColloquial
+              ? 'bg-gold text-on-gold'
+              : 'bg-teal text-on-teal'
+            : 'bg-paper-deep',
         ].join(' ')}
       >
         {selected ? <IconCheck className="h-4 w-4" /> : meta.emoji}
@@ -484,9 +501,7 @@ function ProgressSteps({ active }: { active: number }) {
             <span
               className={[
                 'text-sm',
-                done || current
-                  ? 'font-bold text-ink'
-                  : 'text-ink-muted',
+                done || current ? 'font-bold text-ink' : 'text-ink-muted',
               ].join(' ')}
             >
               {label}
@@ -539,7 +554,13 @@ const ResultPanel = memo(function ResultPanel({
           variant={copied ? 'primary' : 'secondary'}
           size="sm"
           onClick={onCopy}
-          icon={copied ? <IconCheck className="h-3.5 w-3.5" /> : <IconCopy className="h-3.5 w-3.5" />}
+          icon={
+            copied ? (
+              <IconCheck className="h-3.5 w-3.5" />
+            ) : (
+              <IconCopy className="h-3.5 w-3.5" />
+            )
+          }
         >
           {copied ? 'تم النسخ' : 'نسخ'}
         </Button>
@@ -569,6 +590,34 @@ const ResultPanel = memo(function ResultPanel({
         {result.text}
       </pre>
 
+      {/* أزرار الفتح المباشر في أدوات AI */}
+      <div className="flex flex-wrap gap-2 border-t border-line bg-teal-tint/40 px-4 py-3">
+        <button
+          type="button"
+          onClick={() => {
+            void copyText(result.text).then((ok) => {
+              if (ok) window.open('https://chatgpt.com/', '_blank', 'noopener');
+            });
+          }}
+          className="inline-flex flex-1 min-w-[140px] items-center justify-center gap-2 rounded-field border-2 border-teal bg-teal px-4 py-2.5 text-sm font-bold text-on-teal transition-all duration-200 hover:-translate-y-0.5 hover:bg-teal-hover hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+        >
+          <span aria-hidden="true">🚀</span>
+          انسخ وافتح ChatGPT
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            void copyText(result.text).then((ok) => {
+              if (ok) window.open('https://claude.ai/new', '_blank', 'noopener');
+            });
+          }}
+          className="inline-flex flex-1 min-w-[140px] items-center justify-center gap-2 rounded-field border border-line bg-paper-soft px-4 py-2.5 text-sm font-bold text-ink-soft transition-colors hover:border-teal/40 hover:text-teal motion-reduce:transition-none"
+        >
+          <span aria-hidden="true">📎</span>
+          انسخ وافتح Claude
+        </button>
+      </div>
+
       <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-line bg-paper-deep/40 px-4 py-2.5 text-[11px] text-ink-muted">
         <span className="font-mono">{wordCount} كلمة</span>
         <span>{formatTimestamp(result.createdAt)}</span>
@@ -590,6 +639,7 @@ function EmptyPreview({
   language: Language;
 }) {
   const isEmpty = !subjectName || !methodLabel || formats.length === 0;
+  const hasColloquial = formats.some((f) => f.includes('اللهجة العراقية'));
 
   return (
     <section
@@ -632,7 +682,12 @@ function EmptyPreview({
                 {formats.map((f) => (
                   <li
                     key={f}
-                    className="rounded-chip bg-teal-tint px-2 py-0.5 text-[11px] font-bold text-teal"
+                    className={[
+                      'rounded-chip px-2 py-0.5 text-[11px] font-bold',
+                      f.includes('اللهجة العراقية')
+                        ? 'bg-gold-tint text-gold-ink'
+                        : 'bg-teal-tint text-teal',
+                    ].join(' ')}
                   >
                     {FORMAT_META[f].emoji} {STUDY_FORMAT_LABELS[f]}
                   </li>
@@ -650,6 +705,23 @@ function EmptyPreview({
           </dd>
         </div>
       </dl>
+
+      {/* 💡 تلميح استخدام الملخص العامي */}
+      {hasColloquial && (
+        <div className="border-t border-gold/30 bg-gold-tint/50 px-4 py-3">
+          <p className="flex items-center gap-1.5 text-xs font-bold text-gold-ink">
+            <span aria-hidden="true">🇮🇶</span>
+            كيف تستخدم الملخص العامي؟
+          </p>
+          <ol className="mt-2 space-y-1 ps-5 text-[11px] leading-relaxed text-ink-soft list-decimal">
+            <li>اختر طريقة إرسال: <strong>ملف الملزمة كامل</strong></li>
+            <li>اضغط <strong>«توليد البرومبت»</strong></li>
+            <li>انسخ البرومبت + افتح ChatGPT</li>
+            <li>ارفع ملف الملزمة هناك والصق البرومبت</li>
+            <li>ستحصل على ملخص بالعامي العراقي ✨</li>
+          </ol>
+        </div>
+      )}
 
       <div className="border-t border-line bg-paper-deep/30 px-4 py-3">
         <p className="text-[11px] leading-relaxed text-ink-muted">
@@ -757,18 +829,28 @@ function PresetsBar({
         )}
       </div>
       <ul className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
-        {all.map((p) => (
-          <li key={p.id} className="shrink-0">
-            <button
-              type="button"
-              onClick={() => onApply(p)}
-              className="inline-flex items-center gap-2 rounded-chip border border-line bg-paper-soft px-3 py-1.5 text-xs font-bold text-ink-soft transition-all duration-200 hover:border-teal/40 hover:bg-teal-tint hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
-            >
-              <span aria-hidden="true">{p.emoji}</span>
-              {p.label}
-            </button>
-          </li>
-        ))}
+        {all.map((p) => {
+          const isIraqi = p.id === 'iraqi-summary';
+          return (
+            <li key={p.id} className="shrink-0">
+              <button
+                type="button"
+                onClick={() => onApply(p)}
+                className={[
+                  'inline-flex items-center gap-2 rounded-chip border px-3 py-1.5 text-xs font-bold',
+                  'transition-all duration-200 motion-reduce:transition-none',
+                  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal',
+                  isIraqi
+                    ? 'border-gold/40 bg-gold-tint text-gold-ink hover:border-gold hover:bg-gold-soft'
+                    : 'border-line bg-paper-soft text-ink-soft hover:border-teal/40 hover:bg-teal-tint hover:text-teal',
+                ].join(' ')}
+              >
+                <span aria-hidden="true">{p.emoji}</span>
+                {p.label}
+              </button>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
@@ -829,7 +911,12 @@ export default function StudyPromptPage() {
   // ==================== Prefs save ====================
   useEffect(() => {
     if (!prefsLoaded) return;
-    writePrefs({ materialMethod, formats: selectedFormats, language, subjectId });
+    writePrefs({
+      materialMethod,
+      formats: selectedFormats,
+      language,
+      subjectId,
+    });
   }, [prefsLoaded, materialMethod, selectedFormats, language, subjectId]);
 
   // ==================== Load subjects ====================
@@ -975,7 +1062,6 @@ export default function StudyPromptPage() {
       setResult(null);
       setCopied(false);
 
-      // خطوات وهمية بصرية
       const stepTimers: number[] = [];
       stepTimers.push(window.setTimeout(() => setProgressStep(1), 500));
       stepTimers.push(window.setTimeout(() => setProgressStep(2), 1400));
@@ -1067,12 +1153,15 @@ export default function StudyPromptPage() {
   }, [result, toast]);
 
   // ==================== Preset Apply ====================
-  const handleApplyPreset = useCallback((preset: Preset) => {
-    setSelectedFormats(preset.formats);
-    const method = MATERIAL_METHODS[preset.methodIndex];
-    if (method) setMaterialMethod(method.value);
-    toast.show(`تم تطبيق «${preset.label}»`, 'success');
-  }, [toast]);
+  const handleApplyPreset = useCallback(
+    (preset: Preset) => {
+      setSelectedFormats(preset.formats);
+      const method = MATERIAL_METHODS[preset.methodIndex];
+      if (method) setMaterialMethod(method.value);
+      toast.show(`تم تطبيق «${preset.label}»`, 'success');
+    },
+    [toast],
+  );
 
   const handleSavePreset = useCallback(() => {
     const methodIndex = MATERIAL_METHODS.findIndex(
@@ -1096,7 +1185,10 @@ export default function StudyPromptPage() {
 
   const handleRestoreHistory = useCallback(
     (item: HistoryItem) => {
-      toast.show(`آخر برومبت لـ «${item.subjectName}» — استخدم النسخ من النتيجة السابقة`, 'info');
+      toast.show(
+        `آخر برومبت لـ «${item.subjectName}» — استخدم النسخ من النتيجة السابقة`,
+        'info',
+      );
     },
     [toast],
   );
@@ -1115,7 +1207,9 @@ export default function StudyPromptPage() {
     function onKey(e: KeyboardEvent) {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && canGenerate) {
         e.preventDefault();
-        const form = document.getElementById('sp-form') as HTMLFormElement | null;
+        const form = document.getElementById(
+          'sp-form',
+        ) as HTMLFormElement | null;
         form?.requestSubmit();
       }
     }
@@ -1281,7 +1375,9 @@ export default function StudyPromptPage() {
             </div>
 
             {/* أشكال الشرح */}
-            <fieldset aria-describedby={noFormats ? 'sp-formats-error' : undefined}>
+            <fieldset
+              aria-describedby={noFormats ? 'sp-formats-error' : undefined}
+            >
               <legend className="mb-3 flex w-full items-center justify-between gap-2 text-sm font-bold text-ink">
                 <span className="flex items-center gap-1.5">
                   <IconSparkles
@@ -1360,7 +1456,6 @@ export default function StudyPromptPage() {
               {generating ? 'جاري التوليد...' : 'توليد البرومبت'}
             </Button>
 
-            {/* تلميح الاختصار */}
             <p className="hidden text-center text-[11px] text-ink-muted sm:block">
               نصيحة: اضغط{' '}
               <kbd className="rounded border border-line bg-paper-deep px-1.5 py-0.5 font-mono">
@@ -1410,9 +1505,7 @@ export default function StudyPromptPage() {
                     <p className="text-sm font-bold text-ink">
                       يبني البرومبت الآن
                     </p>
-                    <p className="text-[11px] text-ink-muted">
-                      ثوانٍ قليلة…
-                    </p>
+                    <p className="text-[11px] text-ink-muted">ثوانٍ قليلة…</p>
                   </div>
                 </div>
                 <ProgressSteps active={progressStep} />
@@ -1434,7 +1527,6 @@ export default function StudyPromptPage() {
               />
             )}
 
-            {/* زر مسح سريع إذا كانت النتيجة ظاهرة */}
             {result && !generating && (
               <button
                 type="button"

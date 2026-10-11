@@ -43,7 +43,9 @@ export const STORAGE_BUCKETS = {
   channelFiles: 'channel-files',
 } as const;
 
+// ==================== Study Formats ====================
 export const STUDY_FORMATS = [
+  'ملخص باللهجة العراقية العامية (سريع ومختصر)',
   'شرح مبسط وواضح لمحتوى السلايد خطوة بخطوة',
   'أسئلة اختيار من متعدد (MCQ) للمراجعة مع الإجابات الصحيحة وتوضيح كل خيار',
   'فلاش كاردز (سؤال وجواب) للحفظ السريع',
@@ -55,6 +57,7 @@ export const STUDY_FORMATS = [
 export type StudyFormat = (typeof STUDY_FORMATS)[number];
 
 export const STUDY_FORMAT_LABELS: Record<StudyFormat, string> = {
+  'ملخص باللهجة العراقية العامية (سريع ومختصر)': 'ملخص عامي',
   'شرح مبسط وواضح لمحتوى السلايد خطوة بخطوة': 'شرح مبسط',
   'أسئلة اختيار من متعدد (MCQ) للمراجعة مع الإجابات الصحيحة وتوضيح كل خيار': 'أسئلة اختيار من متعدد (MCQ)',
   'فلاش كاردز (سؤال وجواب) للحفظ السريع': 'فلاش كاردز',
