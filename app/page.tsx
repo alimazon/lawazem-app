@@ -10,7 +10,11 @@ import { TrendingNotes } from '@/components/TrendingNotes';
 import { BotChannelCard } from '@/components/BotChannelCard';
 import { Masthead } from './_components/Masthead';
 import { SectionTile, SectionTileGrid } from './_components/SectionTile';
-import type { TileSize, TileVariant } from './_components/SectionTile';
+import type {
+  SubLink,
+  TileSize,
+  TileVariant,
+} from './_components/SectionTile';
 import type { Stage } from '@/lib/types';
 import {
   IconArrowLeft,
@@ -41,7 +45,7 @@ function pad(n: number): string {
   return String(n).padStart(2, '0');
 }
 
-// ==================== Editorial: Divider (سطران فوق العنوان) ====================
+// ==================== Editorial: Divider ====================
 function DoubleRule({ className }: { className?: string }) {
   return (
     <div aria-hidden="true" className={cx('border-t-2 border-ink', className)}>
@@ -82,7 +86,7 @@ function IconGrades() {
   );
 }
 
-// ==================== Icon: Timer (جلسة دراسة) ====================
+// ==================== Icon: Timer ====================
 function IconTimer() {
   return (
     <svg
@@ -113,6 +117,7 @@ interface Section {
   ctaLabel?: string;
   badge?: string;
   locked?: boolean;
+  subLinks?: SubLink[];
 }
 
 const SECTIONS: Section[] = [
@@ -161,24 +166,16 @@ const SECTIONS: Section[] = [
 
   // ═══ الصف الثالث ═══
   {
-    href: '/grades',
-    title: 'الدرجات',
-    kicker: 'الأرشيف',
-    description:
-      'كوزات، امتحانات يومية، فصلية، وفاينل — كل ملفات الدرجات في مكان واحد.',
-    icon: <IconGrades />,
-    variant: 'gold',
-    size: 'wide',
-    badge: 'جديد',
-  },
-  {
     href: '/gpa',
-    title: 'المعدل',
+    title: 'المعدل والدرجات',
     kicker: 'التتبع',
-    description: 'احسب معدلك واعرف موقعك.',
+    description: 'احسب معدلك، تصفّح ملفات الدرجات، واعرف موقعك.',
     icon: <IconChart />,
     variant: 'teal',
-    size: 'small',
+    size: 'wide',
+    subLinks: [
+      { href: '/grades', label: 'تصفح الدرجات', icon: <IconGrades /> },
+    ],
   },
   {
     href: '/study-session',
@@ -187,7 +184,7 @@ const SECTIONS: Section[] = [
     description: 'مؤقت بومودورو + أصوات هادئة + تحليل عاداتك.',
     icon: <IconTimer />,
     variant: 'coral',
-    size: 'small',
+    size: 'wide',
   },
 
   // ═══ الصف الأخير ═══
@@ -358,7 +355,6 @@ export default function HomePage() {
         {/* ==================== Sections ==================== */}
         <section aria-labelledby="sections-heading" className="mt-10">
           <div className="ink-reveal" style={reveal(1)}>
-            {/* ✅ الخط الفاصل الآن فوق العنوان */}
             <DoubleRule />
 
             <div className="mt-4 flex items-end justify-between gap-4">
@@ -393,6 +389,7 @@ export default function HomePage() {
                   ctaLabel={sec.ctaLabel}
                   locked={sec.locked === true}
                   lockedLabel="قريباً"
+                  subLinks={sec.subLinks}
                 />
               ))}
             </SectionTileGrid>

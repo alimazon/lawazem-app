@@ -1,5 +1,8 @@
 // app/_components/SectionTile.tsx
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useId } from 'react';
 import type { ReactNode } from 'react';
 
@@ -22,6 +25,12 @@ export type TileSize =
 
 type Layout = 'hero' | 'wide' | 'small' | 'strip';
 
+export interface SubLink {
+  href: string;
+  label: string;
+  icon?: ReactNode;
+}
+
 export interface SectionTileProps {
   href: string;
   title: string;
@@ -34,6 +43,8 @@ export interface SectionTileProps {
   locked?: boolean;
   ctaLabel?: string;
   lockedLabel?: string;
+  /** روابط صغيرة داخل البطاقة (تفتح مسارات فرعية) */
+  subLinks?: SubLink[];
   className?: string;
 }
 
@@ -231,9 +242,11 @@ export function SectionTile({
   locked = false,
   ctaLabel = 'افتح',
   lockedLabel = 'قريباً',
+  subLinks,
   className,
 }: SectionTileProps) {
   const uid = useId();
+  const router = useRouter();
   const titleId = `${uid}-title`;
   const descId = `${uid}-desc`;
   const lockId = `${uid}-lock`;
@@ -299,6 +312,44 @@ export function SectionTile({
     />
   ) : null;
 
+  // ---------- Sub Links ----------
+  const subLinksBlock =
+    subLinks && subLinks.length > 0 ? (
+      <div className="mt-3 flex flex-wrap gap-2">
+        {subLinks.map((s) => (
+          <span
+            key={s.href}
+            role="link"
+            tabIndex={0}
+            aria-label={s.label}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              router.push(s.href);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+                router.push(s.href);
+              }
+            }}
+            className={cx(
+              'inline-flex cursor-pointer items-center gap-1.5 rounded-chip px-2.5 py-1 text-[11px] font-bold',
+              'transition-all duration-200 motion-reduce:transition-none',
+              'focus-visible:outline-2 focus-visible:outline-offset-2',
+              isFeatured
+                ? 'border border-on-teal/30 bg-on-teal/10 text-on-teal hover:border-on-teal/60 hover:bg-on-teal/20 focus-visible:outline-on-teal'
+                : 'border border-teal/25 bg-teal-tint text-teal hover:border-teal/50 hover:bg-teal-soft focus-visible:outline-teal',
+            )}
+          >
+            {s.icon && <span className="flex-shrink-0">{s.icon}</span>}
+            <span>{s.label}</span>
+          </span>
+        ))}
+      </div>
+    ) : null;
+
   // ---------- Body ----------
   const body = (
     <div className="min-w-0">
@@ -335,6 +386,7 @@ export function SectionTile({
       >
         {description}
       </p>
+      {subLinksBlock}
     </div>
   );
 
@@ -356,7 +408,6 @@ export function SectionTile({
   let inner: ReactNode;
 
   if (layout === 'hero') {
-    // ═══ Hero ═══
     inner = (
       <>
         <div className="flex items-start justify-between gap-3">
@@ -370,7 +421,6 @@ export function SectionTile({
       </>
     );
   } else if (layout === 'small') {
-    // ═══ Small (عمودي) ═══
     inner = (
       <>
         <div className="flex items-start justify-between gap-2">
@@ -384,7 +434,6 @@ export function SectionTile({
       </>
     );
   } else if (layout === 'wide') {
-    // ═══ Wide (أفقي) ═══
     inner = (
       <div className="flex flex-1 items-center gap-4">
         {iconBox}
@@ -396,7 +445,6 @@ export function SectionTile({
       </div>
     );
   } else {
-    // ═══ Strip (شريط رفيع) ═══
     inner = (
       <div className="flex flex-1 items-center gap-4">
         {iconBox}
@@ -411,7 +459,6 @@ export function SectionTile({
   // ---------- Surface ----------
   const surface = (
     <>
-      {/* خط سفلي ينمو من المنتصف عند hover */}
       {style.accent && (
         <span
           aria-hidden="true"
@@ -424,7 +471,6 @@ export function SectionTile({
         />
       )}
 
-      {/* إطار داخلي وزخرفة دائرية لبطاقة hero */}
       {isFeatured && (
         <>
           <span
