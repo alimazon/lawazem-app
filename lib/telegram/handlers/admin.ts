@@ -1,538 +1,642 @@
-// app/api/telegram/webhook/route.ts
-import { NextResponse } from 'next/server';
+// lib/telegram/handlers/admin.ts
 import {
   sendMessage,
+  editMessageText,
   answerCallbackQuery,
-  getWebhookSecret,
-} from '@/lib/telegram';
-import { getAdmin, type AdminRole } from '@/lib/telegram-admins';
-import { getSession, clearSession } from '@/lib/telegram/sessions';
-
-// ═══ Student handlers ═══
+  escapeHtml,
+} from '../../telegram';
+import { getSupabaseAdmin } from '../../supabaseAdmin';
 import {
-  handleStart,
-  handleStageSelection,
-  handleGroupSelection,
-  handleSubjectToggle,
-  handleSubjectsDone,
-  handleToggleNotification,
-  handleSettingsNavigation,
-  handleStop,
-  handleStudentMenuButton,
-  sendHelp,
-  sendStreak,
-  sendSettings,
-} from '@/lib/telegram/handlers/student';
-
-// ═══ Announce handlers ═══
+  listAdmins,
+  registerAdmin,
+  deactivateAdmin,
+  roleLabel,
+  type TelegramAdmin,
+  type AdminRole,
+} from '../../telegram-admins';
+import { sendAnnouncement } from '../../telegram-notifications';
+import { setSession, clearSession, getSession } from '../sessions';
 import {
-  handleAnnounceStart,
-  handleTemplatePick,
-  handleEditTitleStart,
-  handleEditBodyStart,
-  handleAddLinkStart,
-  handleChooseStageStart,
-  handleStagePick,
-  handleBackToDraft,
-  handleAnnounceTextInput,
-  handleAnnounceSubmit,
-  handleAnnounceCancel,
-} from '@/lib/telegram/handlers/announce';
+  pendingItemKeyboard,
+  roleKeyboard,
+  SUPER_ADMIN_MENU,
+  ADMIN_MENU,
+} from './menus';
+import { ADMIN_MENU_TEXTS } from '../types';
+import { countPendingInquiries } from '../inquiries';
 
-// ═══ Admin handlers ═══
-import {
-  sendAdminHelp,
-  handlePendingList,
-  handleApprove,
-  handleRejectStart,
-  handleRejectText,
-  handleDeleteAnnouncement,
-  handleHistory,
-  handleStats,
-  handleListAdmins,
-  handleAddAdminStart,
-  handleAddAdminChatId,
-  handleAddAdminRole,
-  handleRemoveAdmin,
-  handleAdminMenuButton,
-  quickAddAdmin,
-} from '@/lib/telegram/handlers/admin';
+// ==================== Admin Help ====================
+export async function sendAdminHelp(
+  chatId: number,
+  admin: TelegramAdmin,
+): Promise<void> {
+  const isSuper = admin.role === 'super_admin';
+  const lines: string[] = [];
 
-// ═══ Inquiry handlers ═══
-import {
-  handleInquiryStart,
-  handleInquiryText,
-  handleInquiriesList,
-  handleInquiryReplyStart,
-  handleInquiryReplyText,
-  handleInquiryClose,
-  handleInquiryCancel,
-} from '@/lib/telegram/handlers/inquiries';
+  lines.push(`📖 <b>دليل ${isSuper ? 'المشرف الأعلى' : 'المشرف'}</b>`);
+  lines.push('');
+  lines.push(`👤 دورك: <b>${roleLabel(admin.role)}</b>`);
+  lines.push('');
+  lines.push('👇 استخدم الأزرار الثابتة بالأسفل، أو الأوامر النصية.');
+  lines.push('');
+  lines.push('━━━━━━━━━━━━━━━━━━━');
+  lines.push('🗺️ <b>الأوامر المتاحة</b>');
+  lines.push('━━━━━━━━━━━━━━━━━━━');
+  lines.push('');
+  lines.push('📢 <code>/announce</code> — إنشاء تبليغ بقوالب جاهزة');
 
-// ═══ Types ═══
-import type {
-  TelegramUpdate,
-  TelegramMessage,
-  TelegramCallbackQuery,
-} from '@/lib/telegram/types';
-import {
-  STUDENT_MENU_TEXTS,
-  ADMIN_MENU_TEXTS,
-} from '@/lib/telegram/types';
+  if (isSuper) {
+    lines.push('📋 <code>/pending</code> — التبليغات قيد المراجعة');
+    lines.push('📜 <code>/history</code> — آخر التبليغات');
+    lines.push('📊 <code>/stats</code> — إحصائيات البوت');
+    lines.push('📮 <code>/inquiries</code> — الاستفسارات');
+    lines.push('👥 <code>/admins</code> — قائمة المشرفين');
+    lines.push('➕ <code>/add_admin</code> — إضافة مشرف');
+    lines.push('➖ <code>/remove_admin</code> — حذف مشرف');
+  } else {
+    lines.push('📋 <code>/pending</code> — عرض المعلقة (بدون موافقة)');
+  }
 
-// ==================== Constants ====================
-const ADMIN_ROLES: readonly AdminRole[] = [
-  'super_admin',
-  'admin',
-  'publisher',
-];
+  lines.push('❌ <code>/cancel</code> — إلغاء أي عملية');
+  lines.push('📖 <code>/admin_help</code> — هذا الدليل');
 
-function isAdminRole(v: string): v is AdminRole {
-  return (ADMIN_ROLES as readonly string[]).includes(v);
+  await sendMessage(chatId, lines.join('\n'), {
+    reply_markup: isSuper ? SUPER_ADMIN_MENU : ADMIN_MENU,
+  });
 }
 
-// ==================== POST ====================
-export async function POST(request: Request) {
-  // 1. التحقق من السكرت
-  const secret = getWebhookSecret();
-  if (secret) {
-    const incoming = request.headers.get('x-telegram-bot-api-secret-token');
-    if (incoming !== secret) {
-      return NextResponse.json({ ok: false }, { status: 401 });
-    }
+// ==================== Pending List ====================
+export async function handlePendingList(chatId: number): Promise<void> {
+  const { data } = await getSupabaseAdmin()
+    .from('telegram_announcements')
+    .select('*')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true })
+    .limit(15);
+
+  const items = (data ?? []) as Array<{
+    id: string;
+    title: string;
+    body: string;
+    stage: string | null;
+    created_by: string;
+  }>;
+
+  if (items.length === 0) {
+    await sendMessage(chatId, '✅ لا توجد تبليغات بانتظار المراجعة.');
+    return;
   }
 
-  // 2. تحليل الـupdate
-  let update: TelegramUpdate;
-  try {
-    update = (await request.json()) as TelegramUpdate;
-  } catch {
-    return NextResponse.json({ ok: true });
+  await sendMessage(chatId, `📋 <b>${items.length}</b> تبليغ بانتظار المراجعة:`);
+
+  for (const a of items) {
+    const lines: string[] = [];
+    lines.push(`📢 <b>${escapeHtml(a.title)}</b>`);
+    lines.push(
+      `🎯 ${
+        a.stage ? escapeHtml(a.stage) : 'كل المراحل'
+      } • 👤 ${escapeHtml(a.created_by)}`,
+    );
+    lines.push('');
+    lines.push(escapeHtml(a.body));
+    await sendMessage(chatId, lines.join('\n'), {
+      reply_markup: pendingItemKeyboard(a.id),
+    });
+  }
+}
+
+// ==================== Approve ====================
+export async function handleApprove(
+  cb: {
+    id: string;
+    from: { id: number };
+    message?: { chat: { id: number }; message_id: number };
+  },
+  id: string,
+  admin: TelegramAdmin,
+): Promise<void> {
+  if (admin.role !== 'super_admin') {
+    await answerCallbackQuery(cb.id, '❌ غير مصرح — تحتاج صلاحية مشرف أعلى');
+    return;
   }
 
-  // 3. تحديد baseUrl
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ??
-    'https://lawazem.vercel.app';
+  const chatId = cb.message?.chat.id ?? 0;
+  const messageId = cb.message?.message_id ?? 0;
+  if (!chatId) return;
 
-  // 4. التوجيه
+  const supabase = getSupabaseAdmin();
+
+  const { data: existing } = await supabase
+    .from('telegram_announcements')
+    .select('status')
+    .eq('id', id)
+    .maybeSingle<{ status: string }>();
+
+  if (!existing) {
+    await answerCallbackQuery(cb.id, 'التبليغ غير موجود');
+    return;
+  }
+  if (existing.status !== 'pending') {
+    await answerCallbackQuery(cb.id, 'تمت معالجة هذا التبليغ مسبقاً');
+    return;
+  }
+
+  await answerCallbackQuery(cb.id, '⏳ جاري الإرسال...');
+
+  await supabase
+    .from('telegram_announcements')
+    .update({
+      status: 'approved',
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: 'super_admin',
+    })
+    .eq('id', id);
+
+  let result: Awaited<ReturnType<typeof sendAnnouncement>>;
   try {
-    if (update.message) {
-      await handleMessage(update.message, baseUrl);
-    } else if (update.callback_query) {
-      await handleCallback(update.callback_query, baseUrl);
-    }
+    result = await sendAnnouncement(id);
   } catch (err) {
-    console.error('[tg webhook] error:', err);
-  }
-
-  return NextResponse.json({ ok: true });
-}
-
-// ==================== Message Handler ====================
-async function handleMessage(msg: TelegramMessage, baseUrl: string): Promise<void> {
-  if (!msg.text || !msg.from) return;
-
-  const chatId = msg.chat.id;
-  const text = msg.text.trim();
-  const lower = text.toLowerCase();
-  const admin = await getAdmin(chatId);
-
-  // ═══════════════════════════════════════════════════
-  // 1. الأوامر الأساسية (تعمل للجميع وقبل أي شي)
-  // ═══════════════════════════════════════════════════
-  if (lower === '/start' || lower.startsWith('/start ')) {
-    await handleStart(msg, baseUrl);
+    const msg = err instanceof Error ? err.message : 'خطأ غير معروف';
+    await supabase
+      .from('telegram_announcements')
+      .update({ status: 'failed', sent_error: msg })
+      .eq('id', id);
+    await sendMessage(chatId, `❌ فشل الإرسال: ${escapeHtml(msg)}`);
     return;
   }
 
-  // ═══════════════════════════════════════════════════
-  // 2. جلسة مفتوحة (text input waiting)
-  //    مهم: قبل الأوامر المشتركة، لأن الجلسة قد تكون نشطة
-  // ═══════════════════════════════════════════════════
-  const session = await getSession(chatId);
-  if (session && session.flow_type !== 'idle') {
-    const handled = await routeSessionText(chatId, text, session.flow_type, session.flow_step, admin);
-    if (handled) return;
-    // إذا الجلسة لم تتعامل مع النص، نمسحها لنمنع التعليق
-    await clearSession(chatId);
-  }
-
-  // ═══════════════════════════════════════════════════
-  // 3. أوامر مشتركة (طالب + مشرف)
-  // ═══════════════════════════════════════════════════
-  if (lower === '/help') {
-    await sendHelp(chatId, baseUrl);
-    return;
-  }
-  if (lower === '/streak') {
-    await sendStreak(chatId);
-    return;
-  }
-  if (lower === '/settings') {
-    await sendSettings(chatId);
-    return;
-  }
-  if (lower === '/ask' || lower === '/inquiry') {
-    await handleInquiryStart(chatId);
-    return;
-  }
-  if (lower === '/stop') {
-    await handleStop(chatId);
+  if (result.error) {
+    await supabase
+      .from('telegram_announcements')
+      .update({
+        status: 'failed',
+        sent_error: result.error,
+        sent_count: result.sent,
+      })
+      .eq('id', id);
+    await sendMessage(chatId, `❌ فشل الإرسال: ${escapeHtml(result.error)}`);
     return;
   }
 
-  // ═══════════════════════════════════════════════════
-  // 4. أوامر المشرف
-  // ═══════════════════════════════════════════════════
-  if (admin) {
-    // دليل المشرف
-    if (
-      lower === '/admin_help' ||
-      lower === '/guide' ||
-      lower === '/help_admin'
-    ) {
-      await sendAdminHelp(chatId, admin);
-      return;
-    }
+  await supabase
+    .from('telegram_announcements')
+    .update({
+      status: 'sent',
+      sent_at: new Date().toISOString(),
+      sent_count: result.sent,
+      sent_error: result.failed > 0 ? `فشل ${result.failed}` : null,
+    })
+    .eq('id', id);
 
-    // تبليغ جديد
-    if (lower === '/announce') {
-      await handleAnnounceStart(chatId);
-      return;
-    }
-
-    // المراجعة (متاح للمشرف والسوبر)
-    if (lower === '/pending') {
-      await handlePendingList(chatId);
-      return;
-    }
-
-    // أوامر السوبر أدمن فقط
-    if (admin.role === 'super_admin') {
-      if (lower === '/history') {
-        await handleHistory(chatId);
-        return;
-      }
-      if (lower === '/stats') {
-        await handleStats(chatId);
-        return;
-      }
-      if (lower === '/inquiries') {
-        await handleInquiriesList(chatId);
-        return;
-      }
-      if (lower === '/admins') {
-        await handleListAdmins(chatId);
-        return;
-      }
-
-      // /add_admin (سريع)
-      if (lower.startsWith('/add_admin ')) {
-        const parts = text.split(/\s+/).slice(1);
-        if (parts.length < 2) {
-          await sendMessage(
-            chatId,
-            '❌ الصيغة: <code>/add_admin CHAT_ID ROLE</code>\n\n' +
-              'أو اكتب <code>/add_admin</code> فقط للطريقة التفاعلية.',
-          );
-          return;
-        }
-        const targetId = Number(parts[0]);
-        const roleStr = parts[1];
-        if (!Number.isFinite(targetId) || !isAdminRole(roleStr)) {
-          await sendMessage(
-            chatId,
-            '❌ الصيغة غير صحيحة. الأدوار المتاحة: super_admin | admin | publisher',
-          );
-          return;
-        }
-        await quickAddAdmin(chatId, targetId, roleStr);
-        return;
-      }
-
-      // /add_admin (تفاعلي)
-      if (lower === '/add_admin') {
-        await handleAddAdminStart(chatId);
-        return;
-      }
-
-      // /remove_admin
-      if (lower.startsWith('/remove_admin')) {
-        await handleRemoveAdmin(chatId, text);
-        return;
-      }
-    }
-
-    // إلغاء
-    if (lower === '/cancel') {
-      await clearSession(chatId);
-      await sendMessage(chatId, '✅ تم الإلغاء.');
-      return;
-    }
-
-    // أزرار قائمة المشرف
-    if (Object.values(ADMIN_MENU_TEXTS).includes(text as never)) {
-      const handled = await handleAdminMenuButton(chatId, text, admin);
-      if (handled) return;
-    }
+  if (messageId) {
+    await editMessageText(chatId, messageId, '✅ تم الإرسال', {
+      reply_markup: { inline_keyboard: [] },
+    });
   }
 
-  // ═══════════════════════════════════════════════════
-  // 5. زر "📮 استفسار" من قائمة الطالب
-  //    (قبل handleStudentMenuButton لأنه ما يعالجها)
-  // ═══════════════════════════════════════════════════
-  if (text === STUDENT_MENU_TEXTS.inquiry) {
-    await handleInquiryStart(chatId);
-    return;
-  }
-
-  // ═══════════════════════════════════════════════════
-  // 6. باقي أزرار قائمة الطالب
-  // ═══════════════════════════════════════════════════
-  const studentHandled = await handleStudentMenuButton(chatId, text, baseUrl);
-  if (studentHandled) return;
-
-  // ═══════════════════════════════════════════════════
-  // 7. Fallback
-  // ═══════════════════════════════════════════════════
   await sendMessage(
     chatId,
-    `🤔 لم أفهم هذا الأمر.\n\nاكتب /help للقائمة، أو /start للتسجيل.`,
+    `✅ <b>تم الإرسال</b>\n\n📤 نجح: ${result.sent}\n❌ فشل: ${result.failed}`,
   );
 }
 
-// ==================== Session Text Router ====================
-async function routeSessionText(
-  chatId: number,
-  text: string,
-  flowType: string,
-  flowStep: string | null,
-  admin: Awaited<ReturnType<typeof getAdmin>>,
-): Promise<boolean> {
-  // ─── announce wizard ───
-  if (flowType === 'announce') {
-    if (
-      flowStep === 'edit_title' ||
-      flowStep === 'edit_body' ||
-      flowStep === 'edit_link_url'
-    ) {
-      await handleAnnounceTextInput(chatId, text, flowStep);
-      return true;
-    }
-    return false;
+// ==================== Reject ====================
+export async function handleRejectStart(
+  cb: {
+    id: string;
+    message?: { chat: { id: number }; message_id: number };
+  },
+  id: string,
+  admin: TelegramAdmin,
+): Promise<void> {
+  if (admin.role !== 'super_admin') {
+    await answerCallbackQuery(cb.id, '❌ غير مصرح');
+    return;
   }
 
-  // ─── reject wizard ───
-  if (flowType === 'reject') {
-    if (!admin) return false;
-    await handleRejectText(chatId, text, admin);
+  const chatId = cb.message?.chat.id ?? 0;
+  if (!chatId) return;
+
+  await setSession(chatId, 'reject', 'awaiting_reason', {
+    announcement_id: id,
+  });
+
+  await answerCallbackQuery(cb.id);
+  await sendMessage(
+    chatId,
+    '📝 اكتب <b>سبب الرفض</b> (أو أرسل <code>-</code> بدون سبب) — أو /cancel للإلغاء:',
+  );
+}
+
+export async function handleRejectText(
+  chatId: number,
+  text: string,
+  admin: TelegramAdmin,
+): Promise<void> {
+  if (admin.role !== 'super_admin') {
+    await clearSession(chatId);
+    return;
+  }
+
+  const session = await getSession(chatId);
+  if (!session || session.flow_type !== 'reject') {
+    await clearSession(chatId);
+    return;
+  }
+
+  const id = session.flow_data.announcement_id as string | undefined;
+  if (!id) {
+    await clearSession(chatId);
+    return;
+  }
+
+  const trimmed = text.trim();
+  const note = trimmed === '-' || trimmed === '' ? null : trimmed.slice(0, 500);
+
+  const { error } = await getSupabaseAdmin()
+    .from('telegram_announcements')
+    .update({
+      status: 'rejected',
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: 'super_admin',
+      reviewed_note: note,
+    })
+    .eq('id', id)
+    .eq('status', 'pending');
+
+  await clearSession(chatId);
+
+  if (error) {
+    await sendMessage(chatId, '❌ فشل الرفض. حاول مرة ثانية.');
+    return;
+  }
+
+  await sendMessage(chatId, '✅ تم رفض التبليغ.');
+}
+
+// ==================== Delete ====================
+export async function handleDeleteAnnouncement(
+  cb: {
+    id: string;
+    message?: { chat: { id: number }; message_id: number };
+  },
+  id: string,
+  admin: TelegramAdmin,
+): Promise<void> {
+  if (admin.role !== 'super_admin') {
+    await answerCallbackQuery(cb.id, '❌ غير مصرح');
+    return;
+  }
+
+  const chatId = cb.message?.chat.id ?? 0;
+  const messageId = cb.message?.message_id ?? 0;
+  if (!chatId) return;
+
+  await getSupabaseAdmin().from('telegram_announcements').delete().eq('id', id);
+  await answerCallbackQuery(cb.id, 'تم الحذف');
+  if (messageId) {
+    await editMessageText(chatId, messageId, '🗑 تم حذف التبليغ.', {
+      reply_markup: { inline_keyboard: [] },
+    });
+  } else {
+    await sendMessage(chatId, '🗑 تم حذف التبليغ.');
+  }
+}
+
+// ==================== History ====================
+export async function handleHistory(chatId: number): Promise<void> {
+  const { data } = await getSupabaseAdmin()
+    .from('telegram_announcements')
+    .select('id, title, status, sent_count, sent_at, created_at, reviewed_note')
+    .in('status', ['sent', 'rejected', 'failed'])
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  const items = (data ?? []) as Array<{
+    id: string;
+    title: string;
+    status: string;
+    sent_count: number;
+    sent_at: string | null;
+    created_at: string;
+    reviewed_note: string | null;
+  }>;
+
+  if (items.length === 0) {
+    await sendMessage(chatId, 'لا يوجد سجل بعد.');
+    return;
+  }
+
+  const lines: string[] = ['📜 <b>آخر التبليغات</b>', ''];
+  for (const a of items) {
+    const emoji =
+      a.status === 'sent' ? '✅' : a.status === 'rejected' ? '❌' : '⚠️';
+    lines.push(`${emoji} <b>${escapeHtml(a.title)}</b>`);
+    if (a.status === 'sent') lines.push(`  أُرسل لـ ${a.sent_count} مشترك`);
+    if (a.status === 'rejected' && a.reviewed_note)
+      lines.push(`  ${escapeHtml(a.reviewed_note)}`);
+    lines.push('');
+  }
+  await sendMessage(chatId, lines.join('\n'));
+}
+
+// ==================== Stats ====================
+export async function handleStats(chatId: number): Promise<void> {
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const [
+    subsCount,
+    pendingAnnCount,
+    sentAnnCount,
+    pendingInqCount,
+    adminsCount,
+  ] = await Promise.all([
+    supabaseAdmin
+      .from('telegram_subscribers')
+      .select('chat_id', { count: 'exact', head: true }),
+    supabaseAdmin
+      .from('telegram_announcements')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending'),
+    supabaseAdmin
+      .from('telegram_announcements')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'sent'),
+    countPendingInquiries(),
+    supabaseAdmin
+      .from('telegram_admins')
+      .select('chat_id', { count: 'exact', head: true })
+      .eq('is_active', true),
+  ]);
+
+  const lines: string[] = [];
+  lines.push('📊 <b>إحصائيات البوت</b>');
+  lines.push('');
+  lines.push(`👥 المشتركون: <b>${subsCount.count ?? 0}</b>`);
+  lines.push(`👤 المشرفون النشطون: <b>${adminsCount.count ?? 0}</b>`);
+  lines.push('');
+  lines.push(`📋 تبليغات منتظرة: <b>${pendingAnnCount.count ?? 0}</b>`);
+  lines.push(`📤 تبليغات أُرسلت: <b>${sentAnnCount.count ?? 0}</b>`);
+  lines.push(`📮 استفسارات منتظرة: <b>${pendingInqCount}</b>`);
+
+  await sendMessage(chatId, lines.join('\n'));
+}
+
+// ==================== List Admins ====================
+export async function handleListAdmins(chatId: number): Promise<void> {
+  const admins = await listAdmins();
+  if (admins.length === 0) {
+    await sendMessage(chatId, 'لا يوجد مشرفون مسجّلون.');
+    return;
+  }
+
+  const lines: string[] = ['👥 <b>قائمة المشرفين</b>', ''];
+  for (const a of admins) {
+    lines.push(
+      `• <b>${escapeHtml(a.first_name)}</b> ${
+        a.username ? `(@${escapeHtml(a.username)})` : ''
+      }`,
+    );
+    lines.push(`  <code>${a.chat_id}</code> — ${roleLabel(a.role)}`);
+  }
+  await sendMessage(chatId, lines.join('\n'));
+}
+
+// ==================== Add Admin ====================
+export async function handleAddAdminStart(chatId: number): Promise<void> {
+  await setSession(chatId, 'add_admin', 'awaiting_chat_id', {});
+  await sendMessage(
+    chatId,
+    '👤 <b>إضافة مشرف جديد</b>\n\nأرسل <b>Chat ID</b> أو <b>@username</b> للمشرف:\n' +
+      '<i>يجب أن يبدأ محادثة مع البوت أول مرة.</i>',
+    {
+      reply_markup: {
+        inline_keyboard: [[{ text: '❌ إلغاء', callback_data: 'admin_cancel' }]],
+      },
+    },
+  );
+}
+
+export async function handleAddAdminChatId(
+  chatId: number,
+  text: string,
+): Promise<void> {
+  const clean = text.trim().replace(/^@/, '');
+  let targetId: number | null = null;
+
+  if (/^-?\d+$/.test(clean)) {
+    targetId = Number(clean);
+  } else {
+    const { data } = await getSupabaseAdmin()
+      .from('telegram_subscribers')
+      .select('chat_id')
+      .ilike('username', clean)
+      .maybeSingle<{ chat_id: number }>();
+    if (data) targetId = data.chat_id;
+  }
+
+  if (!targetId) {
+    await sendMessage(
+      chatId,
+      '❌ ما لقيت هذا المستخدم. تأكد من الـChat ID أو أن اليوزر بدأ محادثة مع البوت.',
+    );
+    return;
+  }
+
+  await setSession(chatId, 'add_admin', 'awaiting_role', {
+    target_chat_id: targetId,
+  });
+
+  await sendMessage(
+    chatId,
+    `👤 تم اختيار: <code>${targetId}</code>\n\nاختر الدور:`,
+    { reply_markup: roleKeyboard() },
+  );
+}
+
+export async function handleAddAdminRole(
+  cb: {
+    id: string;
+    message?: { chat: { id: number }; message_id: number };
+  },
+  role: AdminRole,
+): Promise<void> {
+  const chatId = cb.message?.chat.id ?? 0;
+  const messageId = cb.message?.message_id ?? 0;
+  if (!chatId) return;
+
+  const session = await getSession(chatId);
+  if (!session || session.flow_type !== 'add_admin') {
+    await answerCallbackQuery(cb.id, 'انتهت الجلسة');
+    return;
+  }
+
+  const targetId = session.flow_data.target_chat_id as number | undefined;
+  if (!targetId) {
+    await answerCallbackQuery(cb.id, 'لا يوجد هدف');
+    return;
+  }
+
+  const { data: sub } = await getSupabaseAdmin()
+    .from('telegram_subscribers')
+    .select('first_name, username')
+    .eq('chat_id', targetId)
+    .maybeSingle<{ first_name: string | null; username: string | null }>();
+
+  const result = await registerAdmin({
+    chatId: targetId,
+    username: sub?.username ?? null,
+    firstName: sub?.first_name ?? `Admin ${targetId}`,
+    role,
+    addedBy: chatId,
+  });
+
+  await clearSession(chatId);
+
+  if (!result.ok) {
+    await answerCallbackQuery(cb.id, `فشل: ${result.error ?? ''}`, true);
+    return;
+  }
+
+  await answerCallbackQuery(cb.id, 'تمت الإضافة');
+
+  const confirm = `✅ تم إضافة <code>${targetId}</code> بدور <b>${roleLabel(
+    role,
+  )}</b>.`;
+  if (messageId) {
+    await editMessageText(chatId, messageId, confirm);
+  } else {
+    await sendMessage(chatId, confirm);
+  }
+
+  try {
+    await sendMessage(
+      targetId,
+      `🎉 <b>تم تفعيلك في بوت لوازم</b>\n\nالدور: <b>${roleLabel(role)}</b>\n\n` +
+        (role === 'super_admin'
+          ? 'يمكنك الموافقة على التبليغات وإرسالها عبر /pending.'
+          : role === 'admin'
+            ? 'يمكنك إنشاء تبليغات عبر /announce، وسيراجعها المشرف الأعلى.'
+            : 'يمكنك إنشاء تبليغات عبر /announce.') +
+        '\n\n📖 اكتب /admin_help للمزيد',
+      { reply_markup: role === 'super_admin' ? SUPER_ADMIN_MENU : ADMIN_MENU },
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+// ==================== Remove Admin ====================
+export async function handleRemoveAdmin(
+  chatId: number,
+  text: string,
+): Promise<void> {
+  const parts = text.split(/\s+/).slice(1);
+  if (parts.length === 0 || !/^-?\d+$/.test(parts[0])) {
+    await sendMessage(chatId, '❌ الصيغة: <code>/remove_admin CHAT_ID</code>');
+    return;
+  }
+  const targetId = Number(parts[0]);
+
+  if (targetId === chatId) {
+    await sendMessage(chatId, '❌ ما تكدر تحذف نفسك.');
+    return;
+  }
+
+  const result = await deactivateAdmin(targetId);
+  if (!result.ok) {
+    await sendMessage(
+      chatId,
+      `❌ فشل الحذف: ${escapeHtml(result.error ?? '')}`,
+    );
+    return;
+  }
+  await sendMessage(chatId, `✅ تم حذف <code>${targetId}</code>.`);
+}
+
+// ==================== Quick Add Admin ====================
+export async function quickAddAdmin(
+  chatId: number,
+  targetId: number,
+  role: AdminRole,
+): Promise<void> {
+  const { data: sub } = await getSupabaseAdmin()
+    .from('telegram_subscribers')
+    .select('first_name, username')
+    .eq('chat_id', targetId)
+    .maybeSingle<{ first_name: string | null; username: string | null }>();
+
+  const result = await registerAdmin({
+    chatId: targetId,
+    username: sub?.username ?? null,
+    firstName: sub?.first_name ?? `Admin ${targetId}`,
+    role,
+    addedBy: chatId,
+  });
+
+  if (!result.ok) {
+    await sendMessage(
+      chatId,
+      `❌ فشل الإضافة: ${escapeHtml(result.error ?? '')}`,
+    );
+    return;
+  }
+
+  await sendMessage(
+    chatId,
+    `✅ تم إضافة <code>${targetId}</code> بدور <b>${roleLabel(role)}</b>.`,
+  );
+
+  try {
+    await sendMessage(
+      targetId,
+      `🎉 <b>تم تفعيلك في بوت لوازم</b>\n\nالدور: <b>${roleLabel(role)}</b>\n\n📖 اكتب /admin_help للمزيد`,
+      { reply_markup: role === 'super_admin' ? SUPER_ADMIN_MENU : ADMIN_MENU },
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+// ==================== Menu Button Router ====================
+export async function handleAdminMenuButton(
+  chatId: number,
+  text: string,
+  admin: TelegramAdmin,
+): Promise<boolean> {
+  const isSuper = admin.role === 'super_admin';
+
+  if (text === ADMIN_MENU_TEXTS.newAnnounce) {
+    const { handleAnnounceStart } = await import('./announce');
+    await handleAnnounceStart(chatId);
     return true;
   }
 
-  // ─── add admin wizard ───
-  if (flowType === 'add_admin') {
-    if (!admin || admin.role !== 'super_admin') return false;
-    if (flowStep === 'awaiting_chat_id') {
-      await handleAddAdminChatId(chatId, text);
-      return true;
-    }
-    return false;
+  if (text === ADMIN_MENU_TEXTS.pending) {
+    await handlePendingList(chatId);
+    return true;
   }
 
-  // ─── inquiry wizard ───
-  if (flowType === 'inquiry') {
-    if (flowStep === 'awaiting_question') {
-      await handleInquiryText(chatId, text);
-      return true;
-    }
-    if (flowStep === 'awaiting_reply') {
-      if (!admin) return false;
-      await handleInquiryReplyText(chatId, text, chatId);
-      return true;
-    }
-    return false;
+  if (text === ADMIN_MENU_TEXTS.inquiries && isSuper) {
+    const { handleInquiriesList } = await import('./inquiries');
+    await handleInquiriesList(chatId);
+    return true;
+  }
+
+  if (text === ADMIN_MENU_TEXTS.admins && isSuper) {
+    await handleListAdmins(chatId);
+    return true;
+  }
+
+  if (text === ADMIN_MENU_TEXTS.stats && isSuper) {
+    await handleStats(chatId);
+    return true;
+  }
+
+  if (text === ADMIN_MENU_TEXTS.help) {
+    await sendAdminHelp(chatId, admin);
+    return true;
   }
 
   return false;
-}
-
-// ==================== Callback Handler ====================
-async function handleCallback(
-  cb: TelegramCallbackQuery,
-  baseUrl: string,
-): Promise<void> {
-  if (!cb.data || !cb.message) return;
-
-  const chatId = cb.message.chat.id;
-  const data = cb.data;
-  const admin = await getAdmin(chatId);
-
-  // ═══════════════════════════════════════════════════
-  // Cancel
-  // ═══════════════════════════════════════════════════
-  if (
-    data === 'ann_cancel' ||
-    data === 'admin_cancel' ||
-    data === 'inq_cancel'
-  ) {
-    await clearSession(chatId);
-    if (data === 'inq_cancel') {
-      await handleInquiryCancel(chatId);
-    } else {
-      await handleAnnounceCancel(chatId);
-    }
-    await answerCallbackQuery(cb.id);
-    return;
-  }
-
-  // ═══════════════════════════════════════════════════
-  // Student onboarding
-  // ═══════════════════════════════════════════════════
-  if (data.startsWith('stage:')) {
-    await handleStageSelection(cb, data.slice(6));
-    return;
-  }
-  if (data.startsWith('group:')) {
-    await handleGroupSelection(cb, data.slice(6), baseUrl);
-    return;
-  }
-  if (data.startsWith('subj:')) {
-    await handleSubjectToggle(cb, data.slice(5));
-    return;
-  }
-  if (data === 'subj_done') {
-    await handleSubjectsDone(cb, baseUrl);
-    return;
-  }
-
-  // ═══════════════════════════════════════════════════
-  // Notification toggles
-  // ═══════════════════════════════════════════════════
-  if (data.startsWith('tog:')) {
-    await handleToggleNotification(cb, data.slice(4));
-    return;
-  }
-
-  // ═══════════════════════════════════════════════════
-  // Settings navigation
-  // ═══════════════════════════════════════════════════
-  if (data.startsWith('settings:')) {
-    await handleSettingsNavigation(cb, data.slice(9));
-    return;
-  }
-  if (data === 'onboarding:restart') {
-    await handleSettingsNavigation(cb, 'restart');
-    return;
-  }
-
-  // ═══════════════════════════════════════════════════
-  // Announce wizard
-  // ═══════════════════════════════════════════════════
-  if (data.startsWith('tpl_pick:')) {
-    await handleTemplatePick(cb, data.slice(9));
-    return;
-  }
-  if (data === 'ann_edit_title') {
-    await handleEditTitleStart(cb);
-    return;
-  }
-  if (data === 'ann_edit_body') {
-    await handleEditBodyStart(cb);
-    return;
-  }
-  if (data === 'ann_add_link') {
-    await handleAddLinkStart(cb);
-    return;
-  }
-  if (data === 'ann_choose_stage') {
-    await handleChooseStageStart(cb);
-    return;
-  }
-  if (data === 'ann_back_to_draft') {
-    await handleBackToDraft(cb);
-    return;
-  }
-  if (data.startsWith('ann_stage:')) {
-    await handleStagePick(cb, data.slice(10));
-    return;
-  }
-  if (data === 'ann_submit') {
-    if (!admin) {
-      await answerCallbackQuery(cb.id, '❌ غير مصرح');
-      return;
-    }
-    await handleAnnounceSubmit(cb, admin);
-    return;
-  }
-
-  // ═══════════════════════════════════════════════════
-  // Approve / Reject / Delete
-  // ═══════════════════════════════════════════════════
-  if (data.startsWith('ann_approve:')) {
-    if (!admin) {
-      await answerCallbackQuery(cb.id, '❌ غير مصرح');
-      return;
-    }
-    await handleApprove(cb, data.slice(12), admin);
-    return;
-  }
-  if (data.startsWith('ann_reject:')) {
-    if (!admin) {
-      await answerCallbackQuery(cb.id, '❌ غير مصرح');
-      return;
-    }
-    await handleRejectStart(cb, data.slice(11), admin);
-    return;
-  }
-  if (data.startsWith('ann_delete:')) {
-    if (!admin) {
-      await answerCallbackQuery(cb.id, '❌ غير مصرح');
-      return;
-    }
-    await handleDeleteAnnouncement(cb, data.slice(11), admin);
-    return;
-  }
-
-  // ═══════════════════════════════════════════════════
-  // Add admin: role picker
-  // ═══════════════════════════════════════════════════
-  if (data.startsWith('addadmin_role:')) {
-    if (!admin || admin.role !== 'super_admin') {
-      await answerCallbackQuery(cb.id, '❌ غير مصرح');
-      return;
-    }
-    const roleStr = data.slice(14);
-    if (!isAdminRole(roleStr)) {
-      await answerCallbackQuery(cb.id, 'دور غير معروف');
-      return;
-    }
-    await handleAddAdminRole(cb, roleStr);
-    return;
-  }
-
-  // ═══════════════════════════════════════════════════
-  // Inquiries
-  // ═══════════════════════════════════════════════════
-  if (data.startsWith('inq_reply:')) {
-    if (!admin) {
-      await answerCallbackQuery(cb.id, '❌ غير مصرح');
-      return;
-    }
-    await handleInquiryReplyStart(cb, data.slice(10));
-    return;
-  }
-  if (data.startsWith('inq_close:')) {
-    if (!admin) {
-      await answerCallbackQuery(cb.id, '❌ غير مصرح');
-      return;
-    }
-    await handleInquiryClose(cb, data.slice(10));
-    return;
-  }
-
-  // ═══════════════════════════════════════════════════
-  // Fallback
-  // ═══════════════════════════════════════════════════
-  await answerCallbackQuery(cb.id);
 }

@@ -11,6 +11,8 @@ import {
 
 interface SoundPickerProps {
   selectedId: string | null;
+  /** الصوت الذي يجري تحميله حالياً — null إن لم يكن هناك تحميل */
+  loadingId?: string | null;
   onSelect: (id: string | null) => void;
   volume: number;
   onVolumeChange: (v: number) => void;
@@ -18,6 +20,7 @@ interface SoundPickerProps {
 
 export function SoundPicker({
   selectedId,
+  loadingId = null,
   onSelect,
   volume,
   onVolumeChange,
@@ -81,35 +84,83 @@ export function SoundPicker({
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
         {sounds.map((sound) => {
           const active = selectedId === sound.id;
+          const loading = loadingId === sound.id;
           return (
             <button
               key={sound.id}
               type="button"
               onClick={() => onSelect(active ? null : sound.id)}
+              disabled={loading}
               aria-pressed={active}
-              aria-label={`${sound.label}${active ? ' — يعمل الآن' : ''}`}
-              className={`relative flex flex-col items-center gap-1 rounded-field border px-1.5 py-3 text-[11px] font-bold transition-all duration-200 motion-reduce:transition-none ${
+              aria-label={`${sound.label}${
+                active ? ' — يعمل الآن' : loading ? ' — جاري التحميل' : ''
+              }`}
+              className={`relative flex flex-col items-center gap-1 rounded-field border px-1.5 py-3 text-[11px] font-bold transition-all duration-200 motion-reduce:transition-none disabled:cursor-progress ${
                 active
                   ? 'border-teal bg-teal-tint text-teal'
-                  : 'border-line bg-paper-soft text-ink-soft hover:border-teal/40 hover:bg-teal-tint/40'
+                  : loading
+                    ? 'border-gold bg-gold-tint text-gold-ink'
+                    : 'border-line bg-paper-soft text-ink-soft hover:border-teal/40 hover:bg-teal-tint/40'
               }`}
             >
-              {active && (
+              {/* مؤشر نشط / تحميل */}
+              {(active || loading) && (
                 <span
                   aria-hidden="true"
-                  className="absolute end-1.5 top-1.5 h-1.5 w-1.5 animate-pulse rounded-full bg-teal motion-reduce:animate-none"
+                  className={`absolute end-1.5 top-1.5 h-1.5 w-1.5 rounded-full motion-reduce:animate-none ${
+                    loading ? 'animate-pulse bg-gold' : 'animate-pulse bg-teal'
+                  }`}
                 />
               )}
+
               <span className="text-2xl leading-none" aria-hidden="true">
-                {sound.emoji}
+                {loading ? (
+                  <svg
+                    className="h-6 w-6 animate-spin text-gold-ink motion-reduce:animate-none"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      opacity="0.25"
+                    />
+                    <path
+                      d="M22 12a10 10 0 0 1-10 10"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                ) : (
+                  sound.emoji
+                )}
               </span>
               <span className="truncate text-center leading-tight">
-                {sound.label}
+                {loading ? 'جاري...' : sound.label}
               </span>
             </button>
           );
         })}
       </div>
+
+      {/* تلميح للملفات الكبيرة */}
+      {loadingId && (
+        <p
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-2 rounded-field border border-gold/30 bg-gold-tint/50 px-3 py-2 text-[11px] font-semibold text-gold-ink"
+        >
+          <span
+            aria-hidden="true"
+            className="h-1.5 w-1.5 animate-pulse rounded-full bg-gold-ink motion-reduce:animate-none"
+          />
+          الملف قيد التحميل — قد يستغرق بعض الوقت للملفات الكبيرة.
+        </p>
+      )}
 
       {/* مستوى الصوت */}
       {selectedId && (

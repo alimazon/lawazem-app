@@ -411,3 +411,11 @@ export function IconExpand(props: IconProps) {
     </Base>
   );
 }
+/** درجات — ملف أكاديمي مع أسطر */
+export function IconGrades(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M9 12h6m-6 4h6M9 4h6M5 20h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" />
+    </Base>
+  );
+}
