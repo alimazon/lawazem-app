@@ -123,3 +123,37 @@ export const MEDICAL_CATEGORY_EMOJIS: Record<MedicalCategory, string> = {
   immunology: '🛡️',
   clinical: '🩺',
 };
+// ==================== Grade Types ====================
+export const GRADE_TYPES = [
+  'quiz',
+  'daily',
+  'midterm',
+  'final',
+  'other',
+] as const;
+
+export type GradeType = (typeof GRADE_TYPES)[number];
+
+export const GRADE_TYPE_LABELS: Record<GradeType, string> = {
+  quiz: 'كوز',
+  daily: 'امتحان يومي',
+  midterm: 'امتحان فصلي',
+  final: 'فاينل',
+  other: 'أخرى',
+};
+
+export const GRADE_TYPE_EMOJIS: Record<GradeType, string> = {
+  quiz: '📝',
+  daily: '📋',
+  midterm: '📊',
+  final: '🎯',
+  other: '📁',
+};
+
+export const GRADE_TYPE_COLORS: Record<GradeType, string> = {
+  quiz: 'bg-gold-soft text-gold-ink',
+  daily: 'bg-teal-soft text-teal',
+  midterm: 'bg-navy-soft text-navy-ink',
+  final: 'bg-coral-soft text-coral-ink',
+  other: 'bg-ink/5 text-ink-soft',
+};

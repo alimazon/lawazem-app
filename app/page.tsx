@@ -18,7 +18,6 @@ import {
   IconCalendar,
   IconChannels,
   IconChart,
-  IconHealth,
   IconSparkles,
   IconSwap,
 } from '@/components/ui/Icons';
@@ -34,6 +33,74 @@ function isStage(value: string | null): value is Stage {
   return value !== null && (STAGES as readonly string[]).includes(value);
 }
 
+function cx(...parts: Array<string | false | null | undefined>): string {
+  return parts.filter(Boolean).join(' ');
+}
+
+function pad(n: number): string {
+  return String(n).padStart(2, '0');
+}
+
+// ==================== Editorial: Divider (سطران فوق العنوان) ====================
+function DoubleRule({ className }: { className?: string }) {
+  return (
+    <div aria-hidden="true" className={cx('border-t-2 border-ink', className)}>
+      <div className="mt-[3px] border-t border-ink/40" />
+    </div>
+  );
+}
+
+// ==================== Editorial: Ornamented Rule ====================
+function EditorialRule({ className }: { className?: string }) {
+  return (
+    <div
+      aria-hidden="true"
+      className={cx('flex items-center gap-3', className)}
+    >
+      <span className="h-px flex-1 bg-line" />
+      <span className="text-[9px] leading-none text-gold-ink">◆</span>
+      <span className="h-px flex-1 bg-line" />
+    </div>
+  );
+}
+
+// ==================== Icon: Grades ====================
+function IconGrades() {
+  return (
+    <svg
+      className="h-5 w-5"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M9 12h6m-6 4h6M9 4h6M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  );
+}
+
+// ==================== Icon: Timer (جلسة دراسة) ====================
+function IconTimer() {
+  return (
+    <svg
+      className="h-5 w-5"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="13" r="8" />
+      <path d="M12 9v4l3 2M9 2h6" />
+    </svg>
+  );
+}
+
 // ==================== Section Config ====================
 interface Section {
   href: string;
@@ -45,21 +112,24 @@ interface Section {
   size: TileSize;
   ctaLabel?: string;
   badge?: string;
-  /** مقفل دائماً (قريباً) */
   locked?: boolean;
 }
 
 const SECTIONS: Section[] = [
+  // ═══ Hero ═══
   {
     href: '/lawazem',
     title: 'الملازم والمصادر',
     kicker: 'المكتبة',
-    description: 'ملازم الدكاترة مرتبة حسب المادة والدكتور، مع وسوم للتصفية السريعة.',
+    description:
+      'ملازم الدكاترة مرتبة حسب المادة والدكتور، مع وسوم للتصفية السريعة.',
     icon: <IconBook />,
     variant: 'featured',
-    size: 'lg',
+    size: 'hero',
     ctaLabel: 'تصفّح الملازم',
   },
+
+  // ═══ بجانب الـ hero ═══
   {
     href: '/channels',
     title: 'القنوات',
@@ -67,7 +137,7 @@ const SECTIONS: Section[] = [
     description: 'دليل قنوات التليكرام لكل مادة.',
     icon: <IconChannels />,
     variant: 'teal',
-    size: 'sm',
+    size: 'small',
   },
   {
     href: '/schedule',
@@ -75,74 +145,63 @@ const SECTIONS: Section[] = [
     kicker: 'التنظيم',
     description: 'جدول محاضراتك الأسبوعي.',
     icon: <IconCalendar />,
-    variant: 'gold',
-    size: 'sm',
+    variant: 'coral',
+    size: 'small',
   },
   {
     href: '/study-prompt',
     title: 'جات الدراسة',
     kicker: 'أدوات AI',
-    description: 'برومبت ذكي يولّد لك شرحاً تفاعلياً لمحاضراتك، مع بطاقات وأسئلة.',
+    description:
+      'برومبت ذكي يولّد لك شرحاً تفاعلياً لمحاضراتك، مع بطاقات وأسئلة.',
     icon: <IconSparkles />,
     variant: 'navy',
     size: 'wide',
+  },
+
+  // ═══ الصف الثالث ═══
+  {
+    href: '/grades',
+    title: 'الدرجات',
+    kicker: 'الأرشيف',
+    description:
+      'كوزات، امتحانات يومية، فصلية، وفاينل — كل ملفات الدرجات في مكان واحد.',
+    icon: <IconGrades />,
+    variant: 'gold',
+    size: 'wide',
+    badge: 'جديد',
   },
   {
     href: '/gpa',
     title: 'المعدل',
     kicker: 'التتبع',
-    description: 'احسب معدلك واعرف كم تحتاج للنجاح.',
+    description: 'احسب معدلك واعرف موقعك.',
     icon: <IconChart />,
-    variant: 'coral',
-    size: 'sm',
+    variant: 'teal',
+    size: 'small',
   },
   {
-    href: '/study-health',
-    title: 'صحتك الدراسية',
-    kicker: 'التحليل',
-    description: 'تحليل شخصي لعاداتك الدراسية.',
-    icon: <IconHealth />,
-    variant: 'teal',
-    size: 'sm',
+    href: '/study-session',
+    title: 'جلسة دراسة',
+    kicker: 'التركيز',
+    description: 'مؤقت بومودورو + أصوات هادئة + تحليل عاداتك.',
+    icon: <IconTimer />,
+    variant: 'coral',
+    size: 'small',
+  },
+
+  // ═══ الصف الأخير ═══
+  {
+    href: '/group-swap',
+    title: 'تبديل الكروبات',
+    kicker: 'العملي',
+    description: 'بدّل كروبك العملي بسهولة — مغلق حالياً.',
+    icon: <IconSwap />,
+    variant: 'navy',
+    size: 'strip',
+    locked: true,
   },
 ];
-
-const GROUP_SWAP_SECTION: Section = {
-  href: '/group-swap',
-  title: 'تبديل الكروبات',
-  kicker: 'العملي',                                          // ← وصف بدل "قريباً"
-  description: 'بدّل كروبك العملي بسهولة — مغلق حالياً.',        // ← تصحيح طفيف
-  icon: <IconSwap />,
-  variant: 'gold',
-  size: 'wide',
-  // badge: 'قريباً',                                        // ← احذف هذا السطر
-  locked: true,
-};
-
-// ==================== Section Heading ====================
-function SectionHeading({
-  id,
-  kicker,
-  title,
-  index,
-}: {
-  id: string;
-  kicker: string;
-  title: string;
-  index: number;
-}) {
-  return (
-    <div className="mb-5 ink-reveal" style={reveal(index)}>
-      <p className="kicker">{kicker}</p>
-      <h2
-        id={id}
-        className="mt-2 font-display text-xl font-bold leading-tight text-ink sm:text-2xl"
-      >
-        {title}
-      </h2>
-    </div>
-  );
-}
 
 // ==================== Stage Card ====================
 function StageCard({
@@ -154,16 +213,16 @@ function StageCard({
   index: number;
   onClick: () => void;
 }) {
-  const number = String(index + 1).padStart(2, '0');
+  const number = pad(index + 1);
 
   return (
     <div className="ink-reveal" style={reveal(index + 3)}>
       <button
         type="button"
         onClick={onClick}
-        className="group relative block w-full overflow-hidden rounded-card border border-line bg-paper-soft p-6 text-start transition-all duration-200 hover:-translate-y-1 hover:border-teal hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+        className="group relative block w-full overflow-hidden rounded-card border border-line bg-paper-soft p-6 text-start transition-all duration-200 hover:-translate-y-px hover:border-teal hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none motion-reduce:hover:translate-y-0"
       >
-        <div className="absolute inset-x-0 top-0 h-[3px] origin-center scale-x-0 bg-gold transition-transform duration-500 group-hover:scale-x-100 motion-reduce:transition-none" />
+        <div className="absolute inset-x-0 top-0 h-[3px] origin-center scale-x-0 bg-gold transition-transform duration-500 group-hover:scale-x-100 group-focus-visible:scale-x-100 motion-reduce:transition-none" />
 
         <span
           aria-hidden="true"
@@ -178,7 +237,7 @@ function StageCard({
 
         <span className="relative mt-6 flex items-center gap-1.5 text-sm font-semibold text-teal">
           <span>اختر</span>
-          <IconArrowLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1 motion-reduce:transition-none" />
+          <IconArrowLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0" />
         </span>
       </button>
     </div>
@@ -233,7 +292,10 @@ export default function HomePage() {
         <main className="relative mx-auto flex min-h-[calc(100dvh-var(--nav-h))] max-w-3xl flex-col items-center justify-center px-4 py-12 text-center sm:px-6 sm:py-16">
           <div className="ink-reveal">
             <span className="inline-flex items-center gap-2 rounded-chip border border-line bg-paper-soft px-4 py-1.5 font-mono text-[11px] font-medium uppercase tracking-widest text-ink-soft">
-              <span className="h-1.5 w-1.5 rounded-full bg-teal" aria-hidden="true" />
+              <span
+                className="h-1.5 w-1.5 rounded-full bg-teal"
+                aria-hidden="true"
+              />
               منصة لطلبة جامعة العميد
             </span>
           </div>
@@ -246,11 +308,14 @@ export default function HomePage() {
             اختر مرحلتك الدراسية
           </h1>
 
+          <EditorialRule className="mt-6 w-40 ink-reveal" />
+
           <p
-            className="mt-4 max-w-md text-base leading-relaxed text-ink-soft ink-reveal"
+            className="mt-6 max-w-md text-base leading-relaxed text-ink-soft ink-reveal"
             style={reveal(2)}
           >
-            في لوازم نعرض لك المحتوى المناسب لمرحلتك — قنوات، جداول، وكل ما تحتاجه.
+            في لوازم نعرض لك المحتوى المناسب لمرحلتك — قنوات، جداول، وكل ما
+            تحتاجه.
           </p>
 
           <div
@@ -259,11 +324,19 @@ export default function HomePage() {
             className="relative mt-12 grid w-full gap-4 sm:grid-cols-3"
           >
             {STAGES.map((s, i) => (
-              <StageCard key={s} stage={s} index={i} onClick={() => chooseStage(s)} />
+              <StageCard
+                key={s}
+                stage={s}
+                index={i}
+                onClick={() => chooseStage(s)}
+              />
             ))}
           </div>
 
-          <p className="mt-10 text-xs text-ink-muted ink-reveal" style={reveal(6)}>
+          <p
+            className="mt-10 text-xs text-ink-muted ink-reveal"
+            style={reveal(6)}
+          >
             يمكنك تغييرها لاحقاً
           </p>
         </main>
@@ -272,8 +345,6 @@ export default function HomePage() {
   }
 
   // ==================== Dashboard ====================
-  const sections = [...SECTIONS, GROUP_SWAP_SECTION];
-
   return (
     <>
       <BackgroundPattern />
@@ -284,46 +355,54 @@ export default function HomePage() {
         {/* ==================== Masthead ==================== */}
         <Masthead stage={stage} onChangeStage={changeStage} />
 
-        
+        {/* ==================== Sections ==================== */}
+        <section aria-labelledby="sections-heading" className="mt-10">
+          <div className="ink-reveal" style={reveal(1)}>
+            {/* ✅ الخط الفاصل الآن فوق العنوان */}
+            <DoubleRule />
 
-        {/* ==================== Sections (Bento) ==================== */}
-        <section aria-labelledby="sections-heading" className="mt-12">
-          <SectionHeading
-            id="sections-heading"
-            kicker="الأقسام"
-            title="كل ما تحتاجه في مكان واحد"
-            index={1}
-          />
+            <div className="mt-4 flex items-end justify-between gap-4">
+              <div>
+                <p className="kicker">الأقسام</p>
+                <h2
+                  id="sections-heading"
+                  className="mt-2 font-display text-xl font-bold leading-tight text-ink sm:text-2xl"
+                >
+                  كل ما تحتاجه في مكان واحد
+                </h2>
+              </div>
+              <p className="flex-shrink-0 pb-1 text-xs text-ink-muted">
+                <span className="font-mono">{pad(SECTIONS.length)}</span> أقسام
+              </p>
+            </div>
+          </div>
 
-          <div className="ink-reveal" style={reveal(2)}>
+          <div className="mt-6 ink-reveal" style={reveal(2)}>
             <SectionTileGrid>
-              {sections.map((sec) => {
-                const isLocked = sec.locked === true;
-                const size: TileSize = sec.size;
-
-                return (
-                  <SectionTile
-                    key={sec.href}
-                    href={sec.href}
-                    title={sec.title}
-                    kicker={sec.kicker}
-                    description={sec.description}
-                    icon={sec.icon}
-                    variant={sec.variant}
-                    size={size}
-                    badge={sec.badge}
-                    ctaLabel={sec.ctaLabel}
-                    locked={isLocked}
-                    lockedLabel={isLocked ? 'قريباً' : undefined}
-                  />
-                );
-              })}
+              {SECTIONS.map((sec) => (
+                <SectionTile
+                  key={sec.href}
+                  href={sec.href}
+                  title={sec.title}
+                  kicker={sec.kicker}
+                  description={sec.description}
+                  icon={sec.icon}
+                  variant={sec.variant}
+                  size={sec.size}
+                  badge={sec.badge}
+                  ctaLabel={sec.ctaLabel}
+                  locked={sec.locked === true}
+                  lockedLabel="قريباً"
+                />
+              ))}
             </SectionTileGrid>
           </div>
         </section>
 
         {/* ==================== Community: Bot + Trending ==================== */}
         <section aria-labelledby="community-heading" className="mt-20">
+          <EditorialRule className="mx-auto mb-10 max-w-xs" />
+
           <div
             className="mx-auto mb-10 max-w-2xl text-center ink-reveal"
             style={reveal(3)}
@@ -354,11 +433,10 @@ export default function HomePage() {
           </div>
         </section>
 
-       
-
         {/* ==================== Footer ==================== */}
-        <footer className="mt-20 border-t border-line pt-8 pb-4">
-          <div className="flex flex-col items-center gap-4 text-center">
+        <footer className="mt-20">
+          <DoubleRule />
+          <div className="flex flex-col items-center gap-4 pb-4 pt-8 text-center">
             <Image
               src="/logo.png"
               alt=""

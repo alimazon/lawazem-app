@@ -1,4 +1,4 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+﻿# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
 /node_modules
@@ -40,11 +40,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Backup folders (لا ترفع أبداً)
+# Backup folders (Ù„Ø§ ØªØ±ÙØ¹ Ø£Ø¨Ø¯Ø§Ù‹)
 .backup/
 *.backup
 
-# Project exports (تحتوي على أسرار)
+# Project exports (ØªØ­ØªÙˆÙŠ Ø¹Ù„Ù‰ Ø£Ø³Ø±Ø§Ø±)
 project-export.md
 project-export*.md
 *-export.md
@@ -54,3 +54,8 @@ project-export*.md
 
 # Local temp
 _tmp_*/
+# ═══ ملفات محلية (لا ترفع) ═══
+_tools/
+_compress_tmp/
+# exports
+study-session-export.md

@@ -13,10 +13,18 @@ export interface InlineKeyboardMarkup {
   inline_keyboard: InlineKeyboardButton[][];
 }
 
+import type {
+  ReplyKeyboardMarkup,
+  ReplyKeyboardRemove,
+} from './telegram/types';
+
 export interface SendMessageOptions {
   parse_mode?: 'HTML' | 'MarkdownV2' | 'Markdown';
   disable_web_page_preview?: boolean;
-  reply_markup?: InlineKeyboardMarkup;
+  reply_markup?:
+    | InlineKeyboardMarkup
+    | ReplyKeyboardMarkup
+    | ReplyKeyboardRemove;
 }
 
 // ==================== Token ====================

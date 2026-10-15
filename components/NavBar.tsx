@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ThemeToggle } from './ThemeToggle';
 import { useDismissable } from '@/hooks/useDismissable';
 import { IconChevronDown } from '@/components/ui/Icons';
@@ -26,7 +26,7 @@ const PRIMARY_NAV: readonly NavLinkItem[] = [
 
 const SECONDARY_NAV: readonly NavLinkItem[] = [
   { href: '/gpa', label: 'المعدل' },
-  { href: '/study-health', label: 'صحتك' },
+  { href: '/study-session', label: 'جلسة دراسة' },
 ];
 
 const HIDDEN_PREFIXES: readonly string[] = ['/admin', '/channel-portal', '/publisher'];
@@ -94,13 +94,20 @@ function NewDot() {
 // ==================== Component ====================
 export function NavBar() {
   const pathname = usePathname();
-  const currentPath = pathname ?? '';
+
+  // ✅ إصلاح hydration: لا نطبّق aria-current قبل mount
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [openPath, setOpenPath] = useState<string | null>(null);
-  const moreOpen = openPath !== null && openPath === currentPath;
 
   const moreRef = useRef<HTMLDivElement>(null);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
+
+  const currentPath = pathname ?? '';
+  const moreOpen = openPath !== null && openPath === currentPath;
 
   useDismissable(moreOpen, moreRef, (viaKeyboard) => {
     setOpenPath(null);
@@ -110,7 +117,7 @@ export function NavBar() {
   if (isPathHidden(pathname)) return null;
 
   const moreActive = SECONDARY_NAV.some((item) =>
-    isPathActive(pathname, item.href)
+    isPathActive(pathname, item.href),
   );
 
   return (
@@ -121,7 +128,7 @@ export function NavBar() {
       >
         <Link
           href="/"
-          aria-current={pathname === '/' ? 'page' : undefined}
+          aria-current={mounted && pathname === '/' ? 'page' : undefined}
           className="group flex shrink-0 items-center gap-2.5 rounded-field transition-transform active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
         >
           <Image
@@ -144,7 +151,7 @@ export function NavBar() {
               <Link
                 key={item.href}
                 href={item.href}
-                aria-current={active ? 'page' : undefined}
+                aria-current={mounted && active ? 'page' : undefined}
                 className={linkClass(active)}
               >
                 {item.label}
@@ -160,7 +167,7 @@ export function NavBar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  aria-current={active ? 'page' : undefined}
+                  aria-current={mounted && active ? 'page' : undefined}
                   className={linkClass(active)}
                 >
                   {item.label}
@@ -205,7 +212,9 @@ export function NavBar() {
                     <li key={item.href}>
                       <Link
                         href={item.href}
-                        aria-current={active ? 'page' : undefined}
+                        aria-current={
+                          mounted && active ? 'page' : undefined
+                        }
                         onClick={() => setOpenPath(null)}
                         className={menuLinkClass(active)}
                       >

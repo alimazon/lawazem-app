@@ -23,14 +23,31 @@ export interface StudyAnalysis {
   // أنماط
   bestHour: number | null; // 0-23
   weeklyActivity: { day: string; count: number }[]; // 7 أيام (الأحدث أخيراً)
+  // ✨ جلسات التركيز
+  focusSessions: number;
+  focusMinutes: number;
   // شارات
   badges: { emoji: string; label: string }[];
 }
 
-const WEEK_DAYS_AR = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+const WEEK_DAYS_AR = [
+  'الأحد',
+  'الاثنين',
+  'الثلاثاء',
+  'الأربعاء',
+  'الخميس',
+  'الجمعة',
+  'السبت',
+];
 
 function daysBetween(a: number, b: number): number {
   return Math.floor((b - a) / (1000 * 60 * 60 * 24));
+}
+
+function toDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate()
+  ).padStart(2, '0')}`;
 }
 
 function computeStreak(daily: Record<string, number>): number {
@@ -50,12 +67,6 @@ function computeStreak(daily: Record<string, number>): number {
     }
   }
   return streak;
-}
-
-function toDateStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-    d.getDate()
-  ).padStart(2, '0')}`;
 }
 
 function analyze(stats: StudyStats): StudyAnalysis {
@@ -104,22 +115,48 @@ function analyze(stats: StudyStats): StudyAnalysis {
     d.setDate(d.getDate() + 1);
   }
 
-  // ===== الشارات =====
+  // ===== ملخص عام =====
   const daysActive = Object.keys(stats.daily).filter(
     (k) => (stats.daily[k] ?? 0) > 0
   ).length;
 
   const currentStreak = computeStreak(stats.daily);
 
+  // ===== ✨ جلسات التركيز =====
+  const focusSessions = stats.focusSessions ?? 0;
+  const focusMinutes = stats.focusMinutes ?? 0;
+
+  // ===== الشارات =====
   const badges: { emoji: string; label: string }[] = [];
+
+  // شارات الفتحات
   if (stats.totalViews >= 1) badges.push({ emoji: '🌱', label: 'بداية الرحلة' });
   if (stats.totalViews >= 10) badges.push({ emoji: '📚', label: '10 فتحات' });
   if (stats.totalViews >= 50) badges.push({ emoji: '💪', label: '50 فتحة' });
   if (stats.totalViews >= 100) badges.push({ emoji: '🏆', label: '100 فتحة' });
-  if (currentStreak >= 3) badges.push({ emoji: '🔥', label: `${currentStreak} أيام متتالية` });
+
+  // شارات الستريك
+  if (currentStreak >= 3)
+    badges.push({ emoji: '🔥', label: `${currentStreak} أيام متتالية` });
   if (currentStreak >= 7) badges.push({ emoji: '⚡', label: 'أسبوع كامل' });
-  if (topSubjects.length >= 3) badges.push({ emoji: '🎯', label: '3 مواد نشطة' });
+
+  // شارات المواد
+  if (topSubjects.length >= 3)
+    badges.push({ emoji: '🎯', label: '3 مواد نشطة' });
   if (daysActive >= 7) badges.push({ emoji: '📅', label: 'أسبوع نشط' });
+
+  // ✨ شارات جلسات التركيز
+  if (focusSessions >= 1)
+    badges.push({ emoji: '⏱️', label: 'أول جلسة تركيز' });
+  if (focusSessions >= 5) badges.push({ emoji: '🌱', label: '5 جلسات' });
+  if (focusSessions >= 25) badges.push({ emoji: '🎯', label: '25 جلسة' });
+  if (focusSessions >= 100) badges.push({ emoji: '🏆', label: '100 جلسة' });
+  if (focusMinutes >= 500)
+    badges.push({ emoji: '🧠', label: '500 دقيقة تركيز' });
+  if (focusMinutes >= 1500)
+    badges.push({ emoji: '⚡', label: '25 ساعة تركيز' });
+  if (focusMinutes >= 3000)
+    badges.push({ emoji: '👑', label: '50 ساعة تركيز' });
 
   return {
     stats,
@@ -130,12 +167,20 @@ function analyze(stats: StudyStats): StudyAnalysis {
     weakSubjects,
     bestHour,
     weeklyActivity,
+    focusSessions,
+    focusMinutes,
     badges,
   };
 }
 
-export function useStudyStats(): { analysis: StudyAnalysis; mounted: boolean; reset: () => void } {
-  const [analysis, setAnalysis] = useState<StudyAnalysis>(() => analyze(emptyStats()));
+export function useStudyStats(): {
+  analysis: StudyAnalysis;
+  mounted: boolean;
+  reset: () => void;
+} {
+  const [analysis, setAnalysis] = useState<StudyAnalysis>(() =>
+    analyze(emptyStats())
+  );
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -158,7 +203,13 @@ export function useStudyStats(): { analysis: StudyAnalysis; mounted: boolean; re
 // ==================== Helpers للعرض ====================
 export function formatHour(h: number): string {
   const period =
-    h >= 5 && h < 12 ? 'صباحاً' : h >= 12 && h < 17 ? 'ظهراً' : h >= 17 && h < 22 ? 'مساءً' : 'ليلاً';
+    h >= 5 && h < 12
+      ? 'صباحاً'
+      : h >= 12 && h < 17
+        ? 'ظهراً'
+        : h >= 17 && h < 22
+          ? 'مساءً'
+          : 'ليلاً';
   const hour12 = h % 12 || 12;
   return `${hour12} ${period}`;
 }

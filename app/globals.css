@@ -336,6 +336,18 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ✨ دائرة المؤقت (study-session) */
+@keyframes ringBlink { 50% { opacity: 0.25; } }
+@keyframes ringBreathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.035); }
+}
+@keyframes ringWarn { 50% { opacity: 0.25; } }
+@keyframes ringBloom {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 /* ============================================
    Base
    ============================================ */
@@ -449,6 +461,28 @@
   direction: ltr;
   unicode-bidi: isolate;
   font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* ✨ حركات دائرة المؤقت — لا تعمل مع prefers-reduced-motion: reduce */
+@utility ring-colon {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: ringBlink 1s steps(1, end) infinite;
+  }
+}
+@utility ring-breathe {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: ringBreathe 6s ease-in-out infinite;
+  }
+}
+@utility ring-warn {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: ringWarn 1s ease-in-out infinite;
+  }
+}
+@utility ring-bloom {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: ringBloom 1.2s var(--ease-editorial) both;
+  }
 }
 
 /* ============================================
@@ -721,11 +755,6 @@
 @utility badge-info { --b-fg: var(--info-ink); --b-bg: var(--info-soft); --b-bd: color-mix(in srgb, var(--info) 30%, transparent); }
 @utility badge-warning { --b-fg: var(--warning-ink); --b-bg: var(--warning-soft); --b-bd: color-mix(in srgb, var(--warning) 40%, transparent); }
 @utility badge-solid { --b-fg: var(--on-teal); --b-bg: var(--teal); --b-bd: var(--teal); }
-
-@utility defer-render {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 600px;
-}
 
 @utility defer-render {
   content-visibility: auto;

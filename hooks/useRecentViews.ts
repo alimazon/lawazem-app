@@ -27,6 +27,9 @@ export interface StudyStats {
   subjects: Record<string, SubjectStat>;
   hourly: number[]; // 24 خانات
   daily: Record<string, number>; // "YYYY-MM-DD": عدد الزيارات
+  // ✨ جديد: جلسات التركيز
+  focusSessions: number;
+  focusMinutes: number;
 }
 
 export function emptyStats(): StudyStats {
@@ -36,6 +39,8 @@ export function emptyStats(): StudyStats {
     subjects: {},
     hourly: Array(24).fill(0),
     daily: {},
+    focusSessions: 0,
+    focusMinutes: 0,
   };
 }
 
@@ -65,6 +70,8 @@ export function loadStats(): StudyStats {
             : Array(24).fill(0),
         daily:
           parsed.daily && typeof parsed.daily === 'object' ? parsed.daily : {},
+        focusSessions: Number(parsed.focusSessions) || 0,
+        focusMinutes: Number(parsed.focusMinutes) || 0,
       };
     }
   } catch {
@@ -103,6 +110,23 @@ function recordStat(view: Omit<RecentView, 'viewed_at'>) {
   stats.daily[today] = (stats.daily[today] ?? 0) + 1;
 
   saveStats(stats);
+}
+
+// ==================== ✨ Focus Session Recording ====================
+/**
+ * تُستدعى من صفحة /study-session عند إكمال جلسة تركيز.
+ * تضيف جلسة + الدقائق إلى الإحصائيات.
+ */
+export function recordFocusSession(minutes: number): void {
+  if (minutes <= 0) return;
+  try {
+    const stats = loadStats();
+    stats.focusSessions = (stats.focusSessions ?? 0) + 1;
+    stats.focusMinutes = (stats.focusMinutes ?? 0) + minutes;
+    saveStats(stats);
+  } catch {
+    /* تجاهل */
+  }
 }
 
 // ==================== Hook ====================

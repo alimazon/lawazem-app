@@ -4,6 +4,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
+  useEffect,
   useRef,
   useState,
   useSyncExternalStore,
@@ -53,7 +54,7 @@ const BASE_ITEMS: readonly NavItem[] = [
 const MORE_ITEMS: readonly NavItem[] = [
   { href: '/channels', label: 'القنوات', icon: <IconChannels /> },
   { href: '/gpa', label: 'المعدل', icon: <IconGpa /> },
-  { href: '/study-health', label: 'صحتك', icon: <IconHealth /> },
+  { href: '/study-session', label: 'جلسة دراسة', icon: <IconHealth /> },
 ];
 
 const STAGE_2_ITEM: NavItem = {
@@ -191,15 +192,22 @@ export function MobileBottomNav({
   reserveSpace = false,
 }: MobileBottomNavProps) {
   const pathname = usePathname();
-  const currentPath = pathname ?? '';
+
+  // ✅ إصلاح hydration: لا نطبّق aria-current قبل mount
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const stage = useSyncExternalStore(
     subscribeStage,
     readStage,
-    readServerStage
+    readServerStage,
   );
 
   const [openPath, setOpenPath] = useState<string | null>(null);
+
+  const currentPath = pathname ?? '';
   const moreOpen = openPath !== null && openPath === currentPath;
 
   const navRef = useRef<HTMLElement>(null);
@@ -217,7 +225,7 @@ export function MobileBottomNav({
     ? [STAGE_2_ITEM, ...MORE_ITEMS]
     : MORE_ITEMS;
   const moreActive = sheetItems.some((item) =>
-    isPathActive(pathname, item.href)
+    isPathActive(pathname, item.href),
   );
 
   return (
@@ -250,7 +258,7 @@ export function MobileBottomNav({
                 >
                   <Link
                     href={item.href}
-                    aria-current={active ? 'page' : undefined}
+                    aria-current={mounted && active ? 'page' : undefined}
                     onClick={() => {
                       haptic();
                       setOpenPath(null);
@@ -275,7 +283,7 @@ export function MobileBottomNav({
               <Link
                 key={item.href}
                 href={item.href}
-                aria-current={active ? 'page' : undefined}
+                aria-current={mounted && active ? 'page' : undefined}
                 onClick={() => {
                   haptic();
                   setOpenPath(null);
