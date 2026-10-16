@@ -10,11 +10,7 @@ import { TrendingNotes } from '@/components/TrendingNotes';
 import { BotChannelCard } from '@/components/BotChannelCard';
 import { Masthead } from './_components/Masthead';
 import { SectionTile, SectionTileGrid } from './_components/SectionTile';
-import type {
-  SubLink,
-  TileSize,
-  TileVariant,
-} from './_components/SectionTile';
+import type { TileSize, TileVariant } from './_components/SectionTile';
 import type { Stage } from '@/lib/types';
 import {
   IconArrowLeft,
@@ -45,7 +41,7 @@ function pad(n: number): string {
   return String(n).padStart(2, '0');
 }
 
-// ==================== Editorial: Divider ====================
+// ==================== Editorial: Divider (سطران فوق العنوان) ====================
 function DoubleRule({ className }: { className?: string }) {
   return (
     <div aria-hidden="true" className={cx('border-t-2 border-ink', className)}>
@@ -65,24 +61,6 @@ function EditorialRule({ className }: { className?: string }) {
       <span className="text-[9px] leading-none text-gold-ink">◆</span>
       <span className="h-px flex-1 bg-line" />
     </div>
-  );
-}
-
-// ==================== Icon: Grades ====================
-function IconGrades() {
-  return (
-    <svg
-      className="h-5 w-5"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M9 12h6m-6 4h6M9 4h6M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-    </svg>
   );
 }
 
@@ -117,7 +95,6 @@ interface Section {
   ctaLabel?: string;
   badge?: string;
   locked?: boolean;
-  subLinks?: SubLink[];
 }
 
 const SECTIONS: Section[] = [
@@ -173,9 +150,6 @@ const SECTIONS: Section[] = [
     icon: <IconChart />,
     variant: 'teal',
     size: 'wide',
-    subLinks: [
-      { href: '/grades', label: 'تصفح الدرجات', icon: <IconGrades /> },
-    ],
   },
   {
     href: '/study-session',
@@ -389,7 +363,6 @@ export default function HomePage() {
                   ctaLabel={sec.ctaLabel}
                   locked={sec.locked === true}
                   lockedLabel="قريباً"
-                  subLinks={sec.subLinks}
                 />
               ))}
             </SectionTileGrid>

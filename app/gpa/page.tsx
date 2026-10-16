@@ -2,15 +2,18 @@
 'use client';
 
 import {
+  Suspense,
   memo,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type KeyboardEvent,
 } from 'react';
 import Link from 'next/link';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { useStudentStage } from '@/hooks/useStudentStage';
 import { Button } from '@/components/ui/Button';
@@ -26,6 +29,7 @@ import {
   IconWarning,
 } from '@/components/ui/Icons';
 import type { Subject } from '@/lib/types';
+import { GradesTab } from './_components/GradesTab';
 
 // ==================== Constants ====================
 interface ComponentDef {
@@ -48,7 +52,6 @@ interface TargetDef {
   short: string;
 }
 
-// ✅ 5 تقديرات عراقية: مقبول / متوسط / جيد / جيد جداً / امتياز
 const TARGETS: readonly TargetDef[] = [
   { value: 50, label: 'مقبول', short: 'مقبول' },
   { value: 60, label: 'متوسط', short: 'متوسط' },
@@ -60,8 +63,9 @@ const TARGETS: readonly TargetDef[] = [
 const TARGET_KEY_PREFIX = 'gpa_target_';
 const SCORES_KEY_PREFIX = 'gpa_scores_';
 
-/** هامش صغير لتفادي أخطاء الفاصلة العائمة */
 const EPS = 1e-9;
+
+type Tab = 'gpa' | 'grades';
 
 // ==================== Types ====================
 interface ComponentData {
@@ -88,7 +92,7 @@ interface ComponentIssues {
   score: string | null;
 }
 
-// ==================== Storage helpers ====================
+// ==================== Storage ====================
 function readStorage(key: string): string | null {
   try {
     return localStorage.getItem(key);
@@ -147,7 +151,7 @@ function safeParseScores(raw: string | null): Record<string, unknown> {
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
       return parsed as Record<string, unknown>;
   } catch {
-    /* تجاهل */
+    /* ignore */
   }
   return {};
 }
@@ -176,8 +180,7 @@ function fmtNeed(n: number): string {
 
 function getComponentIssues(comp: ComponentData): ComponentIssues {
   const maxNum = Number(comp.max);
-  const maxInvalid =
-    comp.max.trim() === '' || Number.isNaN(maxNum) || maxNum <= 0;
+  const maxInvalid = comp.max.trim() === '' || Number.isNaN(maxNum) || maxNum <= 0;
   const max = maxInvalid ? 'الدرجة العظمى يجب أن تكون أكبر من صفر' : null;
 
   let score: string | null = null;
@@ -215,7 +218,7 @@ function calculatePercentage(subjectScores: SubjectScores | undefined): number |
 
 function analyzeForTarget(
   subjectScores: SubjectScores | undefined,
-  targetPercent: number
+  targetPercent: number,
 ): TargetAnalysis {
   const base: TargetAnalysis = {
     currentScore: 0,
@@ -286,7 +289,6 @@ function getScoreColor(pct: number): string {
   return 'bg-coral/15 text-coral-ink dark:bg-coral/25';
 }
 
-// ✅ التقدير العراقي حسب 5 مستويات
 function getGradeLabel(pct: number): string {
   if (pct >= 90) return 'امتياز';
   if (pct >= 80) return 'جيد جداً';
@@ -312,8 +314,8 @@ function Skeleton() {
           aria-hidden="true"
           className="flex items-center justify-between rounded-card border border-line bg-paper-soft p-4"
         >
-          <div className="h-4 w-40 skeleton-shimmer rounded" />
-          <div className="h-6 w-16 skeleton-shimmer rounded-chip" />
+          <div className="h-4 w-40 skeleton-shimmer rounded motion-reduce:animate-none" />
+          <div className="h-6 w-16 skeleton-shimmer rounded-chip motion-reduce:animate-none" />
         </div>
       ))}
     </div>
@@ -331,6 +333,15 @@ function BackLink() {
       </span>
       رجوع إلى لوحة الأقسام
     </Link>
+  );
+}
+
+// ==================== Icon: Grades ====================
+function IconGradesInline() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M9 4h6M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
   );
 }
 
@@ -365,7 +376,6 @@ function TargetSelector({
         </div>
       </div>
 
-      {/* ✅ 5 أزرار */}
       <div className="grid grid-cols-5 gap-1.5">
         {TARGETS.map((t) => {
           const active = target === t.value;
@@ -474,7 +484,10 @@ function TargetAnalysisCard({
 
   const progressPct =
     analysis.targetScore > 0
-      ? Math.min(100, Math.max(0, (analysis.currentScore / analysis.targetScore) * 100))
+      ? Math.min(
+          100,
+          Math.max(0, (analysis.currentScore / analysis.targetScore) * 100),
+        )
       : 0;
 
   return (
@@ -556,7 +569,7 @@ function StatusChip({
   );
 }
 
-// ==================== Subject Row (memo) ====================
+// ==================== Subject Row ====================
 interface SubjectRowProps {
   subject: Subject;
   index: number;
@@ -568,7 +581,7 @@ interface SubjectRowProps {
     subjectId: string,
     componentKey: string,
     field: 'max' | 'score',
-    value: string
+    value: string,
   ) => void;
   onClear: (subjectId: string, subjectName: string) => void;
 }
@@ -584,7 +597,10 @@ const SubjectRow = memo(function SubjectRow({
   onClear,
 }: SubjectRowProps) {
   const percentage = useMemo(() => calculatePercentage(scores), [scores]);
-  const analysis = useMemo(() => analyzeForTarget(scores, target), [scores, target]);
+  const analysis = useMemo(
+    () => analyzeForTarget(scores, target),
+    [scores, target],
+  );
   const scoreColor = percentage !== null ? getScoreColor(percentage) : '';
   const panelId = `gpa-panel-${subject.id}`;
   const triggerId = `gpa-trigger-${subject.id}`;
@@ -592,10 +608,13 @@ const SubjectRow = memo(function SubjectRow({
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key !== 'Enter') return;
     const el = e.target;
-    if (!(el instanceof HTMLInputElement) || !el.hasAttribute('data-gpa-score')) return;
+    if (!(el instanceof HTMLInputElement) || !el.hasAttribute('data-gpa-score'))
+      return;
     e.preventDefault();
     const inputs = Array.from(
-      e.currentTarget.querySelectorAll<HTMLInputElement>('input[data-gpa-score]')
+      e.currentTarget.querySelectorAll<HTMLInputElement>(
+        'input[data-gpa-score]',
+      ),
     );
     const next = inputs[inputs.indexOf(el) + 1];
     if (next) next.focus();
@@ -619,7 +638,9 @@ const SubjectRow = memo(function SubjectRow({
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-bold text-ink">{subject.name}</span>
             {subject.units != null && (
-              <span className="text-xs text-ink-muted">({subject.units} وحدة)</span>
+              <span className="text-xs text-ink-muted">
+                ({subject.units} وحدة)
+              </span>
             )}
           </div>
           <div className="mt-1">
@@ -635,7 +656,10 @@ const SubjectRow = memo(function SubjectRow({
               {percentage.toFixed(1)}%
             </span>
           ) : (
-            <span className="text-sm text-ink-muted" aria-label="لم تُدخل درجات بعد">
+            <span
+              className="text-sm text-ink-muted"
+              aria-label="لم تُدخل درجات بعد"
+            >
               —
             </span>
           )}
@@ -670,7 +694,10 @@ const SubjectRow = memo(function SubjectRow({
 
             <div className="space-y-3">
               {COMPONENTS.map((c) => {
-                const comp: ComponentData = scores?.[c.key] ?? { max: '', score: '' };
+                const comp: ComponentData = scores?.[c.key] ?? {
+                  max: '',
+                  score: '',
+                };
                 const issues = getComponentIssues(comp);
                 const issueText = issues.score ?? issues.max;
                 const scoreId = `${subject.id}-${c.key}-score`;
@@ -704,7 +731,7 @@ const SubjectRow = memo(function SubjectRow({
                             subject.id,
                             c.key,
                             'score',
-                            normalizeNumericInput(e.target.value)
+                            normalizeNumericInput(e.target.value),
                           )
                         }
                         onFocus={(e) => e.currentTarget.select()}
@@ -713,7 +740,10 @@ const SubjectRow = memo(function SubjectRow({
                         aria-describedby={issueText ? errId : undefined}
                         className="w-20 text-center"
                       />
-                      <span className="text-sm text-ink-muted" aria-hidden="true">
+                      <span
+                        className="text-sm text-ink-muted"
+                        aria-hidden="true"
+                      >
                         من
                       </span>
                       <Input
@@ -728,7 +758,7 @@ const SubjectRow = memo(function SubjectRow({
                             subject.id,
                             c.key,
                             'max',
-                            normalizeNumericInput(e.target.value)
+                            normalizeNumericInput(e.target.value),
                           )
                         }
                         onFocus={(e) => e.currentTarget.select()}
@@ -770,8 +800,8 @@ const SubjectRow = memo(function SubjectRow({
   );
 });
 
-// ==================== Page ====================
-export default function GpaPage() {
+// ==================== GPA Tab ====================
+function GpaTab() {
   const { stage, ready } = useStudentStage();
   const confirm = useConfirm();
 
@@ -790,7 +820,7 @@ export default function GpaPage() {
   const dirtyRef = useRef(false);
   const orphansRef = useRef<Record<string, unknown>>({});
 
-  // ---- تحميل الهدف المحفوظ ----
+  // ---- تحميل الهدف ----
   useEffect(() => {
     if (!targetKey) return;
     const saved = Number(readStorage(targetKey));
@@ -826,7 +856,8 @@ export default function GpaPage() {
       const ids = new Set(subjectList.map((s) => s.id));
 
       const merged: AllScores = {};
-      for (const s of subjectList) merged[s.id] = sanitizeSubjectScores(saved[s.id]);
+      for (const s of subjectList)
+        merged[s.id] = sanitizeSubjectScores(saved[s.id]);
 
       const orphans: Record<string, unknown> = {};
       for (const [id, value] of Object.entries(saved)) {
@@ -850,7 +881,7 @@ export default function GpaPage() {
     if (!storageKey || !dirtyRef.current) return;
     const ok = writeStorage(
       storageKey,
-      JSON.stringify({ ...orphansRef.current, ...scores })
+      JSON.stringify({ ...orphansRef.current, ...scores }),
     );
     setStorageFailed((prev) => (prev === !ok ? prev : !ok));
   }, [scores, storageKey]);
@@ -860,7 +891,7 @@ export default function GpaPage() {
       setTarget(value);
       if (targetKey) writeStorage(targetKey, String(value));
     },
-    [targetKey]
+    [targetKey],
   );
 
   const updateComponent = useCallback(
@@ -868,12 +899,15 @@ export default function GpaPage() {
       subjectId: string,
       componentKey: string,
       field: 'max' | 'score',
-      value: string
+      value: string,
     ) => {
       dirtyRef.current = true;
       setScores((prev) => {
         const subject = prev[subjectId] ?? defaultSubjectScores();
-        const current: ComponentData = subject[componentKey] ?? { max: '', score: '' };
+        const current: ComponentData = subject[componentKey] ?? {
+          max: '',
+          score: '',
+        };
         return {
           ...prev,
           [subjectId]: {
@@ -883,7 +917,7 @@ export default function GpaPage() {
         };
       });
     },
-    []
+    [],
   );
 
   const toggleExpand = useCallback((subjectId: string) => {
@@ -892,22 +926,28 @@ export default function GpaPage() {
 
   const clearSubject = useCallback(
     async (subjectId: string, subjectName: string) => {
-      const ok = await confirm(`حذف كل درجات مادة «${subjectName}». هل أنت متأكد؟`, {
-        variant: 'danger',
-        confirmLabel: 'حذف',
-      });
+      const ok = await confirm(
+        `حذف كل درجات مادة «${subjectName}». هل أنت متأكد؟`,
+        {
+          variant: 'danger',
+          confirmLabel: 'حذف',
+        },
+      );
       if (!ok) return;
       dirtyRef.current = true;
       setScores((prev) => ({ ...prev, [subjectId]: defaultSubjectScores() }));
     },
-    [confirm]
+    [confirm],
   );
 
   const resetScores = useCallback(async () => {
-    const ok = await confirm('حذف كل الدرجات المدخلة لهذه المرحلة. هل أنت متأكد؟', {
-      variant: 'danger',
-      confirmLabel: 'حذف',
-    });
+    const ok = await confirm(
+      'حذف كل الدرجات المدخلة لهذه المرحلة. هل أنت متأكد؟',
+      {
+        variant: 'danger',
+        confirmLabel: 'حذف',
+      },
+    );
     if (!ok) return;
     const cleared: AllScores = {};
     for (const s of subjects) cleared[s.id] = defaultSubjectScores();
@@ -916,7 +956,7 @@ export default function GpaPage() {
     setScores(cleared);
   }, [confirm, subjects]);
 
-  // ---- إحصاءات المعدل ----
+  // ---- إحصاءات ----
   const stats = useMemo(() => {
     let weightedSum = 0;
     let totalUnits = 0;
@@ -951,40 +991,24 @@ export default function GpaPage() {
       usedSimple,
       skippedUnits: usedSimple ? 0 : withoutUnits,
       allFilled: subjects.length > 0 && enteredCount === subjects.length,
-      progress: subjects.length > 0 ? (enteredCount / subjects.length) * 100 : 0,
+      progress:
+        subjects.length > 0 ? (enteredCount / subjects.length) * 100 : 0,
       enteredCount,
     };
   }, [subjects, scores]);
 
   if (!ready) {
-    return (
-      <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
-        <Skeleton />
-      </main>
-    );
+    return <Skeleton />;
   }
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10">
-      <BackLink />
-
-      <div className="mt-6 animate-slide-up motion-reduce:animate-none">
-        <span className="stage-badge">{stage}</span>
-        <h1 className="mt-3 font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">
-          المعدل
-        </h1>
-        <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-          افتح كل مادة وأدخل درجاتك. سنحسب معدلك، وسنخبرك بكم تحتاج في المتبقي
-          لتحقيق هدفك.
-        </p>
-      </div>
-
+    <div className="space-y-6">
       {loading && <Skeleton />}
 
       {!loading && error && (
         <div
           role="alert"
-          className="mt-6 rounded-card border border-coral/30 bg-coral/5 p-4 text-sm text-coral-ink animate-slide-up motion-reduce:animate-none"
+          className="rounded-card border border-coral/30 bg-coral/5 p-4 text-sm text-coral-ink"
         >
           <p className="font-bold">خطأ في الاتصال بقاعدة البيانات</p>
           <p className="mt-1 opacity-80">{error}</p>
@@ -1002,7 +1026,7 @@ export default function GpaPage() {
       )}
 
       {!loading && !error && subjects.length === 0 && (
-        <div className="mt-6 rounded-card border border-line bg-paper-soft p-10 text-center animate-slide-up motion-reduce:animate-none">
+        <div className="rounded-card border border-line bg-paper-soft p-10 text-center">
           <div
             aria-hidden="true"
             className="mx-auto flex h-20 w-20 items-center justify-center rounded-card bg-teal/8 text-teal"
@@ -1020,25 +1044,23 @@ export default function GpaPage() {
           {storageFailed && (
             <div
               role="alert"
-              className="mt-6 flex items-start gap-2 rounded-card border border-gold/30 bg-gold/5 p-3 text-xs text-ink-soft animate-slide-up motion-reduce:animate-none"
+              className="flex items-start gap-2 rounded-card border border-gold/30 bg-gold/5 p-3 text-xs text-ink-soft"
             >
               <IconWarning
                 aria-hidden="true"
                 className="mt-0.5 h-4 w-4 flex-shrink-0 text-gold-ink"
               />
               <p>
-                تعذّر حفظ درجاتك على هذا الجهاز (التخزين ممتلئ أو معطّل). ستبقى
-                ظاهرة ما دمت في الصفحة فقط.
+                تعذّر حفظ درجاتك على هذا الجهاز. ستبقى ظاهرة ما دمت في الصفحة
+                فقط.
               </p>
             </div>
           )}
 
-          <div className="mt-6 animate-slide-up motion-reduce:animate-none">
-            <TargetSelector target={target} onChange={handleTargetChange} />
-          </div>
+          <TargetSelector target={target} onChange={handleTargetChange} />
 
           {stats.enteredCount > 0 && !stats.allFilled && (
-            <div className="mt-6 animate-slide-up motion-reduce:animate-none">
+            <div>
               <div className="mb-1.5 flex items-center justify-between text-xs font-bold text-ink-muted">
                 <span id="gpa-progress-label">التقدم</span>
                 <span>
@@ -1062,7 +1084,7 @@ export default function GpaPage() {
             </div>
           )}
 
-          <div className="mt-6 space-y-2">
+          <div className="space-y-2">
             {subjects.map((s, idx) => (
               <SubjectRow
                 key={s.id}
@@ -1080,7 +1102,7 @@ export default function GpaPage() {
 
           <div
             aria-live="polite"
-            className="mt-6 overflow-hidden rounded-card border border-line bg-gradient-to-bl from-teal/5 via-teal/3 to-gold/5 p-6 text-center shadow-sm animate-slide-up motion-reduce:animate-none"
+            className="overflow-hidden rounded-card border border-line bg-gradient-to-bl from-teal/5 via-teal/3 to-gold/5 p-6 text-center shadow-sm"
           >
             {stats.average !== null ? (
               <>
@@ -1099,7 +1121,10 @@ export default function GpaPage() {
                     التقدير: {getGradeLabel(stats.average)}
                   </span>
                   <span className="inline-flex items-center gap-1.5 rounded-chip bg-paper px-3 py-1 text-xs font-bold text-ink-soft">
-                    <IconTarget aria-hidden="true" className="h-3.5 w-3.5 text-teal" />
+                    <IconTarget
+                      aria-hidden="true"
+                      className="h-3.5 w-3.5 text-teal"
+                    />
                     هدفك: {getGradeLabel(target)}
                   </span>
                 </div>
@@ -1115,11 +1140,13 @@ export default function GpaPage() {
                 )}
               </>
             ) : (
-              <p className="text-sm text-ink-muted">أدخل درجاتك ليظهر معدلك.</p>
+              <p className="text-sm text-ink-muted">
+                أدخل درجاتك ليظهر معدلك.
+              </p>
             )}
           </div>
 
-          <div className="mt-4 text-center">
+          <div className="text-center">
             <Button
               variant="ghost"
               size="sm"
@@ -1131,6 +1158,103 @@ export default function GpaPage() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+// ==================== Content (يقرأ useSearchParams) ====================
+function GpaPageContent() {
+  const { stage } = useStudentStage();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const initialTab = searchParams.get('tab') === 'grades' ? 'grades' : 'gpa';
+  const [tab, setTab] = useState<Tab>(initialTab);
+
+  // مزامنة الرابط مع التبويب
+  const handleTabChange = useCallback(
+    (newTab: Tab) => {
+      setTab(newTab);
+      const params = new URLSearchParams(searchParams.toString());
+      if (newTab === 'grades') {
+        params.set('tab', 'grades');
+      } else {
+        params.delete('tab');
+      }
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [router, pathname, searchParams],
+  );
+
+  return (
+    <main className="mx-auto max-w-2xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10">
+      <BackLink />
+
+      <div className="mt-6 animate-slide-up motion-reduce:animate-none">
+        <span className="stage-badge">{stage}</span>
+        <h1 className="mt-3 font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">
+          المعدل والدرجات
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+          احسب معدلك الموزون حسب وحدات موادك، وتصفّح ملفات الدرجات السابقة.
+        </p>
+      </div>
+
+      {/* Tabs */}
+      <div
+        role="tablist"
+        aria-label="أقسام المعدل والدرجات"
+        className="mt-6 flex gap-1.5 rounded-2xl border border-line bg-white/60 p-1.5 backdrop-blur-sm dark:bg-white/[0.04] animate-slide-up motion-reduce:animate-none"
+        style={{ animationDelay: '80ms' }}
+      >
+        <button
+          role="tab"
+          aria-selected={tab === 'gpa'}
+          onClick={() => handleTabChange('gpa')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 motion-reduce:transition-none ${
+            tab === 'gpa'
+              ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.30)]'
+              : 'text-ink/60 hover:bg-ink/5 hover:text-ink'
+          }`}
+        >
+          <IconChart aria-hidden="true" className="h-4 w-4" />
+          <span>المعدل</span>
+        </button>
+        <button
+          role="tab"
+          aria-selected={tab === 'grades'}
+          onClick={() => handleTabChange('grades')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 motion-reduce:transition-none ${
+            tab === 'grades'
+              ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.30)]'
+              : 'text-ink/60 hover:bg-ink/5 hover:text-ink'
+          }`}
+        >
+          <IconGradesInline />
+          <span>الدرجات</span>
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      <div className="mt-6">
+        <div hidden={tab !== 'gpa'}>
+          <GpaTab />
+        </div>
+        <div hidden={tab !== 'grades'}>
+          <GradesTab />
+        </div>
+      </div>
     </main>
+  );
+}
+
+// ==================== Page (يغلّف في Suspense) ====================
+export default function GpaPage() {
+  return (
+    <Suspense fallback={<Skeleton />}>
+      <GpaPageContent />
+    </Suspense>
   );
 }
