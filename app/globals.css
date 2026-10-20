@@ -463,7 +463,7 @@
   font-variant-numeric: tabular-nums lining-nums;
 }
 
-/* ✨ حركات دائرة المؤقت — لا تعمل مع prefers-reduced-motion: reduce */
+/* ✨ حركات دائرة المؤقت */
 @utility ring-colon {
   @media (prefers-reduced-motion: no-preference) {
     animation: ringBlink 1s steps(1, end) infinite;
@@ -761,7 +761,6 @@
   contain-intrinsic-size: auto 600px;
 }
 
-/* ✅ جديد: للعناصر الصغيرة داخل القوائم (channels، lecture notes، إلخ) */
 @utility defer-item {
   content-visibility: auto;
   contain-intrinsic-size: auto 100px;
@@ -798,6 +797,7 @@
   body { background: #fff; color: #000; }
   .no-print, .nav-glass { display: none !important; }
 }
+
 /* ============================================
    Reveal on scroll
    ============================================ */
@@ -826,11 +826,11 @@
 
 /* ============================================
    منع refresh المتصفح الأصلي (Chrome Android)
-   — حتى لا يتداخل مع PullToRefresh المخصص
    ============================================ */
 html {
   overscroll-behavior-y: contain;
 }
+
 /* ============================================
    Responsive Guard Rails
    ============================================ */
@@ -853,7 +853,6 @@ body {
     min-height: 44px;
   }
 
-  /* الاستثناءات: البطاقات الكبيرة والأزرار داخل عناصر */
   a.card-editorial,
   a[role='listitem'],
   [role='listitem'] a,
@@ -862,14 +861,13 @@ body {
   }
 }
 
-/* 3. على الشاشات الصغيرة جداً (320-360px) — تصغير الحشوات */
+/* 3. على الشاشات الصغيرة جداً (320-360px) */
 @media (max-width: 360px) {
   :root {
     --gutter: 0.875rem;
     --section-y: 2rem;
   }
 
-  /* العناوين الضخمة لا تتجاوز الشاشة */
   h1 {
     word-break: break-word;
     overflow-wrap: anywhere;
@@ -884,20 +882,20 @@ canvas {
   max-width: 100%;
 }
 
-/* 5. النصوص الطويلة (يوزر تلغرام، URLs، أسماء) */
+/* 5. النصوص الطويلة */
 body {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
 
-/* 6. جداول فيها أعمدة كثيرة → scroll أفقي داخل الحاوية فقط */
+/* 6. جداول فيها أعمدة كثيرة */
 .table-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
 }
 
-/* 7. لوحة المفاتيح على iOS — لا تُخفِ حقل الإدخال */
+/* 7. لوحة المفاتيح على iOS */
 @supports (padding: max(0px)) {
   body {
     padding-left: env(safe-area-inset-left);

@@ -1,0 +1,126 @@
+/* components/anatomy/face-atlas.css */
+
+.fa-plate {
+  --fa-bg: #ECEFF0; --fa-surface: #F7F9F9; --fa-ink: #14232B; --fa-muted: #55666E; --fa-line: #CAD3D7;
+  --fa-fascia: #EADFD5; --fa-skin: #E9C4B0; --fa-lip: #D98A84; --fa-brow: #4A3228;
+  --fa-eye: #F6F5F2; --fa-iris: #4F6A74; --fa-mouth: #6E2A2D;
+  --fa-muscle: #C4574F; --fa-muscle-hover: #D8746B; --fa-muscle-edge: #8B2E2A;
+  --fa-fibre: #7E2824; --fa-fibre-hi: #EBA096;
+  --fa-sel: #F5B83D; --fa-sel-edge: #14232B; --fa-sel-fibre: #9C6410;
+  --fa-ok: #4FB47F; --fa-bad: #E0634A;
+  color: var(--fa-ink);
+}
+
+/* ---------- التخطيط ---------- */
+.fa-layout {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "card" "stage";
+}
+@media (min-width: 880px) {
+  .fa-layout {
+    grid-template-columns: minmax(0, 1fr) 380px;
+    grid-template-areas: "stage card";
+    align-items: start;
+  }
+}
+.fa-card { grid-area: card; min-width: 0; z-index: 10; }
+.fa-card.is-sticky { position: sticky; top: calc(var(--nav-h, 0px) + 8px); }
+.fa-card.is-quiz { position: static; }
+@media (min-width: 880px) {
+  .fa-card.is-quiz { position: sticky; top: calc(var(--nav-h, 0px) + 12px); }
+}
+.fa-stage { grid-area: stage; min-width: 0; }
+
+.fa-card-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 112px;
+  gap: 12px;
+  align-items: start;
+}
+@media (min-width: 880px) { .fa-card-main { grid-template-columns: minmax(0, 1fr) 128px; } }
+
+.fa-scroll { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.fa-scroll > * { flex: none; }
+
+/* ---------- لوحة الرسم ---------- */
+.fa-figure {
+  --R: .7407;
+  position: relative;
+  background: var(--fa-surface);
+  border: 1px solid var(--fa-line);
+  border-radius: 14px;
+  padding: 8px;
+  display: flex;
+  justify-content: center;
+}
+.fa-figure svg {
+  display: block;
+  width: min(100%, calc(720px * var(--R)), calc(68vh * var(--R)));
+  aspect-ratio: var(--R);
+  height: auto;
+  touch-action: manipulation;
+  direction: ltr;
+}
+
+.fa-base-fascia { fill: var(--fa-fascia); stroke: var(--fa-line); stroke-width: 1.2; }
+.fa-base-skin { fill: var(--fa-skin); stroke: var(--fa-muscle-edge); stroke-opacity: .5; stroke-width: .8; }
+
+.fa-m { cursor: pointer; transition: opacity .2s; }
+.fa-mo { fill: var(--fa-muscle); stroke: var(--fa-muscle-edge); stroke-width: .9; stroke-linejoin: round; }
+.fa-fa { fill: none; stroke: var(--fa-fibre); stroke-opacity: .5; stroke-width: .7; stroke-linecap: round; }
+.fa-fb { fill: none; stroke: var(--fa-fibre-hi); stroke-opacity: .55; stroke-width: .7; stroke-linecap: round; }
+.fa-m:hover .fa-mo { fill: var(--fa-muscle-hover); }
+.fa-m:focus-visible { outline: none; }
+.fa-m:focus-visible .fa-mo { stroke: var(--fa-ink); stroke-width: 2; }
+.fa-m.is-dim { opacity: .16; }
+.fa-m.is-dim:hover { opacity: .55; }
+.fa-m.is-hi .fa-mo { stroke: var(--fa-ink); stroke-width: 1.3; }
+
+.fa-sel { pointer-events: none; cursor: default; }
+.fa-sel .fa-mo { fill: var(--fa-sel); fill-opacity: calc(.78 + .22 * var(--k, 1)); stroke: var(--fa-sel-edge); stroke-width: 1.5; }
+.fa-sel .fa-fa { stroke: var(--fa-sel-fibre); stroke-opacity: .7; }
+.fa-sel .fa-fb { stroke: #fff; stroke-opacity: .55; }
+.fa-sel-ok .fa-mo { fill: var(--fa-ok); fill-opacity: .92; }
+.fa-sel-bad .fa-mo { fill: var(--fa-bad); fill-opacity: .92; }
+.fa-sel-ok .fa-fa, .fa-sel-bad .fa-fa { stroke: #0d2b1c; stroke-opacity: .55; }
+
+.fa-decor { pointer-events: none; }
+.fa-thin { fill: none; stroke: var(--fa-ink); stroke-opacity: .4; stroke-width: 1.1; }
+
+.fa-halo { fill: none; stroke: var(--fa-surface); stroke-width: 4.6; stroke-linecap: round; stroke-linejoin: round; }
+.fa-arrow { fill: none; stroke: var(--fa-ink); stroke-width: 2.2; stroke-linecap: round; stroke-dasharray: 5 4; animation: fa-flow .9s linear infinite; }
+.fa-ahead { fill: var(--fa-ink); stroke: var(--fa-surface); stroke-width: 1.2; stroke-linejoin: round; }
+@keyframes fa-flow { to { stroke-dashoffset: -9; } }
+
+.fa-lab { font-family: inherit; fill: var(--fa-ink); paint-order: stroke; stroke: var(--fa-surface); stroke-linejoin: round; cursor: pointer; }
+.fa-lab.is-sel { font-weight: 700; }
+.fa-leader { stroke: var(--fa-ink); stroke-opacity: .55; pointer-events: none; fill: none; }
+.fa-ldot { fill: var(--fa-ink); pointer-events: none; }
+
+.fa-tip {
+  position: absolute; pointer-events: none; z-index: 3;
+  background: #14232B; color: #F7F9F9; font-size: 12px; padding: 3px 8px; border-radius: 6px;
+  white-space: nowrap; transform: translate(-50%, -140%); direction: ltr;
+}
+.fa-tip[hidden] { display: none; }
+
+/* ---------- معاينة التعبير ---------- */
+.fa-preview { position: relative; border-radius: 10px; }
+.fa-preview > svg { display: block; width: 100%; height: auto; background: var(--fa-bg); border-radius: 8px; }
+.fa-pl { fill: none; stroke: var(--fa-ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.fa-pw { fill: none; stroke: var(--fa-ink); stroke-width: 1.2; stroke-linecap: round; }
+.fa-pstate { font-size: 11px; color: var(--fa-muted); text-align: center; margin-top: 2px; }
+.fa-play {
+  position: absolute; inset-inline-start: 4px; top: 4px; width: 26px; height: 26px; border-radius: 50%;
+  border: 1px solid var(--fa-line); background: var(--fa-surface); color: var(--fa-ink);
+  display: grid; place-items: center; cursor: pointer; padding: 0;
+}
+.fa-play:focus-visible, .fa-range:focus-visible { outline: 2px solid var(--fa-sel); outline-offset: 2px; }
+.fa-range { width: 100%; margin: 4px 0 0; accent-color: var(--fa-muscle); cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fa-arrow { animation: none; }
+  .fa-m { transition: none; }
+}

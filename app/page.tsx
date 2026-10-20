@@ -18,30 +18,23 @@ import {
   IconCalendar,
   IconChannels,
   IconChart,
+  IconHealth,
   IconSparkles,
   IconSwap,
 } from '@/components/ui/Icons';
 
 // ==================== Helpers ====================
 type RevealStyle = CSSProperties & { '--i'?: number };
-
-function reveal(i: number): RevealStyle {
-  return { '--i': i };
-}
-
+function reveal(i: number): RevealStyle { return { '--i': i }; }
 function isStage(value: string | null): value is Stage {
   return value !== null && (STAGES as readonly string[]).includes(value);
 }
-
 function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(' ');
 }
+function pad(n: number): string { return String(n).padStart(2, '0'); }
 
-function pad(n: number): string {
-  return String(n).padStart(2, '0');
-}
-
-// ==================== Editorial: Divider (سطران فوق العنوان) ====================
+// ==================== Editorial ====================
 function DoubleRule({ className }: { className?: string }) {
   return (
     <div aria-hidden="true" className={cx('border-t-2 border-ink', className)}>
@@ -50,13 +43,9 @@ function DoubleRule({ className }: { className?: string }) {
   );
 }
 
-// ==================== Editorial: Ornamented Rule ====================
 function EditorialRule({ className }: { className?: string }) {
   return (
-    <div
-      aria-hidden="true"
-      className={cx('flex items-center gap-3', className)}
-    >
+    <div aria-hidden="true" className={cx('flex items-center gap-3', className)}>
       <span className="h-px flex-1 bg-line" />
       <span className="text-[9px] leading-none text-gold-ink">◆</span>
       <span className="h-px flex-1 bg-line" />
@@ -64,21 +53,23 @@ function EditorialRule({ className }: { className?: string }) {
   );
 }
 
-// ==================== Icon: Timer ====================
+// ==================== Icons ====================
 function IconTimer() {
   return (
-    <svg
-      className="h-5 w-5"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <circle cx="12" cy="13" r="8" />
       <path d="M12 9v4l3 2M9 2h6" />
+    </svg>
+  );
+}
+
+function IconAtlas() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+      <circle cx="12" cy="10" r="3" />
+      <path d="M12 13v4" />
     </svg>
   );
 }
@@ -95,23 +86,20 @@ interface Section {
   ctaLabel?: string;
   badge?: string;
   locked?: boolean;
+  lockedLabel?: string;
 }
 
 const SECTIONS: Section[] = [
-  // ═══ Hero ═══
   {
     href: '/lawazem',
     title: 'الملازم والمصادر',
     kicker: 'المكتبة',
-    description:
-      'ملازم الدكاترة مرتبة حسب المادة والدكتور، مع وسوم للتصفية السريعة.',
+    description: 'ملازم الدكاترة مرتبة حسب المادة والدكتور، مع وسوم للتصفية السريعة.',
     icon: <IconBook />,
     variant: 'featured',
     size: 'hero',
     ctaLabel: 'تصفّح الملازم',
   },
-
-  // ═══ بجانب الـ hero ═══
   {
     href: '/channels',
     title: 'القنوات',
@@ -134,14 +122,11 @@ const SECTIONS: Section[] = [
     href: '/study-prompt',
     title: 'جات الدراسة',
     kicker: 'أدوات AI',
-    description:
-      'برومبت ذكي يولّد لك شرحاً تفاعلياً لمحاضراتك، مع بطاقات وأسئلة.',
+    description: 'برومبت ذكي يولّد لك شرحاً تفاعلياً لمحاضراتك، مع بطاقات وأسئلة.',
     icon: <IconSparkles />,
     variant: 'navy',
     size: 'wide',
   },
-
-  // ═══ الصف الثالث ═══
   {
     href: '/gpa',
     title: 'المعدل والدرجات',
@@ -160,8 +145,15 @@ const SECTIONS: Section[] = [
     variant: 'coral',
     size: 'wide',
   },
-
-  // ═══ الصف الأخير ═══
+  {
+    href: '/anatomy', // استبدلنا الأنسجة بالأطالس
+    title: 'الأطالس',
+    kicker: 'تفاعلي',
+    description: 'أطلس التشريح والأنسجة التفاعلي.',
+    icon: <IconAtlas />,
+    variant: 'teal',
+    size: 'wide',
+  },
   {
     href: '/group-swap',
     title: 'تبديل الكروبات',
@@ -169,8 +161,9 @@ const SECTIONS: Section[] = [
     description: 'بدّل كروبك العملي بسهولة — مغلق حالياً.',
     icon: <IconSwap />,
     variant: 'navy',
-    size: 'strip',
+    size: 'wide',
     locked: true,
+    lockedLabel: 'قريباً',
   },
 ];
 
@@ -194,18 +187,12 @@ function StageCard({
         className="group relative block w-full overflow-hidden rounded-card border border-line bg-paper-soft p-6 text-start transition-all duration-200 hover:-translate-y-px hover:border-teal hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none motion-reduce:hover:translate-y-0"
       >
         <div className="absolute inset-x-0 top-0 h-[3px] origin-center scale-x-0 bg-gold transition-transform duration-500 group-hover:scale-x-100 group-focus-visible:scale-x-100 motion-reduce:transition-none" />
-
-        <span
-          aria-hidden="true"
-          className="absolute end-4 top-4 font-mono text-xs font-medium text-ink-muted"
-        >
+        <span aria-hidden="true" className="absolute end-4 top-4 font-mono text-xs font-medium text-ink-muted">
           {number}
         </span>
-
         <span className="relative block font-display text-2xl font-bold text-ink">
           {stage}
         </span>
-
         <span className="relative mt-6 flex items-center gap-1.5 text-sm font-semibold text-teal">
           <span>اختر</span>
           <IconArrowLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0" />
@@ -224,38 +211,26 @@ export default function HomePage() {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.studentStage);
       if (isStage(saved)) setStage(saved);
-    } catch {
-      /* تجاهل */
-    }
+    } catch { /* تجاهل */ }
     setLoaded(true);
   }, []);
 
   function chooseStage(s: Stage) {
-    try {
-      localStorage.setItem(STORAGE_KEYS.studentStage, s);
-    } catch {
-      /* تجاهل */
-    }
+    try { localStorage.setItem(STORAGE_KEYS.studentStage, s); } catch {}
     setStage(s);
     window.dispatchEvent(new Event('student-stage-change'));
   }
 
   function changeStage() {
-    try {
-      localStorage.removeItem(STORAGE_KEYS.studentStage);
-    } catch {
-      /* تجاهل */
-    }
+    try { localStorage.removeItem(STORAGE_KEYS.studentStage); } catch {}
     setStage(null);
     window.dispatchEvent(new Event('student-stage-change'));
   }
 
-  // ==================== Loading ====================
   if (!loaded) {
     return <main className="min-h-dvh bg-paper" aria-busy="true" />;
   }
 
-  // ==================== Stage Selection ====================
   if (!stage) {
     return (
       <>
@@ -263,51 +238,23 @@ export default function HomePage() {
         <main className="relative mx-auto flex min-h-[calc(100dvh-var(--nav-h))] max-w-3xl flex-col items-center justify-center px-4 py-12 text-center sm:px-6 sm:py-16">
           <div className="ink-reveal">
             <span className="inline-flex items-center gap-2 rounded-chip border border-line bg-paper-soft px-4 py-1.5 font-mono text-[11px] font-medium uppercase tracking-widest text-ink-soft">
-              <span
-                className="h-1.5 w-1.5 rounded-full bg-teal"
-                aria-hidden="true"
-              />
+              <span className="h-1.5 w-1.5 rounded-full bg-teal" aria-hidden="true" />
               منصة لطلبة جامعة العميد
             </span>
           </div>
-
-          <h1
-            id="stage-heading"
-            className="mt-8 font-display text-4xl font-bold leading-tight text-ink sm:text-5xl ink-reveal"
-            style={reveal(1)}
-          >
+          <h1 id="stage-heading" className="mt-8 font-display text-4xl font-bold leading-tight text-ink sm:text-5xl ink-reveal" style={reveal(1)}>
             اختر مرحلتك الدراسية
           </h1>
-
           <EditorialRule className="mt-6 w-40 ink-reveal" />
-
-          <p
-            className="mt-6 max-w-md text-base leading-relaxed text-ink-soft ink-reveal"
-            style={reveal(2)}
-          >
-            في لوازم نعرض لك المحتوى المناسب لمرحلتك — قنوات، جداول، وكل ما
-            تحتاجه.
+          <p className="mt-6 max-w-md text-base leading-relaxed text-ink-soft ink-reveal" style={reveal(2)}>
+            في لوازم نعرض لك المحتوى المناسب لمرحلتك — قنوات، جداول، وكل ما تحتاجه.
           </p>
-
-          <div
-            role="group"
-            aria-labelledby="stage-heading"
-            className="relative mt-12 grid w-full gap-4 sm:grid-cols-3"
-          >
+          <div role="group" aria-labelledby="stage-heading" className="relative mt-12 grid w-full gap-4 sm:grid-cols-3">
             {STAGES.map((s, i) => (
-              <StageCard
-                key={s}
-                stage={s}
-                index={i}
-                onClick={() => chooseStage(s)}
-              />
+              <StageCard key={s} stage={s} index={i} onClick={() => chooseStage(s)} />
             ))}
           </div>
-
-          <p
-            className="mt-10 text-xs text-ink-muted ink-reveal"
-            style={reveal(6)}
-          >
+          <p className="mt-10 text-xs text-ink-muted ink-reveal" style={reveal(6)}>
             يمكنك تغييرها لاحقاً
           </p>
         </main>
@@ -315,29 +262,20 @@ export default function HomePage() {
     );
   }
 
-  // ==================== Dashboard ====================
   return (
     <>
       <BackgroundPattern />
-
       <main className="relative mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-6 sm:pb-12 sm:pt-8">
         <h1 className="sr-only">لوازم — الصفحة الرئيسية</h1>
-
-        {/* ==================== Masthead ==================== */}
         <Masthead stage={stage} onChangeStage={changeStage} />
 
-        {/* ==================== Sections ==================== */}
         <section aria-labelledby="sections-heading" className="mt-10">
           <div className="ink-reveal" style={reveal(1)}>
             <DoubleRule />
-
             <div className="mt-4 flex items-end justify-between gap-4">
               <div>
                 <p className="kicker">الأقسام</p>
-                <h2
-                  id="sections-heading"
-                  className="mt-2 font-display text-xl font-bold leading-tight text-ink sm:text-2xl"
-                >
+                <h2 id="sections-heading" className="mt-2 font-display text-xl font-bold leading-tight text-ink sm:text-2xl">
                   كل ما تحتاجه في مكان واحد
                 </h2>
               </div>
@@ -362,37 +300,26 @@ export default function HomePage() {
                   badge={sec.badge}
                   ctaLabel={sec.ctaLabel}
                   locked={sec.locked === true}
-                  lockedLabel="قريباً"
+                  lockedLabel={sec.lockedLabel ?? 'قريباً'}
                 />
               ))}
             </SectionTileGrid>
           </div>
         </section>
 
-        {/* ==================== Community: Bot + Trending ==================== */}
         <section aria-labelledby="community-heading" className="mt-20">
           <EditorialRule className="mx-auto mb-10 max-w-xs" />
-
-          <div
-            className="mx-auto mb-10 max-w-2xl text-center ink-reveal"
-            style={reveal(3)}
-          >
+          <div className="mx-auto mb-10 max-w-2xl text-center ink-reveal" style={reveal(3)}>
             <div className="flex justify-center">
               <p className="kicker">تابعنا</p>
             </div>
-
-            <h2
-              id="community-heading"
-              className="mt-3 font-display text-2xl font-bold leading-tight text-ink sm:text-3xl"
-            >
+            <h2 id="community-heading" className="mt-3 font-display text-2xl font-bold leading-tight text-ink sm:text-3xl">
               ابقَ على اطلاع
             </h2>
-
             <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-ink-soft sm:text-base">
               كل جديد يصلك مباشرة — بدون ما تفتح الموقع كل يوم.
             </p>
           </div>
-
           <div className="mx-auto flex max-w-5xl flex-wrap justify-center gap-4">
             <div className="w-full lg:w-[58%]">
               <BotChannelCard />
@@ -403,17 +330,10 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ==================== Footer ==================== */}
         <footer className="mt-20">
           <DoubleRule />
           <div className="flex flex-col items-center gap-4 pb-4 pt-8 text-center">
-            <Image
-              src="/logo.png"
-              alt=""
-              width={32}
-              height={32}
-              className="h-8 w-8 object-contain opacity-60"
-            />
+            <Image src="/logo.png" alt="" width={32} height={32} className="h-8 w-8 object-contain opacity-60" />
             <p className="text-xs leading-relaxed text-ink-soft sm:text-sm">
               صُنع بكل حب لطلاب كلية الطب · جامعة العميد
             </p>
