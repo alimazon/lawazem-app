@@ -18,6 +18,8 @@
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas: "card" "stage";
 }
+
+/* سطح المكتب: البطاقة على اليمين وتكون Sticky */
 @media (min-width: 880px) {
   .fa-layout {
     grid-template-columns: minmax(0, 1fr) 380px;
@@ -25,13 +27,15 @@
     align-items: start;
   }
 }
+
 .fa-card { grid-area: card; min-width: 0; z-index: 10; }
-.fa-card.is-sticky { position: sticky; top: calc(var(--nav-h, 0px) + 8px); }
-.fa-card.is-quiz { position: static; }
+.fa-stage { grid-area: stage; min-width: 0; }
+
+/* تثبيت البطاقة فقط على الشاشات الكبيرة */
 @media (min-width: 880px) {
+  .fa-card.is-sticky { position: sticky; top: calc(var(--nav-h, 0px) + 8px); }
   .fa-card.is-quiz { position: sticky; top: calc(var(--nav-h, 0px) + 12px); }
 }
-.fa-stage { grid-area: stage; min-width: 0; }
 
 .fa-card-main {
   display: grid;
@@ -57,13 +61,16 @@
 }
 .fa-figure svg {
   display: block;
-  width: min(100%, calc(720px * var(--R)), calc(68vh * var(--R)));
-  aspect-ratio: var(--R);
+  width: 100%;
   height: auto;
+  aspect-ratio: var(--R);
+  /* يضمن ألا يتجاوز الرسم 68% من ارتفاع الشاشة على الشاشات الكبيرة */
+  max-width: calc(68vh * var(--R));
   touch-action: manipulation;
   direction: ltr;
 }
 
+/* ---------- العناصر الرسومية ---------- */
 .fa-base-fascia { fill: var(--fa-fascia); stroke: var(--fa-line); stroke-width: 1.2; }
 .fa-base-skin { fill: var(--fa-skin); stroke: var(--fa-muscle-edge); stroke-opacity: .5; stroke-width: .8; }
 

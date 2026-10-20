@@ -7,13 +7,19 @@ export const LABEL_MARGIN = 170;
 
 export type ViewBox = readonly [number, number, number, number];
 
-export const canvasRatio = (labelsOn: boolean): number =>
-  (W0 + (labelsOn ? 2 * LABEL_MARGIN : 0)) / H0;
+/** يحسب نسبة العرض إلى الارتفاع للـ SVG بناءً على التقريب والتسميات */
+export const canvasRatio = (zoom: ZoomId, labelsOn: boolean): number => {
+  if (!labelsOn) return W0 / H0;
+  const z = ZOOMS[zoom];
+  const w = z.size + 2 * LABEL_MARGIN;
+  const h = (z.size * H0) / W0;
+  return w / h;
+};
 
 export function viewBoxFor(zoom: ZoomId, labelsOn: boolean): ViewBox {
   const z = ZOOMS[zoom];
   const h = (z.size * H0) / W0;
-  const w = h * canvasRatio(labelsOn);
+  const w = labelsOn ? z.size + 2 * LABEL_MARGIN : z.size;
   return [z.center[0] - w / 2, z.center[1] - h / 2, w, h];
 }
 

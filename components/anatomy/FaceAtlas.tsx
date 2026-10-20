@@ -1,12 +1,6 @@
 'use client';
 
 // components/anatomy/FaceAtlas.tsx
-/**
- * أطلس عضلات الوجه التفاعلي (React).
- * - استكشاف: لمس أي عضلة، تقريب، تسميات، تصفية بالعصب، تعابير وجه كاملة.
- * - اختبار: 5 أنواع أسئلة (تحديد الموضع، التعرّف، الوظيفة، المنشأ/المرتكز، فرع العصب).
- * - رابط قابل للمشاركة: ?m=zmaj أو ?x=smile
- */
 import { memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, MouseEvent, PointerEvent } from 'react';
 import './face-atlas.css';
@@ -277,7 +271,8 @@ export default function FaceAtlas() {
 
     let wantLabels = false;
     try {
-      wantLabels = window.matchMedia('(min-width: 760px)').matches;
+      // إخفاء التسميات افتراضياً على الجوال (أقل من 1024px)
+      wantLabels = window.matchMedia('(min-width: 1024px)').matches;
     } catch {
       /* تجاهل */
     }
@@ -656,6 +651,9 @@ export default function FaceAtlas() {
   const inn = selected ? innervationOf(selected) : null;
   const arch = selected ? pharyngealArchOf(selected) : null;
   const selBranches = selected ? branchesOf(selected) : [];
+  
+  // حساب النسبة هنا لتتوافق مع حالة التسميات
+  const dynamicR = canvasRatio(zoom, labelsOn);
   const cardClass = `fa-card rounded-card border border-line bg-paper-soft p-3 shadow-sm sm:p-3.5 ${mode === 'quiz' ? 'is-quiz' : 'is-sticky'}`;
 
   return (
@@ -672,7 +670,7 @@ export default function FaceAtlas() {
         </div>
         {mode === 'explore' && (
           <button type="button" className={btnGhost} onClick={share}>
-            {copied ? 'تم نسخ الرابط ✓' : 'مشاركة هذه العضلة'}
+            {copied ? 'تم نسخ الرابط ✓' : 'مشاركة العضلة'}
           </button>
         )}
       </div>
@@ -825,8 +823,8 @@ export default function FaceAtlas() {
             ))}
             {mode === 'explore' && (
               <>
-                <span className="mx-0.5 w-px self-stretch bg-line" aria-hidden="true" />
-                <button type="button" className={chip} aria-pressed={labelsOn} onClick={toggleLabels}>
+                <span className="mx-0.5 hidden w-px self-stretch bg-line md:block" aria-hidden="true" />
+                <button type="button" className={`${chip} hidden md:inline-flex`} aria-pressed={labelsOn} onClick={toggleLabels}>
                   Labels
                 </button>
               </>
@@ -861,16 +859,16 @@ export default function FaceAtlas() {
 
               {branch && branch !== 'v3' && (
                 <p className="text-xs text-ink-muted">
-                  <bdi dir="ltr" className="font-mono">{BRANCH_MNEMONIC}</bdi> — Muscles highlighted receive this branch; some may also receive another.
+                  <bdi dir="ltr" className="font-mono">{BRANCH_MNEMONIC}</bdi> — Muscles highlighted receive this branch.
                 </p>
               )}
               {branch === 'v3' && (
-                <p className="text-xs text-ink-muted">Muscles of mastication shown here: masseter and temporalis. The pterygoids are deep and listed further below.</p>
+                <p className="text-xs text-ink-muted">Muscles of mastication shown: masseter, temporalis.</p>
               )}
             </div>
           )}
 
-          <div ref={figRef} className="fa-plate fa-figure mt-2" style={{ '--R': canvasRatio(labelsOn).toFixed(4) } as CSSProperties}>
+          <div ref={figRef} className="fa-plate fa-figure mt-2" style={{ '--R': dynamicR.toFixed(4) } as CSSProperties}>
             <svg
               ref={svgRef}
               viewBox={vb.map((n) => n.toFixed(2)).join(' ')}
@@ -930,8 +928,7 @@ export default function FaceAtlas() {
           </div>
 
           <p className="mt-2 text-xs leading-relaxed text-ink-muted">
-            Simplified study illustration; positions are approximate. Arrows show the direction of pull on contraction.
-            {mode === 'quiz' && currentQ?.kind === 'locate' && ' Tap the muscle on the drawing to answer.'}
+            Simplified study illustration. Arrows show the direction of pull on contraction.
           </p>
         </section>
       </div>
@@ -941,7 +938,7 @@ export default function FaceAtlas() {
         <section aria-label="Muscle list" className="mt-8">
           <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line pb-2">
             <h2 className="font-display text-lg font-bold text-ink">Muscle Index</h2>
-            <label className="block">
+            <label className="block w-full sm:w-auto">
               <span className="sr-only">Search for a muscle</span>
               <input
                 type="search"
@@ -949,7 +946,7 @@ export default function FaceAtlas() {
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search: smile, nasal, jaw..."
                 dir="ltr"
-                className="w-56 rounded-field border border-line bg-paper-soft px-3 py-1.5 text-sm text-ink placeholder:text-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
+                className="w-full rounded-field border border-line bg-paper-soft px-3 py-1.5 text-sm text-ink placeholder:text-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal sm:w-56"
               />
             </label>
           </div>
