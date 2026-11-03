@@ -21,9 +21,28 @@ export const BRANCH_MNEMONIC = 'To Zanzibar By Motor Car';
 export type Innervation = 'VII' | 'V3';
 
 export function innervationOf(m: Muscle): Innervation | null {
-  if (m.nerve.includes('CN VII')) return 'VII';
-  if (m.nerve.includes('CN V3')) return 'V3';
+  const vii = /\bCN VII\b/.test(m.nerve);
+  const v3 = /\bCN V3\b/.test(m.nerve);
+  if (vii && v3) return null; // عضلة مختلطة (مثل digastric)
+  if (vii) return 'VII';
+  if (v3) return 'V3';
   return null;
+}
+
+const NERVE_TAGS: readonly (readonly [RegExp, string])[] = [
+  [/\bCN VII\b/, 'CN VII'],
+  [/\bCN V3\b/, 'CN V3'],
+  [/\bCN XI\b/, 'CN XI'],
+  [/\bCN XII\b/, 'CN XII'],
+  [/ansa cervicalis/i, 'Ansa cervicalis'],
+  [/dorsal scapular/i, 'Dorsal scapular n.'],
+  [/anterior rami/i, 'Anterior rami'],
+  [/posterior rami/i, 'Posterior rami'],
+];
+
+/** وسوم العصب التي تظهر كشارات على البطاقة. */
+export function nerveTagsOf(m: Muscle): string[] {
+  return NERVE_TAGS.filter(([re]) => re.test(m.nerve)).map(([, label]) => label);
 }
 
 export function branchesOf(m: Muscle): FacialBranch[] {
@@ -104,6 +123,11 @@ export const EXAM_TIPS: Readonly<Record<string, { ar: string; en: string }>> = {
   dli:         { ar: 'اطلب إظهار الأسنان السفلية',                             en: 'Show the lower teeth' },
   mentalis:    { ar: 'اطلب منه يعبّس بالذقن (pout)',                            en: 'Pout' },
   platysma:    { ar: 'اطلب فتح الفم مقابل مقاومة وراقب الشرائط العمودية',      en: 'Open the mouth against resistance' },
+  scm:         { ar: 'اطلب إدارة الرأس لجهة والمريض يقاوم بيدك، وتحسّس العضلة على الجهة المقابلة', en: 'Turn the head against resistance and palpate the opposite SCM' },
+  trapezius:   { ar: 'اطلب رفع الكتفين (shrug) مقابل مقاومة، وقارن الجهتين', en: 'Shrug the shoulders against resistance' },
+  digastric:   { ar: 'اطلب فتح الفم مقابل مقاومة تحت الذقن',                   en: 'Open the mouth against resistance under the chin' },
+  sternohyoid: { ar: 'اطلب بلع اللعاب وراقب حركة العظم اللامي والحنجرة',       en: 'Swallow and watch the hyoid and larynx move' },
+  scaleneAnt:  { ar: 'في الاختبار السريري تُلمس العضلة خلف الـ SCM أثناء الشهيق العميق', en: 'Palpate behind SCM during deep inspiration' },
   masseter:    { ar: 'اطلب صرّ الأسنان وتحسّس العضلة على زاوية الفك',          en: 'Clench the teeth and palpate' },
   temporalis:  { ar: 'اطلب صرّ الأسنان وتحسّس العضلة فوق الصدغ',               en: 'Clench the teeth and palpate' },
 };
@@ -142,13 +166,16 @@ export function validateAtlas(): string[] {
     ids.add(m.id);
 
     if (!m.nerve.trim()) problems.push(`${m.id}: missing nerve`);
-    if (innervationOf(m) === null) problems.push(`${m.id}: nerve is neither CN VII nor CN V3`);
 
-    if (m.geometry.type === 'fan') {
-      if (m.geometry.A.length !== 8 || m.geometry.B.length !== 8) {
+    const g = m.geometry;
+    const fans = g.type === 'fan' ? [g] : g.type === 'multi' ? g.parts : [];
+    for (const f of fans) {
+      if (f.A.length !== 8 || f.B.length !== 8) {
         problems.push(`${m.id}: fan geometry needs 8 numbers in A and B`);
       }
-    } else if (m.geometry.irx >= m.geometry.rx || m.geometry.iry >= m.geometry.ry) {
+    }
+    if (g.type === 'multi' && g.parts.length < 2) problems.push(`${m.id}: multi geometry needs 2 or more parts`);
+    if (g.type === 'ring' && (g.irx >= g.rx || g.iry >= g.ry)) {
       problems.push(`${m.id}: ring inner radius must be smaller than outer radius`);
     }
   }

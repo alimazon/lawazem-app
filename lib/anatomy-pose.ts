@@ -44,6 +44,12 @@ export interface FaceShape {
   marR: string;
   marOpacity: number;
   purse: readonly [string, string, string, string];
+  /** حركة الرأس: يُطبَّق على كل رسم الوجه في المعاينة */
+  headT: string;
+  /** رفع الكتفين (0..1) */
+  shr: number;
+  /** رفع/خفض العظم اللامي (+ لأعلى) */
+  hy: number;
   op: {
     purse: number; forehead: number; glabella: number; nose: number; squint: number;
     temple: number; clench: number; cheek: number; chin: number; neck: number;
@@ -83,7 +89,18 @@ export function computeFace(P: Pose): FaceShape {
 
   const nlf = g('nlf');
 
+  // حركات الرأس (tilt: ميلان جانبي، turn: دوران، fx: انحناء للأمام/تمدد للخلف)
+  const tilt = g('tilt');
+  const turn = g('turn');
+  const fx = g('fx');
+  const headT =
+    `translate(${r2(110 + turn * 12)} ${r2(215 + fx * 7)}) rotate(${r2(tilt * 14)}) ` +
+    `scale(${r2(1 - 0.05 * Math.abs(turn))} ${r2(1 - 0.03 * Math.abs(fx))}) translate(-110 -215)`;
+
   return {
+    headT,
+    shr: clamp01(g('shr')),
+    hy: Math.max(-1, Math.min(1, g('hy'))),
     head,
     eyeL: eyePath(80),
     eyeR: eyePath(140),

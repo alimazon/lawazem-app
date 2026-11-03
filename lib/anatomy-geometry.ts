@@ -1,5 +1,5 @@
 // lib/anatomy-geometry.ts
-import { MUSCLES, type FanGeometry, type Muscle, type RingGeometry } from './anatomy-data';
+import { MUSCLES, type FanGeometry, type Muscle, type MultiGeometry, type RingGeometry } from './anatomy-data';
 
 export interface BuiltGeometry {
   d: string;
@@ -78,8 +78,21 @@ function ring(g: RingGeometry): BuiltGeometry {
   };
 }
 
+function multi(g: MultiGeometry): BuiltGeometry {
+  const built = g.parts.map(fan);
+  return {
+    d: built.map((b) => b.d).join(''),
+    dark: built.map((b) => b.dark).join(''),
+    light: built.map((b) => b.light).join(''),
+    evenodd: false,
+  };
+}
+
 export function buildGeometry(m: Muscle): BuiltGeometry {
-  return m.geometry.type === 'ring' ? ring(m.geometry) : fan(m.geometry);
+  const g = m.geometry;
+  if (g.type === 'ring') return ring(g);
+  if (g.type === 'multi') return multi(g);
+  return fan(g);
 }
 
 export const GEOMETRY: Readonly<Record<string, BuiltGeometry>> = (() => {

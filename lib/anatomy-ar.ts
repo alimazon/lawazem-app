@@ -1,4 +1,5 @@
 // lib/anatomy-ar.ts
+import type { ZoomId } from './anatomy-data';
 import type { Pose } from './anatomy-pose';
 
 export const ACTION_AR: Readonly<Record<string, string>> = {
@@ -22,6 +23,25 @@ export const ACTION_AR: Readonly<Record<string, string>> = {
   corrugator: 'تسحب الحاجبين للداخل والأسفل فتُحدث خطوط العبوس العمودية.',
   procerus: 'تسحب الطرف الإنسي للحاجبين للأسفل فتُحدث تجاعيد مستعرضة فوق جسر الأنف.',
   depSepti: 'تسحب حاجز الأنف وطرفه للأسفل وتوسّع فتحتي الأنف.',
+  scm: 'تدير الرأس نحو الجهة المقابلة وتُميله نحو نفس الكتف؛ والعضلتان معاً تثنيان الرقبة، وتساعدان في الشهيق.',
+  trapezius: 'تثبّت لوح الكتف وتحرّكه (رفع، تقريب، تدوير)؛ والألياف العلوية ترفع الكتف.',
+  digastric: 'تفتح الفم بخفض الفك السفلي، وترفع العظم اللامي (البطن الأمامي V3، والخلفي VII).',
+  stylohyoid: 'تسحب العظم اللامي للأعلى والخلف أثناء البلع.',
+  mylohyoid: 'ترفع قاع الفم والعظم اللامي (تُشكّل حجاب الفم diaphragma oris).',
+  geniohyoid: 'تسحب العظم اللامي للأمام والأعلى، أو تخفض الفك إذا ثُبّت العظم اللامي.',
+  omohyoid: 'تخفض العظم اللامي وتثبّته (بطنان يصل بينهما وتر وسطي).',
+  sternohyoid: 'تخفض العظم اللامي بعد البلع.',
+  thyrohyoid: 'تخفض العظم اللامي، وإذا ثُبّت رفعت الحنجرة.',
+  sternothyroid: 'تسحب الغضروف الدرقي (الحنجرة) للأسفل.',
+  spleniusCapitis: 'العضلتان معاً تسحبان الرأس للخلف، وكل واحدة تدير الرأس وتميله لنفس الجهة.',
+  levatorScapulae: 'ترفع لوح الكتف.',
+  scalenePost: 'ترفع الضلع الثاني.',
+  scaleneMid: 'ترفع الضلع الأول.',
+  scaleneAnt: 'ترفع الضلع الأول، وتثني الرقبة جانبياً.',
+  rcAnterior: 'تثني الرأس عند المفصل القذالي الحاملي.',
+  rcLateralis: 'تثني الرأس جانبياً نحو نفس الجهة.',
+  longusCapitis: 'تثني الرأس.',
+  longusColli: 'تثني الرقبة للأمام وللجانب مع دوران خفيف نحو الجهة المقابلة.',
 };
 
 export const PEARLS_AR: Readonly<Record<string, string>> = {
@@ -29,6 +49,26 @@ export const PEARLS_AR: Readonly<Record<string, string>> = {
     'فخ امتحاني: عضلة تعبير (الوجهي – الفرع الشدقي) وليست عضلة مضغ رغم دورها في المضغ. الـ long buccal nerve (فرع V3) يخترقها حسّياً فقط ولا يغذّيها حركياً.',
   platysma:
     'عضلة في الرقبة لكنها تُغذّى بالوجهي (الفرع العنقي)، لأنها من القوس البلعومي الثاني.',
+  scm:
+    'تقسم الرقبة إلى مثلث أمامي وخلفي. العصب المساعد (CN XI) يغذّيها حركياً، وأعصاب الضفيرة العنقية (C2, C3) تنقل الإحساس العميق فقط.',
+  trapezius:
+    'العصب المساعد يعبر المثلث الخلفي سطحياً، لذلك يتأذى في خزعات العقد الليمفاوية هناك فيسقط الكتف ويضعف رفعه.',
+  digastric:
+    'عضلة مختلطة المنشأ: البطن الأمامي من القوس الأول (V3) والبطن الخلفي من القوس الثاني (VII).',
+  mylohyoid:
+    'يغذّيها فرع من العصب السنخي السفلي (V3) لأنها من القوس البلعومي الأول، وهي ليست من عضلات المضغ وتشكّل أرضية الفم.',
+  geniohyoid:
+    'ألياف C1 تسير مع العصب تحت اللسان فقط (XII) ولا تغذّيها منه.',
+  thyrohyoid:
+    'الوحيدة بين العضلات الشريطية التي لا تغذّيها الـ ansa cervicalis (ألياف C1 مع XII).',
+  sternothyroid:
+    'التصاقها بالخط المائل للغضروف الدرقي يمنع تضخّم الدرقية من الامتداد للأعلى.',
+  scaleneAnt:
+    'العصب الحجابي يمر على سطحها الأمامي، والضفيرة العضدية تمر بين الأمامية والوسطى (interscalene) — موضع حقن التخدير ومتلازمة المخرج الصدري.',
+  scaleneMid:
+    'جذوع الضفيرة العضدية تمر أمامها (بين الأمامية والوسطى).',
+  longusColli:
+    'الجذع الودّي العنقي يستلقي على سطحها الأمامي خلف غمد السُّباتي.',
   frontalis:
     'الجبين محفوظ في شلل الـ UMN لأن القشرة تغذّي الوجه العلوي من الجهتين، ويُشلّ في شلل الـ LMN (مثل Bell’s palsy).',
   orbOculi:
@@ -49,6 +89,8 @@ export interface Expression {
   note: string;
   /** ملاحظة إنجليزية (تظهر أولاً — الإنجليزية أوضح) */
   noteEn?: string;
+  /** تقريب الكاميرا عند اختيار الحركة (الافتراضي: الوجه كامل) */
+  zoom?: ZoomId;
 }
 
 export const EXPRESSIONS: readonly Expression[] = [
@@ -97,5 +139,57 @@ export const EXPRESSIONS: readonly Expression[] = [
     note: 'الـ levator labii superioris alaeque nasi والـ levator labii superioris يرفعان الشفة العليا والأنف، والـ procerus يُجعّد جسر الأنف.',
     noteEn:
       'Levator labii superioris alaeque nasi and levator labii superioris raise the upper lip and dilate the nose, while procerus creases the bridge of the nose.',
+  },
+  {
+    id: 'headTurn',
+    ar: 'دوران الرأس',
+    en: 'Head rotation',
+    zoom: 'neck',
+    muscles: [{ id: 'scm' }, { id: 'spleniusCapitis' }],
+    extra: { turn: -0.9, tilt: 0.2 },
+    note: 'عند دوران الوجه إلى اليسار (في الصورة) تنقبض الـ SCM على اليمين (الجهة المقابلة) والـ splenius capitis على اليسار (نفس الجهة). الرسم يُظهر الجهة اليمنى فقط.',
+    noteEn:
+      'Turning the face to one side contracts the opposite sternocleidomastoid and the same-side splenius capitis. Only the right side of the image is drawn.',
+  },
+  {
+    id: 'headFlex',
+    ar: 'ثني الرقبة',
+    en: 'Neck flexion',
+    zoom: 'throat',
+    muscles: [{ id: 'scm' }, { id: 'longusColli' }, { id: 'longusCapitis' }, { id: 'rcAnterior', w: 0.7 }],
+    note: 'الـ SCM من الجهتين مع عضلات ما أمام الفقرات (longus colli و longus capitis) تثني الرأس والرقبة للأمام.',
+    noteEn:
+      'Both sternocleidomastoids act with the prevertebral muscles (longus colli, longus capitis) to flex the head and neck.',
+  },
+  {
+    id: 'lateralFlex',
+    ar: 'الميلان الجانبي',
+    en: 'Lateral flexion',
+    zoom: 'posterior',
+    muscles: [{ id: 'scaleneAnt' }, { id: 'scaleneMid' }, { id: 'scalenePost' }, { id: 'scm', w: 0.7 }, { id: 'rcLateralis', w: 0.6 }],
+    note: 'العضلات الأخمعية (scalenes) والـ SCM والـ rectus capitis lateralis تُميل الرأس نحو نفس الكتف.',
+    noteEn:
+      'The scalenes, sternocleidomastoid and rectus capitis lateralis tilt the head toward the same shoulder.',
+  },
+  {
+    id: 'shrug',
+    ar: 'رفع الكتفين',
+    en: 'Shoulder shrug',
+    zoom: 'posterior',
+    muscles: [{ id: 'trapezius' }, { id: 'levatorScapulae' }],
+    note: 'الألياف العلوية للـ trapezius والـ levator scapulae ترفعان لوح الكتف. العصب المساعد (XI) يغذّي الأولى، والعصب الكتفي الظهري (dorsal scapular) الثانية.',
+    noteEn:
+      'The upper trapezius and levator scapulae elevate the scapula. The first is supplied by the accessory nerve, the second by C3, C4 and the dorsal scapular nerve.',
+  },
+  {
+    id: 'swallow',
+    ar: 'البلع (رفع العظم اللامي)',
+    en: 'Hyoid elevation (swallowing)',
+    zoom: 'throat',
+    muscles: [{ id: 'mylohyoid' }, { id: 'geniohyoid' }, { id: 'stylohyoid' }, { id: 'digastric', w: 0.8 }],
+    extra: { hy: 1 },
+    note: 'العضلات فوق العظم اللامي ترفعه وتسحبه للأمام أثناء البلع، ثم تعيده العضلات تحت اللامي إلى مكانه (sternohyoid و omohyoid).',
+    noteEn:
+      'The suprahyoid muscles elevate and pull the hyoid forward during swallowing; the infrahyoid (strap) muscles then depress it again.',
   },
 ];

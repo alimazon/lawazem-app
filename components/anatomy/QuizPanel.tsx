@@ -1,11 +1,12 @@
 'use client';
 
 // components/anatomy/QuizPanel.tsx
+import { useState } from 'react';
 import { MUSCLE_BY_ID } from '@/lib/anatomy-data';
 import { ACTION_AR } from '@/lib/anatomy-ar';
 import { FACIAL_BRANCHES } from '@/lib/anatomy-extras';
-import type { Question } from '@/lib/anatomy-quiz';
-import { badge, btnGhost, btnPrimary } from './ui-classes';
+import { TRIANGLES } from '@/lib/anatomy-neck-notes';
+import { NERVE_OPTIONS, type Question, type QuizScope } from '@/lib/anatomy-quiz';
 
 export interface QuizState {
   questions: Question[];
@@ -16,6 +17,55 @@ export interface QuizState {
   bestStreak: number;
   missed: string[];
   done: boolean;
+  scope: QuizScope;
+  hinted: boolean;
+}
+
+interface SetupProps {
+  best: Record<QuizScope, number>;
+  onStart: (o: { scope: QuizScope; count: number }) => void;
+  onExit: () => void;
+}
+
+const SCOPES: readonly { id: QuizScope; en: string; ar: string }[] = [
+  { id: 'all', en: 'Face & neck', ar: 'الوجه والرقبة' },
+  { id: 'face', en: 'Face only', ar: 'الوجه فقط' },
+  { id: 'neck', en: 'Neck only', ar: 'الرقبة فقط (ومثلثاتها)' },
+];
+
+export function QuizSetup({ best, onStart, onExit }: SetupProps) {
+  const [scope, setScope] = useState<QuizScope>('all');
+  const [count, setCount] = useState(10);
+  return (
+    <div className="fq">
+      <p className="fq-eyebrow">اختبر نفسك</p>
+      <h2 className="fq-title">Quiz</h2>
+
+      <p className="fq-label">المحتوى</p>
+      <div className="fq-opts">
+        {SCOPES.map((s) => (
+          <button key={s.id} type="button" className="fq-opt" aria-pressed={scope === s.id} onClick={() => setScope(s.id)}>
+            <span dir="ltr">{s.en}</span>
+            <small>{s.ar}{best[s.id] > 0 ? ` · أفضل ${best[s.id]}%` : ''}</small>
+          </button>
+        ))}
+      </div>
+
+      <p className="fq-label">عدد الأسئلة</p>
+      <div className="fq-seg">
+        {[5, 10, 20].map((n) => (
+          <button key={n} type="button" aria-pressed={count === n} onClick={() => setCount(n)}>{n}</button>
+        ))}
+      </div>
+
+      <p className="fq-note">أنواع الأسئلة: تحديد الموضع، التعرّف، الوظيفة، المنشأ والمرتكز، العصب المغذّي{scope !== 'face' ? '، وحدود المثلثات ومحتوياتها (من الملزمة)' : ''}.</p>
+
+      <div className="fq-row">
+        <button type="button" className="fa-btn is-primary" onClick={() => onStart({ scope, count })}>ابدأ</button>
+        <button type="button" className="fa-btn" onClick={onExit}>رجوع</button>
+      </div>
+    </div>
+  );
 }
 
 interface Props {
@@ -24,29 +74,36 @@ interface Props {
   onAnswer: (choice: string) => void;
   onNext: () => void;
   onRestart: () => void;
+  onRetryMissed: () => void;
   onExit: () => void;
   onReview: (id: string) => void;
+  onHint: () => void;
 }
 
 const PROMPT: Record<Question['kind'], string> = {
-  locate: 'اضغط على هذه العضلة في الرسم',
-  identify: 'ما اسم العضلة المظلَّلة في الرسم؟',
+  locate: 'اضغط على هذه العضلة في النموذج',
+  identify: 'ما اسم العضلة المظلَّلة؟',
   action: 'أي عضلة تقوم بهذه الوظيفة؟',
   attach: 'أي عضلة لها هذا المنشأ والمرتكز؟',
   branch: 'ما فرع العصب الوجهي الذي يغذّي هذه العضلة؟',
+  nerve: 'ما العصب الذي يغذّي هذه العضلة؟',
+  boundary: 'أي عضلة تُشكّل أحد حدود هذا المثلث؟',
+  contents: 'أي من التالي يقع داخل هذا المثلث؟',
 };
 
-const optionBase =
-  'w-full rounded-field border px-3 py-2 text-start text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal disabled:cursor-default motion-reduce:transition-none';
-
-function optionTone(answered: boolean, isCorrect: boolean, isPicked: boolean): string {
-  if (!answered) return 'border-line bg-paper-soft text-ink hover:border-teal/50';
-  if (isCorrect) return 'border-teal bg-teal-soft text-ink';
-  if (isPicked) return 'border-coral bg-coral-soft text-ink';
-  return 'border-line bg-paper-soft text-ink-muted opacity-60';
+function optionText(q: Question, opt: string): { en: string; ar?: string } {
+  if (q.kind === 'branch') {
+    const b = FACIAL_BRANCHES.find((x) => x.id === opt);
+    return { en: b?.en ?? opt, ar: b?.ar };
+  }
+  if (q.kind === 'nerve') {
+    const n = NERVE_OPTIONS.find((x) => x.id === opt);
+    return { en: n?.en ?? opt, ar: n?.ar };
+  }
+  return { en: MUSCLE_BY_ID[opt]?.en ?? opt };
 }
 
-export default function QuizPanel({ state, best, onAnswer, onNext, onRestart, onExit, onReview }: Props) {
+export default function QuizPanel({ state, best, onAnswer, onNext, onRestart, onRetryMissed, onExit, onReview, onHint }: Props) {
   const total = state.questions.length;
 
   if (state.done) {
@@ -54,40 +111,34 @@ export default function QuizPanel({ state, best, onAnswer, onNext, onRestart, on
     const verdict =
       pct === 100 ? 'ممتاز! علامة كاملة.' : pct >= 80 ? 'مستواك قوي، راجع الأخطاء وتنتهي.' : pct >= 50 ? 'جيد، يحتاج مراجعة بسيطة.' : 'لا بأس، ابدأ بالاستكشاف ثم أعد المحاولة.';
     return (
-      <div>
-        <p className="text-xs font-bold tracking-wide text-ink-muted">انتهت الجولة</p>
-        <p className="mt-1 font-display text-3xl font-bold text-ink">
-          {state.score}
-          <span className="text-lg text-ink-muted"> / {total}</span>
-        </p>
-        <p className="mt-1 text-sm text-ink-soft">{verdict}</p>
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          <span className={badge}>أفضل نتيجة: {Math.max(best, state.score)}/{total}</span>
-          <span className={badge}>أطول سلسلة: {state.bestStreak}</span>
+      <div className="fq">
+        <p className="fq-eyebrow">انتهت الجولة</p>
+        <p className="fq-score">{state.score}<span> / {total}</span></p>
+        <p className="fq-note">{verdict}</p>
+        <div className="fa-tags">
+          <span className="fa-tag">أفضل نتيجة: {Math.max(best, pct)}%</span>
+          <span className="fa-tag">أطول سلسلة: {state.bestStreak}</span>
         </div>
 
         {state.missed.length > 0 && (
-          <div className="mt-3">
-            <p className="text-xs font-bold text-ink-muted">للمراجعة (اضغط لفتحها في الأطلس):</p>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
+          <>
+            <p className="fq-label">للمراجعة (اضغط لفتحها في الأطلس)</p>
+            <div className="fa-tags" dir="ltr">
               {state.missed.map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  dir="ltr"
-                  onClick={() => onReview(id)}
-                  className="rounded-chip border border-coral/40 bg-coral-soft px-2.5 py-1 text-xs text-ink hover:border-coral focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
-                >
+                <button key={id} type="button" className="fa-tag is-btn is-bad" onClick={() => onReview(id)}>
                   {MUSCLE_BY_ID[id]?.en ?? id}
                 </button>
               ))}
             </div>
-          </div>
+          </>
         )}
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" className={btnPrimary} onClick={onRestart}>جولة جديدة</button>
-          <button type="button" className={btnGhost} onClick={onExit}>رجوع للأطلس</button>
+        <div className="fq-row">
+          <button type="button" className="fa-btn is-primary" onClick={onRestart}>جولة جديدة</button>
+          {state.missed.length > 0 && (
+            <button type="button" className="fa-btn" onClick={onRetryMissed}>أعد الأسئلة الخاطئة ({state.missed.length})</button>
+          )}
+          <button type="button" className="fa-btn" onClick={onExit}>رجوع للأطلس</button>
         </div>
       </div>
     );
@@ -96,70 +147,64 @@ export default function QuizPanel({ state, best, onAnswer, onNext, onRestart, on
   const q = state.questions[state.index];
   if (!q) return null;
   const m = MUSCLE_BY_ID[q.id];
+  const tri = q.ref ? TRIANGLES.find((t) => t.id === q.ref) : undefined;
   const answered = state.picked !== null;
   const correct = answered && state.picked === q.correct;
+  const muscleId = q.kind === 'boundary' ? q.correct : q.id;
+  const mm = MUSCLE_BY_ID[muscleId];
 
   return (
-    <div>
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-bold tracking-wide text-ink-muted">
-          سؤال <span className="font-mono">{state.index + 1}</span> من <span className="font-mono">{total}</span>
-        </p>
-        <div className="flex items-center gap-1.5">
-          <span className={badge}>النتيجة {state.score}</span>
-          {state.streak >= 2 && <span className={badge}>🔥 {state.streak}</span>}
-          <button type="button" onClick={onExit} className="text-xs font-semibold text-ink-muted underline-offset-2 hover:text-teal hover:underline focus-visible:outline-2 focus-visible:outline-teal">
-            خروج
-          </button>
+    <div className="fq">
+      <div className="fq-top">
+        <p className="fq-eyebrow">سؤال <b>{state.index + 1}</b> من <b>{total}</b></p>
+        <div className="fa-tags">
+          <span className="fa-tag">النتيجة {state.score}</span>
+          {state.streak >= 2 && <span className="fa-tag">سلسلة {state.streak}</span>}
+          <button type="button" className="fq-link" onClick={onExit}>خروج</button>
         </div>
       </div>
+      <div className="fq-bar" aria-hidden="true"><div style={{ width: `${((state.index + (answered ? 1 : 0)) / total) * 100}%` }} /></div>
 
-      <div className="mt-2 h-1 overflow-hidden rounded-full bg-line" aria-hidden="true">
-        <div className="h-full bg-teal transition-all duration-300 motion-reduce:transition-none" style={{ width: `${((state.index + (answered ? 1 : 0)) / total) * 100}%` }} />
-      </div>
+      <h3 className="fq-q">{PROMPT[q.kind]}</h3>
 
-      <h3 className="mt-3 text-sm font-bold text-ink">{PROMPT[q.kind]}</h3>
-
-      {(q.kind === 'locate' || q.kind === 'branch') && m && (
-        <p dir="ltr" className="mt-1 text-start font-display text-xl font-bold text-ink">{m.en}</p>
+      {(q.kind === 'locate' || q.kind === 'branch' || q.kind === 'nerve') && m && <p dir="ltr" className="fq-name">{m.en}</p>}
+      {(q.kind === 'boundary' || q.kind === 'contents') && tri && (
+        <div className="fq-box" dir="ltr">
+          <p className="fq-name">{tri.en}</p>
+          {q.kind === 'boundary' && <p className="fq-sm">{tri.boundaries}</p>}
+        </div>
       )}
-      {q.kind === 'action' && m && (
-        <p dir="ltr" className="mt-1 rounded-field border border-line bg-paper px-3 py-2 text-start text-[13px] leading-snug text-ink-soft">{m.actEn}</p>
-      )}
+      {q.kind === 'action' && m && <p dir="ltr" className="fq-box">{m.actEn}</p>}
       {q.kind === 'attach' && m && (
-        <dl dir="ltr" className="mt-1 rounded-field border border-line bg-paper px-3 py-2 text-start text-[13px] leading-snug text-ink-soft">
-          <dt className="text-[11px] font-bold uppercase tracking-wide text-ink-muted">Origin</dt>
-          <dd>{m.origin}</dd>
-          <dt className="mt-1 text-[11px] font-bold uppercase tracking-wide text-ink-muted">Insertion</dt>
-          <dd>{m.insertion}</dd>
+        <dl dir="ltr" className="fq-box">
+          <dt>Origin</dt><dd>{m.origin}</dd>
+          <dt>Insertion</dt><dd>{m.insertion}</dd>
         </dl>
       )}
 
       {q.kind === 'locate' && !answered && (
-        <button type="button" className={`${btnGhost} mt-3 w-full`} onClick={() => onAnswer('__skip')}>
-          لا أعرف
-        </button>
+        <div className="fq-row">
+          <button type="button" className="fa-btn" onClick={onHint} disabled={state.hinted}>{state.hinted ? 'تم التلميح' : 'تلميح: قرّب المنطقة'}</button>
+          <button type="button" className="fa-btn" onClick={() => onAnswer('__skip')}>لا أعرف</button>
+        </div>
       )}
+      {q.kind === 'identify' && !answered && (
+        <div className="fq-row">
+          <button type="button" className="fa-btn" onClick={onHint} disabled={state.hinted}>{state.hinted ? 'تم التلميح' : 'تلميح: وظيفة العضلة'}</button>
+        </div>
+      )}
+      {q.kind === 'identify' && state.hinted && m && !answered && <p dir="ltr" className="fq-box">{m.actEn}</p>}
 
       {q.kind !== 'locate' && (
-        <ul className="mt-3 grid gap-2">
+        <ul className="fq-list">
           {q.options.map((opt) => {
-            const label =
-              q.kind === 'branch'
-                ? FACIAL_BRANCHES.find((b) => b.id === opt)
-                : null;
-            const text = label ? label.en : (MUSCLE_BY_ID[opt]?.en ?? opt);
+            const t = optionText(q, opt);
+            const tone = !answered ? '' : opt === q.correct ? ' is-ok' : opt === state.picked ? ' is-bad' : ' is-dim';
             return (
               <li key={opt}>
-                <button
-                  type="button"
-                  dir="ltr"
-                  disabled={answered}
-                  onClick={() => onAnswer(opt)}
-                  className={`${optionBase} ${optionTone(answered, opt === q.correct, opt === state.picked)}`}
-                >
-                  {text}
-                  {label && <span dir="rtl" className="ms-2 text-xs text-ink-muted">({label.ar})</span>}
+                <button type="button" dir="ltr" disabled={answered} onClick={() => onAnswer(opt)} className={`fq-choice${tone}`}>
+                  {t.en}
+                  {t.ar && <span dir="rtl">{t.ar}</span>}
                 </button>
               </li>
             );
@@ -167,20 +212,28 @@ export default function QuizPanel({ state, best, onAnswer, onNext, onRestart, on
         </ul>
       )}
 
-      {answered && m && (
-        <div className="mt-3 rounded-field border border-line bg-paper p-3" role="status">
-          <p className={`text-sm font-bold ${correct ? 'text-teal' : 'text-coral-ink'}`}>
-            {correct ? 'إجابة صحيحة ✓' : 'ليست صحيحة'}
-          </p>
-          <p dir="ltr" className="mt-1 text-start text-sm font-bold text-ink">{m.en}</p>
-          <p dir="ltr" className="mt-0.5 text-start text-[13px] leading-relaxed text-ink">{m.actEn}</p>
-          <p className="mt-0.5 text-[12px] leading-relaxed text-ink-muted">{ACTION_AR[m.id]}</p>
-          <p dir="ltr" className="mt-1 text-start text-xs text-ink-muted">{m.nerve}</p>
+      {answered && (
+        <div className="fq-feedback" role="status">
+          <p className={`fq-verdict${correct ? ' is-ok' : ''}`}>{correct ? 'إجابة صحيحة ✓' : 'ليست صحيحة'}</p>
+          {mm && (
+            <>
+              <p dir="ltr" className="fq-name">{mm.en}</p>
+              <dl dir="ltr" className="fq-sm-list">
+                <dt>Action</dt><dd>{mm.actEn}</dd>
+                <dt>Origin</dt><dd>{mm.origin}</dd>
+                <dt>Insertion</dt><dd>{mm.insertion}</dd>
+                <dt>Innervation</dt><dd>{mm.nerve}</dd>
+              </dl>
+              <p className="fq-ar">{ACTION_AR[mm.id]}</p>
+              <button type="button" className="fq-link" onClick={() => onReview(mm.id)}>افتحها في الأطلس</button>
+            </>
+          )}
+          {q.kind === 'contents' && tri && <p dir="ltr" className="fq-sm">Contents: {tri.contents.join('; ')}.</p>}
         </div>
       )}
 
       {answered && (
-        <button type="button" className={`${btnPrimary} mt-3 w-full`} onClick={onNext} autoFocus>
+        <button type="button" className="fa-btn is-primary fq-next" onClick={onNext} autoFocus>
           {state.index + 1 >= total ? 'عرض النتيجة' : 'السؤال التالي'}
         </button>
       )}

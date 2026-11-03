@@ -7,9 +7,9 @@ import FaceAtlas from '@/components/anatomy/FaceAtlas';
 import { MUSCLES } from '@/lib/anatomy-data';
 
 export const metadata: Metadata = {
-  title: 'Facial Muscles — لوازم',
+  title: 'Facial & Neck Muscles — لوازم',
   description:
-    'Interactive facial muscle atlas: origin, insertion, nerve supply and action, with expressions and a self-test.',
+    'Interactive facial and neck muscle atlas (2D and 3D): origin, insertion, nerve supply and action, with movements and a self-test.',
 };
 
 export default function FaceAtlasPage() {
@@ -33,13 +33,13 @@ export default function FaceAtlasPage() {
             {MUSCLES.length} muscles · عضلة
           </span>
           <h1 dir="ltr" className="mt-3 text-start font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">
-            Facial Muscles
+            Facial & Neck Muscles
           </h1>
           <p className="mt-1 text-sm font-semibold text-ink-muted sm:text-base">
-            أطلس عضلات الوجه
+            أطلس عضلات الوجه والرقبة
           </p>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-soft sm:text-base">
-            اضغط أي عضلة على الوجه أو اخترها من القائمة. جرّب التعابير لترى العضلات تعمل معاً، ثم اختبر نفسك.
+            اضغط أي عضلة على الوجه أو الرقبة أو اخترها من القائمة. بدّل بين الرسم 2D والمجسّم 3D، وجرّب الحركات لترى العضلات تعمل معاً، ثم اختبر نفسك.
             الواجهة بالعربية، والمصطلحات العلمية بالإنجليزية كما تُدرَّس.
           </p>
         </header>

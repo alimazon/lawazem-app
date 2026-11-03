@@ -83,16 +83,26 @@ function ExpressionPreview({ pose, poseKey, onK }: Props) {
 
         <path d="M84,206 L82,270" className="fa-pl" />
         <path d="M136,206 L138,270" className="fa-pl" />
-        <ellipse cx="36" cy="112" rx="5" ry="14" className="fa-pl" style={{ fill: 'var(--fa-skin)' }} />
-        <ellipse cx="184" cy="112" rx="5" ry="14" className="fa-pl" style={{ fill: 'var(--fa-skin)' }} />
-        <path d={f.head} className="fa-pl" style={{ fill: 'var(--fa-skin)' }} />
-
         <g style={{ opacity: f.op.neck }}>
           <path className="fa-pw" d="M92,214 L86,262" />
           <path className="fa-pw" d="M100,218 L96,262" />
           <path className="fa-pw" d="M128,214 L134,262" />
           <path className="fa-pw" d="M120,218 L124,262" />
         </g>
+        <g transform={`translate(0 ${-8 * f.shr})`}>
+          <path className="fa-pl" d="M86,262 Q50,256 0,268" />
+          <path className="fa-pl" d="M134,262 Q170,256 220,268" />
+        </g>
+        <g transform={`translate(0 ${-9 * f.hy})`}>
+          <path className="fa-pw" style={{ strokeWidth: 1.8 }} d="M96,236 Q110,242 124,236" />
+          <path className="fa-pw" d="M103,250 L110,256 L117,250" />
+        </g>
+
+        <g transform={f.headT}>
+        <ellipse cx="36" cy="112" rx="5" ry="14" className="fa-pl" style={{ fill: 'var(--fa-skin)' }} />
+        <ellipse cx="184" cy="112" rx="5" ry="14" className="fa-pl" style={{ fill: 'var(--fa-skin)' }} />
+        <path d={f.head} className="fa-pl" style={{ fill: 'var(--fa-skin)' }} />
+
         <g style={{ opacity: f.op.forehead }}>
           <path className="fa-pw" d="M70,44 Q110,40 150,44" />
           <path className="fa-pw" d="M66,54 Q110,50 154,54" />
@@ -163,6 +173,7 @@ function ExpressionPreview({ pose, poseKey, onK }: Props) {
         <path d={f.browL} className="fa-pl" style={{ strokeWidth: 3.2 }} />
         <path d={f.browR} className="fa-pl" style={{ strokeWidth: 3.2 }} />
         <path d={f.mouth} className="fa-pl" style={{ fill: 'var(--fa-lip)' }} />
+        </g>
       </svg>
 
       <button

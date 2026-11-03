@@ -182,9 +182,9 @@ export default function AnatomyHubPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 animate-slide-up motion-reduce:animate-none">
             <AtlasCard
               href="/anatomy/face"
-              titleEn="Facial Muscles"
+              titleEn="Facial & Neck Muscles"
               titleAr="أطلس التشريح"
-              description={`${MUSCLES.length} عضلة تفاعلية مع الحركات التعبيرية — ابتسامة، عبوس، رفع الحاجب، وغيرها.`}
+              description={`${MUSCLES.length} عضلة تفاعلية (وجه ورقبة) بوضعي 2D و3D مع الحركات — ابتسامة، دوران الرأس، البلع، وغيرها.`}
               icon={<IconFace />}
               accent="teal"
               available
