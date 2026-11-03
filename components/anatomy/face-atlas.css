@@ -19,7 +19,6 @@
   grid-template-areas: "card" "stage";
 }
 
-/* سطح المكتب: البطاقة على اليمين وتكون Sticky */
 @media (min-width: 880px) {
   .fa-layout {
     grid-template-columns: minmax(0, 1fr) 380px;
@@ -31,7 +30,6 @@
 .fa-card { grid-area: card; min-width: 0; z-index: 10; }
 .fa-stage { grid-area: stage; min-width: 0; }
 
-/* تثبيت البطاقة فقط على الشاشات الكبيرة */
 @media (min-width: 880px) {
   .fa-card.is-sticky { position: sticky; top: calc(var(--nav-h, 0px) + 8px); }
   .fa-card.is-quiz { position: sticky; top: calc(var(--nav-h, 0px) + 12px); }
@@ -64,7 +62,6 @@
   width: 100%;
   height: auto;
   aspect-ratio: var(--R);
-  /* يضمن ألا يتجاوز الرسم 68% من ارتفاع الشاشة على الشاشات الكبيرة */
   max-width: calc(68vh * var(--R));
   touch-action: manipulation;
   direction: ltr;
@@ -133,11 +130,10 @@
 }
 
 /* ---------- طبقة الرقبة ---------- */
-/* الـ platysma صفيحة رقيقة: نُظهر ما تحتها */
 .fa-m[data-id='platysma'] > .fa-mo { fill-opacity: .55; }
 .fa-neckmark { fill: none; stroke: var(--fa-ink); stroke-opacity: .5; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
 
-/* ================= الاستوديو: واجهة الأطلس ================= */
+/* ================= الاستوديو ================= */
 .fa-studio { --r: 10px; }
 .fa-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
 .fa-bar-end { display: flex; align-items: center; gap: 8px; }
@@ -255,7 +251,7 @@
 .fa3-note { position: absolute; inset-inline: 10px; inset-block-end: 104px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper-soft); font-size: 12px; color: var(--ink); }
 .fa3-credit { position: absolute; inset-inline-end: 10px; inset-block-end: 6px; font-size: 10px; color: var(--ink-muted); pointer-events: none; }
 
-/* ================= الإصدار 3: أدوات المجسّم، الاختبار، اللوحات، الأجهزة اللوحية ================= */
+/* ================= الإصدار 3: الأدوات ================= */
 .fa-btn.is-primary { background: var(--ink); border-color: var(--ink); color: var(--paper); }
 .fa-tabs button { display: grid; gap: 2px; justify-items: center; padding: 9px 0 8px; }
 .fa-tabs button small { font-size: 10.5px; font-weight: 500; opacity: .75; }
@@ -358,14 +354,12 @@
   .fa3-pop button { min-height: 46px; }
   .fa3-peel input[type='range'], .fa3-slider input { height: 28px; }
 }
-/* آيباد عمودي وما شابهه: المجسّم كبير والمعلومات تحته */
 @media (min-width: 700px) and (max-width: 999px) {
   .fa3 { height: min(66vh, 720px); }
   .fa-viewer[data-view='3d'] { position: static; }
   .fa-body { max-height: none; }
   .fa-panel { max-height: none; }
 }
-/* آيباد أفقي وشاشات 1000–1200: لوحة أضيق */
 @media (min-width: 1000px) and (max-width: 1200px) {
   .fa-grid { grid-template-columns: minmax(0, 1fr) 340px; }
 }
@@ -385,7 +379,7 @@
   .fa3-bottom { inset-block-end: 16px; }
 }
 
-/* ================= الإصدار 4: التعلّم والأوامر (تصميم مسطّح) ================= */
+/* ================= الإصدار 4: التعلّم والأوامر ================= */
 .fa-kbd { margin-inline-start: 6px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 5px; font: 500 10.5px/1.4 var(--font-mono, monospace); color: var(--ink-muted); }
 .fa-more { inset-inline-start: auto; inset-inline-end: 0; min-width: 190px; }
 .fa-note-view { white-space: pre-wrap; color: var(--ink); }
@@ -398,7 +392,7 @@
 .fa-toast-success { background: var(--teal); }
 .fa-toast-error { background: var(--coral-strong, var(--coral)); }
 
-/* نافذة حوارية (بدون ظلال أو تدرّجات) */
+/* نافذة حوارية */
 .fa-modal-overlay { position: fixed; inset: 0; z-index: 1001; display: grid; place-items: center; padding: 16px; background: color-mix(in srgb, var(--ink) 45%, transparent); }
 .fa-modal { display: flex; flex-direction: column; width: min(520px, 100%); max-height: min(86vh, 760px); border: 1px solid var(--line); border-radius: 14px; background: var(--paper-soft); outline: none; }
 .fa-modal.is-wide { width: min(640px, 100%); }
@@ -443,11 +437,330 @@
 .fa-shortcuts-row dt, .fa-shortcuts-row dd { margin: 0; font-size: 13px; color: var(--ink); }
 .fa-shortcuts-row dd { color: var(--ink-soft); }
 
+/* ================= الإصدار 5: أدوات العرض + الحركات السريعة + ملء الشاشة ================= */
+
+/* أدوات العرض (تكبير/إعادة ضبط/ملء الشاشة) */
+.fa-vctrl {
+  position: absolute;
+  inset-block-start: 8px;
+  inset-inline-end: 8px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: color-mix(in srgb, var(--paper-soft) 92%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  backdrop-filter: blur(6px);
+}
+.fa-vctrl-btn {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.fa-vctrl-btn:hover { background: var(--paper); border-color: var(--line); }
+.fa-vctrl-btn:active { transform: scale(0.96); }
+.fa-vctrl-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.fa-vctrl-btn[aria-pressed='true'] { background: var(--ink); color: var(--paper); }
+.fa-vctrl-pct {
+  min-width: 42px;
+  padding: 0 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  text-align: center;
+}
+@media (pointer: coarse) {
+  .fa-vctrl-btn { width: 40px; height: 40px; }
+}
+
+/* شريط الحركات السريعة */
+.fa-quick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper-soft) 70%, var(--paper));
+}
+.fa-quick-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-muted);
+  margin-inline-end: 4px;
+}
+.fa-quick .fa-pill { min-height: 28px; padding: 4px 10px; font-size: 12px; }
+
+/* وضع ملء الشاشة (Fullscreen API) */
+.fa-viewer:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  max-height: 100vh;
+  border: 0;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper-soft);
+}
+.fa-viewer:fullscreen .fa-vbar,
+.fa-viewer:fullscreen .fa-quick {
+  border-radius: 0;
+}
+.fa-viewer:fullscreen .fa-figure {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0;
+  padding: 12px;
+  background: var(--fa-surface);
+}
+.fa-viewer:fullscreen .fa-figure svg {
+  max-width: min(100%, calc((100vh - 140px) * var(--R)));
+  max-height: calc(100vh - 140px);
+  width: auto;
+  height: auto;
+}
+.fa-viewer:fullscreen .fa3 {
+  height: 100%;
+  max-height: calc(100vh - 100px);
+}
+.fa-viewer:fullscreen .fa-hint { display: block; }
+.fa-viewer:fullscreen .fa-vctrl { inset-block-start: 12px; inset-inline-end: 12px; }
+
+/* fallback للأجهزة التي لا تدعم Fullscreen API */
+.fa-viewer.is-expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  border: 0;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper-soft);
+}
+.fa-viewer.is-expanded .fa-figure {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--fa-surface);
+}
+.fa-viewer.is-expanded .fa-figure svg {
+  max-width: min(100%, calc((100vh - 140px) * var(--R)));
+  max-height: calc(100vh - 140px);
+  width: auto;
+  height: auto;
+}
+body:has(.fa-viewer.is-expanded) { overflow: hidden; }
+
+/* ================= تقليل الحركة والتباين ================= */
 @media (prefers-reduced-motion: reduce) {
-  .fa-studio *, .fa-modal-overlay *, .fa-cmd-overlay *, .fa-toasts * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+  .fa-studio *, .fa-modal-overlay *, .fa-cmd-overlay *, .fa-toasts *,
+  .fa-vctrl-btn { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+  .fa-arrow { animation: none; }
 }
 @media (prefers-contrast: more) {
-  .fa-btn, .fa-pill, .fa-row, .fa-seg, .fa-tag { border-width: 2px; }
+  .fa-btn, .fa-pill, .fa-row, .fa-seg, .fa-tag, .fa-vctrl-btn { border-width: 2px; }
+  .fa-vctrl { border-width: 2px; }
 }
 .fa-sum .fa-btn { min-height: 30px; padding: 5px 10px; font-size: 12px; }
 @media (pointer: coarse) { .fa-sum .fa-btn { min-height: 40px; } }
+/* ================= تحسينات أزرار التحكم (Top Right) ================= */
+.fa-vctrl {
+  /* تأكد من أنه في الأعلى يمين الشاشة في RTL */
+  inset-inline-start: 8px !important;
+  inset-inline-end: auto !important;
+  background: var(--paper-soft);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 6px;
+  gap: 4px;
+}
+.fa-vctrl-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  color: var(--ink-soft);
+}
+.fa-vctrl-btn:hover {
+  color: var(--ink);
+  background: var(--paper);
+  border-color: var(--line);
+}
+.fa-vctrl-info {
+  color: var(--teal);
+  background: var(--teal-tint);
+  border-color: var(--teal-soft);
+}
+.fa-vctrl-info:hover {
+  background: var(--teal-soft);
+  color: var(--teal-hover);
+}
+.fa-vctrl-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--line);
+  margin: 0 4px;
+}
+
+/* نافذة المعلومات المنبثقة */
+.fa-info-modal .fa-title {
+  text-align: left;
+  margin-bottom: 2px;
+}
+.fa-info-modal .fa-sec {
+  margin-top: 16px;
+}
+/* ================= تحسينات أزرار التحكم (Top Right) ================= */
+.fa-vctrl {
+  position: absolute;
+  top: 8px;
+  right: 8px !important;
+  left: auto !important;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: color-mix(in srgb, var(--paper-soft) 92%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+/* إزاحة الزر لأسفل في وضع 3D لتجنب تغطية زر الطبقات */
+.fa-viewer[data-view='3d'] .fa-vctrl {
+  top: 56px;
+}
+
+.fa-vctrl-btn {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.fa-vctrl-btn:hover { background: var(--paper); border-color: var(--line); color: var(--ink); }
+.fa-vctrl-btn:active { transform: scale(0.96); }
+.fa-vctrl-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.fa-vctrl-btn[aria-pressed='true'] { background: var(--ink); color: var(--paper); }
+
+.fa-vctrl-info {
+  color: var(--teal);
+  background: var(--teal-tint);
+  border-color: var(--teal-soft);
+}
+.fa-vctrl-info:hover {
+  background: var(--teal-soft);
+  color: var(--teal-hover);
+}
+
+.fa-vctrl-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--line);
+  margin: 0 4px;
+}
+
+.fa-vctrl-pct {
+  min-width: 42px;
+  padding: 0 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  text-align: center;
+}
+@media (pointer: coarse) {
+  .fa-vctrl-btn { width: 40px; height: 40px; }
+}
+
+/* ================= بطاقة المعلومات داخل ملء الشاشة ================= */
+.fa-fs-card {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  right: auto;
+  width: min(400px, 90vw);
+  max-height: 50vh;
+  overflow-y: auto;
+  background: color-mix(in srgb, var(--paper-soft) 95%, transparent);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 18px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  z-index: 10;
+  direction: ltr;
+  text-align: left;
+  animation: fa-fade-in .2s ease-out;
+}
+
+.fa-fs-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 6px;
+}
+.fa-fs-card-head h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--ink);
+}
+.fa-fs-card-head button {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--ink-muted);
+  padding: 0 4px;
+}
+.fa-fs-card-head button:hover { color: var(--ink); }
+
+.fa-fs-list dt {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-top: 6px;
+  letter-spacing: .05em;
+}
+.fa-fs-list dd {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+.fa-fs-text {
+  font-size: 13px;
+  color: var(--ink);
+  margin: 0;
+  line-height: 1.6;
+}
+
+@keyframes fa-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+}

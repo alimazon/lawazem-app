@@ -25,6 +25,7 @@ import { NECK_TOPICS, NECK_OBJECTIVES, TRIANGLES } from '@/lib/anatomy-neck-note
 import { useLocalState } from '@/lib/hooks/useLocalState';
 import { useKeyboard } from '@/lib/hooks/useKeyboard';
 import { useDebounced } from '@/lib/hooks/useDebounced';
+import { useFullscreen } from '@/lib/hooks/useFullscreen';
 import {
   DEFAULT_LEARN, LEARN_KEY, LEARN_VERSION, computeStats, exportLearn, importLearn, markSeen, recordAnswer, setNote,
   toggleFavorite, type LearnState,
@@ -37,6 +38,7 @@ import OnboardingTour from './OnboardingTour';
 import ProgressPanel from './ProgressPanel';
 import RelatedMuscles from './RelatedMuscles';
 import ShortcutsHelp from './ShortcutsHelp';
+import ViewerControls from './ViewerControls';
 import { ToastProvider, useToast } from './Toasts';
 
 import ExpressionPreview from './ExpressionPreview';
@@ -61,6 +63,7 @@ const EMPTY_BEST: Record<QuizScope, number> = { all: 0, face: 0, neck: 0 };
 const VIEW_KEY = 'anatomy-face-view';
 const ROUND_SIZE = 10;
 const V3_IDS: readonly string[] = MUSCLE_GROUPS.find((g) => g.labelEn === 'Mastication (V3)')?.ids ?? [];
+const QUICK_MOVES = ['smile', 'frown', 'surprise', 'headTurn', 'swallow'] as const;
 
 // ==================== طبقات الرسم الثابتة ====================
 const FaceBase = memo(function FaceBase() {
@@ -84,12 +87,10 @@ const FaceBase = memo(function FaceBase() {
   );
 });
 
-/** الرقبة والكتفان: تُرسم خلف الرأس وتمتد تحت حدود الرسم الأصلي (y > 540) */
 const NeckBase = memo(function NeckBase() {
   return <path d={NECK_OUTLINE} className="fa-base-fascia" />;
 });
 
-/** معالم تشريحية بخطوط رفيعة فوق العضلات (العظم اللامي، الغضروف الدرقي، الترقوة) */
 const NeckDecor = memo(function NeckDecor() {
   return (
     <g className="fa-decor">
@@ -247,7 +248,10 @@ function FaceAtlasInner() {
   const [flashOpen, setFlashOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false); 
+  const [showFsInfo, setShowFsInfo] = useState(true); // بطاقة المعلومات داخل ملء الشاشة
   const [moreOpen, setMoreOpen] = useState(false);
+  const [zoomPct, setZoomPct] = useState(100);
   const quizOpts = useRef<{ scope: QuizScope; count: number }>({ scope: 'all', count: 10 });
   const [quiz, setQuiz] = useState<QuizState | null>(null);
   const quizRef = useRef<QuizState | null>(null);
@@ -263,12 +267,26 @@ function FaceAtlasInner() {
   const tipRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<SVGTextElement>(null);
   const vbRef = useRef<ViewBox>(vb);
+  const baseVbRef = useRef<ViewBox>(vb);
   const labelsOnRef = useRef(false);
   const animRef = useRef(0);
   const reducedRef = useRef(false);
   const interacted = useRef(false);
   const bestsRef = useRef<Record<QuizScope, number>>(EMPTY_BEST);
   const kRef = useRef(0);
+
+  // مراجع ومؤثرات العرض
+  const viewerRef = useRef<HTMLElement>(null);
+  const dragRef = useRef<{ active: boolean; startX: number; startY: number; startVb: ViewBox | null; moved: number }>(
+    { active: false, startX: 0, startY: 0, startVb: null, moved: 0 },
+  );
+  const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const pinchRef = useRef<{ dist: number; vb: ViewBox } | null>(null);
+  const fs = useFullscreen<HTMLDivElement>();
+
+  useEffect(() => {
+    if (viewerRef.current) fs.setRef(viewerRef.current as HTMLDivElement);
+  }, [fs.setRef]);
 
   // ==================== الكاميرا ====================
   const animateTo = useCallback((to: ViewBox, instant = false) => {
@@ -292,10 +310,47 @@ function FaceAtlasInner() {
     animRef.current = requestAnimationFrame(step);
   }, []);
 
+  const clampVb = useCallback((v: ViewBox): ViewBox => {
+    const MIN_W = 90;
+    const MAX_W = 500;
+    const [x, y, w, h] = v;
+    const nw = Math.max(MIN_W, Math.min(MAX_W, w));
+    const nh = nw * (h / Math.max(1, w));
+    const nx = Math.max(-260, Math.min(620 - nw, x));
+    const ny = Math.max(-260, Math.min(1000 - nh, y));
+    return [nx, ny, nw, nh];
+  }, []);
+
+  const applyVb = useCallback((v: ViewBox) => {
+    cancelAnimationFrame(animRef.current);
+    const c = clampVb(v);
+    vbRef.current = c;
+    setVb(c);
+    const base = baseVbRef.current;
+    if (base[2] > 0) setZoomPct(Math.round((base[2] / c[2]) * 100));
+  }, [clampVb]);
+
+  const zoomSvgAt = useCallback((factor: number, fx = 0.5, fy = 0.5) => {
+    const [x, y, w, h] = vbRef.current;
+    const nw = w * factor;
+    const nh = h * factor;
+    applyVb([x + (w - nw) * fx, y + (h - nh) * fy, nw, nh]);
+  }, [applyVb]);
+
+  const resetView = useCallback(() => {
+    const preset = viewBoxFor(zoom, labelsOnRef.current);
+    baseVbRef.current = preset;
+    setZoomPct(100);
+    animateTo(preset);
+  }, [animateTo, zoom]);
+
   const changeZoom = useCallback(
     (z: ZoomId, instant = false) => {
       setZoom(z);
-      animateTo(viewBoxFor(z, labelsOnRef.current), instant);
+      const preset = viewBoxFor(z, labelsOnRef.current);
+      baseVbRef.current = preset;
+      setZoomPct(100);
+      animateTo(preset, instant);
     },
     [animateTo],
   );
@@ -304,10 +359,31 @@ function FaceAtlasInner() {
     const next = !labelsOnRef.current;
     labelsOnRef.current = next;
     setLabelsOn(next);
-    animateTo(viewBoxFor(zoom, next), true);
+    const preset = viewBoxFor(zoom, next);
+    baseVbRef.current = preset;
+    setZoomPct(100);
+    animateTo(preset, true);
   }, [animateTo, zoom]);
 
   useEffect(() => () => cancelAnimationFrame(animRef.current), []);
+
+  // عجلة الفأرة = تكبير عند نقطة المؤشر (2D فقط)
+  const zoomAtRef = useRef(zoomSvgAt);
+  zoomAtRef.current = zoomSvgAt;
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg || view !== '2d') return;
+    const onWheel = (e: WheelEvent): void => {
+      if (mode === 'quiz') return;
+      e.preventDefault();
+      const rect = svg.getBoundingClientRect();
+      const fx = (e.clientX - rect.left) / rect.width;
+      const fy = (e.clientY - rect.top) / rect.height;
+      zoomAtRef.current(e.deltaY < 0 ? 0.85 : 1.18, fx, fy);
+    };
+    svg.addEventListener('wheel', onWheel, { passive: false });
+    return () => svg.removeEventListener('wheel', onWheel);
+  }, [view, mode]);
 
   // ==================== بدء التشغيل ====================
   useIsoLayoutEffect(() => {
@@ -319,7 +395,6 @@ function FaceAtlasInner() {
 
     let wantLabels = false;
     try {
-      // إخفاء التسميات افتراضياً على الجوال (أقل من 1024px)
       wantLabels = window.matchMedia('(min-width: 1024px)').matches;
     } catch {
       /* تجاهل */
@@ -348,6 +423,7 @@ function FaceAtlasInner() {
     setZoom(startZoom);
     const v = viewBoxFor(startZoom, wantLabels);
     vbRef.current = v;
+    baseVbRef.current = v;
     setVb(v);
     if (want3d && webglAvailable()) setView('3d');
   }, []);
@@ -527,7 +603,6 @@ function FaceAtlasInner() {
       const q = cur.questions[cur.index];
       if (!q) return;
       const ok = choice === q.correct;
-      // التسجيل مرة واحدة هنا (وليس داخل دالة التحديث التي قد تُنفَّذ مرتين في StrictMode)
       if (MUSCLE_BY_ID[q.id]) setLearn((p) => recordAnswer(p, q.id, ok));
       quizRef.current = { ...cur, picked: choice };
       setQuiz((prev) => {
@@ -685,6 +760,7 @@ function FaceAtlasInner() {
   };
 
   const onLayerClick = (e: MouseEvent<SVGGElement>) => {
+    if (dragRef.current.moved > 5) return;
     const id = idFromEvent(e);
     if (id) handlePick(id);
   };
@@ -716,6 +792,72 @@ function FaceAtlasInner() {
 
   const hideTip = () => {
     if (tipRef.current) tipRef.current.hidden = true;
+  };
+
+  // ==================== سحب + قرص ====================
+  const onSvgPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (view !== '2d' || mode === 'quiz') return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointersRef.current.size === 1) {
+      dragRef.current.active = true;
+      dragRef.current.startX = e.clientX;
+      dragRef.current.startY = e.clientY;
+      dragRef.current.startVb = [...vbRef.current] as ViewBox;
+      dragRef.current.moved = 0;
+    }
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+
+  const onSvgPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (view !== '2d' || mode === 'quiz') return;
+    const p = pointersRef.current.get(e.pointerId);
+    if (!p) return;
+    p.x = e.clientX;
+    p.y = e.clientY;
+
+    // قرص بإصبعين
+    if (pointersRef.current.size === 2) {
+      const [a, b] = [...pointersRef.current.values()];
+      if (!a || !b) return;
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      if (!pinchRef.current) {
+        pinchRef.current = { dist, vb: [...vbRef.current] as ViewBox };
+        return;
+      }
+      const factor = pinchRef.current.dist / Math.max(1, dist);
+      const [x, y, w, h] = pinchRef.current.vb;
+      const nw = w * factor;
+      const nh = h * factor;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const fx = ((a.x + b.x) / 2 - rect.left) / rect.width;
+      const fy = ((a.y + b.y) / 2 - rect.top) / rect.height;
+      applyVb([x + (w - nw) * fx, y + (h - nh) * fy, nw, nh]);
+      return;
+    }
+
+    // سحب باصبع/زر واحد
+    if (!dragRef.current.active || !dragRef.current.startVb) return;
+    const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
+    dragRef.current.moved = Math.max(dragRef.current.moved, Math.hypot(dx, dy));
+    if (dragRef.current.moved < 5) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const [bx, by, bw, bh] = dragRef.current.startVb;
+    const scaleX = bw / Math.max(1, rect.width);
+    const scaleY = bh / Math.max(1, rect.height);
+    applyVb([bx - dx * scaleX, by - dy * scaleY, bw, bh]);
+    e.currentTarget.style.cursor = 'grabbing';
+  };
+
+  const endPointer = (e: React.PointerEvent<SVGSVGElement>) => {
+    pointersRef.current.delete(e.pointerId);
+    if (pointersRef.current.size < 2) pinchRef.current = null;
+    if (dragRef.current.active && pointersRef.current.size === 0) {
+      dragRef.current.active = false;
+      dragRef.current.startVb = null;
+    }
+    if (e.currentTarget) e.currentTarget.style.cursor = '';
   };
 
   const share = async () => {
@@ -787,6 +929,10 @@ function FaceAtlasInner() {
     input.onchange = async () => {
       const f = input.files?.[0];
       if (!f) return;
+      if (f.size > 2_000_000) {
+        notify('الملف كبير جداً (الحد 2 ميغابايت)', 'error');
+        return;
+      }
       const parsed = importLearn(await f.text());
       if (parsed) {
         setLearn(parsed);
@@ -805,7 +951,7 @@ function FaceAtlasInner() {
     }
   }, [setLearn, notify]);
 
-  const dialogOpen = cmdOpen || progressOpen || flashOpen || shortcutsOpen || noteOpen;
+  const dialogOpen = cmdOpen || progressOpen || flashOpen || shortcutsOpen || noteOpen || infoOpen;
 
   const commandHandlers = useMemo<CommandHandlers>(
     () => ({
@@ -851,10 +997,15 @@ function FaceAtlasInner() {
       { key: '3', handler: () => setPtab('neck'), description: 'Neck' },
       { key: '4', handler: () => setPtab('index'), description: 'Index' },
       { key: 'v', handler: () => chooseView(view === '3d' ? '2d' : '3d'), description: 'View' },
-      { key: 'f', handler: toggleFav, description: 'Favorite' },
+      { key: 'f', shift: false, handler: toggleFav, description: 'Favorite' },
+      { key: 'f', shift: true, handler: () => { void fs.toggle(); }, description: 'Fullscreen' },
+      { key: '0', handler: resetView, description: 'Reset view' },
+      { key: '+', handler: () => zoomSvgAt(0.8), description: 'Zoom in' },
+      { key: '-', handler: () => zoomSvgAt(1.25), description: 'Zoom out' },
       { key: 'n', handler: openNote, description: 'Note' },
       { key: 'p', handler: () => setProgressOpen(true), description: 'Progress' },
       { key: 's', handler: () => void share(), description: 'Share' },
+      { key: 'i', handler: () => { if (selected || expression) { if (fs.isFullscreen) setShowFsInfo(true); else setInfoOpen(true); } }, description: 'Info' },
     ],
     mode === 'explore' && !dialogOpen,
   );
@@ -893,8 +1044,7 @@ function FaceAtlasInner() {
   const selTags = selected ? nerveTagsOf(selected) : [];
   const arch = selected ? pharyngealArchOf(selected) : null;
   const selBranches = selected ? branchesOf(selected) : [];
-  
-  // حساب النسبة هنا لتتوافق مع حالة التسميات
+
   const dynamicR = view === '3d' ? 0.9 : canvasRatio(zoom, labelsOn);
 
   const NECK_MOVES = ['headTurn', 'headFlex', 'lateralFlex', 'shrug', 'swallow'];
@@ -931,7 +1081,6 @@ function FaceAtlasInner() {
 
   return (
     <div className="fa-studio">
-      {/* ---- الشريط العلوي ---- */}
       <div className="fa-bar">
         <div className="fa-seg" role="group" aria-label="Atlas mode">
           <button type="button" aria-pressed={mode === 'explore'} onClick={() => (mode === 'quiz' ? exitQuiz() : undefined)}>استكشاف</button>
@@ -974,8 +1123,7 @@ function FaceAtlasInner() {
       <p className="sr-only" role="status" aria-live="polite">{mode === 'explore' ? statusText : ''}</p>
 
       <div className="fa-grid">
-        {/* ================= المجسّم / الرسم ================= */}
-        <section className="fa-viewer" data-view={view} aria-label="Viewer">
+        <section ref={viewerRef} className="fa-viewer" data-view={view} aria-label="Viewer">
           <div className="fa-vbar" role="toolbar" aria-label="Focus region">
             <div className="fa-scroll">
               {(Object.keys(ZOOMS) as ZoomId[]).map((k) => (
@@ -989,13 +1137,38 @@ function FaceAtlasInner() {
             )}
           </div>
 
+          {mode === 'explore' && view === '2d' && (
+            <div className="fa-quick" role="toolbar" aria-label="حركات سريعة">
+              <span className="fa-quick-label">حركات:</span>
+              {QUICK_MOVES.map((id) => {
+                const x = EXPRESSIONS.find((e) => e.id === id);
+                if (!x) return null;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    className="fa-pill"
+                    aria-pressed={expressionId === id}
+                    onClick={() => selectExpression(id)}
+                  >
+                    {x.ar}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           <div ref={figRef} className="fa-plate fa-figure" style={{ '--R': dynamicR.toFixed(4) } as CSSProperties}>
             <svg
               ref={svgRef}
               viewBox={vb.map((n) => n.toFixed(2)).join(' ')}
               role="group"
               aria-label="Anatomical drawing of the facial and neck muscles"
-              style={view === '3d' ? { display: 'none' } : undefined}
+              style={view === '3d' ? { display: 'none' } : { touchAction: 'none' }}
+              onPointerDown={onSvgPointerDown}
+              onPointerMove={onSvgPointerMove}
+              onPointerUp={endPointer}
+              onPointerCancel={endPointer}
             >
               <defs>
                 <clipPath id={clipId} clipPathUnits="userSpaceOnUse">
@@ -1064,17 +1237,56 @@ function FaceAtlasInner() {
               />
             )}
 
+            <ViewerControls
+              view={view}
+              isFullscreen={fs.isFullscreen}
+              fullscreenSupported={fs.supported}
+              zoomPct={zoomPct}
+              canZoom={view === '2d'}
+              onZoomIn={() => zoomSvgAt(0.8)}
+              onZoomOut={() => zoomSvgAt(1.25)}
+              onReset={view === '3d' ? () => changeZoom(zoom) : resetView}
+              onToggleFullscreen={() => { void fs.toggle(); }}
+              hasSelection={!!selectedId || !!expressionId}
+              onShowInfo={() => {
+                if (fs.isFullscreen) {
+                  setShowFsInfo(true);
+                } else {
+                  setInfoOpen(true);
+                }
+              }}
+            />
+
+            {/* بطاقة المعلومات المصغرة داخل ملء الشاشة */}
+            {fs.isFullscreen && showFsInfo && (selected || expression) && (
+              <div className="fa-fs-card" dir="ltr">
+                <div className="fa-fs-card-head">
+                  <h3>{selected ? selected.en : expression?.en}</h3>
+                  <button type="button" onClick={() => setShowFsInfo(false)} aria-label="إغلاق">×</button>
+                </div>
+                {selected ? (
+                  <dl className="fa-fs-list">
+                    <dt>Origin</dt><dd>{selected.origin}</dd>
+                    <dt>Insertion</dt><dd>{selected.insertion}</dd>
+                    <dt>Nerve Supply</dt><dd>{selected.nerve}</dd>
+                    <dt>Action</dt><dd>{selected.actEn}</dd>
+                  </dl>
+                ) : (
+                  <p className="fa-fs-text">{expression?.noteEn || expression?.note}</p>
+                )}
+              </div>
+            )}
+
             <div ref={tipRef} className="fa-tip" hidden />
           </div>
 
           <p className="fa-hint">
             {view === '3d'
               ? 'اسحب للتدوير، وبالعجلة أو القرص للتكبير. اضغط على أي عضلة لتحديدها، واستخدم «قشّر الطبقات» للوصول للعضلات العميقة.'
-              : 'رسم تعليمي مبسّط. الأسهم تُظهر اتجاه شدّ العضلة عند الانقباض.'}
+              : 'عجلة الفأرة للتكبير · اسحب للتنقل · Shift+F لملء الشاشة · 0 لإعادة الضبط.'}
           </p>
         </section>
 
-        {/* ================= اللوحة الجانبية ================= */}
         <aside className="fa-panel" aria-label={mode === 'quiz' ? 'Quiz' : 'Muscle info'}>
           {mode === 'quiz' ? (
             <div className="fa-panel-pad">
@@ -1363,6 +1575,50 @@ function FaceAtlasInner() {
           <NoteForm key={selected.id} initial={learn.notes[selected.id] ?? ''} title={selected.en} onSave={saveNote} onCancel={() => setNoteOpen(false)} />
         )}
       </AtlasDialog>
+
+      {/* نافذة معلومات العضلة (للشاشة العادية) */}
+      <AtlasDialog open={infoOpen} onClose={() => setInfoOpen(false)} title="معلومات العضلة" wide>
+        {selected ? (
+          <div className="fa-info-modal">
+            <h3 className="fa-title" dir="ltr">{selected.en}</h3>
+            <p className="fa-sub">{selected.region}</p>
+            <p className="fa-text" dir="ltr">{selected.actEn}</p>
+            <p className="fa-text-ar">{ACTION_AR[selected.id]}</p>
+            <div className="fa-sec">
+              <p className="fa-sec-title"><span dir="ltr">Origin</span><small>المنشأ</small></p>
+              <p className="fa-text" dir="ltr">{selected.origin}</p>
+              <p className="fa-sec-title"><span dir="ltr">Insertion</span><small>المرتكز</small></p>
+              <p className="fa-text" dir="ltr">{selected.insertion}</p>
+            </div>
+            <div className="fa-sec">
+              <p className="fa-sec-title"><span dir="ltr">Innervation</span><small>العصب المغذّي</small></p>
+              <p className="fa-text" dir="ltr">{selected.nerve}</p>
+            </div>
+            <div className="fa-sec">
+              <p className="fa-sec-title"><span dir="ltr">Clinical</span><small>سريري</small></p>
+              <p className="fa-text" dir="ltr">{selected.clin}</p>
+              {PEARLS_AR[selected.id] && <p className="fa-pearl">{PEARLS_AR[selected.id]}</p>}
+            </div>
+          </div>
+        ) : expression ? (
+          <div className="fa-info-modal">
+            <h3 className="fa-title" dir="ltr">{expression.en}</h3>
+            <p className="fa-sub">{expression.ar}</p>
+            {expression.noteEn && <p className="fa-text" dir="ltr">{expression.noteEn}</p>}
+            <p className="fa-text-ar">{expression.note}</p>
+            <div className="fa-tags" dir="ltr">
+              {expression.muscles.map((x) => (
+                <button key={x.id} type="button" className="fa-tag is-btn" onClick={() => { setInfoOpen(false); selectMuscle(x.id, { zoom: true }); }}>
+                  {MUSCLE_BY_ID[x.id]?.short ?? MUSCLE_BY_ID[x.id]?.en}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="fa-text-ar">لا توجد عضلة محددة. اضغط على أي عضلة في النموذج لعرض معلوماتها.</p>
+        )}
+      </AtlasDialog>
+
       <OnboardingTour />
     </div>
   );
