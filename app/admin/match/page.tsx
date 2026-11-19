@@ -315,17 +315,20 @@ export default function AdminMatchPage() {
     }
   }
 
-  async function handleAdminRequest(requestId: string, action: 'accept' | 'reject') {
-    setBusy(`req-${requestId}`);
-    try {
-      await fetchApi('admin-handle-request', { request_id: requestId, action });
-      showMsg('success', action === 'accept' ? 'تم قبول الطالب' : 'تم رفض الطالب');
-      await refreshGroups();
-    } catch (err) {
-      showMsg('error', err instanceof Error ? err.message : 'خطأ');
-    } finally {
-      setBusy(null);
-    }
+  // ✅ دالة جديدة: إبلاغ القائد بالطلبات المعلقة عبر التليكرام
+  function handleInformLeader(group: GroupRow) {
+    if (!group.leader?.telegram_username || !group.requests || group.requests.length === 0) return;
+
+    const count = group.requests.length;
+    const groupLabel = group.name || `كروب #${group.serial}`;
+    const message =
+      `مرحباً ${group.leader.full_name}،\n\n` +
+      `لديك ${count} طلب انضمام معلق في ${groupLabel}.\n` +
+      `الرجاء الدخول إلى صفحة الكروب لقبول أو رفض الطلبات.\n\n` +
+      `- إدارة لوازم`;
+
+    const url = `https://t.me/${group.leader.telegram_username}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
 
   function handleLogout() {
@@ -607,7 +610,6 @@ export default function AdminMatchPage() {
                               <span className="font-mono" dir="ltr">
                                 (@{g.leader.telegram_username})
                               </span>
-                              {/* 👈 زر التواصل مع القائد */}
                               <a
                                 href={`https://t.me/${g.leader.telegram_username}`}
                                 target="_blank"
@@ -666,37 +668,47 @@ export default function AdminMatchPage() {
                       </button>
                     </div>
 
-                    {/* Requests */}
+                    {/* Requests — عرض فقط + إبلاغ القائد */}
                     {g.requests && g.requests.length > 0 && (
                       <div className="border-t border-line pt-2">
-                        <div className="text-xs font-bold text-amber-600 mb-2">طلبات الانضمام المعلقة ({g.requests.length})</div>
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                          <div className="text-xs font-bold text-amber-600">
+                            طلبات الانضمام المعلقة ({g.requests.length})
+                          </div>
+                          {g.leader?.telegram_username && (
+                            <button
+                              onClick={() => handleInformLeader(g)}
+                              className="rounded-md bg-[#229ED9] px-3 py-1.5 text-[10px] font-bold text-white hover:bg-[#1e8cc0] transition-colors flex items-center gap-1 shadow-sm"
+                            >
+                              💬 إبلاغ القائد
+                            </button>
+                          )}
+                        </div>
                         <div className="space-y-1.5">
                           {g.requests.map((req) => (
-                            <div key={req.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs border border-amber-100">
+                            <div
+                              key={req.id}
+                              className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs border border-amber-100"
+                            >
                               <div className="flex items-center gap-2">
                                 <span>{req.student?.gender === 'male' ? '👨' : '👩'}</span>
                                 <span className="font-bold text-ink">{req.student?.full_name}</span>
-                                <span className="text-ink-muted font-mono" dir="ltr">@{req.student?.telegram_username}</span>
+                                <span className="text-ink-muted font-mono" dir="ltr">
+                                  @{req.student?.telegram_username}
+                                </span>
                               </div>
-                              <div className="flex gap-1.5 shrink-0">
-                                <button
-                                  onClick={() => handleAdminRequest(req.id, 'accept')}
-                                  disabled={busy === `req-${req.id}`}
-                                  className="rounded bg-teal px-3 py-1 text-[10px] font-bold text-white hover:bg-teal/90 disabled:opacity-50"
-                                >
-                                  قبول
-                                </button>
-                                <button
-                                  onClick={() => handleAdminRequest(req.id, 'reject')}
-                                  disabled={busy === `req-${req.id}`}
-                                  className="rounded bg-ink/10 px-3 py-1 text-[10px] font-bold text-ink-soft hover:bg-ink/20 disabled:opacity-50"
-                                >
-                                  رفض
-                                </button>
-                              </div>
+                              <span className="text-[10px] text-ink-muted">
+                                {new Date(req.created_at).toLocaleString('ar-IQ', {
+                                  dateStyle: 'short',
+                                  timeStyle: 'short',
+                                })}
+                              </span>
                             </div>
                           ))}
                         </div>
+                        <p className="text-[10px] text-ink-muted mt-2 italic">
+                          ℹ️ القبول والرفض من صلاحيات القائد فقط. يمكنك إبلاغه بالطلبات عبر الزر أعلاه.
+                        </p>
                       </div>
                     )}
 
