@@ -131,22 +131,96 @@ export async function POST(req: Request) {
       });
     }
 
-    // ============ 4) قائمة الكروبات مع الأعضاء ============
+    // ============ 4) قائمة الكروبات مع الأعضاء والطلبات ============
     if (action === 'list-groups') {
       const { data, error } = await supabaseAdmin
         .from('sg_groups')
         .select(
           `*,
            leader:sg_students!sg_groups_leader_id_fkey(id, full_name, telegram_username),
-           members:sg_members(id, role, student_id, student:sg_students(id, full_name, telegram_username, gender))`
+           members:sg_members(id, role, student_id, student:sg_students(id, full_name, telegram_username, gender)),
+           requests:sg_requests(id, status, created_at, student:sg_students(id, full_name, telegram_username, gender))`
         )
         .order('serial', { ascending: false });
 
       if (error) throw new Error(error.message);
-      return ok({ groups: data || [] });
+
+      // تصفية الطلبات لتشمل فقط المعلقة (pending)
+      const formatted = (data || []).map((g: any) => ({
+        ...g,
+        requests: (g.requests || []).filter((r: any) => r.status === 'pending'),
+      }));
+
+      return ok({ groups: formatted });
     }
 
-    // ============ 5) تعديل خصائص كروب ============
+    // ============ 5) معالجة طلب انضمام من الأدمن ============
+    if (action === 'admin-handle-request') {
+      const { request_id, action: reqAction } = body;
+      if (!request_id || !['accept', 'reject'].includes(reqAction)) {
+        return fail('بيانات غير صالحة');
+      }
+
+      // جلب الكروب المرتبط بالطلب لمعرفة القائد
+      const { data: reqData } = await supabaseAdmin
+        .from('sg_requests')
+        .select('group_id')
+        .eq('id', request_id)
+        .maybeSingle();
+
+      if (!reqData) return fail('الطلب غير موجود');
+
+      const { data: group } = await supabaseAdmin
+        .from('sg_groups')
+        .select('leader_id')
+        .eq('id', reqData.group_id)
+        .maybeSingle();
+
+      if (!group?.leader_id) return fail('الكروب ليس له قائد (خطأ في البيانات)');
+
+      if (reqAction === 'accept') {
+        const { error } = await supabaseAdmin.rpc('sg_accept_request', {
+          p_request_id: request_id,
+          p_leader_id: group.leader_id,
+        });
+        if (error) throw new Error(error.message);
+      } else {
+        const { error } = await supabaseAdmin.rpc('sg_reject_request', {
+          p_request_id: request_id,
+          p_leader_id: group.leader_id,
+        });
+        if (error) throw new Error(error.message);
+      }
+
+      return ok({ message: 'تمت معالجة الطلب بنجاح' });
+    }
+
+    // ============ 6) حذف الكروبات الملغية تلقائياً ============
+    if (action === 'cleanup-cancelled') {
+      // 1. جلب الكروبات الملغية
+      const { data: cancelledGroups } = await supabaseAdmin
+        .from('sg_groups')
+        .select('id')
+        .eq('status', 'cancelled');
+
+      if (!cancelledGroups || cancelledGroups.length === 0) {
+        return ok({ message: 'لا توجد كروبات ملغية للحذف.' });
+      }
+
+      const ids = cancelledGroups.map((g) => g.id);
+
+      // 2. حذف الأعضاء والطلبات المرتبطة بهذه الكروبات
+      await supabaseAdmin.from('sg_members').delete().in('group_id', ids);
+      await supabaseAdmin.from('sg_requests').delete().in('group_id', ids);
+
+      // 3. حذف الكروبات نفسها
+      const { error } = await supabaseAdmin.from('sg_groups').delete().in('id', ids);
+      if (error) throw new Error(error.message);
+
+      return ok({ message: `تم حذف ${ids.length} كروب ملغى بنجاح.` });
+    }
+
+    // ============ 7) تعديل خصائص كروب ============
     if (action === 'edit-group') {
       const { group_id, name, target_size, status } = body;
       if (!group_id) return fail('معرف الكروب مطلوب');
@@ -164,18 +238,19 @@ export async function POST(req: Request) {
       return ok({ message: 'تم التعديل' });
     }
 
-    // ============ 6) حذف كروب ============
+    // ============ 8) حذف كروب ============
     if (action === 'delete-group') {
       const { group_id } = body;
       if (!group_id) return fail('معرف الكروب مطلوب');
 
       await supabaseAdmin.from('sg_members').delete().eq('group_id', group_id);
+      await supabaseAdmin.from('sg_requests').delete().eq('group_id', group_id);
       const { error } = await supabaseAdmin.from('sg_groups').delete().eq('id', group_id);
       if (error) throw new Error(error.message);
       return ok({ message: 'تم حذف الكروب' });
     }
 
-    // ============ 7) إزالة عضو ============
+    // ============ 9) إزالة عضو ============
     if (action === 'remove-member') {
       const { group_id, student_id } = body;
       if (!group_id || !student_id) return fail('بيانات ناقصة');
@@ -208,7 +283,7 @@ export async function POST(req: Request) {
       return ok({ message: 'تم إزالة العضو' });
     }
 
-    // ============ 8) تغيير قائد الكروب ============
+    // ============ 10) تغيير قائد الكروب ============
     if (action === 'change-leader') {
       const { group_id, student_id } = body;
       if (!group_id || !student_id) return fail('بيانات ناقصة');
@@ -238,7 +313,7 @@ export async function POST(req: Request) {
       return ok({ message: 'تم تغيير القائد' });
     }
 
-    // ============ 9) إضافة عضو من قائمة الانتظار ============
+    // ============ 11) إضافة عضو من قائمة الانتظار ============
     if (action === 'add-member') {
       const { group_id, student_id } = body;
       if (!group_id || !student_id) return fail('بيانات ناقصة');

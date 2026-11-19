@@ -48,6 +48,18 @@ interface GroupMember {
   } | null;
 }
 
+interface GroupRequest {
+  id: string;
+  status: string;
+  created_at: string;
+  student: {
+    id: string;
+    full_name: string;
+    telegram_username: string;
+    gender: string;
+  } | null;
+}
+
 interface GroupRow {
   id: string;
   code: string;
@@ -60,6 +72,7 @@ interface GroupRow {
   status: string;
   leader: { id: string; full_name: string; telegram_username: string } | null;
   members: GroupMember[];
+  requests: GroupRequest[];
 }
 
 type Tab = 'queue' | 'preview' | 'groups';
@@ -85,7 +98,6 @@ export default function AdminMatchPage() {
     const saved = sessionStorage.getItem(STORAGE_KEY);
     if (saved) {
       setPassword(saved);
-      // نحاول الدخول تلقائياً
       (async () => {
         try {
           await fetchApi('queue', {}, saved);
@@ -97,6 +109,7 @@ export default function AdminMatchPage() {
         }
       })();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function showMsg(type: 'success' | 'error', text: string) {
@@ -204,6 +217,20 @@ export default function AdminMatchPage() {
     }
   }
 
+  async function handleCleanupCancelled() {
+    if (!confirm('سيتم حذف جميع الكروبات الملغية (مع أعضائها وطلباتها) نهائياً. متابعة؟')) return;
+    setBusy('cleanup');
+    try {
+      const data = await fetchApi<{ message: string }>('cleanup-cancelled');
+      showMsg('success', data.message);
+      await refreshGroups();
+    } catch (err) {
+      showMsg('error', err instanceof Error ? err.message : 'خطأ');
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function handleRename(group: GroupRow) {
     const name = prompt('اسم الكروب الجديد (اتركه فارغاً لحذف الاسم):', group.name || '');
     if (name === null) return;
@@ -288,6 +315,19 @@ export default function AdminMatchPage() {
     }
   }
 
+  async function handleAdminRequest(requestId: string, action: 'accept' | 'reject') {
+    setBusy(`req-${requestId}`);
+    try {
+      await fetchApi('admin-handle-request', { request_id: requestId, action });
+      showMsg('success', action === 'accept' ? 'تم قبول الطالب' : 'تم رفض الطالب');
+      await refreshGroups();
+    } catch (err) {
+      showMsg('error', err instanceof Error ? err.message : 'خطأ');
+    } finally {
+      setBusy(null);
+    }
+  }
+
   function handleLogout() {
     sessionStorage.removeItem(STORAGE_KEY);
     setPassword('');
@@ -341,10 +381,10 @@ export default function AdminMatchPage() {
             </div>
             <div className="flex gap-2">
               <button
-  onClick={() => loadAll()}
-  disabled={loading}
-  className="rounded-lg border border-line bg-white px-3 py-2 text-xs font-bold text-ink hover:bg-ink/5 disabled:opacity-50"
->
+                onClick={() => loadAll()}
+                disabled={loading}
+                className="rounded-lg border border-line bg-white px-3 py-2 text-xs font-bold text-ink hover:bg-ink/5 disabled:opacity-50"
+              >
                 {loading ? '...' : '🔄 تحديث الكل'}
               </button>
               <button
@@ -516,12 +556,21 @@ export default function AdminMatchPage() {
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <h2 className="font-bold text-ink">الكروبات ({groups.length})</h2>
-              <button
-                onClick={refreshGroups}
-                className="text-xs font-bold text-teal hover:underline"
-              >
-                🔄 تحديث
-              </button>
+              <div className="flex gap-3 items-center">
+                <button
+                  onClick={handleCleanupCancelled}
+                  disabled={busy === 'cleanup'}
+                  className="text-xs font-bold text-red-600 hover:underline disabled:opacity-50 flex items-center gap-1"
+                >
+                  {busy === 'cleanup' ? '...' : '🧹 حذف الكروبات الملغية'}
+                </button>
+                <button
+                  onClick={refreshGroups}
+                  className="text-xs font-bold text-teal hover:underline"
+                >
+                  🔄 تحديث
+                </button>
+              </div>
             </div>
 
             {groups.length === 0 ? (
@@ -548,18 +597,28 @@ export default function AdminMatchPage() {
                           </span>
                           <StatusBadge status={g.status} />
                         </div>
-                        <p className="text-xs text-ink-muted mt-1">
-                          القائد:{' '}
+                        <div className="text-xs text-ink-muted mt-1 flex items-center flex-wrap gap-1.5">
+                          <span>القائد:</span>
                           <span className="font-semibold text-ink-soft">
                             {g.leader?.full_name || '—'}
                           </span>
                           {g.leader && (
-                            <span className="font-mono" dir="ltr">
-                              {' '}
-                              (@{g.leader.telegram_username})
-                            </span>
+                            <>
+                              <span className="font-mono" dir="ltr">
+                                (@{g.leader.telegram_username})
+                              </span>
+                              {/* 👈 زر التواصل مع القائد */}
+                              <a
+                                href={`https://t.me/${g.leader.telegram_username}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="rounded bg-[#229ED9]/10 px-1.5 py-0.5 text-[10px] font-bold text-[#229ED9] hover:bg-[#229ED9]/20 transition-colors"
+                              >
+                                💬 تواصل
+                              </a>
+                            </>
                           )}
-                        </p>
+                        </div>
                       </div>
                       <div className="text-center shrink-0">
                         <div className="text-lg font-bold text-teal">
@@ -606,6 +665,40 @@ export default function AdminMatchPage() {
                         🗑 حذف الكروب
                       </button>
                     </div>
+
+                    {/* Requests */}
+                    {g.requests && g.requests.length > 0 && (
+                      <div className="border-t border-line pt-2">
+                        <div className="text-xs font-bold text-amber-600 mb-2">طلبات الانضمام المعلقة ({g.requests.length})</div>
+                        <div className="space-y-1.5">
+                          {g.requests.map((req) => (
+                            <div key={req.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs border border-amber-100">
+                              <div className="flex items-center gap-2">
+                                <span>{req.student?.gender === 'male' ? '👨' : '👩'}</span>
+                                <span className="font-bold text-ink">{req.student?.full_name}</span>
+                                <span className="text-ink-muted font-mono" dir="ltr">@{req.student?.telegram_username}</span>
+                              </div>
+                              <div className="flex gap-1.5 shrink-0">
+                                <button
+                                  onClick={() => handleAdminRequest(req.id, 'accept')}
+                                  disabled={busy === `req-${req.id}`}
+                                  className="rounded bg-teal px-3 py-1 text-[10px] font-bold text-white hover:bg-teal/90 disabled:opacity-50"
+                                >
+                                  قبول
+                                </button>
+                                <button
+                                  onClick={() => handleAdminRequest(req.id, 'reject')}
+                                  disabled={busy === `req-${req.id}`}
+                                  className="rounded bg-ink/10 px-3 py-1 text-[10px] font-bold text-ink-soft hover:bg-ink/20 disabled:opacity-50"
+                                >
+                                  رفض
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Members */}
                     <div className="space-y-1.5">
