@@ -27,6 +27,10 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
 
+  // 👈 حالات البحث والفلترة الجديدة
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterPractical, setFilterPractical] = useState<string>('all');
+
   const [leaderRequests, setLeaderRequests] = useState<RequestWithStudent[]>([]);
   const [myRequests, setMyRequests] = useState<RequestWithGroup[]>([]);
   const [inQueue, setInQueue] = useState(false);
@@ -40,12 +44,9 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
   const [msg, setMsg] = useState({ type: '', text: '' });
   const [copied, setCopied] = useState(false);
 
-  // ✅ تتبع عدد الطلبات السابق (يمنع التنبيه في أول تحميل)
   const lastReqCountRef = useRef<number>(-1);
-  // ✅ لمنع مسح رسائل أحدث (نظام نسخ الرسائل)
   const msgVersionRef = useRef(0);
 
-  // ==================== دوال الرسائل ====================
   function showMsg(type: string, text: string) {
     msgVersionRef.current++;
     setMsg({ type, text });
@@ -62,7 +63,6 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
     setMsg({ type: '', text: '' });
   }
 
-  // ✅ صوت تنبيه بسيط (بدون مكتبات)
   function playNewRequestSound() {
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
@@ -80,7 +80,6 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
     } catch {}
   }
 
-  // ✅ إشعار المتصفح
   function showBrowserNotification(count: number) {
     try {
       if (typeof Notification === 'undefined') return;
@@ -99,12 +98,10 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
     }
     loadData();
 
-    // ✅ طلب إذن إشعارات المتصفح (مرة واحدة)
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
       Notification.requestPermission().catch(() => {});
     }
 
-    // ✅ polling كل 5 ثوانٍ
     const interval = setInterval(() => {
       refreshInBackground();
     }, 5000);
@@ -240,6 +237,21 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
     setTimeout(() => setCopied(false), 2000);
   }
 
+  // 👈 منطق الفلترة
+  const filteredGroups = groups.filter((g) => {
+    // 1. فلترة المجموعة العملية
+    const matchesPractical = filterPractical === 'all' || g.practical_group === filterPractical;
+    
+    // 2. فلترة البحث بالاسم أو اسم القائد
+    const q = searchQuery.toLowerCase().trim();
+    const matchesSearch = 
+      !q || 
+      (g.name && g.name.toLowerCase().includes(q)) || 
+      (g.leader_name && g.leader_name.toLowerCase().includes(q));
+
+    return matchesPractical && matchesSearch;
+  });
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -324,7 +336,6 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
                 </h2>
                 <p className="text-xs sm:text-sm text-ink-soft mt-1">أنت {me.isLeader ? 'قائد هذا الكروب 👑' : 'عضو في هذا الكروب'}</p>
 
-                {/* 👈 عرض المجموعة العملية وإتاحة تعديلها للقائد */}
                 <div className="mt-2 flex items-center gap-2 text-sm">
                   <span className="font-semibold text-ink-soft text-xs sm:text-sm">المجموعة العملية:</span>
                   {me.group.practical_group ? (
@@ -345,7 +356,7 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
                         try {
                           await groupsFetch('/api/groups/update-practical', { practical_group: val });
                           showMsg('success', 'تم تحديث المجموعة العملية');
-                          loadData(); // إعادة تحميل البيانات
+                          loadData();
                         } catch (err) {
                           showMsg('error', 'فشل التحديث');
                         }
@@ -452,17 +463,49 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
           </div>
 
           <div className="space-y-4">
-            <h2 className="text-lg font-bold text-ink flex items-center gap-2">الكروبات المتاحة <span className="bg-ink/5 text-ink-muted px-2 py-0.5 rounded-full text-xs">{groups?.length || 0}</span></h2>
-            {groups?.length === 0 ? <p className="text-sm text-ink-muted bg-white p-6 rounded-2xl border border-line text-center">لا توجد كروبات متاحة للانضمام حالياً.</p> : (
+            <h2 className="text-lg font-bold text-ink flex items-center gap-2">الكروبات المتاحة</h2>
+            
+            {/* 👈 جديد: شريط البحث والفلترة */}
+            <div className="rounded-2xl border border-line bg-white p-3 sm:p-4 shadow-sm space-y-3">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <span className="text-ink-muted">🔍</span>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="ابحث باسم الكروب أو اسم القائد..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full rounded-lg border border-line bg-paper-soft py-2 pr-10 pl-3 text-sm text-ink outline-none focus:border-teal focus:ring-1 focus:ring-teal"
+                  />
+                </div>
+                <select
+                  value={filterPractical}
+                  onChange={(e) => setFilterPractical(e.target.value)}
+                  className="rounded-lg border border-line bg-paper-soft px-3 py-2 text-sm font-semibold text-ink outline-none focus:border-teal sm:w-48"
+                >
+                  <option value="all">كل المجموعات (A-H)</option>
+                  {['A','B','C','D','E','F','G','H'].map(g => (
+                    <option key={g} value={g}>المجموعة {g}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {filteredGroups.length === 0 ? (
+              <p className="text-sm text-ink-muted bg-white p-6 rounded-2xl border border-line text-center">
+                لا توجد كروبات تطابق بحثك أو الفلتر المحدد.
+              </p>
+            ) : (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {groups?.map(g => {
+                {filteredGroups.map(g => {
                   const hasPendingRequest = myRequests?.find(r => r.group_id === g.id);
                   return (
                     <div key={g.id} className="rounded-2xl border border-line bg-white p-4 shadow-sm flex flex-col justify-between hover:border-teal/30 transition-colors">
                       <div>
                         <div className="flex justify-between items-start gap-2">
                           <div className="min-w-0">
-                            {/* 👈 عرض المجموعة العملية في قائمة الكروبات */}
                             <h3 className="font-bold text-ink flex items-center gap-1.5">
                               <span className="truncate">{g.name || `كروب #${g.serial}`}</span>
                               {g.practical_group && (
