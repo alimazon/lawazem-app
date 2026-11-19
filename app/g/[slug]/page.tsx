@@ -43,7 +43,7 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
   const [msg, setMsg] = useState({ type: '', text: '' });
   const [copied, setCopied] = useState(false);
 
-  // 👈 حالات جديدة لعرض الأعضاء
+  // حالات عرض الأعضاء
   const [selectedGroupForMembers, setSelectedGroupForMembers] = useState<PublicGroup | null>(null);
   const [groupMembers, setGroupMembers] = useState<PublicMember[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
@@ -241,7 +241,6 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
     setTimeout(() => setCopied(false), 2000);
   }
 
-  // 👈 دالة عرض الأعضاء
   async function handleViewMembers(group: PublicGroup) {
     setSelectedGroupForMembers(group);
     setLoadingMembers(true);
@@ -280,9 +279,11 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
   }
   if (!me) return null;
 
+  // 👈 التحقق مما إذا كان القائد بحاجة لاختيار مجموعة عملية
+  const needsPracticalGroup = me.isLeader && !me.group?.practical_group;
+
   return (
     <div className="space-y-6 pb-20">
-      {/* Header والاشعارات (كما هو) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-line bg-white p-4 sm:p-5 shadow-sm relative">
         <div className="flex items-center justify-between w-full sm:w-auto">
           <div>
@@ -345,7 +346,40 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
 
       {me.group ? (
         <div className="space-y-6">
-          {/* بطاقة كروب الطالب (كما هي) */}
+          
+          {/* 👈 التنبيه البارز للقادة القدامى */}
+          {needsPracticalGroup && (
+            <div className="rounded-xl border-2 border-red-400 bg-red-50 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-pulse">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">⚠️</span>
+                <div>
+                  <h3 className="font-bold text-red-800 text-sm sm:text-base">تنبيه هام جداً يا قائد الكروب!</h3>
+                  <p className="text-xs sm:text-sm text-red-600 mt-1">كروبك الحالي لا ينتمي لأي مجموعة عملية. يرجى تحديد المجموعة (A-H) الآن لكي يظهر كروبك للطلاب.</p>
+                </div>
+              </div>
+              <select
+                className="w-full sm:w-auto rounded-lg border-2 border-red-400 bg-white px-4 py-2 text-sm font-bold text-red-700 outline-none focus:border-red-600 cursor-pointer"
+                value={me.group.practical_group || ''}
+                onChange={async (e) => {
+                  const val = e.target.value;
+                  if (!val) return;
+                  try {
+                    await groupsFetch('/api/groups/update-practical', { practical_group: val });
+                    showMsg('success', 'تم تحديث المجموعة العملية بنجاح');
+                    loadData();
+                  } catch (err) {
+                    showMsg('error', 'فشل التحديث');
+                  }
+                }}
+              >
+                <option value="" disabled>-- اختر المجموعة --</option>
+                {['A','B','C','D','E','F','G','H'].map(g => (
+                  <option key={g} value={g}>المجموعة {g}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="rounded-2xl border border-teal/30 bg-teal/5 p-4 sm:p-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
@@ -353,6 +387,8 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
                   {me.group.name || `كروب #${me.group.serial}`}
                 </h2>
                 <p className="text-xs sm:text-sm text-ink-soft mt-1">أنت {me.isLeader ? 'قائد هذا الكروب 👑' : 'عضو في هذا الكروب'}</p>
+                
+                {/* عرض المجموعة العملية داخل البطاقة */}
                 <div className="mt-2 flex items-center gap-2 text-sm">
                   <span className="font-semibold text-ink-soft text-xs sm:text-sm">المجموعة العملية:</span>
                   {me.group.practical_group ? (
@@ -360,9 +396,10 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
                       {me.group.practical_group}
                     </span>
                   ) : (
-                    <span className="text-xs text-ink-muted">غير محددة</span>
+                    <span className="text-xs text-red-500 font-bold">غير محددة</span>
                   )}
-                  {me.isLeader && (
+                  
+                  {me.isLeader && !needsPracticalGroup && (
                     <select
                       className="ml-2 rounded border border-line bg-white px-1 py-0.5 text-xs outline-none focus:border-teal"
                       value={me.group.practical_group || ''}
@@ -378,7 +415,6 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
                         }
                       }}
                     >
-                      <option value="" disabled>اختر...</option>
                       {['A','B','C','D','E','F','G','H'].map(g => (
                         <option key={g} value={g}>{g}</option>
                       ))}
@@ -391,11 +427,13 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
                 <div className="text-xs text-ink-muted">عضو</div>
               </div>
             </div>
+
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-teal/20 pt-4">
               <div className="flex gap-4 text-sm font-semibold bg-white/50 px-3 py-1 rounded-lg">
                 <span>👨 {me.group.male_count}</span>
                 <span>👩 {me.group.female_count}</span>
               </div>
+
               <div className="flex gap-2 w-full sm:w-auto">
                 {me.isLeader && (
                   <button onClick={copyInviteLink} className="flex-1 sm:flex-none rounded-lg border border-teal/30 bg-white px-4 py-2 text-xs font-bold text-teal hover:bg-teal/5 transition-colors">
@@ -546,8 +584,6 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
                             {actionLoading === g.id ? '...' : (inQueue ? 'أنت في قائمة الانتظار' : 'طلب انضمام')}
                           </button>
                         )}
-                        
-                        {/* 👈 زر عرض الأعضاء الجديد */}
                         <button onClick={() => handleViewMembers(g)} className="w-full rounded-lg border border-line bg-white py-2 text-xs font-bold text-ink-soft hover:bg-ink/5 transition-colors">
                           👥 عرض الأعضاء
                         </button>
@@ -569,7 +605,6 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
         </div>
       )}
 
-      {/* 👈 النافذة المنبثقة لعرض الأعضاء */}
       {selectedGroupForMembers && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setSelectedGroupForMembers(null)}>
           <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
