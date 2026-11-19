@@ -40,12 +40,12 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
   const [msg, setMsg] = useState({ type: '', text: '' });
   const [copied, setCopied] = useState(false);
 
-  // ✅ جديد: تتبع عدد الطلبات السابق (يمنع التنبيه في أول تحميل)
+  // ✅ تتبع عدد الطلبات السابق (يمنع التنبيه في أول تحميل)
   const lastReqCountRef = useRef<number>(-1);
-  // ✅ جديد: لمنع مسح رسائل أحدث (نظام نسخ الرسائل)
+  // ✅ لمنع مسح رسائل أحدث (نظام نسخ الرسائل)
   const msgVersionRef = useRef(0);
 
-  // ==================== ✅ جديدة: دوال الرسائل ====================
+  // ==================== دوال الرسائل ====================
   function showMsg(type: string, text: string) {
     msgVersionRef.current++;
     setMsg({ type, text });
@@ -62,7 +62,7 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
     setMsg({ type: '', text: '' });
   }
 
-  // ✅ جديدة: صوت تنبيه بسيط (بدون مكتبات)
+  // ✅ صوت تنبيه بسيط (بدون مكتبات)
   function playNewRequestSound() {
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
@@ -80,7 +80,7 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
     } catch {}
   }
 
-  // ✅ جديدة: إشعار المتصفح
+  // ✅ إشعار المتصفح
   function showBrowserNotification(count: number) {
     try {
       if (typeof Notification === 'undefined') return;
@@ -99,12 +99,12 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
     }
     loadData();
 
-    // ✅ جديد: طلب إذن إشعارات المتصفح (مرة واحدة)
+    // ✅ طلب إذن إشعارات المتصفح (مرة واحدة)
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
       Notification.requestPermission().catch(() => {});
     }
 
-    // ✅ التعديل 3: polling كل 5 ثوانٍ بدلاً من 15
+    // ✅ polling كل 5 ثوانٍ
     const interval = setInterval(() => {
       refreshInBackground();
     }, 5000);
@@ -127,7 +127,6 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
           const reqData = await groupsFetch<{ requests: RequestWithStudent[] }>('/api/groups/requests/list');
           const initialRequests = reqData?.requests || [];
           setLeaderRequests(initialRequests);
-          // ✅ جديد: تهيئة المرجع دون تنبيه عند أول تحميل
           lastReqCountRef.current = initialRequests.length;
         }
       } else {
@@ -167,7 +166,6 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
         const newRequests = reqData?.requests || [];
         const prev = lastReqCountRef.current;
 
-        // ✅ التعديل 3: كشف الطلبات الجديدة → تنبيه
         if (prev >= 0 && newRequests.length > prev) {
           playNewRequestSound();
           showBrowserNotification(newRequests.length);
@@ -321,8 +319,46 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
           <div className="rounded-2xl border border-teal/30 bg-teal/5 p-4 sm:p-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-base sm:text-lg font-bold text-ink">{me.group.name || `كروب #${me.group.serial}`}</h2>
+                <h2 className="text-base sm:text-lg font-bold text-ink flex items-center flex-wrap gap-2">
+                  {me.group.name || `كروب #${me.group.serial}`}
+                </h2>
                 <p className="text-xs sm:text-sm text-ink-soft mt-1">أنت {me.isLeader ? 'قائد هذا الكروب 👑' : 'عضو في هذا الكروب'}</p>
+
+                {/* 👈 عرض المجموعة العملية وإتاحة تعديلها للقائد */}
+                <div className="mt-2 flex items-center gap-2 text-sm">
+                  <span className="font-semibold text-ink-soft text-xs sm:text-sm">المجموعة العملية:</span>
+                  {me.group.practical_group ? (
+                    <span className="rounded-md bg-teal/10 px-2 py-0.5 font-bold text-teal text-xs sm:text-sm">
+                      {me.group.practical_group}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-ink-muted">غير محددة</span>
+                  )}
+                  
+                  {me.isLeader && (
+                    <select
+                      className="ml-2 rounded border border-line bg-white px-1 py-0.5 text-xs outline-none focus:border-teal"
+                      value={me.group.practical_group || ''}
+                      onChange={async (e) => {
+                        const val = e.target.value;
+                        if (!val) return;
+                        try {
+                          await groupsFetch('/api/groups/update-practical', { practical_group: val });
+                          showMsg('success', 'تم تحديث المجموعة العملية');
+                          loadData(); // إعادة تحميل البيانات
+                        } catch (err) {
+                          showMsg('error', 'فشل التحديث');
+                        }
+                      }}
+                    >
+                      <option value="" disabled>اختر...</option>
+                      {['A','B','C','D','E','F','G','H'].map(g => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
               </div>
               <div className="flex items-center justify-between sm:block text-center border-t sm:border-t-0 border-teal/20 pt-3 sm:pt-0">
                 <div className="text-xl sm:text-2xl font-bold text-teal">{me.group.male_count + me.group.female_count}/{me.group.target_size}</div>
@@ -426,7 +462,15 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
                       <div>
                         <div className="flex justify-between items-start gap-2">
                           <div className="min-w-0">
-                            <h3 className="font-bold text-ink truncate">{g.name || `كروب #${g.serial}`}</h3>
+                            {/* 👈 عرض المجموعة العملية في قائمة الكروبات */}
+                            <h3 className="font-bold text-ink flex items-center gap-1.5">
+                              <span className="truncate">{g.name || `كروب #${g.serial}`}</span>
+                              {g.practical_group && (
+                                <span className="shrink-0 text-[10px] font-bold bg-teal/10 text-teal px-1.5 py-0.5 rounded">
+                                  {g.practical_group}
+                                </span>
+                              )}
+                            </h3>
                             <p className="text-xs text-ink-muted truncate">القائد: {g.leader_name}</p>
                           </div>
                           <span className="shrink-0 rounded-full bg-teal/10 px-2.5 py-1 text-[10px] font-bold text-teal">{g.spots_left} مقاعد</span>

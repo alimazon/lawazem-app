@@ -30,6 +30,7 @@ export interface Group {
   female_count: number;
   status: GroupStatus;
   study_year: string;
+  practical_group: string | null; // 👈 أضف هذا السطر
   created_at: string;
 }
 
@@ -100,8 +101,18 @@ export interface MeResponse {
   pendingRequests: number; // عدد طلبات معلّقة (للقائد فقط)
 }
 
+// أضف هذا في نهاية الملف
+export interface PublicMember {
+  id: string;
+  full_name: string;
+  telegram_username: string;
+  gender: string;
+  role: string;
+}
+
 export interface PublicGroup extends Group {
   leader_name: string | null;
   leader_username: string | null;
   spots_left: number;
+  members?: PublicMember[]; // 👈 إضافة قائمة الأعضاء
 }

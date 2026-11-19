@@ -33,15 +33,24 @@ export async function POST(req: Request) {
       else code = generateCode();
     }
 
-    // 3. إنشاء الكروب
+    // 3. استقبال البيانات
     const body = await req.json().catch(() => ({}));
     const groupName = typeof body.name === 'string' ? body.name.trim().slice(0, 50) : null;
+    
+    // 👈 جديد: التحقق من المجموعة العملية
+    let practicalGroup = typeof body.practical_group === 'string' ? body.practical_group.toUpperCase() : null;
+    const validPracticalGroups = ['A','B','C','D','E','F','G','H'];
+    if (practicalGroup && !validPracticalGroups.includes(practicalGroup)) {
+      practicalGroup = null; // تجاهل القيمة إذا كانت غير صالحة
+    }
 
+    // 4. إنشاء الكروب
     const { data: newGroup, error: groupError } = await supabaseAdmin
       .from('sg_groups')
       .insert({
         code,
         name: groupName || null,
+        practical_group: practicalGroup, // 👈 حفظها هنا
         leader_id: student.id,
         target_size: settings.target_size,
         male_count: student.gender === 'male' ? 1 : 0,
@@ -53,14 +62,13 @@ export async function POST(req: Request) {
 
     if (groupError || !newGroup) throw new Error('فشل إنشاء الكروب');
 
-    // 4. إضافة الطالب كقائد
+    // 5. إضافة الطالب كقائد
     const { error: memberError } = await supabaseAdmin.from('sg_members').insert({
       group_id: newGroup.id,
       student_id: student.id,
       role: 'leader',
     });
 
-    // إذا فشلت الإضافة، نحذف الكروب (تنظيف)
     if (memberError) {
       await supabaseAdmin.from('sg_groups').delete().eq('id', newGroup.id);
       throw new Error('فشل تعيينك كقائد. حاول مجدداً');

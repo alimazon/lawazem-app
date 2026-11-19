@@ -54,7 +54,7 @@ export default function JoinByCodePage({ params }: { params: Promise<{ slug: str
     return (
       <div className="mx-auto max-w-md text-center py-20">
         <div className="text-4xl mb-4">🔍</div>
-        <h2 className="text-xl font-bold text-ink mb-2">الكروب غير موجود</h2>
+        <h2 className="text-xl font-bold text-ink mb-2">الكروب غير متاح</h2>
         <p className="text-ink-soft mb-6">{msg.text}</p>
         <button onClick={() => router.push(`/g/${slug}`)} className="rounded-lg bg-teal px-6 py-2 text-white font-bold">العودة للرئيسية</button>
       </div>
@@ -64,12 +64,20 @@ export default function JoinByCodePage({ params }: { params: Promise<{ slug: str
   if (!group) return null;
 
   const isFull = group.spots_left === 0;
+  const membersList = group.members || [];
 
   return (
     <div className="mx-auto max-w-md mt-10">
       <div className="rounded-2xl border border-line bg-white p-6 shadow-sm text-center">
         <div className="text-sm font-bold text-teal mb-2">دعوة للانضمام</div>
-        <h1 className="text-2xl font-bold text-ink mb-1">{group.name || `كروب #${group.serial}`}</h1>
+        <h1 className="text-2xl font-bold text-ink mb-1 flex items-center justify-center gap-2">
+          {group.name || `كروب #${group.serial}`}
+          {group.practical_group && (
+            <span className="text-sm bg-teal/10 text-teal px-2 py-0.5 rounded">
+              {group.practical_group}
+            </span>
+          )}
+        </h1>
         <p className="text-sm text-ink-soft">القائد: {group.leader_name}</p>
 
         <div className="my-6 grid grid-cols-3 gap-2 rounded-xl bg-paper-soft p-4">
@@ -84,6 +92,29 @@ export default function JoinByCodePage({ params }: { params: Promise<{ slug: str
           <div>
             <div className="text-xl font-bold text-gold-ink">👩 {group.female_count}</div>
             <div className="text-[10px] text-ink-muted">إناث</div>
+          </div>
+        </div>
+
+        {/* 👈 جديد: عرض أعضاء الكروب */}
+        <div className="mb-6 text-right">
+          <h3 className="text-sm font-bold text-ink mb-2 border-b border-line pb-2">أعضاء الكروب ({membersList.length})</h3>
+          <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
+            {membersList.length === 0 ? (
+              <p className="text-xs text-center text-ink-muted py-2">لا يوجد أعضاء بعد.</p>
+            ) : (
+              membersList.map((m) => (
+                <div key={m.id} className="flex items-center justify-between bg-paper-soft px-3 py-2 rounded-lg text-xs">
+                  <div className="flex items-center gap-2">
+                    <span>{m.gender === 'male' ? '👨' : '👩'}</span>
+                    <span className="font-semibold text-ink">{m.full_name}</span>
+                    {m.role === 'leader' && (
+                      <span className="text-[10px] bg-teal/10 text-teal px-1.5 py-0.5 rounded">قائد</span>
+                    )}
+                  </div>
+                  <span className="text-ink-muted font-mono" dir="ltr">@{m.telegram_username}</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
 

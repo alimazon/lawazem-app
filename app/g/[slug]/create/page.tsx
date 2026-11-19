@@ -9,15 +9,21 @@ export default function CreateGroupPage({ params }: { params: Promise<{ slug: st
   const { slug } = use(params);
   const router = useRouter();
   const [name, setName] = useState('');
+  const [practicalGroup, setPracticalGroup] = useState<string>(''); // 👈 جديد
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const PRACTICAL_GROUPS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
-      await groupsFetch('/api/groups/create', { name });
+      await groupsFetch('/api/groups/create', { 
+        name, 
+        practical_group: practicalGroup || null 
+      });
       router.push(`/g/${slug}`);
       router.refresh();
     } catch (err) {
@@ -44,6 +50,29 @@ export default function CreateGroupPage({ params }: { params: Promise<{ slug: st
               maxLength={50}
               disabled={loading}
             />
+          </div>
+
+          {/* 👈 جديد: اختيار المجموعة العملية */}
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-ink">المجموعة العملية</label>
+            <div className="grid grid-cols-4 gap-2">
+              {PRACTICAL_GROUPS.map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setPracticalGroup(g)}
+                  disabled={loading}
+                  className={`rounded-lg border px-2 py-3 text-sm font-bold transition-colors ${
+                    practicalGroup === g
+                      ? 'border-teal bg-teal text-white'
+                      : 'border-line bg-white text-ink hover:border-teal/50'
+                  }`}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1 text-xs text-ink-muted">اختر المجموعة العملية التي ينتمي إليها كروبك.</p>
           </div>
 
           {error && (
