@@ -48,6 +48,10 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
   const [groupMembers, setGroupMembers] = useState<PublicMember[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
 
+  // 👈 حالة رابط التليكرام
+  const [tgLink, setTgLink] = useState('');
+  const [isEditingTgLink, setIsEditingTgLink] = useState(false);
+
   const lastReqCountRef = useRef<number>(-1);
   const msgVersionRef = useRef(0);
 
@@ -118,6 +122,10 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
     try {
       const meData = await groupsFetch<MeResponse>('/api/groups/me');
       setMe(meData);
+
+      if (meData.group?.telegram_link) {
+        setTgLink(meData.group.telegram_link);
+      }
 
       const notifData = await groupsFetch<{ list: Notification[], unread: number }>('/api/groups/notifications');
       setNotifications(notifData?.list || []);
@@ -256,6 +264,17 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
     }
   }
 
+  async function handleSaveTgLink() {
+    try {
+      await groupsFetch('/api/groups/update-telegram', { telegram_link: tgLink });
+      showMsg('success', 'تم حفظ رابط الكروب');
+      setIsEditingTgLink(false);
+      loadData();
+    } catch (err) {
+      showMsg('error', 'فشل الحفظ');
+    }
+  }
+
   const filteredGroups = groups.filter((g) => {
     const matchesPractical = filterPractical === 'all' || g.practical_group === filterPractical;
     const q = searchQuery.toLowerCase().trim();
@@ -279,7 +298,6 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
   }
   if (!me) return null;
 
-  // 👈 التحقق مما إذا كان القائد بحاجة لاختيار مجموعة عملية
   const needsPracticalGroup = me.isLeader && !me.group?.practical_group;
 
   return (
@@ -347,14 +365,13 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
       {me.group ? (
         <div className="space-y-6">
           
-          {/* 👈 التنبيه البارز للقادة القدامى */}
           {needsPracticalGroup && (
             <div className="rounded-xl border-2 border-red-400 bg-red-50 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-pulse">
               <div className="flex items-center gap-3">
                 <span className="text-3xl">⚠️</span>
                 <div>
                   <h3 className="font-bold text-red-800 text-sm sm:text-base">تنبيه هام جداً يا قائد الكروب!</h3>
-                  <p className="text-xs sm:text-sm text-red-600 mt-1">كروبك الحالي لا ينتمي لأي مجموعة عملية. يرجى تحديد المجموعة (A-H) الآن لكي يظهر كروبك للطلاب.</p>
+                  <p className="text-xs sm:text-sm text-red-600 mt-1">كروبك الحالي لا ينتمي لأي مجموعة عملية. يرجى تحديد المجموعة (A-H) الآن.</p>
                 </div>
               </div>
               <select
@@ -388,7 +405,6 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
                 </h2>
                 <p className="text-xs sm:text-sm text-ink-soft mt-1">أنت {me.isLeader ? 'قائد هذا الكروب 👑' : 'عضو في هذا الكروب'}</p>
                 
-                {/* عرض المجموعة العملية داخل البطاقة */}
                 <div className="mt-2 flex items-center gap-2 text-sm">
                   <span className="font-semibold text-ink-soft text-xs sm:text-sm">المجموعة العملية:</span>
                   {me.group.practical_group ? (
@@ -421,6 +437,38 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
                     </select>
                   )}
                 </div>
+
+                {/* 👈 إدارة رابط التليكرام */}
+                <div className="mt-3">
+                  {isEditingTgLink ? (
+                    <div className="flex items-center gap-2 mt-2">
+                      <input
+                        type="url"
+                        placeholder="https://t.me/+xxxx"
+                        value={tgLink}
+                        onChange={(e) => setTgLink(e.target.value)}
+                        className="flex-1 rounded-lg border border-line bg-white px-3 py-1.5 text-xs outline-none focus:border-teal"
+                      />
+                      <button onClick={handleSaveTgLink} className="rounded-lg bg-teal px-3 py-1.5 text-xs font-bold text-white hover:bg-teal/90">حفظ</button>
+                      <button onClick={() => setIsEditingTgLink(false)} className="rounded-lg bg-ink/5 px-3 py-1.5 text-xs font-bold text-ink-soft">إلغاء</button>
+                    </div>
+                  ) : me.group.telegram_link ? (
+                    <div className="flex items-center gap-2 mt-2">
+                      <a href={me.group.telegram_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg bg-[#229ED9] px-4 py-2 text-xs font-bold text-white hover:bg-[#1e8cc0] transition-colors shadow-sm">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+                        انضم لكروب التليكرام
+                      </a>
+                      {me.isLeader && (
+                        <button onClick={() => setIsEditingTgLink(true)} className="text-[10px] text-ink-muted hover:text-teal underline">تعديل الرابط</button>
+                      )}
+                    </div>
+                  ) : me.isLeader ? (
+                    <button onClick={() => setIsEditingTgLink(true)} className="mt-2 text-xs text-teal font-semibold hover:underline flex items-center gap-1">
+                      ➕ إضافة رابط كروب التليكرام للتواصل
+                    </button>
+                  ) : null}
+                </div>
+
               </div>
               <div className="flex items-center justify-between sm:block text-center border-t sm:border-t-0 border-teal/20 pt-3 sm:pt-0">
                 <div className="text-xl sm:text-2xl font-bold text-teal">{me.group.male_count + me.group.female_count}/{me.group.target_size}</div>
@@ -462,7 +510,12 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
                           <span className="font-bold text-ink text-base">{req.student.full_name}</span>
                           <span className="text-ink-muted text-xs bg-ink/5 px-2 py-0.5 rounded-md">({req.student.gender === 'male' ? 'ذكر 👨' : 'أنثى 👩'})</span>
                         </div>
-                        <div className="text-xs text-ink-muted mt-1 font-mono" dir="ltr">@{req.student.telegram_username}</div>
+                        <div className="text-xs text-ink-muted mt-1 font-mono flex items-center gap-2" dir="ltr">
+                          @{req.student.telegram_username}
+                          <a href={`https://t.me/${req.student.telegram_username}`} target="_blank" rel="noopener noreferrer" className="text-teal hover:underline text-[10px]">
+                            [تواصل]
+                          </a>
+                        </div>
                       </div>
                       <div className="flex gap-2 w-full sm:w-auto">
                         <button onClick={() => handleLeaderAction(req.id, 'accept')} className="flex-1 sm:flex-none rounded-md bg-teal px-4 py-2 text-xs font-bold text-white hover:bg-teal/90 transition-colors">قبول</button>
@@ -482,7 +535,12 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
                 <li key={m.id} className="flex justify-between items-center rounded-xl border border-line bg-white p-3 text-sm">
                   <div>
                     <span className="font-semibold text-ink">{m.student.full_name} {m.role === 'leader' && '👑'}</span>
-                    <span className="block sm:inline font-mono text-ink-muted text-xs sm:text-sm mt-1 sm:mt-0 sm:ml-3" dir="ltr">@{m.student.telegram_username}</span>
+                    <div className="block sm:inline font-mono text-ink-muted text-xs sm:text-sm mt-1 sm:mt-0 sm:ml-3 flex items-center gap-2" dir="ltr">
+                      @{m.student.telegram_username}
+                      <a href={`https://t.me/${m.student.telegram_username}`} target="_blank" rel="noopener noreferrer" className="text-teal hover:underline text-[10px] font-sans font-bold">
+                        💬 تواصل
+                      </a>
+                    </div>
                   </div>
                   {me.isLeader && m.student_id !== me.student.id && (
                     <button onClick={() => { if (confirm(`هل أنت متأكد من طرد ${m.student.full_name}؟`)) handleAction('/api/groups/kick', { group_id: me.group?.id, student_id: m.student_id }, 'تم طرد الطالب', `kick-${m.id}`); }} disabled={actionLoading === `kick-${m.id}`} className="rounded-md bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100 disabled:opacity-50">
@@ -633,7 +691,12 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
                           {m.full_name}
                           {m.role === 'leader' && <span className="ml-1 text-[10px] bg-teal/10 text-teal px-1.5 py-0.5 rounded">قائد</span>}
                         </div>
-                        <div className="text-xs text-ink-muted font-mono truncate" dir="ltr">@{m.telegram_username}</div>
+                        <div className="text-xs text-ink-muted font-mono truncate flex items-center gap-1" dir="ltr">
+                          @{m.telegram_username}
+                          <a href={`https://t.me/${m.telegram_username}`} target="_blank" rel="noopener noreferrer" className="text-teal hover:underline text-[10px] font-sans">
+                            [تواصل]
+                          </a>
+                        </div>
                       </div>
                     </div>
                   </div>

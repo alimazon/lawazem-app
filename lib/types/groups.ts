@@ -31,6 +31,7 @@ export interface Group {
   status: GroupStatus;
   study_year: string;
   practical_group: string | null; // 👈 أضف هذا السطر
+  telegram_link?: string | null; // 👈 أضف هذا السطر
   created_at: string;
 }
 
