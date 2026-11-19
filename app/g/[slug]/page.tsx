@@ -5,7 +5,7 @@ import { use, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { groupsFetch, getToken, clearToken } from '@/lib/groups/client';
-import type { MeResponse, PublicGroup, RequestWithStudent, RequestWithGroup } from '@/lib/types/groups';
+import type { MeResponse, PublicGroup, RequestWithStudent, RequestWithGroup, PublicMember } from '@/lib/types/groups';
 import { SkeletonCard } from '../_components/SkeletonCard';
 import { PushButton } from '../_components/PushButton';
 
@@ -27,7 +27,6 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // 👈 حالات البحث والفلترة الجديدة
   const [searchQuery, setSearchQuery] = useState('');
   const [filterPractical, setFilterPractical] = useState<string>('all');
 
@@ -43,6 +42,11 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [msg, setMsg] = useState({ type: '', text: '' });
   const [copied, setCopied] = useState(false);
+
+  // 👈 حالات جديدة لعرض الأعضاء
+  const [selectedGroupForMembers, setSelectedGroupForMembers] = useState<PublicGroup | null>(null);
+  const [groupMembers, setGroupMembers] = useState<PublicMember[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
 
   const lastReqCountRef = useRef<number>(-1);
   const msgVersionRef = useRef(0);
@@ -237,12 +241,24 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
     setTimeout(() => setCopied(false), 2000);
   }
 
-  // 👈 منطق الفلترة
+  // 👈 دالة عرض الأعضاء
+  async function handleViewMembers(group: PublicGroup) {
+    setSelectedGroupForMembers(group);
+    setLoadingMembers(true);
+    setGroupMembers([]);
+    try {
+      const data = await groupsFetch<{ members: PublicMember[] }>('/api/groups/members', { group_id: group.id });
+      setGroupMembers(data.members || []);
+    } catch (err) {
+      showMsg('error', 'فشل جلب الأعضاء');
+      setSelectedGroupForMembers(null);
+    } finally {
+      setLoadingMembers(false);
+    }
+  }
+
   const filteredGroups = groups.filter((g) => {
-    // 1. فلترة المجموعة العملية
     const matchesPractical = filterPractical === 'all' || g.practical_group === filterPractical;
-    
-    // 2. فلترة البحث بالاسم أو اسم القائد
     const q = searchQuery.toLowerCase().trim();
     const matchesSearch = 
       !q || 
@@ -266,6 +282,7 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
 
   return (
     <div className="space-y-6 pb-20">
+      {/* Header والاشعارات (كما هو) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-line bg-white p-4 sm:p-5 shadow-sm relative">
         <div className="flex items-center justify-between w-full sm:w-auto">
           <div>
@@ -328,6 +345,7 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
 
       {me.group ? (
         <div className="space-y-6">
+          {/* بطاقة كروب الطالب (كما هي) */}
           <div className="rounded-2xl border border-teal/30 bg-teal/5 p-4 sm:p-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
@@ -335,7 +353,6 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
                   {me.group.name || `كروب #${me.group.serial}`}
                 </h2>
                 <p className="text-xs sm:text-sm text-ink-soft mt-1">أنت {me.isLeader ? 'قائد هذا الكروب 👑' : 'عضو في هذا الكروب'}</p>
-
                 <div className="mt-2 flex items-center gap-2 text-sm">
                   <span className="font-semibold text-ink-soft text-xs sm:text-sm">المجموعة العملية:</span>
                   {me.group.practical_group ? (
@@ -345,7 +362,6 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
                   ) : (
                     <span className="text-xs text-ink-muted">غير محددة</span>
                   )}
-                  
                   {me.isLeader && (
                     <select
                       className="ml-2 rounded border border-line bg-white px-1 py-0.5 text-xs outline-none focus:border-teal"
@@ -369,20 +385,17 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
                     </select>
                   )}
                 </div>
-
               </div>
               <div className="flex items-center justify-between sm:block text-center border-t sm:border-t-0 border-teal/20 pt-3 sm:pt-0">
                 <div className="text-xl sm:text-2xl font-bold text-teal">{me.group.male_count + me.group.female_count}/{me.group.target_size}</div>
                 <div className="text-xs text-ink-muted">عضو</div>
               </div>
             </div>
-
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-teal/20 pt-4">
               <div className="flex gap-4 text-sm font-semibold bg-white/50 px-3 py-1 rounded-lg">
                 <span>👨 {me.group.male_count}</span>
                 <span>👩 {me.group.female_count}</span>
               </div>
-
               <div className="flex gap-2 w-full sm:w-auto">
                 {me.isLeader && (
                   <button onClick={copyInviteLink} className="flex-1 sm:flex-none rounded-lg border border-teal/30 bg-white px-4 py-2 text-xs font-bold text-teal hover:bg-teal/5 transition-colors">
@@ -465,7 +478,6 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
           <div className="space-y-4">
             <h2 className="text-lg font-bold text-ink flex items-center gap-2">الكروبات المتاحة</h2>
             
-            {/* 👈 جديد: شريط البحث والفلترة */}
             <div className="rounded-2xl border border-line bg-white p-3 sm:p-4 shadow-sm space-y-3">
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative flex-1">
@@ -523,7 +535,7 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
                           <span className="text-ink-soft">👩 {g.female_count}</span>
                         </div>
                       </div>
-                      <div className="mt-4">
+                      <div className="mt-4 flex flex-col gap-2">
                         {hasPendingRequest ? (
                           <div className="flex gap-2">
                             <div className="flex-1 rounded-lg bg-amber/10 border border-amber/20 py-2 text-center text-xs font-bold text-amber-700 flex items-center justify-center gap-1">قيد الانتظار ⏳</div>
@@ -534,6 +546,11 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
                             {actionLoading === g.id ? '...' : (inQueue ? 'أنت في قائمة الانتظار' : 'طلب انضمام')}
                           </button>
                         )}
+                        
+                        {/* 👈 زر عرض الأعضاء الجديد */}
+                        <button onClick={() => handleViewMembers(g)} className="w-full rounded-lg border border-line bg-white py-2 text-xs font-bold text-ink-soft hover:bg-ink/5 transition-colors">
+                          👥 عرض الأعضاء
+                        </button>
                       </div>
                     </div>
                   );
@@ -551,6 +568,53 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
           </div>
         </div>
       )}
+
+      {/* 👈 النافذة المنبثقة لعرض الأعضاء */}
+      {selectedGroupForMembers && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setSelectedGroupForMembers(null)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-4 border-b border-line bg-paper-soft">
+              <div>
+                <h3 className="font-bold text-ink text-sm">أعضاء الكروب</h3>
+                <p className="text-xs text-ink-muted">{selectedGroupForMembers.name || `كروب #${selectedGroupForMembers.serial}`}</p>
+              </div>
+              <button onClick={() => setSelectedGroupForMembers(null)} className="p-1 text-ink-muted hover:text-ink hover:bg-ink/10 rounded-lg transition-colors">
+                ✕
+              </button>
+            </div>
+            
+            <div className="p-4 max-h-[60vh] overflow-y-auto space-y-2">
+              {loadingMembers ? (
+                <div className="text-center py-6 text-sm text-ink-muted">جارٍ جلب الأعضاء...</div>
+              ) : groupMembers.length === 0 ? (
+                <div className="text-center py-6 text-sm text-ink-muted">لا يوجد أعضاء في هذا الكروب.</div>
+              ) : (
+                groupMembers.map((m, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2.5 rounded-lg bg-paper-soft border border-line">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-lg">{m.gender === 'male' ? '👨' : '👩'}</span>
+                      <div className="min-w-0">
+                        <div className="text-sm font-bold text-ink truncate">
+                          {m.full_name}
+                          {m.role === 'leader' && <span className="ml-1 text-[10px] bg-teal/10 text-teal px-1.5 py-0.5 rounded">قائد</span>}
+                        </div>
+                        <div className="text-xs text-ink-muted font-mono truncate" dir="ltr">@{m.telegram_username}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            
+            <div className="p-3 border-t border-line bg-paper-soft text-center">
+              <button onClick={() => setSelectedGroupForMembers(null)} className="w-full rounded-lg bg-ink/5 py-2 text-sm font-bold text-ink hover:bg-ink/10 transition-colors">
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
