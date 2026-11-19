@@ -63,12 +63,12 @@ export default function RegisterPage({ params }: { params: Promise<{ slug: strin
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-ink">الاسم الثلاثي</label>
-            <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="مثال: أحمد محمد علي" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-teal focus:ring-1 focus:ring-teal disabled:opacity-60" maxLength={100} disabled={loading} />
+            <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="مثال: علي مازن عباس" className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-teal focus:ring-1 focus:ring-teal disabled:opacity-60" maxLength={100} disabled={loading} />
           </div>
 
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-ink">معرف التليكرام</label>
-            <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="ahmed_m أو @ahmed_m" className="w-full rounded-lg border border-line bg-white px-3 py-2 font-mono text-ink outline-none focus:border-teal focus:ring-1 focus:ring-teal disabled:opacity-60" maxLength={33} disabled={loading} dir="ltr" />
+            <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="E_W_9 أو @E_W_9" className="w-full rounded-lg border border-line bg-white px-3 py-2 font-mono text-ink outline-none focus:border-teal focus:ring-1 focus:ring-teal disabled:opacity-60" maxLength={33} disabled={loading} dir="ltr" />
             <p className="mt-1 text-xs text-ink-muted">يُستخدم للتواصل بين أعضاء الكروب</p>
           </div>
 
