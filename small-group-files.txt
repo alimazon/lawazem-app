@@ -1,0 +1,4683 @@
+===AGENTS.md===
+<!-- BEGIN:nextjs-agent-rules -->
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+<!-- END:nextjs-agent-rules -->
+
+===app/admin/_components/AnnouncementsSection.tsx===
+// app/admin/_components/AnnouncementsSection.tsx
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { Input, Select, Textarea } from '@/components/ui/Field';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { postJson } from '@/lib/api-client';
+import { STAGES } from '@/lib/constants';
+import type { Stage } from '@/lib/types';
+
+interface Props {
+  password: string;
+}
+
+interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  stage: string | null;
+  link_url: string | null;
+  link_label: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'sent' | 'failed';
+  created_by: string;
+  created_at: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  reviewed_note: string | null;
+  sent_at: string | null;
+  sent_count: number;
+  sent_error: string | null;
+}
+
+type Tab = 'pending' | 'history';
+type Role = 'super_admin' | 'admin' | 'publisher';
+
+// ==================== Icons ====================
+function IconMegaphone() {
+  return (
+    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 11l18-8v18l-18-8v-2z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
+    </svg>
+  );
+}
+function IconCheck() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+  );
+}
+function IconClose() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  );
+}
+function IconTrash() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  );
+}
+function IconEdit() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+  );
+}
+function IconSend() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 11l18-8-8 18-2-8-8-2z" />
+    </svg>
+  );
+}
+function IconShield() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M5.618 4.618A2 2 0 017 4h10a2 2 0 011.382.618l.618.618A2 2 0 0120 6.618V12a8 8 0 11-16 0V6.618a2 2 0 011-1.236l.618-.764z" />
+    </svg>
+  );
+}
+
+// ==================== Helpers ====================
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return new Intl.DateTimeFormat('ar-IQ-u-nu-latn-ca-gregory', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(d);
+}
+
+function StatusBadge({ status }: { status: Announcement['status'] }) {
+  const styles: Record<Announcement['status'], { label: string; cls: string }> = {
+    pending: { label: 'قيد المراجعة', cls: 'bg-amber/15 text-amber-800 dark:bg-amber/25 dark:text-amber-300' },
+    approved: { label: 'تمت الموافقة', cls: 'bg-teal/10 text-teal dark:bg-teal/20' },
+    rejected: { label: 'مرفوض', cls: 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300' },
+    sent: { label: 'أُرسل', cls: 'bg-teal text-white' },
+    failed: { label: 'فشل الإرسال', cls: 'bg-red-600 text-white' },
+  };
+  const s = styles[status];
+  return <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${s.cls}`}>{s.label}</span>;
+}
+
+// ==================== Role Badge ====================
+function RoleBadge({ role }: { role: Role | null }) {
+  if (role === 'super_admin') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold-tint px-2.5 py-0.5 text-[11px] font-bold text-gold-ink">
+        <IconShield />
+        مشرف أعلى — يمكنك الموافقة على التبليغات
+      </span>
+    );
+  }
+  if (role === 'admin') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/30 bg-teal-tint px-2.5 py-0.5 text-[11px] font-bold text-teal">
+        مشرف — التبليغات تُرسل للمشرف الأعلى للموافقة
+      </span>
+    );
+  }
+  return null;
+}
+
+// ==================== Edit Form ====================
+interface EditFormState {
+  title: string;
+  body: string;
+  stage: Stage | '';
+  link_url: string;
+  link_label: string;
+}
+
+function formFromAnnouncement(a: Announcement): EditFormState {
+  return {
+    title: a.title,
+    body: a.body,
+    stage: (a.stage as Stage | null) ?? '',
+    link_url: a.link_url ?? '',
+    link_label: a.link_label ?? '',
+  };
+}
+
+// ==================== Card ====================
+function AnnouncementCard({
+  item,
+  password,
+  role,
+  onChanged,
+}: {
+  item: Announcement;
+  password: string;
+  role: Role | null;
+  onChanged: () => void;
+}) {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState<EditFormState>(formFromAnnouncement(item));
+  const [rejectNote, setRejectNote] = useState('');
+  const [showReject, setShowReject] = useState(false);
+
+  const isPending = item.status === 'pending';
+  const canApprove = role === 'super_admin';
+  const canEdit = role === 'super_admin';
+  const canDelete = role === 'super_admin';
+
+  async function handleApprove() {
+    const ok = await confirm(
+      'سيتم إرسال التبليغ لكل المشتركين المُفعّلين. هل أنت متأكد؟',
+      { variant: 'primary', confirmLabel: 'إرسال الآن' }
+    );
+    if (!ok) return;
+
+    setBusy(true);
+    try {
+      const res = await postJson<{ sent: number; failed: number }>(
+        '/api/admin/announcements',
+        { password, action: 'approve', id: item.id }
+      );
+      toast.show(
+        `تم الإرسال لـ ${res.sent} مشترك${res.failed > 0 ? ` (فشل: ${res.failed})` : ''}`,
+        'success'
+      );
+      onChanged();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الإرسال', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleReject() {
+    setBusy(true);
+    try {
+      await postJson('/api/admin/announcements', {
+        password, action: 'reject', id: item.id,
+        note: rejectNote.trim() || null,
+      });
+      toast.show('تم الرفض', 'success');
+      onChanged();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الرفض', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleSaveEdit() {
+    if (!form.title.trim() || !form.body.trim()) {
+      toast.show('العنوان والنص مطلوبان', 'error');
+      return;
+    }
+    setBusy(true);
+    try {
+      await postJson('/api/admin/announcements', {
+        password, action: 'edit', id: item.id,
+        title: form.title.trim(),
+        body: form.body.trim(),
+        stage: form.stage || null,
+        link_url: form.link_url.trim() || null,
+        link_label: form.link_label.trim() || null,
+      });
+      toast.show('تم التعديل', 'success');
+      setEditing(false);
+      onChanged();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل التعديل', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDelete() {
+    const ok = await confirm('حذف التبليغ نهائياً. هل أنت متأكد؟', {
+      variant: 'danger', confirmLabel: 'حذف',
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await postJson('/api/admin/announcements', {
+        password, action: 'delete', id: item.id,
+      });
+      toast.show('تم الحذف', 'success');
+      onChanged();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الحذف', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleResend() {
+    const ok = await confirm('إعادة إرسال التبليغ لكل المشتركين؟', {
+      variant: 'primary', confirmLabel: 'إعادة الإرسال',
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      const res = await postJson<{ sent: number; failed: number }>(
+        '/api/admin/announcements',
+        { password, action: 'resend', id: item.id }
+      );
+      toast.show(`أُعيد الإرسال لـ ${res.sent} مشترك`, 'success');
+      onChanged();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الإعادة', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm dark:bg-paper/80">
+      {/* Header */}
+      <div className="flex flex-wrap items-center gap-2">
+        <StatusBadge status={item.status} />
+        {item.stage ? (
+          <span className="rounded-full bg-teal/8 px-2 py-0.5 text-[11px] font-bold text-teal/80 dark:bg-teal/15">
+            {item.stage}
+          </span>
+        ) : (
+          <span className="rounded-full bg-ink/5 px-2 py-0.5 text-[11px] font-bold text-ink/60 dark:bg-white/10">
+            كل المراحل
+          </span>
+        )}
+        <span className="text-[11px] text-ink/40">
+          بواسطة {item.created_by} — {formatDate(item.created_at)}
+        </span>
+      </div>
+
+      {editing ? (
+        <div className="mt-3 space-y-2">
+          <Input
+            type="text"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            maxLength={200}
+            placeholder="العنوان"
+          />
+          <Select
+            value={form.stage}
+            onChange={(e) => setForm({ ...form, stage: e.target.value as Stage | '' })}
+            aria-label="المرحلة"
+          >
+            <option value="">كل المراحل</option>
+            {STAGES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </Select>
+          <Textarea
+            value={form.body}
+            onChange={(e) => setForm({ ...form, body: e.target.value })}
+            rows={4}
+            maxLength={2000}
+            placeholder="نص التبليغ"
+          />
+          <div className="flex flex-wrap gap-2">
+            <Input
+              type="url"
+              value={form.link_url}
+              onChange={(e) => setForm({ ...form, link_url: e.target.value })}
+              placeholder="رابط (اختياري)"
+              maxLength={1000}
+              className="min-w-0 flex-1 basis-full sm:basis-auto"
+            />
+            <Input
+              type="text"
+              value={form.link_label}
+              onChange={(e) => setForm({ ...form, link_label: e.target.value })}
+              placeholder="نص الزر"
+              maxLength={60}
+              className="w-full sm:w-40"
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={handleSaveEdit} loading={busy}>
+              حفظ التعديل
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setEditing(false);
+                setForm(formFromAnnouncement(item));
+              }}
+              disabled={busy}
+            >
+              إلغاء
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <h3 className="mt-2 break-anywhere font-bold text-ink">{item.title}</h3>
+          <p className="mt-1 whitespace-pre-line break-anywhere text-sm leading-relaxed text-ink/70">
+            {item.body}
+          </p>
+
+          {item.link_url && (
+            <a
+              href={item.link_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex items-center gap-1 break-anywhere text-xs font-bold text-teal hover:underline"
+            >
+              🔗 {item.link_label || item.link_url}
+            </a>
+          )}
+
+          {item.reviewed_note && (
+            <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-300">
+              <span className="font-bold">سبب الرفض: </span>
+              {item.reviewed_note}
+            </p>
+          )}
+
+          {item.status === 'sent' && (
+            <p className="mt-2 text-xs font-bold text-teal">
+              ✅ أُرسل لـ {item.sent_count} مشترك
+              {item.sent_error && ` (${item.sent_error})`}
+            </p>
+          )}
+
+          {item.status === 'failed' && item.sent_error && (
+            <p className="mt-2 text-xs font-bold text-red-600 dark:text-red-400">
+              ❌ {item.sent_error}
+            </p>
+          )}
+        </>
+      )}
+
+      {/* Actions */}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {isPending && !editing && (
+          <>
+            {canApprove && (
+              <Button size="sm" onClick={handleApprove} loading={busy} icon={<IconSend />}>
+                موافقة وإرسال
+              </Button>
+            )}
+            {canEdit && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setEditing(true)}
+                disabled={busy}
+                icon={<IconEdit />}
+              >
+                تعديل
+              </Button>
+            )}
+            {canApprove && (
+              <Button
+                size="sm"
+                variant="danger"
+                onClick={() => setShowReject(true)}
+                disabled={busy}
+                icon={<IconClose />}
+              >
+                رفض
+              </Button>
+            )}
+            {canDelete && (
+              <Button size="sm" variant="ghost" onClick={handleDelete} disabled={busy} icon={<IconTrash />}>
+                حذف
+              </Button>
+            )}
+            {!canApprove && (
+              <p className="self-center text-[11px] text-ink/50">
+                ⏳ بانتظار موافقة المشرف الأعلى
+              </p>
+            )}
+          </>
+        )}
+
+        {item.status === 'failed' && !editing && canApprove && (
+          <>
+            <Button size="sm" onClick={handleResend} loading={busy} icon={<IconSend />}>
+              إعادة الإرسال
+            </Button>
+            <Button size="sm" variant="ghost" onClick={handleDelete} disabled={busy} icon={<IconTrash />}>
+              حذف
+            </Button>
+          </>
+        )}
+
+        {(item.status === 'sent' || item.status === 'rejected') && !editing && canDelete && (
+          <Button size="sm" variant="ghost" onClick={handleDelete} disabled={busy} icon={<IconTrash />}>
+            حذف من السجل
+          </Button>
+        )}
+      </div>
+
+      {/* Reject inline form */}
+      {showReject && (
+        <div className="mt-3 space-y-2 rounded-xl border border-red-200 bg-red-50 p-3 dark:border-red-900/50 dark:bg-red-950/30">
+          <Input
+            type="text"
+            value={rejectNote}
+            onChange={(e) => setRejectNote(e.target.value)}
+            placeholder="سبب الرفض (اختياري، يظهر للناشر)"
+            maxLength={500}
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="danger" onClick={handleReject} loading={busy}>
+              تأكيد الرفض
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setShowReject(false);
+                setRejectNote('');
+              }}
+              disabled={busy}
+            >
+              إلغاء
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==================== Main Section ====================
+export function AnnouncementsSection({ password }: Props) {
+  const toast = useToast();
+  const [tab, setTab] = useState<Tab>('pending');
+  const [role, setRole] = useState<Role | null>(null);
+  const [pending, setPending] = useState<Announcement[]>([]);
+  const [history, setHistory] = useState<Announcement[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const whoamiRes = await postJson<{ role: Role }>('/api/admin/announcements', {
+        password, action: 'whoami',
+      });
+      setRole(whoamiRes.role);
+
+      const [pRes, hRes] = await Promise.all([
+        postJson<{ items: Announcement[] }>('/api/admin/announcements', {
+          password, action: 'list_pending',
+        }),
+        postJson<{ items: Announcement[] }>('/api/admin/announcements', {
+          password, action: 'list_history',
+        }),
+      ]);
+      setPending(pRes.items ?? []);
+      setHistory(hRes.items ?? []);
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل التحميل', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [password, toast]);
+
+  useEffect(() => { load(); }, [load]);
+
+  return (
+    <section>
+      <div className="mb-5 flex items-start gap-3 rounded-2xl border border-teal/20 bg-teal/[0.04] p-4 text-sm dark:border-teal/30 dark:bg-teal/10">
+        <span className="text-teal"><IconMegaphone /></span>
+        <div className="min-w-0">
+          <p className="font-bold text-ink">تبليغات البوت</p>
+          <p className="mt-0.5 text-ink/70">
+            راجع التبليغات الواردة. الموافقة والإرسال تحتاج صلاحية المشرف الأعلى
+            (<code className="break-anywhere rounded bg-ink/5 px-1 font-mono text-[11px]">SUPER_ADMIN_PASSWORD</code>).
+          </p>
+        </div>
+      </div>
+
+      {role && (
+        <div className="mb-4">
+          <RoleBadge role={role} />
+        </div>
+      )}
+
+      <div className="scrollbar-none mb-4 -mx-4 flex gap-1 overflow-x-auto rounded-xl border border-line bg-white/60 p-1 sm:mx-0 dark:bg-white/[0.04]">
+        <button
+          type="button"
+          onClick={() => setTab('pending')}
+          className={`flex flex-shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition-colors ${
+            tab === 'pending' ? 'bg-teal text-white' : 'text-ink/60 hover:bg-ink/5'
+          }`}
+        >
+          <span className="whitespace-nowrap">قيد المراجعة</span>
+          {pending.length > 0 && (
+            <span className="rounded-full bg-white/20 px-1.5 py-0.5 font-mono text-[10px]">
+              {pending.length}
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('history')}
+          className={`flex flex-shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition-colors ${
+            tab === 'history' ? 'bg-teal text-white' : 'text-ink/60 hover:bg-ink/5'
+          }`}
+        >
+          <span className="whitespace-nowrap">السجل</span>
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="space-y-2">
+          {[0, 1, 2].map((i) => <div key={i} className="h-32 skeleton-shimmer rounded-2xl" />)}
+        </div>
+      ) : tab === 'pending' ? (
+        pending.length === 0 ? (
+          <div className="rounded-3xl border border-line bg-white/80 p-12 text-center dark:bg-paper/80">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-teal/8 text-teal">
+              <IconCheck />
+            </div>
+            <p className="mt-4 font-bold text-ink/70">لا توجد تبليغات بانتظار المراجعة</p>
+            <p className="mt-1 text-sm text-ink/50">كل شيء تحت السيطرة ✨</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {pending.map((a) => (
+              <AnnouncementCard key={a.id} item={a} password={password} role={role} onChanged={load} />
+            ))}
+          </div>
+        )
+      ) : history.length === 0 ? (
+        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center dark:bg-paper/80">
+          <p className="font-bold text-ink/70">لا يوجد سجل بعد</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {history.map((a) => (
+            <AnnouncementCard key={a.id} item={a} password={password} role={role} onChanged={load} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+===app/api/admin/announcements/route.ts===
+// app/api/admin/announcements/route.ts
+import { NextResponse } from 'next/server';
+import {
+  jsonError,
+  safeOptionalString,
+  safeString,
+} from '@/lib/api-server';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { sendAnnouncement } from '@/lib/telegram-notifications';
+import { STAGES } from '@/lib/constants';
+
+// ==================== Roles ====================
+type Role = 'super_admin' | 'admin' | 'publisher';
+
+function resolveRole(
+  password: unknown
+): { ok: true; role: Role } | { ok: false } {
+  if (typeof password !== 'string' || password.length === 0) {
+    return { ok: false };
+  }
+
+  const superPw = process.env.SUPER_ADMIN_PASSWORD;
+  if (superPw && password === superPw) {
+    return { ok: true, role: 'super_admin' };
+  }
+
+  const adminPw = process.env.ADMIN_PASSWORD;
+  if (adminPw && password === adminPw) {
+    return { ok: true, role: 'admin' };
+  }
+
+  const pubPw = process.env.PUBLISHER_PASSWORD;
+  if (pubPw && password === pubPw) {
+    return { ok: true, role: 'publisher' };
+  }
+
+  return { ok: false };
+}
+
+// ==================== Helpers ====================
+function parseStage(value: unknown): string | null {
+  const s = safeOptionalString(value, 100);
+  if (!s) return null;
+  return (STAGES as readonly string[]).includes(s) ? s : null;
+}
+
+function isValidUrl(value: string): boolean {
+  try {
+    const u = new URL(value);
+    return u.protocol === 'https:' || u.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+interface AnnouncementRow {
+  id: string;
+  title: string;
+  body: string;
+  stage: string | null;
+  link_url: string | null;
+  link_label: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'sent' | 'failed';
+  created_by: string;
+  created_at: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  reviewed_note: string | null;
+  sent_at: string | null;
+  sent_count: number;
+  sent_error: string | null;
+}
+
+// ==================== Route ====================
+export async function POST(request: Request) {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('الطلب غير صالح', 400);
+  }
+
+  const auth = resolveRole(body.password);
+  if (!auth.ok) {
+    return jsonError('كلمة المرور غير صحيحة', 401);
+  }
+  const { role } = auth;
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const action = typeof body.action === 'string' ? body.action : '';
+
+  // ==================== whoami ====================
+  if (action === 'whoami') {
+    return NextResponse.json({
+      role,
+      canApprove: role === 'super_admin',
+      canEdit: role === 'super_admin',
+      canDelete: role === 'super_admin',
+    });
+  }
+
+  // ==================== create ====================
+  if (action === 'create') {
+    // publisher / admin / super_admin — الكل ينشئ كـ pending
+    // الموافقة والإرسال تحتاج super_admin.
+    const title = safeString(body.title, 200);
+    const text = safeString(body.body, 2000);
+    const stage = parseStage(body.stage);
+    const link_url = safeOptionalString(body.link_url, 1000);
+    const link_label = safeOptionalString(body.link_label, 60);
+    const created_by = safeString(body.created_by, 100);
+
+    if (!title) return jsonError('العنوان مطلوب');
+    if (!text) return jsonError('نص التبليغ مطلوب');
+    if (!created_by) return jsonError('الاسم مطلوب');
+    if (link_url && !isValidUrl(link_url)) {
+      return jsonError('رابط غير صالح (يجب أن يبدأ بـ http أو https)');
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('telegram_announcements')
+      .insert({
+        title,
+        body: text,
+        stage,
+        link_url,
+        link_label,
+        created_by,
+        // super_admin يُنشئ pending أيضاً — لكنه يعتمد زر "موافقة وإرسال" فوراً
+        status: 'pending',
+      })
+      .select('id')
+      .single<{ id: string }>();
+
+    if (error || !data) {
+      console.error('announcement create error:', error?.message);
+      return jsonError('فشل إنشاء التبليغ', 500);
+    }
+
+        // إشعار فوري للمشرفين الأعلى (fire-and-forget)
+    void (async () => {
+      try {
+        const { notifySuperAdminsNewAnnouncement } = await import('@/lib/telegram-notifications');
+        await notifySuperAdminsNewAnnouncement({
+          id: data.id,
+          title,
+          body: text,
+          stage,
+          created_by,
+        });
+      } catch (err) {
+        console.error('[announcement notify] error:', err);
+      }
+    })();
+
+    return NextResponse.json({
+      success: true,
+      id: data.id,
+      status: 'pending',
+      requires_approval: true,
+    });
+  }
+
+  // ==================== list_mine ====================
+  if (action === 'list_mine') {
+    const created_by = safeString(body.created_by, 100);
+    if (!created_by) return jsonError('الاسم مطلوب');
+
+    const { data, error } = await supabaseAdmin
+      .from('telegram_announcements')
+      .select('*')
+      .eq('created_by', created_by)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.error('announcement list_mine error:', error.message);
+      return jsonError('فشل تحميل تبليغاتك', 500);
+    }
+
+    return NextResponse.json({ items: (data ?? []) as AnnouncementRow[] });
+  }
+
+  // ==================== list_pending ====================
+  if (action === 'list_pending') {
+    if (role !== 'super_admin' && role !== 'admin') {
+      return jsonError('غير مصرح', 403);
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('telegram_announcements')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('announcement list_pending error:', error.message);
+      return jsonError('فشل تحميل القائمة', 500);
+    }
+
+    return NextResponse.json({ items: (data ?? []) as AnnouncementRow[] });
+  }
+
+  // ==================== list_history ====================
+  if (action === 'list_history') {
+    if (role !== 'super_admin' && role !== 'admin') {
+      return jsonError('غير مصرح', 403);
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('telegram_announcements')
+      .select('*')
+      .in('status', ['sent', 'failed', 'rejected'])
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) {
+      console.error('announcement list_history error:', error.message);
+      return jsonError('فشل تحميل السجل', 500);
+    }
+
+    return NextResponse.json({ items: (data ?? []) as AnnouncementRow[] });
+  }
+
+  // ==================== pending_count ====================
+  if (action === 'pending_count') {
+    if (role !== 'super_admin' && role !== 'admin') {
+      return jsonError('غير مصرح', 403);
+    }
+
+    const { count, error } = await supabaseAdmin
+      .from('telegram_announcements')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending');
+
+    if (error) return NextResponse.json({ count: 0 });
+    return NextResponse.json({ count: count ?? 0 });
+  }
+
+  // ==================== approve (super_admin فقط) ====================
+  if (action === 'approve') {
+    if (role !== 'super_admin') {
+      return jsonError('غير مصرح — الموافقة تتطلب صلاحية المشرف الأعلى', 403);
+    }
+
+    const id = safeString(body.id, 100);
+    if (!id) return jsonError('id مطلوب');
+
+    const { data: existing } = await supabaseAdmin
+      .from('telegram_announcements')
+      .select('status')
+      .eq('id', id)
+      .maybeSingle<{ status: string }>();
+
+    if (!existing) return jsonError('التبليغ غير موجود', 404);
+    if (existing.status !== 'pending') {
+      return jsonError('لا يمكن الموافقة على تبليغ بحالة ' + existing.status);
+    }
+
+    await supabaseAdmin
+      .from('telegram_announcements')
+      .update({
+        status: 'approved',
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: 'super_admin',
+      })
+      .eq('id', id);
+
+    let result;
+    try {
+      result = await sendAnnouncement(id);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'خطأ غير معروف';
+      await supabaseAdmin
+        .from('telegram_announcements')
+        .update({ status: 'failed', sent_error: msg })
+        .eq('id', id);
+      return jsonError('فشل الإرسال: ' + msg, 500);
+    }
+
+    if (result.error) {
+      await supabaseAdmin
+        .from('telegram_announcements')
+        .update({
+          status: 'failed',
+          sent_error: result.error,
+          sent_count: result.sent,
+        })
+        .eq('id', id);
+      return jsonError('فشل الإرسال: ' + result.error, 500);
+    }
+
+    await supabaseAdmin
+      .from('telegram_announcements')
+      .update({
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+        sent_count: result.sent,
+        sent_error: result.failed > 0 ? `فشل ${result.failed}` : null,
+      })
+      .eq('id', id);
+
+    return NextResponse.json({
+      success: true,
+      sent: result.sent,
+      failed: result.failed,
+    });
+  }
+
+  // ==================== reject (super_admin فقط) ====================
+  if (action === 'reject') {
+    if (role !== 'super_admin') {
+      return jsonError('غير مصرح', 403);
+    }
+
+    const id = safeString(body.id, 100);
+    const note = safeOptionalString(body.note, 500);
+
+    if (!id) return jsonError('id مطلوب');
+
+    const { error } = await supabaseAdmin
+      .from('telegram_announcements')
+      .update({
+        status: 'rejected',
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: 'super_admin',
+        reviewed_note: note,
+      })
+      .eq('id', id)
+      .eq('status', 'pending');
+
+    if (error) {
+      console.error('announcement reject error:', error.message);
+      return jsonError('فشل الرفض', 500);
+    }
+    return NextResponse.json({ success: true });
+  }
+
+  // ==================== edit (super_admin فقط — لتصحيح النص قبل الإرسال) ====================
+  if (action === 'edit') {
+    if (role !== 'super_admin') {
+      return jsonError('غير مصرح', 403);
+    }
+
+    const id = safeString(body.id, 100);
+    const title = safeString(body.title, 200);
+    const text = safeString(body.body, 2000);
+    const stage = parseStage(body.stage);
+    const link_url = safeOptionalString(body.link_url, 1000);
+    const link_label = safeOptionalString(body.link_label, 60);
+
+    if (!id) return jsonError('id مطلوب');
+    if (!title) return jsonError('العنوان مطلوب');
+    if (!text) return jsonError('النص مطلوب');
+    if (link_url && !isValidUrl(link_url)) {
+      return jsonError('رابط غير صالح');
+    }
+
+    const { error } = await supabaseAdmin
+      .from('telegram_announcements')
+      .update({ title, body: text, stage, link_url, link_label })
+      .eq('id', id)
+      .eq('status', 'pending');
+
+    if (error) {
+      console.error('announcement edit error:', error.message);
+      return jsonError('فشل التعديل', 500);
+    }
+    return NextResponse.json({ success: true });
+  }
+
+  // ==================== resend (super_admin فقط) ====================
+  if (action === 'resend') {
+    if (role !== 'super_admin') {
+      return jsonError('غير مصرح', 403);
+    }
+
+    const id = safeString(body.id, 100);
+    if (!id) return jsonError('id مطلوب');
+
+    const result = await sendAnnouncement(id);
+
+    if (result.error) {
+      await supabaseAdmin
+        .from('telegram_announcements')
+        .update({
+          status: 'failed',
+          sent_error: result.error,
+          sent_count: result.sent,
+        })
+        .eq('id', id);
+      return jsonError('فشل الإرسال: ' + result.error, 500);
+    }
+
+    await supabaseAdmin
+      .from('telegram_announcements')
+      .update({
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+        sent_count: result.sent,
+        sent_error: result.failed > 0 ? `فشل ${result.failed}` : null,
+      })
+      .eq('id', id);
+
+    return NextResponse.json({
+      success: true,
+      sent: result.sent,
+      failed: result.failed,
+    });
+  }
+
+  // ==================== delete (super_admin فقط) ====================
+  if (action === 'delete') {
+    if (role !== 'super_admin') {
+      return jsonError('غير مصرح', 403);
+    }
+
+    const id = safeString(body.id, 100);
+    if (!id) return jsonError('id مطلوب');
+
+    const { error } = await supabaseAdmin
+      .from('telegram_announcements')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('announcement delete error:', error.message);
+      return jsonError('فشل الحذف', 500);
+    }
+    return NextResponse.json({ success: true });
+  }
+
+  return jsonError('إجراء غير معروف');
+}
+
+===app/api/groups/register/route.ts===
+// app/api/groups/register/route.ts
+import { getAccessToken, getSettings, isRegistrationOpen } from '@/lib/groups/access';
+import { createSession } from '@/lib/groups/session';
+import { supabaseAdmin } from '@/lib/groups/supabase-admin';
+import { ok, fail, handleError } from '@/lib/groups/api-response';
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json().catch(() => ({}));
+    const { slug, telegram_username, full_name, gender } = body || {};
+
+    // 1) تحقق من الرابط
+    if (!slug || typeof slug !== 'string') return fail('رابط غير صالح');
+    const access = await getAccessToken(slug);
+    if (!access) return fail('هذا الرابط غير متاح أو منتهي الصلاحية', 403);
+
+    // 2) تحقق من حالة التسجيل
+    const settings = await getSettings();
+    if (!isRegistrationOpen(settings)) return fail('التسجيل مغلق حالياً', 403);
+
+    // 3) تحقق من المدخلات
+    if (typeof full_name !== 'string' || full_name.trim().length < 5) {
+      return fail('الاسم يجب أن يكون 5 أحرف على الأقل');
+    }
+    if (full_name.trim().length > 100) return fail('الاسم طويل جداً (الحد 100)');
+
+    if (typeof telegram_username !== 'string') return fail('معرف التليكرام مطلوب');
+    const cleanUsername = telegram_username.trim().replace(/^@+/, '');
+    if (!/^[A-Za-z0-9_]{5,32}$/.test(cleanUsername)) {
+      return fail('معرف التليكرام يجب أن يكون 5-32 حرفاً إنجليزياً أو رقماً أو _');
+    }
+
+    if (gender !== 'male' && gender !== 'female') {
+      return fail('الجنس يجب أن يكون male أو female');
+    }
+
+    // 4) منع التكرار
+    const { data: existing } = await supabaseAdmin
+      .from('sg_students')
+      .select('id')
+      .ilike('telegram_username', cleanUsername)
+      .maybeSingle();
+    if (existing) {
+      return fail('هذا المعرف مسجل مسبقاً. إذا كنت أنت، استخدم نفس المتصفح الذي سجلت منه');
+    }
+
+    // 5) إنشاء الطالب
+    const { data: student, error } = await supabaseAdmin
+      .from('sg_students')
+      .insert({
+        telegram_username: cleanUsername,
+        full_name: full_name.trim(),
+        gender,
+        study_year: access.study_year,
+      })
+      .select('*')
+      .single();
+
+    if (error || !student) return fail('فشل التسجيل: ' + (error?.message || 'خطأ غير معروف'));
+
+    // 6) إنشاء جلسة
+    const token = await createSession(student.id);
+
+    return ok({ token, student });
+  } catch (err) {
+    return handleError(err);
+  }
+}
+===app/g/[slug]/layout.tsx===
+// app/g/[slug]/layout.tsx
+import type { ReactNode } from 'react';
+import { getAccessToken } from '@/lib/groups/access';
+
+export default async function GroupsLayout({
+  children,
+  params,
+}: {
+  children: ReactNode;
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const access = await getAccessToken(slug);
+
+  if (!access) {
+    return (
+      <div className="min-h-screen bg-paper flex items-center justify-center p-6" dir="rtl">
+        <div className="max-w-md text-center space-y-4">
+          <div className="text-6xl">⏰</div>
+          <h1 className="text-2xl font-bold text-ink">انتهت فترة التسجيل</h1>
+          <p className="text-ink-soft leading-relaxed">
+            هذا الرابط لم يعد متاحاً. تواصل مع إدارة لوازم للحصول على رابط جديد.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-paper" dir="rtl">
+      <header className="border-b border-line bg-white">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📚</span>
+            <div>
+              <div className="font-bold text-ink">لوازم</div>
+              <div className="text-xs text-ink-muted">
+                {access.label || 'كروبات الطلاب'}
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+      <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
+    </div>
+  );
+}
+===app/g/[slug]/page.tsx===
+// app/g/[slug]/page.tsx
+'use client';
+
+import { use, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { groupsFetch, getToken, clearToken } from '@/lib/groups/client';
+import type { MeResponse, PublicGroup, RequestWithStudent, RequestWithGroup } from '@/lib/types/groups';
+import { SkeletonCard } from '../_components/SkeletonCard';
+import { PushButton } from '../_components/PushButton';
+
+interface Notification {
+  id: string;
+  title: string;
+  body: string | null;
+  read_at: string | null;
+  created_at: string;
+}
+
+export default function GroupsHomePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = use(params);
+  const router = useRouter();
+  
+  const [me, setMe] = useState<MeResponse | null>(null);
+  const [groups, setGroups] = useState<PublicGroup[]>([]);
+  const [hasMoreGroups, setHasMoreGroups] = useState(false);
+  const [page, setPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
+  
+  const [leaderRequests, setLeaderRequests] = useState<RequestWithStudent[]>([]);
+  const [myRequests, setMyRequests] = useState<RequestWithGroup[]>([]);
+  const [inQueue, setInQueue] = useState(false);
+  
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotif, setShowNotif] = useState(false);
+
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [msg, setMsg] = useState({ type: '', text: '' });
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!getToken()) {
+      router.replace(`/g/${slug}/register`);
+      return;
+    }
+    loadData();
+
+    const interval = setInterval(() => {
+      refreshInBackground();
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [slug, router]);
+
+  async function loadData() {
+    try {
+      const meData = await groupsFetch<MeResponse>('/api/groups/me');
+      setMe(meData);
+
+      const notifData = await groupsFetch<{ list: Notification[], unread: number }>('/api/groups/notifications');
+      setNotifications(notifData?.list || []);
+      setUnreadCount(notifData?.unread || 0);
+
+      if (meData?.group) {
+        if (meData.isLeader) {
+          const reqData = await groupsFetch<{ requests: RequestWithStudent[] }>('/api/groups/requests/list');
+          setLeaderRequests(reqData?.requests || []);
+        }
+      } else {
+        const [listData, myReqData, matchData] = await Promise.all([
+          groupsFetch<{ groups: PublicGroup[], hasMore: boolean }>('/api/groups/list', { page: 1, limit: 10 }),
+          groupsFetch<{ requests: RequestWithGroup[] }>('/api/groups/my-requests'),
+          groupsFetch<{ inQueue: boolean }>('/api/groups/match', { action: 'status' })
+        ]);
+        setGroups(listData?.groups || []);
+        setHasMoreGroups(listData?.hasMore || false);
+        setPage(1);
+        setMyRequests(myReqData?.requests || []);
+        setInQueue(matchData?.inQueue || false);
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'فشل التحميل';
+      if (errorMsg.includes('تسجيل الدخول')) {
+        clearToken();
+        router.replace(`/g/${slug}/register`);
+      } else {
+        setMsg({ type: 'error', text: errorMsg }); // 👈 الآن سيظهر لك الخطأ الحقيقي
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function refreshInBackground() {
+    if (!getToken()) return;
+    try {
+      const notifData = await groupsFetch<{ list: Notification[], unread: number }>('/api/groups/notifications');
+      setNotifications(notifData?.list || []);
+      setUnreadCount(notifData?.unread || 0);
+
+      if (me?.isLeader) {
+        const reqData = await groupsFetch<{ requests: RequestWithStudent[] }>('/api/groups/requests/list');
+        setLeaderRequests(reqData?.requests || []);
+      }
+      
+      if (!me?.group) {
+        const listData = await groupsFetch<{ groups: PublicGroup[], hasMore: boolean }>('/api/groups/list', { page: 1, limit: 10 });
+        setGroups(listData?.groups || []);
+        setHasMoreGroups(listData?.hasMore || false);
+      }
+    } catch (err) {}
+  }
+
+  async function loadMoreGroups() {
+    setLoadingMore(true);
+    try {
+      const nextPage = page + 1;
+      const listData = await groupsFetch<{ groups: PublicGroup[], hasMore: boolean }>('/api/groups/list', { page: nextPage, limit: 10 });
+      setGroups(prev => [...prev, ...(listData?.groups || [])]);
+      setHasMoreGroups(listData?.hasMore || false);
+      setPage(nextPage);
+    } catch (err) {
+      setMsg({ type: 'error', text: 'فشل تحميل المزيد من الكروبات' });
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
+  async function handleLeaderAction(reqId: string, action: 'accept' | 'reject') {
+    const backupRequests = [...leaderRequests];
+    setLeaderRequests(prev => prev.filter(r => r.id !== reqId));
+    setMsg({ type: 'success', text: action === 'accept' ? 'تم قبول الطالب' : 'تم رفض الطالب' });
+    try {
+      await groupsFetch('/api/groups/requests/handle', { request_id: reqId, action });
+      loadData(); 
+    } catch (err) {
+      setLeaderRequests(backupRequests);
+      setMsg({ type: 'error', text: err instanceof Error ? err.message : 'حدث خطأ' });
+    }
+  }
+
+  async function handleAction(endpoint: string, payload: any, successMsg: string, btnId: string) {
+    setActionLoading(btnId);
+    setMsg({ type: '', text: '' });
+    try {
+      await groupsFetch(endpoint, payload);
+      setMsg({ type: 'success', text: successMsg });
+      await loadData();
+    } catch (err) {
+      setMsg({ type: 'error', text: err instanceof Error ? err.message : 'حدث خطأ' });
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function markNotifRead() {
+    if (unreadCount === 0) return;
+    await groupsFetch('/api/groups/notifications', { mark_all: true });
+    setUnreadCount(0);
+  }
+
+  function copyInviteLink() {
+    if (!me?.group) return;
+    const url = `${window.location.origin}/g/${slug}/join/${me.group.code}`;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-24 w-full animate-pulse rounded-2xl bg-white/50 border border-line"></div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[1, 2, 3, 4].map(i => <SkeletonCard key={i} />)}
+        </div>
+      </div>
+    );
+  }
+  if (!me) return null;
+
+  return (
+    <div className="space-y-6 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-line bg-white p-4 sm:p-5 shadow-sm relative">
+        <div className="flex items-center justify-between w-full sm:w-auto">
+          <div>
+            <h1 className="text-lg sm:text-xl font-bold text-ink leading-tight">مرحباً، {me.student.full_name.split(' ')[0]}</h1>
+            <p className="mt-1 text-xs sm:text-sm text-ink-soft font-mono" dir="ltr">@{me.student.telegram_username}</p>
+          </div>
+          <div className="flex sm:hidden items-center gap-2">
+             <PushButton />
+             <button onClick={() => { setShowNotif(!showNotif); markNotifRead(); }} className="relative rounded-full p-2 bg-ink/5 text-xl">
+              🔔
+              {unreadCount > 0 && <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-bold">{unreadCount}</span>}
+            </button>
+          </div>
+        </div>
+        <div className="hidden sm:flex items-center gap-4">
+          <PushButton />
+          <div className="relative">
+            <button onClick={() => { setShowNotif(!showNotif); markNotifRead(); }} className="relative rounded-full p-2 hover:bg-ink/5 text-xl">
+              🔔
+              {unreadCount > 0 && <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-bold">{unreadCount}</span>}
+            </button>
+            {showNotif && (
+              <div className="absolute left-0 mt-2 w-72 rounded-xl border border-line bg-white shadow-lg z-50 max-h-80 overflow-y-auto">
+                <div className="p-3 border-b border-line font-bold text-sm text-ink">الإشعارات</div>
+                {notifications?.length === 0 ? <p className="p-4 text-center text-sm text-ink-muted">لا توجد إشعارات.</p> : (
+                  notifications?.map(n => (
+                    <div key={n.id} className={`p-3 border-b border-line text-sm ${!n.read_at ? 'bg-teal/5' : ''}`}>
+                      <div className="font-bold text-ink">{n.title}</div>
+                      {n.body && <div className="text-ink-soft text-xs mt-1">{n.body}</div>}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+          <button onClick={() => { clearToken(); router.replace(`/g/${slug}/register`); }} className="text-xs font-semibold text-ink-muted hover:text-red-500 bg-ink/5 sm:bg-transparent px-3 py-1.5 rounded-lg sm:p-0">خروج</button>
+        </div>
+      </div>
+
+      {showNotif && (
+         <div className="sm:hidden fixed inset-0 z-50 bg-black/20" onClick={() => setShowNotif(false)}>
+            <div className="absolute top-16 left-4 right-4 rounded-xl border border-line bg-white shadow-xl max-h-[60vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <div className="p-3 border-b border-line font-bold text-sm text-ink flex justify-between">
+                <span>الإشعارات</span>
+                <button onClick={() => setShowNotif(false)}>✕</button>
+              </div>
+              {notifications?.length === 0 ? <p className="p-4 text-center text-sm text-ink-muted">لا توجد إشعارات.</p> : (
+                  notifications?.map(n => (
+                    <div key={n.id} className={`p-3 border-b border-line text-sm ${!n.read_at ? 'bg-teal/5' : ''}`}>
+                      <div className="font-bold text-ink">{n.title}</div>
+                      {n.body && <div className="text-ink-soft text-xs mt-1">{n.body}</div>}
+                    </div>
+                  ))
+                )}
+            </div>
+         </div>
+      )}
+
+      {msg.text && <div className={`rounded-xl p-3 sm:p-4 text-sm font-semibold ${msg.type === 'success' ? 'bg-teal/10 text-teal' : 'bg-red-50 text-red-600'}`}>{msg.text}</div>}
+
+      {me.group ? (
+        <div className="space-y-6">
+          <div className="rounded-2xl border border-teal/30 bg-teal/5 p-4 sm:p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-ink">{me.group.name || `كروب #${me.group.serial}`}</h2>
+                <p className="text-xs sm:text-sm text-ink-soft mt-1">أنت {me.isLeader ? 'قائد هذا الكروب 👑' : 'عضو في هذا الكروب'}</p>
+              </div>
+              <div className="flex items-center justify-between sm:block text-center border-t sm:border-t-0 border-teal/20 pt-3 sm:pt-0">
+                <div className="text-xl sm:text-2xl font-bold text-teal">{me.group.male_count + me.group.female_count}/{me.group.target_size}</div>
+                <div className="text-xs text-ink-muted">عضو</div>
+              </div>
+            </div>
+            
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-teal/20 pt-4">
+              <div className="flex gap-4 text-sm font-semibold bg-white/50 px-3 py-1 rounded-lg">
+                <span>👨 {me.group.male_count}</span>
+                <span>👩 {me.group.female_count}</span>
+              </div>
+              
+              <div className="flex gap-2 w-full sm:w-auto">
+                {me.isLeader && (
+                  <button onClick={copyInviteLink} className="flex-1 sm:flex-none rounded-lg border border-teal/30 bg-white px-4 py-2 text-xs font-bold text-teal hover:bg-teal/5 transition-colors">
+                    {copied ? '✓ تم النسخ' : '🔗 نسخ رابط الدعوة'}
+                  </button>
+                )}
+                <button onClick={() => { if (confirm('هل أنت متأكد من مغادرة الكروب؟')) handleAction('/api/groups/leave', {}, 'تمت المغادرة بنجاح', 'leave'); }} disabled={actionLoading === 'leave'} className="flex-1 sm:flex-none rounded-lg bg-red-100 px-4 py-2 text-xs font-bold text-red-600 transition hover:bg-red-200 disabled:opacity-50">
+                  {actionLoading === 'leave' ? '...' : 'مغادرة'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {me.isLeader && (
+            <div className="space-y-3">
+              <h3 className="font-bold text-ink flex justify-between items-center">
+                <span>طلبات الانضمام ({leaderRequests?.length || 0})</span>
+                <span className="text-[10px] text-ink-muted font-normal bg-ink/5 px-2 py-1 rounded-md">🔄 يتحدث تلقائياً</span>
+              </h3>
+              {leaderRequests?.length === 0 ? <p className="text-sm text-ink-muted bg-white p-4 rounded-xl border border-line text-center">لا توجد طلبات جديدة.</p> : (
+                <div className="space-y-2">
+                  {leaderRequests?.map(req => (
+                    <div key={req.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-line bg-white p-3 text-sm">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-ink text-base">{req.student.full_name}</span>
+                          <span className="text-ink-muted text-xs bg-ink/5 px-2 py-0.5 rounded-md">({req.student.gender === 'male' ? 'ذكر 👨' : 'أنثى 👩'})</span>
+                        </div>
+                        <div className="text-xs text-ink-muted mt-1 font-mono" dir="ltr">@{req.student.telegram_username}</div>
+                      </div>
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <button onClick={() => handleLeaderAction(req.id, 'accept')} className="flex-1 sm:flex-none rounded-md bg-teal px-4 py-2 text-xs font-bold text-white hover:bg-teal/90 transition-colors">قبول</button>
+                        <button onClick={() => handleLeaderAction(req.id, 'reject')} className="flex-1 sm:flex-none rounded-md bg-ink/5 px-4 py-2 text-xs font-bold text-ink-soft hover:bg-ink/10 transition-colors">رفض</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div>
+            <h3 className="font-bold text-ink mb-3">الأعضاء ({me.members?.length || 0})</h3>
+            <ul className="space-y-2">
+              {me.members?.map(m => (
+                <li key={m.id} className="flex justify-between items-center rounded-xl border border-line bg-white p-3 text-sm">
+                  <div>
+                    <span className="font-semibold text-ink">{m.student.full_name} {m.role === 'leader' && '👑'}</span>
+                    <span className="block sm:inline font-mono text-ink-muted text-xs sm:text-sm mt-1 sm:mt-0 sm:ml-3" dir="ltr">@{m.student.telegram_username}</span>
+                  </div>
+                  {me.isLeader && m.student_id !== me.student.id && (
+                    <button onClick={() => { if (confirm(`هل أنت متأكد من طرد ${m.student.full_name}؟`)) handleAction('/api/groups/kick', { group_id: me.group?.id, student_id: m.student_id }, 'تم طرد الطالب', `kick-${m.id}`); }} disabled={actionLoading === `kick-${m.id}`} className="rounded-md bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100 disabled:opacity-50">
+                      {actionLoading === `kick-${m.id}` ? '...' : 'طرد'}
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          <div className="rounded-2xl border border-dashed border-line bg-white p-6 sm:p-8 text-center shadow-sm">
+            <h2 className="text-lg font-bold text-ink">أنت لست في أي كروب حتى الآن</h2>
+            <p className="mt-2 text-xs sm:text-sm text-ink-soft leading-relaxed max-w-md mx-auto">يمكنك إنشاء كروب جديد، أو الانضمام لكروب موجود، أو ترك النظام يكوّن لك كروباً تلقائياً.</p>
+            <div className="mt-6 flex flex-col sm:flex-row justify-center gap-3">
+              <Link href={`/g/${slug}/create`} className="rounded-lg bg-teal px-6 py-3 text-sm font-bold text-white transition hover:bg-teal/90">+ إنشاء كروب جديد</Link>
+              {inQueue ? (
+                <button onClick={() => handleAction('/api/groups/match', { action: 'leave' }, 'تم الخروج من قائمة الانتظار', 'match')} disabled={actionLoading === 'match'} className="rounded-lg border border-amber bg-amber/10 px-6 py-3 text-sm font-bold text-amber-700 transition hover:bg-amber/20 disabled:opacity-50">
+                  {actionLoading === 'match' ? '...' : 'في قائمة الانتظار ⏳ (خروج)'}
+                </button>
+              ) : (
+                <button onClick={() => handleAction('/api/groups/match', { action: 'join' }, 'انضممت لقائمة الانتظار، بانتظار الإدارة.', 'match')} disabled={actionLoading === 'match'} className="rounded-lg border border-gold bg-gold/10 px-6 py-3 text-sm font-bold text-gold-ink transition hover:bg-gold/20 disabled:opacity-50">
+                  {actionLoading === 'match' ? '...' : '🤖 كوّن لي كروباً تلقائياً'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h2 className="text-lg font-bold text-ink flex items-center gap-2">الكروبات المتاحة <span className="bg-ink/5 text-ink-muted px-2 py-0.5 rounded-full text-xs">{groups?.length || 0}</span></h2>
+            {groups?.length === 0 ? <p className="text-sm text-ink-muted bg-white p-6 rounded-2xl border border-line text-center">لا توجد كروبات متاحة للانضمام حالياً.</p> : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {groups?.map(g => {
+                  const hasPendingRequest = myRequests?.find(r => r.group_id === g.id);
+                  return (
+                    <div key={g.id} className="rounded-2xl border border-line bg-white p-4 shadow-sm flex flex-col justify-between hover:border-teal/30 transition-colors">
+                      <div>
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-ink truncate">{g.name || `كروب #${g.serial}`}</h3>
+                            <p className="text-xs text-ink-muted truncate">القائد: {g.leader_name}</p>
+                          </div>
+                          <span className="shrink-0 rounded-full bg-teal/10 px-2.5 py-1 text-[10px] font-bold text-teal">{g.spots_left} مقاعد</span>
+                        </div>
+                        <div className="mt-4 flex gap-3 text-xs font-semibold bg-paper-soft p-2 rounded-lg justify-center">
+                          <span className="text-ink-soft">👨 {g.male_count}</span>
+                          <span className="text-ink-soft">👩 {g.female_count}</span>
+                        </div>
+                      </div>
+                      <div className="mt-4">
+                        {hasPendingRequest ? (
+                          <div className="flex gap-2">
+                            <div className="flex-1 rounded-lg bg-amber/10 border border-amber/20 py-2 text-center text-xs font-bold text-amber-700 flex items-center justify-center gap-1">قيد الانتظار ⏳</div>
+                            <button onClick={() => handleAction('/api/groups/my-requests', { action: 'cancel', request_id: hasPendingRequest.id }, 'تم إلغاء الطلب', g.id)} disabled={actionLoading === g.id} className="rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-100 disabled:opacity-50">إلغاء</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => handleAction('/api/groups/join-request', { group_id: g.id }, 'تم إرسال الطلب بنجاح، بانتظار القائد.', g.id)} disabled={actionLoading === g.id || inQueue} className="w-full rounded-lg border border-teal/30 bg-teal/5 py-2.5 text-xs font-bold text-teal transition hover:bg-teal/10 disabled:opacity-50">
+                            {actionLoading === g.id ? '...' : (inQueue ? 'أنت في قائمة الانتظار' : 'طلب انضمام')}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {hasMoreGroups && (
+              <div className="text-center pt-4">
+                <button onClick={loadMoreGroups} disabled={loadingMore} className="rounded-lg border border-line bg-white px-6 py-2 text-sm font-bold text-ink hover:bg-ink/5 disabled:opacity-50 transition-colors">
+                  {loadingMore ? 'جارٍ التحميل...' : 'عرض المزيد من الكروبات'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+===app/lawazem/page.tsx===
+// app/lawazem/page.tsx
+'use client';
+
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabaseClient';
+import { useStudentStage } from '@/hooks/useStudentStage';
+import { useBookmarks } from '@/hooks/useBookmarks';
+import { useRecentViews } from '@/hooks/useRecentViews';
+import { Input } from '@/components/ui/Field';
+import { ReportModal } from '@/components/ReportModal';
+import { PullToRefresh } from '@/components/PullToRefresh';
+import { postJson } from '@/lib/api-client';
+import {
+  IconArrowRight,
+  IconBook,
+  IconBookmark,
+  IconClose,
+  IconDoc,
+  IconFlag,
+  IconInbox,
+  IconSearch,
+  IconTelegram,
+} from '@/components/ui/Icons';
+import type { LectureNote, Track } from '@/lib/types';
+
+// ==================== Types ====================
+interface LatestNote {
+  title: string;
+  professor: string | null;
+  createdAt: string | null;
+}
+
+interface SubjectMeta {
+  id: string;
+  name: string;
+  units: number | null;
+  noteCount: number;
+  latest: LatestNote | null;
+}
+
+interface DoctorGroup {
+  name: string;
+  notes: LectureNote[];
+}
+
+const NO_DOCTOR = 'غير محدد';
+
+// ==================== Track View (fire-and-forget) ====================
+function trackView(noteId: string) {
+  try {
+    const payload = JSON.stringify({ action: 'increment', note_id: noteId });
+    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+      const blob = new Blob([payload], { type: 'application/json' });
+      navigator.sendBeacon('/api/views', blob);
+    } else {
+      fetch('/api/views', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        keepalive: true,
+      }).catch(() => {});
+    }
+  } catch {
+    /* تجاهل */
+  }
+}
+
+// ==================== Helpers ====================
+const rtf =
+  typeof Intl !== 'undefined' && 'RelativeTimeFormat' in Intl
+    ? new Intl.RelativeTimeFormat('ar-u-nu-latn', { numeric: 'auto' })
+    : null;
+
+function timeAgo(iso: string | null | undefined): string {
+  if (!iso || !rtf) return '';
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return '';
+  const days = Math.floor((Date.now() - t) / 86_400_000);
+  if (days < 1) return 'اليوم';
+  if (days < 7) return rtf.format(-days, 'day');
+  if (days < 30) return rtf.format(-Math.floor(days / 7), 'week');
+  if (days < 365) return rtf.format(-Math.floor(days / 30), 'month');
+  return rtf.format(-Math.floor(days / 365), 'year');
+}
+
+/** ألوان أيقونات المواضيع (مثل Topics في تيليجرام) */
+const TOPIC_COLORS: readonly string[] = [
+  'bg-teal/15 text-teal',
+  'bg-gold/15 text-gold-ink',
+  'bg-success/15 text-success-ink',
+  'bg-navy/15 text-navy-ink',
+  'bg-warning/20 text-warning-ink',
+];
+
+function topicColor(id: string): string {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return TOPIC_COLORS[h % TOPIC_COLORS.length];
+}
+
+function topicInitial(name: string): string {
+  const clean = name.trim().replace(/^ال/, '');
+  return (clean || name.trim()).charAt(0) || '؟';
+}
+
+function countLabel(n: number): string {
+  return `${n} ${n === 1 ? 'ملزمة' : 'ملازم'}`;
+}
+
+function noteMatches(
+  note: LectureNote,
+  term: string,
+  tag: string | null,
+): boolean {
+  const noteTags = Array.isArray(note.tags) ? note.tags : [];
+  if (tag && !noteTags.includes(tag)) return false;
+  if (term) {
+    const lower = term.toLowerCase();
+    const inTitle = note.title.toLowerCase().includes(lower);
+    const inDoctor =
+      note.professor_name?.toLowerCase().includes(lower) ?? false;
+    const inTrack = note.track?.toLowerCase().includes(lower) ?? false;
+    const inTags = noteTags.some((t) => t.toLowerCase().includes(lower));
+    if (!inTitle && !inDoctor && !inTrack && !inTags) return false;
+  }
+  return true;
+}
+
+function sortNotes(notes: LectureNote[]): LectureNote[] {
+  return [...notes].sort((a, b) => {
+    const aNum = a.lecture_number ?? Number.POSITIVE_INFINITY;
+    const bNum = b.lecture_number ?? Number.POSITIVE_INFINITY;
+    if (aNum !== bNum) return aNum - bNum;
+    return a.title.localeCompare(b.title, 'ar');
+  });
+}
+
+function groupByDoctor(notes: LectureNote[]): DoctorGroup[] {
+  const groups: Record<string, LectureNote[]> = {};
+  for (const note of notes) {
+    const doctor = note.professor_name?.trim() || NO_DOCTOR;
+    (groups[doctor] ??= []).push(note);
+  }
+  return Object.entries(groups)
+    .map(([name, list]) => ({ name, notes: sortNotes(list) }))
+    .sort((a, b) => {
+      if (a.name === NO_DOCTOR) return 1;
+      if (b.name === NO_DOCTOR) return -1;
+      return a.name.localeCompare(b.name, 'ar');
+    });
+}
+
+function doctorLabel(name: string): string {
+  return name === NO_DOCTOR ? 'بدون دكتور' : `د. ${name}`;
+}
+
+// ==================== Skeletons ====================
+function TopicsSkeleton() {
+  return (
+    <div aria-hidden="true">
+      {[0, 1, 2, 3, 4].map((i) => (
+        <div key={i} className="flex items-center gap-3 px-4 py-3">
+          <div className="h-12 w-12 flex-shrink-0 skeleton-shimmer rounded-full" />
+          <div className="flex-1 space-y-2">
+            <div className="h-4 w-1/2 skeleton-shimmer rounded" />
+            <div className="h-3 w-4/5 skeleton-shimmer rounded" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function NotesSkeleton() {
+  return (
+    <div className="space-y-3 p-3 sm:p-4" aria-hidden="true">
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          className="flex gap-3 rounded-2xl rounded-ss-md border border-line bg-paper-soft p-3"
+        >
+          <div className="h-11 w-11 flex-shrink-0 skeleton-shimmer rounded-full" />
+          <div className="flex-1 space-y-2 pt-1">
+            <div className="h-4 w-3/4 skeleton-shimmer rounded" />
+            <div className="h-3 w-1/3 skeleton-shimmer rounded" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ==================== Topic Avatar ====================
+function TopicAvatar({
+  subject,
+  className = 'h-12 w-12 text-lg',
+}: {
+  subject: SubjectMeta;
+  className?: string;
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`flex flex-shrink-0 items-center justify-center rounded-full font-display font-bold ${topicColor(
+        subject.id,
+      )} ${className}`}
+    >
+      {topicInitial(subject.name)}
+    </span>
+  );
+}
+
+// ==================== Topic Row (قائمة المواضيع) ====================
+function TopicRow({
+  subject,
+  active,
+  count,
+  isResultCount,
+  onOpen,
+}: {
+  subject: SubjectMeta;
+  active: boolean;
+  count: number;
+  isResultCount: boolean;
+  onOpen: () => void;
+}) {
+  const { latest } = subject;
+  const when = timeAgo(latest?.createdAt);
+
+  let preview = 'لا توجد ملازم بعد';
+  if (isResultCount) {
+    preview = `${count} ${count === 1 ? 'نتيجة مطابقة' : 'نتائج مطابقة'}`;
+  } else if (latest) {
+    const prof = latest.professor?.trim();
+    preview = `${prof ? `د. ${prof}: ` : ''}${latest.title}`;
+  }
+
+  return (
+    <li className="[&:last-child_.row-line]:border-b-0">
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-current={active ? 'true' : undefined}
+        className={`flex w-full items-center gap-3 ps-4 text-start transition-colors duration-150 hover:bg-ink/[0.04] active:bg-ink/[0.07] focus-visible:outline-offset-[-2px] ${
+          active ? 'bg-teal/10 hover:bg-teal/10' : ''
+        }`}
+      >
+        <TopicAvatar subject={subject} />
+
+        <div className="row-line min-w-0 flex-1 border-b border-line-soft py-3 pe-4">
+          <div className="flex items-baseline justify-between gap-2">
+            <h2 className="truncate font-display text-[15px] font-bold text-ink">
+              {subject.name}
+            </h2>
+            {when && !isResultCount && (
+              <span className="flex-shrink-0 text-[11px] text-ink-muted">
+                {when}
+              </span>
+            )}
+          </div>
+          <div className="mt-0.5 flex items-center justify-between gap-2">
+            <p className="truncate text-[13px] text-ink-muted">{preview}</p>
+            {count > 0 && (
+              <span
+                className={`num flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${
+                  active ? 'bg-teal text-on-teal' : 'bg-teal/15 text-teal'
+                }`}
+              >
+                {count}
+              </span>
+            )}
+          </div>
+        </div>
+      </button>
+    </li>
+  );
+}
+
+// ==================== Note Bubble (الملزمة كرسالة) ====================
+function NoteBubble({
+  note,
+  subjectName,
+  reportCount,
+  onReport,
+}: {
+  note: LectureNote;
+  subjectName: string;
+  reportCount: number;
+  onReport: () => void;
+}) {
+  const { isBookmarked, toggle } = useBookmarks();
+  const { addView } = useRecentViews();
+  const bookmarked = isBookmarked(note.id);
+
+  const hasLecture = note.lecture_number != null;
+  const isTelegram = note.file_path.includes('t.me');
+  const noteTags = Array.isArray(note.tags) ? note.tags : [];
+
+  function handleOpen() {
+    addView({
+      id: note.id,
+      title: note.title,
+      subject_name: subjectName,
+      file_path: note.file_path,
+    });
+    trackView(note.id);
+  }
+
+  return (
+    <li className="defer-item">
+      <div className="max-w-full rounded-2xl rounded-ss-md border border-line bg-paper-soft p-2.5 shadow-xs md:max-w-xl">
+        <a
+          href={note.file_path}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={handleOpen}
+          className="group flex items-start gap-3 rounded-xl p-1 transition-colors hover:bg-ink/[0.03]"
+        >
+          <span
+            className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full transition-colors ${
+              hasLecture
+                ? 'num bg-teal text-base font-bold text-on-teal'
+                : 'bg-teal/15 text-teal'
+            }`}
+          >
+            {hasLecture ? note.lecture_number : <IconDoc className="h-5 w-5" />}
+          </span>
+
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-bold leading-snug text-ink group-hover:text-teal">
+              {note.title}
+            </span>
+            <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-muted">
+              {note.track && <TrackText track={note.track} />}
+              {note.year != null && <span className="num">{note.year}</span>}
+              {isTelegram && (
+                <span className="inline-flex items-center gap-1">
+                  <IconTelegram className="h-3 w-3" />
+                  تيليجرام
+                </span>
+              )}
+            </span>
+          </span>
+        </a>
+
+        {noteTags.length > 0 && (
+          <p className="mt-1.5 flex flex-wrap gap-x-2.5 gap-y-0.5 px-1 text-xs font-medium text-teal">
+            {noteTags.map((tag, i) => (
+              <span key={`${tag}-${i}`}>#{tag}</span>
+            ))}
+          </p>
+        )}
+
+        <div className="mt-1.5 flex items-center gap-1 border-t border-line-soft pt-1">
+          {reportCount >= 3 && (
+            <span
+              className="inline-flex items-center gap-1 rounded-chip bg-coral/15 px-2 py-0.5 text-[11px] font-bold text-coral-ink"
+              title={`${reportCount} بلاغ`}
+            >
+              <IconFlag className="h-3 w-3" />
+              <span className="num">{reportCount}</span>
+            </span>
+          )}
+
+          <div className="ms-auto flex items-center">
+            <button
+              type="button"
+              onClick={() => toggle(note.id)}
+              aria-label={bookmarked ? 'إزالة من المفضلة' : 'حفظ في المفضلة'}
+              aria-pressed={bookmarked}
+              className={`flex h-10 w-10 items-center justify-center rounded-full active:scale-95 ${
+                bookmarked
+                  ? 'text-gold-ink'
+                  : 'text-ink-muted hover:bg-ink/5 hover:text-ink'
+              }`}
+            >
+              <IconBookmark filled={bookmarked} className="h-[18px] w-[18px]" />
+            </button>
+            <button
+              type="button"
+              onClick={onReport}
+              aria-label="بلّغ عن مشكلة"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-ink-muted hover:bg-ink/5 hover:text-gold-ink active:scale-95"
+            >
+              <IconFlag className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function TrackText({ track }: { track: Track }) {
+  return (
+    <span
+      className={`font-bold ${track === 'نظري' ? 'text-teal' : 'text-gold-ink'}`}
+    >
+      {track}
+    </span>
+  );
+}
+
+// ==================== Topic Pane (محتوى الموضوع) ====================
+function TopicPane({
+  subject,
+  notes,
+  isLoaded,
+  isLoading,
+  isFiltering,
+  filterLabel,
+  onClearFilter,
+  reportCounts,
+  onReport,
+  onBack,
+}: {
+  subject: SubjectMeta;
+  notes: LectureNote[];
+  isLoaded: boolean;
+  isLoading: boolean;
+  isFiltering: boolean;
+  filterLabel: string;
+  onClearFilter: () => void;
+  reportCounts: Record<string, number>;
+  onReport: (note: LectureNote) => void;
+  onBack: () => void;
+}) {
+  const [doctor, setDoctor] = useState<string | null>(null);
+
+  const groups = useMemo(() => groupByDoctor(notes), [notes]);
+  const activeDoctor =
+    doctor && groups.some((g) => g.name === doctor) ? doctor : null;
+  const visibleGroups = activeDoctor
+    ? groups.filter((g) => g.name === activeDoctor)
+    : groups;
+
+  const subtitle = isLoaded
+    ? notes.length === 0
+      ? 'لا توجد ملفات'
+      : `${countLabel(notes.length)} · ${groups.length} ${
+          groups.length === 1 ? 'دكتور' : 'دكاترة'
+        }`
+    : countLabel(subject.noteCount);
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col md:overflow-y-auto md:bg-paper">
+      {/* ===== رأس الموضوع ===== */}
+      <header className="nav-glass sticky top-[var(--nav-h)] z-[var(--z-sticky)] md:top-0">
+        <div className="flex items-center gap-2 px-2 py-2 sm:px-3">
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="رجوع إلى المواضيع"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-ink-soft hover:bg-ink/5 md:hidden"
+          >
+            <IconArrowRight className="h-5 w-5" />
+          </button>
+
+          <TopicAvatar subject={subject} className="h-10 w-10 text-base" />
+
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate font-display text-base font-bold text-ink">
+              {subject.name}
+            </h2>
+            <p className="truncate text-xs text-ink-muted">{subtitle}</p>
+          </div>
+        </div>
+
+        {(groups.length > 1 || isFiltering) && (
+          <div className="flex items-center gap-2 overflow-x-auto px-3 pb-2 scrollbar-none">
+            {isFiltering && (
+              <button
+                type="button"
+                onClick={onClearFilter}
+                data-compact
+                className="inline-flex min-h-8 flex-shrink-0 items-center gap-1 rounded-chip border border-teal/40 bg-teal/10 px-3 py-1.5 text-xs font-bold text-teal active:scale-95"
+              >
+                {filterLabel}
+                <IconClose className="h-3 w-3" />
+              </button>
+            )}
+            {groups.length > 1 && (
+              <>
+                <Chip
+                  active={activeDoctor === null}
+                  onClick={() => setDoctor(null)}
+                >
+                  الكل
+                </Chip>
+                {groups.map((g) => (
+                  <Chip
+                    key={g.name}
+                    active={activeDoctor === g.name}
+                    onClick={() =>
+                      setDoctor(activeDoctor === g.name ? null : g.name)
+                    }
+                  >
+                    {doctorLabel(g.name)}
+                    <span className="num ms-1 opacity-70">{g.notes.length}</span>
+                  </Chip>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+      </header>
+
+      {/* ===== الرسائل (الملازم) ===== */}
+      {!isLoaded && isLoading && <NotesSkeleton />}
+
+      {isLoaded && notes.length === 0 && (
+        <div className="px-6 py-16 text-center">
+          <IconInbox className="mx-auto h-10 w-10 text-ink-muted/40" />
+          <p className="mt-3 text-sm font-bold text-ink-soft">
+            {isFiltering ? 'لا توجد نتائج في هذا الموضوع' : 'لا توجد ملفات حالياً'}
+          </p>
+        </div>
+      )}
+
+      {isLoaded && notes.length > 0 && (
+        <div className="space-y-5 px-3 py-4 pb-24 sm:px-4 md:pb-6">
+          {visibleGroups.map((g) => (
+            <section key={g.name} aria-label={doctorLabel(g.name)}>
+              <div className="mb-3 flex justify-center">
+                <span className="rounded-chip bg-ink/[0.07] px-3 py-1 text-xs font-bold text-ink-soft dark:bg-white/10">
+                  {doctorLabel(g.name)}
+                </span>
+              </div>
+              <ul className="space-y-2">
+                {g.notes.map((note) => (
+                  <NoteBubble
+                    key={note.id}
+                    note={note}
+                    subjectName={subject.name}
+                    reportCount={reportCounts[note.id] ?? 0}
+                    onReport={() => onReport(note)}
+                  />
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Chip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      data-compact
+      className={`inline-flex min-h-8 flex-shrink-0 items-center whitespace-nowrap rounded-chip px-3 py-1.5 text-xs font-bold active:scale-95 ${
+        active
+          ? 'bg-teal text-on-teal'
+          : 'bg-ink/5 text-ink-soft hover:bg-ink/10'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ==================== Page ====================
+export default function LawazemPage() {
+  const { stage, ready } = useStudentStage();
+
+  const [subjects, setSubjects] = useState<SubjectMeta[]>([]);
+  const [allTags, setAllTags] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const [notesBySubject, setNotesBySubject] = useState<
+    Map<string, LectureNote[]>
+  >(new Map());
+  const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [reportCounts, setReportCounts] = useState<Record<string, number>>({});
+  const [reportingNote, setReportingNote] = useState<LectureNote | null>(null);
+
+  const [eagerLoading, setEagerLoading] = useState(false);
+  const [eagerLoaded, setEagerLoaded] = useState(false);
+
+  // Pull-to-refresh state
+  const [reloadKey, setReloadKey] = useState(0);
+  const [silentReload, setSilentReload] = useState(false);
+  const refreshResolverRef = useRef<(() => void) | null>(null);
+
+  const notesRef = useRef<Map<string, LectureNote[]>>(new Map());
+  const loadingRef = useRef<Set<string>>(new Set());
+
+  const pendingReportIdsRef = useRef<Set<string>>(new Set());
+  const reportTimerRef = useRef<number | null>(null);
+  const autoOpenedRef = useRef(false);
+  // رقم دورة التحميل: يُبطل نتائج الطلبات القديمة عند إعادة التحميل
+  const loadGenRef = useRef(0);
+  const eagerStartedRef = useRef(false);
+
+  const deferredSearch = useDeferredValue(searchTerm);
+  const term = deferredSearch.trim().toLowerCase();
+  const isFiltering = term !== '' || selectedTag !== null;
+
+  // ==================== Initial load ====================
+  useEffect(() => {
+    if (!stage) return;
+    let cancelled = false;
+    const isSilent = silentReload;
+
+    function settleRefresh() {
+      if (refreshResolverRef.current) {
+        const resolve = refreshResolverRef.current;
+        refreshResolverRef.current = null;
+        resolve();
+      }
+    }
+
+    async function loadInitial() {
+      if (!isSilent) setLoading(true);
+      setError('');
+
+      loadGenRef.current += 1;
+      eagerStartedRef.current = false;
+      notesRef.current = new Map();
+      loadingRef.current = new Set();
+      setNotesBySubject(new Map());
+      setLoadingIds(new Set());
+      setEagerLoaded(false);
+      setEagerLoading(false);
+      setReportCounts({});
+
+      const { data: subjectsData, error: subjectsErr } = await supabase
+        .from('subjects')
+        .select('id, name, units')
+        .eq('stage', stage)
+        .order('name');
+
+      if (cancelled) return;
+
+      if (subjectsErr) {
+        setError(subjectsErr.message);
+        setSubjects([]);
+        setAllTags([]);
+        setLoading(false);
+        setSilentReload(false);
+        settleRefresh();
+        return;
+      }
+
+      const rawSubjects = (subjectsData ?? []) as Array<{
+        id: string;
+        name: string;
+        units: number | null;
+      }>;
+
+      if (rawSubjects.length === 0) {
+        setSubjects([]);
+        setAllTags([]);
+        setLoading(false);
+        setSilentReload(false);
+        settleRefresh();
+        return;
+      }
+
+      const ids = rawSubjects.map((s) => s.id);
+
+      // نجلب بيانات خفيفة تكفي للعدّاد ومعاينة "آخر ملزمة"
+      const { data: metaData } = await supabase
+        .from('lecture_notes')
+        .select('subject_id, tags, title, professor_name, created_at')
+        .in('subject_id', ids)
+        .limit(2000);
+
+      if (cancelled) return;
+
+      const countMap = new Map<string, number>();
+      const latestMap = new Map<string, LatestNote>();
+      const tagSet = new Set<string>();
+
+      for (const row of (metaData ?? []) as Array<{
+        subject_id: string;
+        tags: string[] | null;
+        title: string;
+        professor_name: string | null;
+        created_at: string | null;
+      }>) {
+        countMap.set(row.subject_id, (countMap.get(row.subject_id) ?? 0) + 1);
+
+        const cur = latestMap.get(row.subject_id);
+        if (!cur || (row.created_at ?? '') >= (cur.createdAt ?? '')) {
+          latestMap.set(row.subject_id, {
+            title: row.title,
+            professor: row.professor_name,
+            createdAt: row.created_at,
+          });
+        }
+
+        if (Array.isArray(row.tags)) {
+          for (const t of row.tags) tagSet.add(t);
+        }
+      }
+
+      setSubjects(
+        rawSubjects.map((s) => ({
+          id: s.id,
+          name: s.name,
+          units: s.units,
+          noteCount: countMap.get(s.id) ?? 0,
+          latest: latestMap.get(s.id) ?? null,
+        })),
+      );
+      setAllTags(Array.from(tagSet).sort((a, b) => a.localeCompare(b, 'ar')));
+      setLoading(false);
+      setSilentReload(false);
+      settleRefresh();
+    }
+
+    void loadInitial();
+
+    return () => {
+      cancelled = true;
+      settleRefresh();
+    };
+  }, [stage, reloadKey, silentReload]);
+
+  const handleRefresh = useCallback((): Promise<void> => {
+    return new Promise<void>((resolve) => {
+      refreshResolverRef.current = resolve;
+      setSilentReload(true);
+      setReloadKey((k) => k + 1);
+    });
+  }, []);
+
+  // ==================== Reports batching ====================
+  const scheduleReportsFetch = useCallback(() => {
+    if (reportTimerRef.current !== null) {
+      window.clearTimeout(reportTimerRef.current);
+    }
+    reportTimerRef.current = window.setTimeout(() => {
+      reportTimerRef.current = null;
+      const ids = Array.from(pendingReportIdsRef.current);
+      pendingReportIdsRef.current.clear();
+      if (ids.length === 0) return;
+
+      void postJson<{ counts: Record<string, number> }>('/api/reports', {
+        action: 'counts',
+        lecture_note_ids: ids,
+      })
+        .then((res) => {
+          if (res.counts) {
+            setReportCounts((prev) => ({ ...prev, ...res.counts }));
+          }
+        })
+        .catch(() => {
+          /* silent */
+        });
+    }, 300);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (reportTimerRef.current !== null) {
+        window.clearTimeout(reportTimerRef.current);
+      }
+    };
+  }, []);
+
+  // ==================== Load one subject's notes ====================
+  const loadSubjectNotes = useCallback(
+    async (subjectId: string) => {
+      if (notesRef.current.has(subjectId)) return;
+      if (loadingRef.current.has(subjectId)) return;
+
+      const gen = loadGenRef.current;
+      loadingRef.current.add(subjectId);
+      setLoadingIds(new Set(loadingRef.current));
+
+      try {
+        const { data, error: fetchErr } = await supabase
+          .from('lecture_notes')
+          .select('*')
+          .eq('subject_id', subjectId);
+
+        // دورة تحميل جديدة بدأت أثناء الانتظار — تجاهل هذه النتيجة
+        if (gen !== loadGenRef.current) return;
+
+        if (fetchErr) {
+          console.error('load notes error:', fetchErr.message);
+          return;
+        }
+
+        const notes = (data ?? []) as LectureNote[];
+        notesRef.current.set(subjectId, notes);
+        setNotesBySubject(new Map(notesRef.current));
+
+        for (const n of notes) pendingReportIdsRef.current.add(n.id);
+        if (notes.length > 0) scheduleReportsFetch();
+      } finally {
+        if (gen === loadGenRef.current) {
+          loadingRef.current.delete(subjectId);
+          setLoadingIds(new Set(loadingRef.current));
+        }
+      }
+    },
+    [scheduleReportsFetch],
+  );
+
+  // تحميل ملازم الموضوع المفتوح
+  useEffect(() => {
+    if (activeId) void loadSubjectNotes(activeId);
+  }, [activeId, loadSubjectNotes]);
+
+  // ==================== Eager load (search / tag) ====================
+  useEffect(() => {
+    if (!isFiltering) return;
+    if (eagerLoaded || eagerStartedRef.current) return;
+    if (subjects.length === 0) return;
+
+    eagerStartedRef.current = true;
+    const gen = loadGenRef.current;
+    setEagerLoading(true);
+
+    void Promise.all(subjects.map((s) => loadSubjectNotes(s.id))).finally(() => {
+      if (gen !== loadGenRef.current) return;
+      setEagerLoading(false);
+      setEagerLoaded(true);
+    });
+  }, [isFiltering, subjects, eagerLoaded, loadSubjectNotes]);
+
+  // ==================== Navigation (موضوع مفتوح + زر الرجوع) ====================
+  const openTopic = useCallback((id: string) => {
+    setActiveId(id);
+    try {
+      const st = window.history.state as { lawazimTopic?: string } | null;
+      if (st?.lawazimTopic) {
+        window.history.replaceState({ lawazimTopic: id }, '');
+      } else {
+        window.history.pushState({ lawazimTopic: id }, '');
+      }
+      window.scrollTo({ top: 0 });
+    } catch {
+      /* تجاهل */
+    }
+  }, []);
+
+  const closeTopic = useCallback(() => {
+    try {
+      const st = window.history.state as { lawazimTopic?: string } | null;
+      if (st?.lawazimTopic) {
+        window.history.back();
+        return;
+      }
+    } catch {
+      /* تجاهل */
+    }
+    setActiveId(null);
+  }, []);
+
+  // استعادة الموضوع المفتوح بعد إعادة تحميل الصفحة (history.state يبقى محفوظاً)
+  useEffect(() => {
+    try {
+      const id = (window.history.state as { lawazimTopic?: unknown } | null)
+        ?.lawazimTopic;
+      if (typeof id === 'string') setActiveId(id);
+    } catch {
+      /* تجاهل */
+    }
+  }, []);
+
+  useEffect(() => {
+    function onPop(e: PopStateEvent) {
+      const id = (e.state as { lawazimTopic?: unknown } | null)?.lawazimTopic;
+      setActiveId(typeof id === 'string' ? id : null);
+    }
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  // على الشاشات الكبيرة: افتح أول موضوع تلقائياً (مثل تيليجرام ديسكتوب)
+  useEffect(() => {
+    if (autoOpenedRef.current || loading || subjects.length === 0) return;
+    autoOpenedRef.current = true;
+    if (window.matchMedia('(min-width: 768px)').matches) {
+      setActiveId((prev) => prev ?? subjects[0].id);
+    }
+  }, [loading, subjects]);
+
+  // ==================== Derived ====================
+  const filteredSubjects = useMemo(() => {
+    return subjects.map((s) => {
+      const notes = notesBySubject.get(s.id) ?? [];
+      const isLoaded = notesBySubject.has(s.id);
+      const filtered = isFiltering
+        ? notes.filter((n) => noteMatches(n, term, selectedTag))
+        : notes;
+      return { subject: s, notes: filtered, isLoaded };
+    });
+  }, [subjects, notesBySubject, term, selectedTag, isFiltering]);
+
+  const subjectsToRender = useMemo(() => {
+    if (!isFiltering) return filteredSubjects;
+    return filteredSubjects.filter((fs) => fs.isLoaded && fs.notes.length > 0);
+  }, [filteredSubjects, isFiltering]);
+
+  const totalNotes = useMemo(
+    () => subjects.reduce((sum, s) => sum + s.noteCount, 0),
+    [subjects],
+  );
+
+  const activeEntry = activeId
+    ? (filteredSubjects.find((fs) => fs.subject.id === activeId) ?? null)
+    : null;
+  // إن لم يطابق activeId أي موضوع نبقى على القائمة بدل شاشة فارغة
+  const hasActive = activeEntry !== null;
+
+  const filterLabel = selectedTag
+    ? `#${selectedTag}`
+    : searchTerm.trim()
+      ? `«${searchTerm.trim()}»`
+      : '';
+
+  function clearFilters() {
+    setSearchTerm('');
+    setSelectedTag(null);
+  }
+
+  // ==================== Render ====================
+  if (!ready) {
+    return (
+      <div className="mx-auto w-full max-w-6xl md:px-6 md:py-6">
+        <TopicsSkeleton />
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-6xl md:px-6 md:py-6">
+      <PullToRefresh onRefresh={handleRefresh} disabled={hasActive}>
+        <div className="md:grid md:h-[calc(100dvh-var(--nav-h)-3rem)] md:min-h-[30rem] md:grid-cols-[22rem_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:overflow-hidden md:rounded-card md:border md:border-line md:bg-paper-soft lg:grid-cols-[24rem_minmax(0,1fr)]">
+          {/* ==================== قائمة المواضيع ==================== */}
+          <aside
+            className={`${
+              hasActive ? 'hidden md:flex' : 'flex'
+            } min-h-0 flex-col md:border-e md:border-line`}
+            aria-label="مواضيع الملازم"
+          >
+            <div className="px-4 pb-2 pt-5 md:pt-4">
+              <div className="flex items-center justify-between gap-2">
+                <h1 className="font-display text-2xl font-bold text-ink">
+                  الملازم
+                </h1>
+                {stage && <span className="stage-badge">{stage}</span>}
+              </div>
+              {!loading && totalNotes > 0 && (
+                <p className="mt-1 text-sm text-ink-muted">
+                  <span className="num font-bold text-teal">{totalNotes}</span>{' '}
+                  ملزمة في{' '}
+                  <span className="num font-bold text-teal">
+                    {subjects.length}
+                  </span>{' '}
+                  مادة
+                </p>
+              )}
+
+              {totalNotes > 0 && (
+                <div className="relative mt-3">
+                  <IconSearch className="pointer-events-none absolute end-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
+                  <Input
+                    type="search"
+                    inputMode="search"
+                    placeholder="ابحث عن ملزمة أو دكتور أو وسم"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="!rounded-full !bg-ink/[0.05] !border-transparent py-2.5 pe-10 [&::-webkit-search-cancel-button]:hidden"
+                    aria-label="بحث في الملازم"
+                  />
+                </div>
+              )}
+            </div>
+
+            {allTags.length > 0 && (
+              <div
+                className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-none"
+                role="group"
+                aria-label="تصفية بالوسوم"
+              >
+                <Chip
+                  active={selectedTag === null}
+                  onClick={() => setSelectedTag(null)}
+                >
+                  الكل
+                </Chip>
+                {allTags.map((tag) => (
+                  <Chip
+                    key={tag}
+                    active={selectedTag === tag}
+                    onClick={() =>
+                      setSelectedTag(selectedTag === tag ? null : tag)
+                    }
+                  >
+                    #{tag}
+                  </Chip>
+                ))}
+              </div>
+            )}
+
+            <div className="min-h-0 flex-1 border-t border-line-soft pb-24 md:overflow-y-auto md:pb-0">
+              {isFiltering && eagerLoading && (
+                <p className="flex items-center gap-2 px-4 py-3 text-xs text-ink-muted">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-teal" />
+                  جاري البحث في كل المواد...
+                </p>
+              )}
+
+              {loading && <TopicsSkeleton />}
+
+              {!loading && error && (
+                <div className="m-4 rounded-card border border-coral/30 bg-coral/5 p-4 text-sm text-coral-ink">
+                  <p className="font-bold">خطأ في الاتصال بقاعدة البيانات</p>
+                  <p className="mt-1 opacity-80">{error}</p>
+                </div>
+              )}
+
+              {!loading && !error && subjects.length === 0 && (
+                <div className="px-6 py-16 text-center">
+                  <IconInbox className="mx-auto h-12 w-12 text-ink-muted/40" />
+                  <p className="mt-4 font-bold text-ink-soft">
+                    لا توجد مواد مضافة لمرحلتك حالياً.
+                  </p>
+                </div>
+              )}
+
+              {!loading &&
+                !error &&
+                subjects.length > 0 &&
+                isFiltering &&
+                !eagerLoading &&
+                subjectsToRender.length === 0 && (
+                  <div className="px-6 py-16 text-center">
+                    <IconSearch className="mx-auto h-8 w-8 text-ink-muted/40" />
+                    <p className="mt-4 font-bold text-ink-soft">
+                      لا توجد نتائج مطابقة
+                    </p>
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="mt-3 text-sm font-bold text-teal"
+                    >
+                      مسح البحث
+                    </button>
+                  </div>
+                )}
+
+              {!loading && !error && subjects.length > 0 && (
+                <ul role="list">
+                  {subjectsToRender.map((fs) => (
+                    <TopicRow
+                      key={fs.subject.id}
+                      subject={fs.subject}
+                      active={fs.subject.id === activeId}
+                      count={isFiltering ? fs.notes.length : fs.subject.noteCount}
+                      isResultCount={isFiltering}
+                      onOpen={() => openTopic(fs.subject.id)}
+                    />
+                  ))}
+                </ul>
+              )}
+            </div>
+          </aside>
+
+          {/* ==================== محتوى الموضوع ==================== */}
+          <section
+            className={`${
+              hasActive ? 'flex' : 'hidden md:flex'
+            } min-h-0 min-w-0 flex-col`}
+            aria-label="ملازم الموضوع"
+          >
+            {activeEntry ? (
+              <TopicPane
+                key={activeEntry.subject.id}
+                subject={activeEntry.subject}
+                notes={activeEntry.notes}
+                isLoaded={activeEntry.isLoaded}
+                isLoading={loadingIds.has(activeEntry.subject.id)}
+                isFiltering={isFiltering}
+                filterLabel={filterLabel}
+                onClearFilter={clearFilters}
+                reportCounts={reportCounts}
+                onReport={(note) => setReportingNote(note)}
+                onBack={closeTopic}
+              />
+            ) : (
+              <div className="hidden flex-1 flex-col items-center justify-center gap-3 bg-paper px-6 text-center md:flex">
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-ink/5 text-ink-muted">
+                  <IconBook className="h-6 w-6" />
+                </span>
+                <p className="text-sm font-bold text-ink-soft">
+                  اختر مادة من القائمة لعرض ملازمها
+                </p>
+                <Link
+                  href="/"
+                  className="text-xs font-bold text-teal hover:underline"
+                >
+                  العودة للرئيسية
+                </Link>
+              </div>
+            )}
+          </section>
+        </div>
+      </PullToRefresh>
+
+      <ReportModal
+        note={reportingNote}
+        onClose={() => setReportingNote(null)}
+        onReported={() => {
+          if (reportingNote) {
+            setReportCounts((prev) => ({
+              ...prev,
+              [reportingNote.id]: (prev[reportingNote.id] ?? 0) + 1,
+            }));
+          }
+        }}
+      />
+    </div>
+  );
+}
+===lib/api-client.ts===
+// lib/api-client.ts
+import { supabase } from './supabaseClient';
+
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+export async function postJson<TResponse = unknown, TBody = unknown>(
+  url: string,
+  body: TBody,
+  init?: RequestInit
+): Promise<TResponse> {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    ...init,
+  });
+
+  let data: unknown = null;
+  try {
+    data = await res.json();
+  } catch {
+    /* response wasn't JSON */
+  }
+
+  if (!res.ok) {
+    const message =
+      (data && typeof data === 'object' && 'error' in data && typeof (data as { error: unknown }).error === 'string'
+        ? (data as { error: string }).error
+        : null) || `فشل الطلب (${res.status})`;
+    throw new ApiError(message, res.status);
+  }
+
+  return data as TResponse;
+}
+
+export async function uploadToStorage(
+  bucket: string,
+  filePath: string,
+  file: File | Blob,
+  options?: { upsert?: boolean }
+): Promise<string> {
+  const { error } = await supabase.storage.from(bucket).upload(filePath, file, options);
+  if (error) throw new ApiError(`فشل رفع الملف: ${error.message}`, 500);
+  const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
+  return data.publicUrl;
+}
+
+export function buildStoragePath(prefix: string, fileName: string): string {
+  const safeName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+  return `${prefix}/${Date.now()}-${safeName}`;
+}
+===lib/constants.ts===
+// lib/constants.ts
+import type { ContentType, Group, MedicalCategory, Stage } from './types';
+
+export const STAGES: readonly Stage[] = [
+  'المرحلة الأولى',
+  'المرحلة الثانية',
+  'المرحلة الثالثة',
+] as const;
+
+export const GROUPS: readonly Group[] = ['A', 'B'] as const;
+
+export const GROUP_LABELS: Record<Group, string> = {
+  A: 'كروب A',
+  B: 'كروب B',
+};
+
+export const CONTENT_TYPES: readonly ContentType[] = [
+  'assignment',
+  'lecture_note',
+  'summary',
+  'task',
+] as const;
+
+export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
+  assignment: 'واجب',
+  lecture_note: 'ملزمة',
+  summary: 'ملخص',
+  task: 'مهمة | سشن',
+};
+
+export const STORAGE_KEYS = {
+  studentStage: 'student_stage',
+  adminPassword: 'admin_password',
+  channelId: 'channel_id',
+  channelPassword: 'channel_password',
+  publisherPassword: 'publisher_password',
+  publisherName: 'publisher_name',
+} as const;
+
+export const STORAGE_BUCKETS = {
+  scheduleImages: 'schedule-images',
+  channelImages: 'channel-images',
+  channelFiles: 'channel-files',
+} as const;
+
+// ==================== Study Formats ====================
+export const STUDY_FORMATS = [
+  'ملخص باللهجة العراقية العامية (سريع ومختصر)',
+  'شرح مبسط وواضح لمحتوى السلايد خطوة بخطوة',
+  'أسئلة اختيار من متعدد (MCQ) للمراجعة مع الإجابات الصحيحة وتوضيح كل خيار',
+  'فلاش كاردز (سؤال وجواب) للحفظ السريع',
+  'ملخص نقطي سريع ومركز',
+  'أسئلة نقاش عميقة تساعد على الفهم لا الحفظ',
+  'مراجعة شاملة وتجميعية آخر المحاضرة بعد إرسال كل السلايدات',
+] as const;
+
+export type StudyFormat = (typeof STUDY_FORMATS)[number];
+
+export const STUDY_FORMAT_LABELS: Record<StudyFormat, string> = {
+  'ملخص باللهجة العراقية العامية (سريع ومختصر)': 'ملخص عامي',
+  'شرح مبسط وواضح لمحتوى السلايد خطوة بخطوة': 'شرح مبسط',
+  'أسئلة اختيار من متعدد (MCQ) للمراجعة مع الإجابات الصحيحة وتوضيح كل خيار': 'أسئلة اختيار من متعدد (MCQ)',
+  'فلاش كاردز (سؤال وجواب) للحفظ السريع': 'فلاش كاردز',
+  'ملخص نقطي سريع ومركز': 'ملخص نقطي',
+  'أسئلة نقاش عميقة تساعد على الفهم لا الحفظ': 'أسئلة نقاش عميقة',
+  'مراجعة شاملة وتجميعية آخر المحاضرة بعد إرسال كل السلايدات': 'مراجعة شاملة آخر المحاضرة',
+};
+
+export const MATERIAL_METHODS = [
+  {
+    value: 'الطالب راح يرسل صورة سلايد واحد بكل رسالة، سلايد بعد سلايد لين نهاية المحاضرة',
+    label: 'إرسال صور السلايدات (سلايد بكل رسالة)',
+  },
+  {
+    value: 'الطالب راح يرسل ملف الملزمة (PDF) كامل دفعة وحدة برسالة وحدة',
+    label: 'إرسال ملف الملزمة كامل دفعة وحدة',
+  },
+  {
+    value: 'الطالب راح ينسخ نص جزء من الملزمة ويلصقه بكل رسالة، جزء بعد جزء',
+    label: 'نسخ ولصق نص الملزمة على أجزاء',
+  },
+] as const;
+
+// ==================== Dictionary v2 ====================
+export const MEDICAL_CATEGORIES: readonly MedicalCategory[] = [
+  'general',
+  'anatomy',
+  'physiology',
+  'pathology',
+  'pharmacology',
+  'microbiology',
+  'biochemistry',
+  'histology',
+  'embryology',
+  'immunology',
+  'clinical',
+] as const;
+
+export const MEDICAL_CATEGORY_LABELS: Record<MedicalCategory, string> = {
+  general: 'عام',
+  anatomy: 'تشريح',
+  physiology: 'فسلجة',
+  pathology: 'أمراض',
+  pharmacology: 'أدوية',
+  microbiology: 'أحياء دقيقة',
+  biochemistry: 'كيمياء حيوية',
+  histology: 'أنسجة',
+  embryology: 'أجنة',
+  immunology: 'مناعة',
+  clinical: 'سريري',
+};
+
+export const MEDICAL_CATEGORY_EMOJIS: Record<MedicalCategory, string> = {
+  general: '📚',
+  anatomy: '🦴',
+  physiology: '⚙️',
+  pathology: '🦠',
+  pharmacology: '💊',
+  microbiology: '🧫',
+  biochemistry: '🧬',
+  histology: '🔬',
+  embryology: '👶',
+  immunology: '🛡️',
+  clinical: '🩺',
+};
+// ==================== Grade Types ====================
+export const GRADE_TYPES = [
+  'quiz',
+  'daily',
+  'midterm',
+  'final',
+  'other',
+] as const;
+
+export type GradeType = (typeof GRADE_TYPES)[number];
+
+export const GRADE_TYPE_LABELS: Record<GradeType, string> = {
+  quiz: 'كوز',
+  daily: 'امتحان يومي',
+  midterm: 'امتحان فصلي',
+  final: 'فاينل',
+  other: 'أخرى',
+};
+
+export const GRADE_TYPE_EMOJIS: Record<GradeType, string> = {
+  quiz: '📝',
+  daily: '📋',
+  midterm: '📊',
+  final: '🎯',
+  other: '📁',
+};
+
+export const GRADE_TYPE_COLORS: Record<GradeType, string> = {
+  quiz: 'bg-gold-soft text-gold-ink',
+  daily: 'bg-teal-soft text-teal',
+  midterm: 'bg-navy-soft text-navy-ink',
+  final: 'bg-coral-soft text-coral-ink',
+  other: 'bg-ink/5 text-ink-soft',
+};
+===lib/groups/access.ts===
+// lib/groups/access.ts
+// ⚠️ للاستخدام على السيرفر فقط
+
+import { supabaseAdmin } from './supabase-admin';
+import type { Settings } from '@/lib/types/groups';
+
+export interface AccessToken {
+  slug: string;
+  label: string | null;
+  is_active: boolean;
+  study_year: string;
+  expires_at: string | null;
+}
+
+/**
+ * يجيب رابط الوصول المؤقت (slug) إذا كان فعّالاً
+ */
+export async function getAccessToken(
+  slug: string
+): Promise<AccessToken | null> {
+  const { data } = await supabaseAdmin
+    .from('sg_access_tokens')
+    .select('*')
+    .eq('slug', slug)
+    .maybeSingle();
+
+  if (!data) return null;
+  if (!data.is_active) return null;
+  if (data.expires_at && new Date(data.expires_at).getTime() < Date.now())
+    return null;
+
+  return data as AccessToken;
+}
+
+/**
+ * يجيب إعدادات النظام (صف واحد فقط)
+ */
+export async function getSettings(): Promise<Settings> {
+  const { data } = await supabaseAdmin
+    .from('sg_settings')
+    .select('*')
+    .eq('id', 1)
+    .maybeSingle();
+
+  if (!data) {
+    return {
+      id: 1,
+      target_size: 10,
+      preferred_male: 5,
+      preferred_female: 5,
+      registration_open: true,
+      allow_create: true,
+      allow_join: true,
+      session_expires_at: null,
+      updated_at: new Date().toISOString(),
+    };
+  }
+  return data as Settings;
+}
+
+export function isRegistrationOpen(s: Settings): boolean {
+  return s.registration_open === true;
+}
+===lib/groups/session.ts===
+// lib/groups/session.ts
+// ⚠️ للاستخدام على السيرفر فقط (API routes)
+
+import { randomBytes } from 'node:crypto';
+import { supabaseAdmin } from './supabase-admin';
+import type { Student } from '@/lib/types/groups';
+
+// بغداد = UTC+3 (بدون توقيت صيفي)
+const BAGHDAD_OFFSET_MS = 3 * 60 * 60 * 1000;
+
+/**
+ * يرجع "الآن" بتوقيت بغداد (كـ Date نتعامل معه عبر getUTC*)
+ */
+function getBaghdadNow(): Date {
+  return new Date(Date.now() + BAGHDAD_OFFSET_MS);
+}
+
+/**
+ * يحسب موعد "الأحد القادم 23:59:59 بتوقيت بغداد"
+ * - إذا اليوم أحد وقبل 23:59 → نفس اليوم
+ * - إذا اليوم أحد وبعد 23:59 → الأحد القادم
+ * - أي يوم آخر → الأحد القادم
+ */
+export function getNextSundayDeadline(): Date {
+  const baghdadNow = getBaghdadNow();
+  const day = baghdadNow.getUTCDay(); // 0 = الأحد
+  const daysUntilSunday = (7 - day) % 7;
+
+  const target = new Date(baghdadNow);
+  target.setUTCDate(target.getUTCDate() + daysUntilSunday);
+  target.setUTCHours(23, 59, 59, 999);
+
+  if (target.getTime() <= baghdadNow.getTime()) {
+    target.setUTCDate(target.getUTCDate() + 7);
+  }
+
+  // نرجع للـ UTC الحقيقي
+  return new Date(target.getTime() - BAGHDAD_OFFSET_MS);
+}
+
+/**
+ * تاريخ انتهاء الجلسة:
+ * - إذا الأدمن حدد موعداً في sg_settings → نستخدمه
+ * - وإلا → الأحد القادم 23:59
+ */
+export async function getSessionExpiresAt(): Promise<Date> {
+  const { data: settings } = await supabaseAdmin
+    .from('sg_settings')
+    .select('session_expires_at')
+    .eq('id', 1)
+    .maybeSingle();
+
+  if (settings?.session_expires_at) {
+    const d = new Date(settings.session_expires_at);
+    if (!isNaN(d.getTime())) return d;
+  }
+  return getNextSundayDeadline();
+}
+
+export function generateToken(): string {
+  return randomBytes(24).toString('hex');
+}
+
+/**
+ * ينشئ جلسة جديدة ويحفظها في DB، ويرجع التوكن
+ */
+export async function createSession(studentId: string): Promise<string> {
+  const token = generateToken();
+  const expiresAt = await getSessionExpiresAt();
+
+  const { error } = await supabaseAdmin.from('sg_sessions').insert({
+    token,
+    student_id: studentId,
+    expires_at: expiresAt.toISOString(),
+  });
+
+  if (error) throw new Error('فشل إنشاء الجلسة: ' + error.message);
+  return token;
+}
+
+/**
+ * يقرأ التوكن من Authorization header ويجيب الطالب صاحب الجلسة.
+ * يرجع null لو ما فيه توكن، أو منتهي، أو غير موجود.
+ */
+export async function getStudentFromRequest(
+  req: Request
+): Promise<Student | null> {
+  const auth = req.headers.get('authorization') || '';
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  if (!m) return null;
+  const token = m[1].trim();
+  if (!token) return null;
+
+  const { data: session } = await supabaseAdmin
+    .from('sg_sessions')
+    .select('student_id, expires_at')
+    .eq('token', token)
+    .maybeSingle();
+
+  if (!session) return null;
+  if (new Date(session.expires_at).getTime() < Date.now()) return null;
+
+  const { data: student } = await supabaseAdmin
+    .from('sg_students')
+    .select('*')
+    .eq('id', session.student_id)
+    .maybeSingle();
+
+  return (student as Student) || null;
+}
+
+/**
+ * نسخة صارمة: ترمي خطأ 401 إذا ما فيه طالب
+ */
+export async function requireStudent(req: Request): Promise<Student> {
+  const student = await getStudentFromRequest(req);
+  if (!student) {
+    throw Object.assign(new Error('يجب تسجيل الدخول'), { status: 401 });
+  }
+  return student;
+}
+===lib/telegram/handlers/admin.ts===
+// lib/telegram/handlers/admin.ts
+import {
+  sendMessage,
+  editMessageText,
+  answerCallbackQuery,
+  escapeHtml,
+} from '../../telegram';
+import { getSupabaseAdmin } from '../../supabaseAdmin';
+import {
+  listAdmins,
+  registerAdmin,
+  deactivateAdmin,
+  roleLabel,
+  type TelegramAdmin,
+  type AdminRole,
+} from '../../telegram-admins';
+import { sendAnnouncement } from '../../telegram-notifications';
+import { setSession, clearSession, getSession } from '../sessions';
+import {
+  pendingItemKeyboard,
+  roleKeyboard,
+  SUPER_ADMIN_MENU,
+  ADMIN_MENU,
+} from './menus';
+import { ADMIN_MENU_TEXTS } from '../types';
+import { countPendingInquiries } from '../inquiries';
+
+// ==================== Admin Help ====================
+export async function sendAdminHelp(
+  chatId: number,
+  admin: TelegramAdmin,
+): Promise<void> {
+  const isSuper = admin.role === 'super_admin';
+  const lines: string[] = [];
+
+  lines.push(`📖 <b>دليل ${isSuper ? 'المشرف الأعلى' : 'المشرف'}</b>`);
+  lines.push('');
+  lines.push(`👤 دورك: <b>${roleLabel(admin.role)}</b>`);
+  lines.push('');
+  lines.push('👇 استخدم الأزرار الثابتة بالأسفل، أو الأوامر النصية.');
+  lines.push('');
+  lines.push('━━━━━━━━━━━━━━━━━━━');
+  lines.push('🗺️ <b>الأوامر المتاحة</b>');
+  lines.push('━━━━━━━━━━━━━━━━━━━');
+  lines.push('');
+  lines.push('📢 <code>/announce</code> — إنشاء تبليغ بقوالب جاهزة');
+
+  if (isSuper) {
+    lines.push('📋 <code>/pending</code> — التبليغات قيد المراجعة');
+    lines.push('📜 <code>/history</code> — آخر التبليغات');
+    lines.push('📊 <code>/stats</code> — إحصائيات البوت');
+    lines.push('📮 <code>/inquiries</code> — الاستفسارات');
+    lines.push('👥 <code>/admins</code> — قائمة المشرفين');
+    lines.push('➕ <code>/add_admin</code> — إضافة مشرف');
+    lines.push('➖ <code>/remove_admin</code> — حذف مشرف');
+  } else {
+    lines.push('📋 <code>/pending</code> — عرض المعلقة (بدون موافقة)');
+  }
+
+  lines.push('❌ <code>/cancel</code> — إلغاء أي عملية');
+  lines.push('📖 <code>/admin_help</code> — هذا الدليل');
+
+  await sendMessage(chatId, lines.join('\n'), {
+    reply_markup: isSuper ? SUPER_ADMIN_MENU : ADMIN_MENU,
+  });
+}
+
+// ==================== Pending List ====================
+export async function handlePendingList(chatId: number): Promise<void> {
+  const { data } = await getSupabaseAdmin()
+    .from('telegram_announcements')
+    .select('*')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true })
+    .limit(15);
+
+  const items = (data ?? []) as Array<{
+    id: string;
+    title: string;
+    body: string;
+    stage: string | null;
+    created_by: string;
+  }>;
+
+  if (items.length === 0) {
+    await sendMessage(chatId, '✅ لا توجد تبليغات بانتظار المراجعة.');
+    return;
+  }
+
+  await sendMessage(chatId, `📋 <b>${items.length}</b> تبليغ بانتظار المراجعة:`);
+
+  for (const a of items) {
+    const lines: string[] = [];
+    lines.push(`📢 <b>${escapeHtml(a.title)}</b>`);
+    lines.push(
+      `🎯 ${
+        a.stage ? escapeHtml(a.stage) : 'كل المراحل'
+      } • 👤 ${escapeHtml(a.created_by)}`,
+    );
+    lines.push('');
+    lines.push(escapeHtml(a.body));
+    await sendMessage(chatId, lines.join('\n'), {
+      reply_markup: pendingItemKeyboard(a.id),
+    });
+  }
+}
+
+// ==================== Approve ====================
+export async function handleApprove(
+  cb: {
+    id: string;
+    from: { id: number };
+    message?: { chat: { id: number }; message_id: number };
+  },
+  id: string,
+  admin: TelegramAdmin,
+): Promise<void> {
+  if (admin.role !== 'super_admin') {
+    await answerCallbackQuery(cb.id, '❌ غير مصرح — تحتاج صلاحية مشرف أعلى');
+    return;
+  }
+
+  const chatId = cb.message?.chat.id ?? 0;
+  const messageId = cb.message?.message_id ?? 0;
+  if (!chatId) return;
+
+  const supabase = getSupabaseAdmin();
+
+  const { data: existing } = await supabase
+    .from('telegram_announcements')
+    .select('status')
+    .eq('id', id)
+    .maybeSingle<{ status: string }>();
+
+  if (!existing) {
+    await answerCallbackQuery(cb.id, 'التبليغ غير موجود');
+    return;
+  }
+  if (existing.status !== 'pending') {
+    await answerCallbackQuery(cb.id, 'تمت معالجة هذا التبليغ مسبقاً');
+    return;
+  }
+
+  await answerCallbackQuery(cb.id, '⏳ جاري الإرسال...');
+
+  await supabase
+    .from('telegram_announcements')
+    .update({
+      status: 'approved',
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: 'super_admin',
+    })
+    .eq('id', id);
+
+  let result: Awaited<ReturnType<typeof sendAnnouncement>>;
+  try {
+    result = await sendAnnouncement(id);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'خطأ غير معروف';
+    await supabase
+      .from('telegram_announcements')
+      .update({ status: 'failed', sent_error: msg })
+      .eq('id', id);
+    await sendMessage(chatId, `❌ فشل الإرسال: ${escapeHtml(msg)}`);
+    return;
+  }
+
+  if (result.error) {
+    await supabase
+      .from('telegram_announcements')
+      .update({
+        status: 'failed',
+        sent_error: result.error,
+        sent_count: result.sent,
+      })
+      .eq('id', id);
+    await sendMessage(chatId, `❌ فشل الإرسال: ${escapeHtml(result.error)}`);
+    return;
+  }
+
+  await supabase
+    .from('telegram_announcements')
+    .update({
+      status: 'sent',
+      sent_at: new Date().toISOString(),
+      sent_count: result.sent,
+      sent_error: result.failed > 0 ? `فشل ${result.failed}` : null,
+    })
+    .eq('id', id);
+
+  if (messageId) {
+    await editMessageText(chatId, messageId, '✅ تم الإرسال', {
+      reply_markup: { inline_keyboard: [] },
+    });
+  }
+
+  await sendMessage(
+    chatId,
+    `✅ <b>تم الإرسال</b>\n\n📤 نجح: ${result.sent}\n❌ فشل: ${result.failed}`,
+  );
+}
+
+// ==================== Reject ====================
+export async function handleRejectStart(
+  cb: {
+    id: string;
+    message?: { chat: { id: number }; message_id: number };
+  },
+  id: string,
+  admin: TelegramAdmin,
+): Promise<void> {
+  if (admin.role !== 'super_admin') {
+    await answerCallbackQuery(cb.id, '❌ غير مصرح');
+    return;
+  }
+
+  const chatId = cb.message?.chat.id ?? 0;
+  if (!chatId) return;
+
+  await setSession(chatId, 'reject', 'awaiting_reason', {
+    announcement_id: id,
+  });
+
+  await answerCallbackQuery(cb.id);
+  await sendMessage(
+    chatId,
+    '📝 اكتب <b>سبب الرفض</b> (أو أرسل <code>-</code> بدون سبب) — أو /cancel للإلغاء:',
+  );
+}
+
+export async function handleRejectText(
+  chatId: number,
+  text: string,
+  admin: TelegramAdmin,
+): Promise<void> {
+  if (admin.role !== 'super_admin') {
+    await clearSession(chatId);
+    return;
+  }
+
+  const session = await getSession(chatId);
+  if (!session || session.flow_type !== 'reject') {
+    await clearSession(chatId);
+    return;
+  }
+
+  const id = session.flow_data.announcement_id as string | undefined;
+  if (!id) {
+    await clearSession(chatId);
+    return;
+  }
+
+  const trimmed = text.trim();
+  const note = trimmed === '-' || trimmed === '' ? null : trimmed.slice(0, 500);
+
+  const { error } = await getSupabaseAdmin()
+    .from('telegram_announcements')
+    .update({
+      status: 'rejected',
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: 'super_admin',
+      reviewed_note: note,
+    })
+    .eq('id', id)
+    .eq('status', 'pending');
+
+  await clearSession(chatId);
+
+  if (error) {
+    await sendMessage(chatId, '❌ فشل الرفض. حاول مرة ثانية.');
+    return;
+  }
+
+  await sendMessage(chatId, '✅ تم رفض التبليغ.');
+}
+
+// ==================== Delete ====================
+export async function handleDeleteAnnouncement(
+  cb: {
+    id: string;
+    message?: { chat: { id: number }; message_id: number };
+  },
+  id: string,
+  admin: TelegramAdmin,
+): Promise<void> {
+  if (admin.role !== 'super_admin') {
+    await answerCallbackQuery(cb.id, '❌ غير مصرح');
+    return;
+  }
+
+  const chatId = cb.message?.chat.id ?? 0;
+  const messageId = cb.message?.message_id ?? 0;
+  if (!chatId) return;
+
+  await getSupabaseAdmin().from('telegram_announcements').delete().eq('id', id);
+  await answerCallbackQuery(cb.id, 'تم الحذف');
+  if (messageId) {
+    await editMessageText(chatId, messageId, '🗑 تم حذف التبليغ.', {
+      reply_markup: { inline_keyboard: [] },
+    });
+  } else {
+    await sendMessage(chatId, '🗑 تم حذف التبليغ.');
+  }
+}
+
+// ==================== History ====================
+export async function handleHistory(chatId: number): Promise<void> {
+  const { data } = await getSupabaseAdmin()
+    .from('telegram_announcements')
+    .select('id, title, status, sent_count, sent_at, created_at, reviewed_note')
+    .in('status', ['sent', 'rejected', 'failed'])
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  const items = (data ?? []) as Array<{
+    id: string;
+    title: string;
+    status: string;
+    sent_count: number;
+    sent_at: string | null;
+    created_at: string;
+    reviewed_note: string | null;
+  }>;
+
+  if (items.length === 0) {
+    await sendMessage(chatId, 'لا يوجد سجل بعد.');
+    return;
+  }
+
+  const lines: string[] = ['📜 <b>آخر التبليغات</b>', ''];
+  for (const a of items) {
+    const emoji =
+      a.status === 'sent' ? '✅' : a.status === 'rejected' ? '❌' : '⚠️';
+    lines.push(`${emoji} <b>${escapeHtml(a.title)}</b>`);
+    if (a.status === 'sent') lines.push(`  أُرسل لـ ${a.sent_count} مشترك`);
+    if (a.status === 'rejected' && a.reviewed_note)
+      lines.push(`  ${escapeHtml(a.reviewed_note)}`);
+    lines.push('');
+  }
+  await sendMessage(chatId, lines.join('\n'));
+}
+
+// ==================== Stats ====================
+export async function handleStats(chatId: number): Promise<void> {
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const [
+    subsCount,
+    pendingAnnCount,
+    sentAnnCount,
+    pendingInqCount,
+    adminsCount,
+  ] = await Promise.all([
+    supabaseAdmin
+      .from('telegram_subscribers')
+      .select('chat_id', { count: 'exact', head: true }),
+    supabaseAdmin
+      .from('telegram_announcements')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending'),
+    supabaseAdmin
+      .from('telegram_announcements')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'sent'),
+    countPendingInquiries(),
+    supabaseAdmin
+      .from('telegram_admins')
+      .select('chat_id', { count: 'exact', head: true })
+      .eq('is_active', true),
+  ]);
+
+  const lines: string[] = [];
+  lines.push('📊 <b>إحصائيات البوت</b>');
+  lines.push('');
+  lines.push(`👥 المشتركون: <b>${subsCount.count ?? 0}</b>`);
+  lines.push(`👤 المشرفون النشطون: <b>${adminsCount.count ?? 0}</b>`);
+  lines.push('');
+  lines.push(`📋 تبليغات منتظرة: <b>${pendingAnnCount.count ?? 0}</b>`);
+  lines.push(`📤 تبليغات أُرسلت: <b>${sentAnnCount.count ?? 0}</b>`);
+  lines.push(`📮 استفسارات منتظرة: <b>${pendingInqCount}</b>`);
+
+  await sendMessage(chatId, lines.join('\n'));
+}
+
+// ==================== List Admins ====================
+export async function handleListAdmins(chatId: number): Promise<void> {
+  const admins = await listAdmins();
+  if (admins.length === 0) {
+    await sendMessage(chatId, 'لا يوجد مشرفون مسجّلون.');
+    return;
+  }
+
+  const lines: string[] = ['👥 <b>قائمة المشرفين</b>', ''];
+  for (const a of admins) {
+    lines.push(
+      `• <b>${escapeHtml(a.first_name)}</b> ${
+        a.username ? `(@${escapeHtml(a.username)})` : ''
+      }`,
+    );
+    lines.push(`  <code>${a.chat_id}</code> — ${roleLabel(a.role)}`);
+  }
+  await sendMessage(chatId, lines.join('\n'));
+}
+
+// ==================== Add Admin ====================
+export async function handleAddAdminStart(chatId: number): Promise<void> {
+  await setSession(chatId, 'add_admin', 'awaiting_chat_id', {});
+  await sendMessage(
+    chatId,
+    '👤 <b>إضافة مشرف جديد</b>\n\nأرسل <b>Chat ID</b> أو <b>@username</b> للمشرف:\n' +
+      '<i>يجب أن يبدأ محادثة مع البوت أول مرة.</i>',
+    {
+      reply_markup: {
+        inline_keyboard: [[{ text: '❌ إلغاء', callback_data: 'admin_cancel' }]],
+      },
+    },
+  );
+}
+
+export async function handleAddAdminChatId(
+  chatId: number,
+  text: string,
+): Promise<void> {
+  const clean = text.trim().replace(/^@/, '');
+  let targetId: number | null = null;
+
+  if (/^-?\d+$/.test(clean)) {
+    targetId = Number(clean);
+  } else {
+    const { data } = await getSupabaseAdmin()
+      .from('telegram_subscribers')
+      .select('chat_id')
+      .ilike('username', clean)
+      .maybeSingle<{ chat_id: number }>();
+    if (data) targetId = data.chat_id;
+  }
+
+  if (!targetId) {
+    await sendMessage(
+      chatId,
+      '❌ ما لقيت هذا المستخدم. تأكد من الـChat ID أو أن اليوزر بدأ محادثة مع البوت.',
+    );
+    return;
+  }
+
+  await setSession(chatId, 'add_admin', 'awaiting_role', {
+    target_chat_id: targetId,
+  });
+
+  await sendMessage(
+    chatId,
+    `👤 تم اختيار: <code>${targetId}</code>\n\nاختر الدور:`,
+    { reply_markup: roleKeyboard() },
+  );
+}
+
+export async function handleAddAdminRole(
+  cb: {
+    id: string;
+    message?: { chat: { id: number }; message_id: number };
+  },
+  role: AdminRole,
+): Promise<void> {
+  const chatId = cb.message?.chat.id ?? 0;
+  const messageId = cb.message?.message_id ?? 0;
+  if (!chatId) return;
+
+  const session = await getSession(chatId);
+  if (!session || session.flow_type !== 'add_admin') {
+    await answerCallbackQuery(cb.id, 'انتهت الجلسة');
+    return;
+  }
+
+  const targetId = session.flow_data.target_chat_id as number | undefined;
+  if (!targetId) {
+    await answerCallbackQuery(cb.id, 'لا يوجد هدف');
+    return;
+  }
+
+  const { data: sub } = await getSupabaseAdmin()
+    .from('telegram_subscribers')
+    .select('first_name, username')
+    .eq('chat_id', targetId)
+    .maybeSingle<{ first_name: string | null; username: string | null }>();
+
+  const result = await registerAdmin({
+    chatId: targetId,
+    username: sub?.username ?? null,
+    firstName: sub?.first_name ?? `Admin ${targetId}`,
+    role,
+    addedBy: chatId,
+  });
+
+  await clearSession(chatId);
+
+  if (!result.ok) {
+    await answerCallbackQuery(cb.id, `فشل: ${result.error ?? ''}`, true);
+    return;
+  }
+
+  await answerCallbackQuery(cb.id, 'تمت الإضافة');
+
+  const confirm = `✅ تم إضافة <code>${targetId}</code> بدور <b>${roleLabel(
+    role,
+  )}</b>.`;
+  if (messageId) {
+    await editMessageText(chatId, messageId, confirm);
+  } else {
+    await sendMessage(chatId, confirm);
+  }
+
+  try {
+    await sendMessage(
+      targetId,
+      `🎉 <b>تم تفعيلك في بوت لوازم</b>\n\nالدور: <b>${roleLabel(role)}</b>\n\n` +
+        (role === 'super_admin'
+          ? 'يمكنك الموافقة على التبليغات وإرسالها عبر /pending.'
+          : role === 'admin'
+            ? 'يمكنك إنشاء تبليغات عبر /announce، وسيراجعها المشرف الأعلى.'
+            : 'يمكنك إنشاء تبليغات عبر /announce.') +
+        '\n\n📖 اكتب /admin_help للمزيد',
+      { reply_markup: role === 'super_admin' ? SUPER_ADMIN_MENU : ADMIN_MENU },
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+// ==================== Remove Admin ====================
+export async function handleRemoveAdmin(
+  chatId: number,
+  text: string,
+): Promise<void> {
+  const parts = text.split(/\s+/).slice(1);
+  if (parts.length === 0 || !/^-?\d+$/.test(parts[0])) {
+    await sendMessage(chatId, '❌ الصيغة: <code>/remove_admin CHAT_ID</code>');
+    return;
+  }
+  const targetId = Number(parts[0]);
+
+  if (targetId === chatId) {
+    await sendMessage(chatId, '❌ ما تكدر تحذف نفسك.');
+    return;
+  }
+
+  const result = await deactivateAdmin(targetId);
+  if (!result.ok) {
+    await sendMessage(
+      chatId,
+      `❌ فشل الحذف: ${escapeHtml(result.error ?? '')}`,
+    );
+    return;
+  }
+  await sendMessage(chatId, `✅ تم حذف <code>${targetId}</code>.`);
+}
+
+// ==================== Quick Add Admin ====================
+export async function quickAddAdmin(
+  chatId: number,
+  targetId: number,
+  role: AdminRole,
+): Promise<void> {
+  const { data: sub } = await getSupabaseAdmin()
+    .from('telegram_subscribers')
+    .select('first_name, username')
+    .eq('chat_id', targetId)
+    .maybeSingle<{ first_name: string | null; username: string | null }>();
+
+  const result = await registerAdmin({
+    chatId: targetId,
+    username: sub?.username ?? null,
+    firstName: sub?.first_name ?? `Admin ${targetId}`,
+    role,
+    addedBy: chatId,
+  });
+
+  if (!result.ok) {
+    await sendMessage(
+      chatId,
+      `❌ فشل الإضافة: ${escapeHtml(result.error ?? '')}`,
+    );
+    return;
+  }
+
+  await sendMessage(
+    chatId,
+    `✅ تم إضافة <code>${targetId}</code> بدور <b>${roleLabel(role)}</b>.`,
+  );
+
+  try {
+    await sendMessage(
+      targetId,
+      `🎉 <b>تم تفعيلك في بوت لوازم</b>\n\nالدور: <b>${roleLabel(role)}</b>\n\n📖 اكتب /admin_help للمزيد`,
+      { reply_markup: role === 'super_admin' ? SUPER_ADMIN_MENU : ADMIN_MENU },
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+// ==================== Menu Button Router ====================
+export async function handleAdminMenuButton(
+  chatId: number,
+  text: string,
+  admin: TelegramAdmin,
+): Promise<boolean> {
+  const isSuper = admin.role === 'super_admin';
+
+  if (text === ADMIN_MENU_TEXTS.newAnnounce) {
+    const { handleAnnounceStart } = await import('./announce');
+    await handleAnnounceStart(chatId);
+    return true;
+  }
+
+  if (text === ADMIN_MENU_TEXTS.pending) {
+    await handlePendingList(chatId);
+    return true;
+  }
+
+  if (text === ADMIN_MENU_TEXTS.inquiries && isSuper) {
+    const { handleInquiriesList } = await import('./inquiries');
+    await handleInquiriesList(chatId);
+    return true;
+  }
+
+  if (text === ADMIN_MENU_TEXTS.admins && isSuper) {
+    await handleListAdmins(chatId);
+    return true;
+  }
+
+  if (text === ADMIN_MENU_TEXTS.stats && isSuper) {
+    await handleStats(chatId);
+    return true;
+  }
+
+  if (text === ADMIN_MENU_TEXTS.help) {
+    await sendAdminHelp(chatId, admin);
+    return true;
+  }
+
+  return false;
+}
+===lib/telegram/sessions.ts===
+// lib/telegram/sessions.ts
+import { getSupabaseAdmin } from '../supabaseAdmin';
+
+// ==================== Types ====================
+export type SessionFlowType =
+  | 'idle'
+  | 'announce'
+  | 'add_admin'
+  | 'reject'
+  | 'inquiry';
+
+export interface AnnouncementDraft {
+  templateId: string | null;
+  title: string | null;
+  body: string | null;
+  stage: string | null;
+  link_url: string | null;
+  link_label: string | null;
+}
+
+export interface Session {
+  chat_id: number;
+  flow_type: SessionFlowType;
+  flow_step: string | null;
+  flow_data: Record<string, unknown>;
+  updated_at: string;
+}
+
+// ==================== Helpers ====================
+const SESSION_TTL_MS = 60 * 60 * 1000; // ساعة واحدة
+
+function isFresh(updatedAt: string): boolean {
+  const t = Date.parse(updatedAt);
+  if (Number.isNaN(t)) return false;
+  return Date.now() - t < SESSION_TTL_MS;
+}
+
+// ==================== Read ====================
+export async function getSession(
+  chatId: number,
+): Promise<Session | null> {
+  const { data, error } = await getSupabaseAdmin()
+    .from('telegram_sessions')
+    .select('*')
+    .eq('chat_id', chatId)
+    .maybeSingle<Session>();
+
+  if (error || !data) return null;
+  if (!isFresh(data.updated_at)) {
+    // جلسة قديمة — نظّفها
+    void clearSession(chatId);
+    return null;
+  }
+  return data;
+}
+
+// ==================== Write ====================
+export async function setSession(
+  chatId: number,
+  flowType: SessionFlowType,
+  flowStep: string | null,
+  flowData: Record<string, unknown> = {},
+): Promise<void> {
+  const { error } = await getSupabaseAdmin()
+    .from('telegram_sessions')
+    .upsert(
+      {
+        chat_id: chatId,
+        flow_type: flowType,
+        flow_step: flowStep,
+        flow_data: flowData,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'chat_id' },
+    );
+
+  if (error) {
+    console.error('[sessions] setSession error:', error.message);
+  }
+}
+
+export async function clearSession(chatId: number): Promise<void> {
+  const { error } = await getSupabaseAdmin()
+    .from('telegram_sessions')
+    .delete()
+    .eq('chat_id', chatId);
+  if (error) {
+    console.error('[sessions] clearSession error:', error.message);
+  }
+}
+
+// ==================== Cleanup ====================
+/**
+ * احذف كل الجلسات القديمة (أكثر من ساعة بدون تحديث).
+ * تُستدعى من الويب هوك sporadically.
+ */
+export async function cleanupStaleSessions(): Promise<void> {
+  const cutoff = new Date(Date.now() - SESSION_TTL_MS).toISOString();
+  const { error } = await getSupabaseAdmin()
+    .from('telegram_sessions')
+    .delete()
+    .lt('updated_at', cutoff);
+  if (error) {
+    console.error('[sessions] cleanup error:', error.message);
+  }
+}
+
+// ==================== Typed getters ====================
+export async function getAnnouncementDraft(
+  chatId: number,
+): Promise<AnnouncementDraft | null> {
+  const s = await getSession(chatId);
+  if (!s || s.flow_type !== 'announce') return null;
+  const draft = s.flow_data.draft as AnnouncementDraft | undefined;
+  return draft ?? null;
+}
+
+export function emptyAnnouncementDraft(): AnnouncementDraft {
+  return {
+    templateId: null,
+    title: null,
+    body: null,
+    stage: null,
+    link_url: null,
+    link_label: null,
+  };
+}
+===lib/telegram-notifications.ts===
+// lib/telegram-notifications.ts
+import { getSupabaseAdmin } from './supabaseAdmin';
+import { sendMessage, escapeHtml, type InlineKeyboardMarkup } from './telegram';
+import { listSuperAdmins } from './telegram-admins';
+import type { Group } from './types';
+
+// ==================== Base URL ====================
+function getBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '');
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return 'https://lawazem.vercel.app';
+}
+
+// ==================== Types ====================
+interface SubscriberLite {
+  chat_id: number;
+  stage: string | null;
+  subjects: string[];
+  group_name: Group | null;
+}
+
+export interface NewNoteInfo {
+  id: string;
+  title: string;
+  subject_name: string;
+  professor_name: string | null;
+  stage: string;
+  group_name: Group | null; // ← جديد
+}
+
+// ==================== Batching ====================
+const BATCH_SIZE = 25;
+const BATCH_DELAY_MS = 1000;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function groupLabel(g: Group): string {
+  return g === 'A' ? 'كروب A' : 'كروب B';
+}
+
+// ==================== Notify: New Note ====================
+export async function notifyNewLectureNote(info: NewNoteInfo): Promise<void> {
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const { data: subs, error } = await supabaseAdmin
+    .from('telegram_subscribers')
+    .select('chat_id, stage, subjects, group_name')
+    .eq('stage', info.stage)
+    .eq('notify_new_note', true);
+
+  if (error) {
+    console.error('[notify] fetch subscribers error:', error.message);
+    return;
+  }
+
+  if (!subs || subs.length === 0) return;
+
+  const subscribers = (subs as SubscriberLite[]).filter((s) => {
+    // فلترة الكروب: إن كانت الملزمة محددة لكروب معيّن، نرسلها لأصحابه فقط
+    if (info.group_name !== null) {
+      if (s.group_name !== info.group_name) return false;
+    }
+    // فلترة المادة
+    if (!s.subjects || s.subjects.length === 0) return true;
+    return s.subjects.includes(info.subject_name);
+  });
+
+  if (subscribers.length === 0) return;
+
+  const baseUrl = getBaseUrl();
+  const lines: string[] = [];
+  lines.push('📚 <b>ملزمة جديدة!</b>');
+  lines.push('');
+  lines.push(`📘 ${escapeHtml(info.subject_name)}`);
+  lines.push(`📝 <b>${escapeHtml(info.title)}</b>`);
+
+  if (info.professor_name) {
+    lines.push(`👨‍🏫 د. ${escapeHtml(info.professor_name)}`);
+  }
+
+  if (info.group_name) {
+    lines.push(`👥 ${groupLabel(info.group_name)}`);
+  }
+
+  const text = lines.join('\n');
+
+  for (let i = 0; i < subscribers.length; i += BATCH_SIZE) {
+    const batch = subscribers.slice(i, i + BATCH_SIZE);
+
+    await Promise.allSettled(
+      batch.map((sub) => {
+        const keyboard: InlineKeyboardMarkup = {
+          inline_keyboard: [
+            [
+              {
+                text: '📖 افتح الملزمة',
+                url: `${baseUrl}/api/telegram/go?n=${info.id}&c=${sub.chat_id}`,
+              },
+            ],
+            [{ text: '🌐 كل الملازم', url: `${baseUrl}/lawazem` }],
+          ],
+        };
+        return sendMessage(sub.chat_id, text, { reply_markup: keyboard });
+      })
+    );
+
+    if (i + BATCH_SIZE < subscribers.length) {
+      await delay(BATCH_DELAY_MS);
+    }
+  }
+
+  console.log(`[notify] sent to ${subscribers.length} subscribers`);
+}
+
+// ==================== Morning Digest ====================
+export async function sendMorningDigest(): Promise<{ sent: number }> {
+  const supabaseAdmin = getSupabaseAdmin();
+  const baseUrl = getBaseUrl();
+
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+  const { data: notes, error: notesErr } = await supabaseAdmin
+    .from('lecture_notes')
+    .select('id, title, professor_name, created_at, group_name, subjects!inner(name, stage)')
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if (notesErr) {
+    console.error('[morning] fetch notes error:', notesErr.message);
+    return { sent: 0 };
+  }
+
+  if (!notes || notes.length === 0) {
+    console.log('[morning] no new notes in last 24h');
+    return { sent: 0 };
+  }
+
+  function pickRelation(rel: unknown): { name: string; stage: string } {
+    if (Array.isArray(rel) && rel[0]) {
+      const first = rel[0] as { name?: unknown; stage?: unknown };
+      return {
+        name: typeof first.name === 'string' ? first.name : '',
+        stage: typeof first.stage === 'string' ? first.stage : '',
+      };
+    }
+    if (rel && typeof rel === 'object') {
+      const obj = rel as { name?: unknown; stage?: unknown };
+      return {
+        name: typeof obj.name === 'string' ? obj.name : '',
+        stage: typeof obj.stage === 'string' ? obj.stage : '',
+      };
+    }
+    return { name: '', stage: '' };
+  }
+
+  // نبني فهرساً حسب المرحلة + الكروب
+  const byStageGroup: Record<string, { title: string; subject: string; group: Group | null }[]> = {};
+  for (const n of notes as Array<{
+    id: string;
+    title: string;
+    professor_name: string | null;
+    group_name: Group | null;
+    subjects: unknown;
+  }>) {
+    const rel = pickRelation(n.subjects);
+    if (!rel.stage) continue;
+    if (!byStageGroup[rel.stage]) byStageGroup[rel.stage] = [];
+    byStageGroup[rel.stage].push({
+      title: n.title,
+      subject: rel.name,
+      group: n.group_name,
+    });
+  }
+
+  const { data: subs, error: subsErr } = await supabaseAdmin
+    .from('telegram_subscribers')
+    .select('chat_id, stage, subjects, group_name')
+    .eq('notify_morning', true)
+    .not('stage', 'is', null);
+
+  if (subsErr) {
+    console.error('[morning] fetch subscribers error:', subsErr.message);
+    return { sent: 0 };
+  }
+
+  if (!subs || subs.length === 0) return { sent: 0 };
+
+  let sent = 0;
+  const subscribers = subs as SubscriberLite[];
+
+  for (let i = 0; i < subscribers.length; i += BATCH_SIZE) {
+    const batch = subscribers.slice(i, i + BATCH_SIZE);
+
+    await Promise.allSettled(
+      batch.map(async (sub) => {
+        if (!sub.stage) return;
+        const stageNotes = byStageGroup[sub.stage] ?? [];
+
+        // فلترة حسب الكروب أولاً
+        const groupFiltered = stageNotes.filter((n) => {
+          if (n.group === null) return true; // للكل
+          return n.group === sub.group_name;
+        });
+
+        if (groupFiltered.length === 0) return;
+
+        const filtered =
+          sub.subjects && sub.subjects.length > 0
+            ? groupFiltered.filter((n) => sub.subjects.includes(n.subject))
+            : groupFiltered;
+
+        if (filtered.length === 0) return;
+
+        const preview = filtered.slice(0, 5);
+        const extra = filtered.length - preview.length;
+
+        const lines: string[] = [];
+        lines.push('🌅 <b>صباح الخير</b>');
+        lines.push('');
+        lines.push(
+          `أمس أُضيفت <b>${filtered.length}</b> ${
+            filtered.length === 1 ? 'ملزمة' : 'ملازم'
+          } لمرحلتك:`
+        );
+        lines.push('');
+
+        for (const n of preview) {
+          const g = n.group ? ` <i>(${groupLabel(n.group)})</i>` : '';
+          lines.push(`• <b>${escapeHtml(n.subject)}</b>: ${escapeHtml(n.title)}${g}`);
+        }
+
+        if (extra > 0) {
+          lines.push(`<i>+ ${extra} أخرى...</i>`);
+        }
+
+        const keyboard: InlineKeyboardMarkup = {
+          inline_keyboard: [
+            [{ text: '🌐 تصفح الكل', url: `${baseUrl}/lawazem` }],
+          ],
+        };
+
+        const ok = await sendMessage(sub.chat_id, lines.join('\n'), {
+          reply_markup: keyboard,
+        });
+        if (ok) sent++;
+      })
+    );
+
+    if (i + BATCH_SIZE < subscribers.length) {
+      await delay(BATCH_DELAY_MS);
+    }
+  }
+
+  console.log(`[morning] sent to ${sent} subscribers`);
+  return { sent };
+}
+
+// ==================== Streak Reminder ====================
+export async function sendStreakReminder(): Promise<{ sent: number }> {
+  const supabaseAdmin = getSupabaseAdmin();
+  const baseUrl = getBaseUrl();
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const { data: subs, error } = await supabaseAdmin
+    .from('telegram_subscribers')
+    .select('chat_id, streak_count, last_streak_date, stage')
+    .eq('notify_streak', true)
+    .gt('streak_count', 0)
+    .neq('last_streak_date', today)
+    .not('stage', 'is', null);
+
+  if (error) {
+    console.error('[streak] fetch subscribers error:', error.message);
+    return { sent: 0 };
+  }
+
+  if (!subs || subs.length === 0) return { sent: 0 };
+
+  let sent = 0;
+  const subscribers = subs as Array<{
+    chat_id: number;
+    streak_count: number;
+    stage: string | null;
+  }>;
+
+  for (let i = 0; i < subscribers.length; i += BATCH_SIZE) {
+    const batch = subscribers.slice(i, i + BATCH_SIZE);
+
+    await Promise.allSettled(
+      batch.map(async (sub) => {
+        const lines: string[] = [];
+        lines.push('🔥 <b>لا تكسر سلسلتك!</b>');
+        lines.push('');
+        lines.push(
+          `لديك <b>${sub.streak_count}</b> ${
+            sub.streak_count === 1 ? 'يوم متتالي' : 'أيام متتالية'
+          } — لا تخسرها اليوم.`
+        );
+        lines.push('');
+        lines.push('افتح أي ملزمة للحفاظ عليها:');
+
+        const keyboard: InlineKeyboardMarkup = {
+          inline_keyboard: [
+            [{ text: '📚 تصفح الملازم', url: `${baseUrl}/lawazem` }],
+          ],
+        };
+
+        const ok = await sendMessage(sub.chat_id, lines.join('\n'), {
+          reply_markup: keyboard,
+        });
+        if (ok) sent++;
+      })
+    );
+
+    if (i + BATCH_SIZE < subscribers.length) {
+      await delay(BATCH_DELAY_MS);
+    }
+  }
+
+  console.log(`[streak] sent to ${sent} subscribers`);
+  return { sent };
+}
+
+// ==================== Stats ====================
+export async function getBotStats(): Promise<{
+  total: number;
+  byStage: Record<string, number>;
+  byGroup: Record<string, number>;
+  streaks: { avg: number; max: number; active: number };
+}> {
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const { data } = await supabaseAdmin
+    .from('telegram_subscribers')
+    .select('stage, group_name, streak_count');
+
+  const subs = (data ?? []) as Array<{
+    stage: string | null;
+    group_name: Group | null;
+    streak_count: number;
+  }>;
+
+  const byStage: Record<string, number> = {};
+  const byGroup: Record<string, number> = { A: 0, B: 0, 'غير محدد': 0 };
+  let totalStreak = 0;
+  let maxStreak = 0;
+  let activeStreaks = 0;
+
+  for (const s of subs) {
+    const stage = s.stage ?? 'غير محدد';
+    byStage[stage] = (byStage[stage] ?? 0) + 1;
+
+    const g = s.group_name ?? 'غير محدد';
+    byGroup[g] = (byGroup[g] ?? 0) + 1;
+
+    const st = s.streak_count ?? 0;
+    totalStreak += st;
+    if (st > maxStreak) maxStreak = st;
+    if (st > 0) activeStreaks++;
+  }
+
+  return {
+    total: subs.length,
+    byStage,
+    byGroup,
+    streaks: {
+      avg: subs.length > 0 ? Math.round((totalStreak / subs.length) * 10) / 10 : 0,
+      max: maxStreak,
+      active: activeStreaks,
+    },
+  };
+}
+
+// ==================== Announcements ====================
+export interface AnnouncementResult {
+  sent: number;
+  failed: number;
+  error?: string;
+}
+
+export async function sendAnnouncement(
+  announcementId: string
+): Promise<AnnouncementResult> {
+  const supabaseAdmin = getSupabaseAdmin();
+  const baseUrl = getBaseUrl();
+
+  const { data: ann, error: fetchError } = await supabaseAdmin
+    .from('telegram_announcements')
+    .select('id, title, body, stage, link_url, link_label')
+    .eq('id', announcementId)
+    .maybeSingle<{
+      id: string;
+      title: string;
+      body: string;
+      stage: string | null;
+      link_url: string | null;
+      link_label: string | null;
+    }>();
+
+  if (fetchError || !ann) {
+    return { sent: 0, failed: 0, error: 'التبليغ غير موجود' };
+  }
+
+  let query = supabaseAdmin
+    .from('telegram_subscribers')
+    .select('chat_id')
+    .eq('notify_announcements', true);
+
+  if (ann.stage) {
+    query = query.eq('stage', ann.stage);
+  }
+
+  const { data: subs, error: subsError } = await query;
+
+  if (subsError) {
+    return { sent: 0, failed: 0, error: subsError.message };
+  }
+
+  const subscribers = (subs ?? []) as Array<{ chat_id: number }>;
+  if (subscribers.length === 0) {
+    return { sent: 0, failed: 0 };
+  }
+
+  const lines: string[] = [];
+  lines.push('📢 <b>تبليغ إداري</b>');
+  lines.push('');
+  lines.push(`<b>${escapeHtml(ann.title)}</b>`);
+  lines.push('');
+  lines.push(escapeHtml(ann.body));
+
+  const text = lines.join('\n');
+
+  const keyboard: InlineKeyboardMarkup = {
+    inline_keyboard: [],
+  };
+
+  if (ann.link_url) {
+    keyboard.inline_keyboard.push([
+      {
+        text: ann.link_label?.trim() || 'المزيد',
+        url: ann.link_url,
+      },
+    ]);
+  }
+
+  keyboard.inline_keyboard.push([
+    { text: '🌐 فتح المنصة', url: baseUrl },
+  ]);
+
+  let sent = 0;
+  let failed = 0;
+
+  for (let i = 0; i < subscribers.length; i += BATCH_SIZE) {
+    const batch = subscribers.slice(i, i + BATCH_SIZE);
+
+    const results = await Promise.allSettled(
+      batch.map((sub) =>
+        sendMessage(sub.chat_id, text, { reply_markup: keyboard })
+      )
+    );
+
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value === true) sent++;
+      else failed++;
+    }
+
+    if (i + BATCH_SIZE < subscribers.length) {
+      await delay(BATCH_DELAY_MS);
+    }
+  }
+
+  console.log(
+    `[announcement] id=${announcementId} sent=${sent} failed=${failed}`
+  );
+  return { sent, failed };
+}
+// ==================== Notify Super Admins (new announcement) ====================
+export async function notifySuperAdminsNewAnnouncement(info: {
+  id: string;
+  title: string;
+  body: string;
+  stage: string | null;
+  created_by: string;
+}): Promise<void> {
+  const supers = await listSuperAdmins();
+  if (supers.length === 0) return;
+
+  const lines: string[] = [];
+  lines.push('📢 <b>تبليغ جديد بانتظار المراجعة</b>');
+  lines.push('');
+  lines.push(`👤 من: ${escapeHtml(info.created_by)}`);
+  lines.push(`🎯 ${info.stage ? escapeHtml(info.stage) : 'كل المراحل'}`);
+  lines.push('');
+  lines.push(`<b>${escapeHtml(info.title)}</b>`);
+  lines.push('');
+  lines.push(escapeHtml(info.body));
+
+  const keyboard: InlineKeyboardMarkup = {
+    inline_keyboard: [
+      [
+        { text: '✅ موافقة وإرسال', callback_data: `ann_approve:${info.id}` },
+        { text: '❌ رفض', callback_data: `ann_reject:${info.id}` },
+      ],
+      [{ text: '🗑 حذف', callback_data: `ann_delete:${info.id}` }],
+    ],
+  };
+
+  for (const s of supers) {
+    try {
+      await sendMessage(s.chat_id, lines.join('\n'), { reply_markup: keyboard });
+    } catch {
+      /* تجاهل */
+    }
+  }
+}
+
+===lib/types.ts===
+// lib/types.ts
+
+export type Stage = 'المرحلة الأولى' | 'المرحلة الثانية' | 'المرحلة الثالثة';
+
+export type Group = 'A' | 'B';
+
+export type ContentType = 'assignment' | 'lecture_note' | 'summary' | 'task';
+
+export type Track = 'نظري' | 'عملي';
+
+export type MedicalCategory =
+  | 'general'
+  | 'anatomy'
+  | 'physiology'
+  | 'pathology'
+  | 'pharmacology'
+  | 'microbiology'
+  | 'biochemistry'
+  | 'histology'
+  | 'embryology'
+  | 'immunology'
+  | 'clinical';
+
+export interface Subject {
+  id: string;
+  name: string;
+  stage: Stage;
+  units: number | null;
+  created_at?: string;
+}
+
+export interface LectureNote {
+  id: string;
+  subject_id: string;
+  title: string;
+  professor_name: string | null;
+  lecture_number: number | null;
+  track: Track | null;
+  tags: string[];
+  year: number | null;
+  group_name: Group | null;
+  file_path: string;
+  status?: string;
+  created_at?: string;
+  subjects?: { name: string } | null;
+}
+
+export type ReportReason = 'dead_link' | 'outdated';
+
+export interface LectureNoteReport {
+  id: string;
+  lecture_note_id: string;
+  reason: ReportReason;
+  note: string | null;
+  created_at: string;
+  resolved_at: string | null;
+  resolved_action: 'deleted' | 'ignored' | null;
+  lecture_notes?: {
+    id: string;
+    title: string;
+    subject_id: string;
+    professor_name: string | null;
+    year: number | null;
+    file_path: string;
+    subjects?: { name: string } | null;
+  } | null;
+}
+
+export interface FileEntry {
+  label: string | null;
+  url: string;
+}
+
+export interface Channel {
+  id: string;
+  name: string;
+  stage: Stage;
+  description: string | null;
+  telegram_link: string;
+  channel_password: string | null;
+  image_url: string | null;
+  views: number;
+  created_at?: string;
+}
+
+export interface ChannelContent {
+  id: string;
+  channel_id: string;
+  content_type: ContentType;
+  title: string;
+  description: string | null;
+  due_date: string | null;
+  track: Track | null;
+  tags: string[];
+  file_urls: FileEntry[];
+  folder: string | null;
+  pinned: boolean;
+  created_at?: string;
+}
+
+export interface Schedule {
+  stage: Stage;
+  image_url: string | null;
+  updated_at?: string;
+}
+
+export interface ChannelListItem {
+  id: string;
+  name: string;
+}
+
+// ==================== Dictionary v2 ====================
+export interface DictionaryDeepExplanation {
+  overview: string;
+  mechanism: string;
+  clinical: string;
+  confusions: string[];
+  mnemonic: string | null;
+}
+===lib/types/groups.ts===
+// lib/types/groups.ts
+
+export type Gender = 'male' | 'female';
+export type GroupStatus = 'open' | 'full' | 'closed' | 'cancelled';
+export type RequestStatus =
+  | 'pending'
+  | 'accepted'
+  | 'rejected'
+  | 'cancelled'
+  | 'expired';
+
+export interface Student {
+  id: string;
+  telegram_username: string;
+  full_name: string;
+  gender: Gender;
+  study_year: string;
+  status: 'active' | 'inactive';
+  registered_at: string;
+}
+
+export interface Group {
+  id: string;
+  code: string;
+  serial: number;
+  name: string | null;
+  leader_id: string | null;
+  target_size: number;
+  male_count: number;
+  female_count: number;
+  status: GroupStatus;
+  study_year: string;
+  created_at: string;
+}
+
+export interface Member {
+  id: string;
+  group_id: string;
+  student_id: string;
+  role: 'leader' | 'member';
+  joined_at: string;
+}
+
+export interface JoinRequest {
+  id: string;
+  student_id: string;
+  group_id: string;
+  status: RequestStatus;
+  created_at: string;
+  processed_at: string | null;
+}
+
+export interface NotificationRow {
+  id: string;
+  student_id: string;
+  type: string;
+  title: string;
+  body: string | null;
+  href: string | null;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface Settings {
+  id: number;
+  target_size: number;
+  preferred_male: number;
+  preferred_female: number;
+  registration_open: boolean;
+  allow_create: boolean;
+  allow_join: boolean;
+  session_expires_at: string | null;
+  updated_at: string;
+}
+
+// Types مع بيانات مدمجة (joins)
+export interface GroupWithLeader extends Group {
+  leader?: Pick<Student, 'id' | 'full_name' | 'telegram_username'> | null;
+}
+
+export interface MemberWithStudent extends Member {
+  student: Student;
+}
+
+export interface RequestWithStudent extends JoinRequest {
+  student: Student;
+}
+
+export interface RequestWithGroup extends JoinRequest {
+  group: Group;
+}
+
+// Types للردود
+export interface MeResponse {
+  student: Student;
+  group: Group | null;
+  membership: Member | null;
+  members: MemberWithStudent[]; // فقط إذا كان عضواً
+  isLeader: boolean;
+  pendingRequests: number; // عدد طلبات معلّقة (للقائد فقط)
+}
+
+export interface PublicGroup extends Group {
+  leader_name: string | null;
+  leader_username: string | null;
+  spots_left: number;
+}
+===package.json===
+{
+  "name": "lawazem-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build --webpack",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.2",
+    "@supabase/supabase-js": "^2.119.1",
+    "next": "16.2.11",
+    "openseadragon": "^6.1.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-dropzone": "^20.1.2",
+    "three": "^0.187.0",
+    "web-push": "^4.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/openseadragon": "^5.0.2",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/three": "^0.187.0",
+    "@types/web-push": "^3.6.4",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.11",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
+

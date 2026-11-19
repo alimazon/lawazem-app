@@ -1,0 +1,2220 @@
+﻿===.backup/anatomy-before-3d/app__anatomy__face__page.tsx===
+// app/anatomy/face/page.tsx
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { BackgroundPattern } from '@/components/BackgroundPattern';
+import { IconArrowLeft } from '@/components/ui/Icons';
+import FaceAtlas from '@/components/anatomy/FaceAtlas';
+import { MUSCLES } from '@/lib/anatomy-data';
+
+export const metadata: Metadata = {
+  title: 'Facial Muscles — لوازم',
+  description:
+    'Interactive facial muscle atlas: origin, insertion, nerve supply and action, with expressions and a self-test.',
+};
+
+export default function FaceAtlasPage() {
+  return (
+    <>
+      <BackgroundPattern />
+      <main className="relative mx-auto max-w-6xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10">
+        <Link
+          href="/#atlases"
+          className="group inline-flex items-center gap-1.5 rounded-field text-sm font-semibold text-teal transition-colors hover:text-teal-hover motion-reduce:transition-none"
+        >
+          <span className="transition-transform duration-200 group-hover:-translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0">
+            <IconArrowLeft aria-hidden="true" className="h-4 w-4" />
+          </span>
+          رجوع إلى قائمة الأطالس
+        </Link>
+
+        <header className="mt-6 mb-6 animate-slide-up motion-reduce:animate-none">
+          <span className="inline-flex items-center gap-1.5 rounded-chip border border-teal/20 bg-teal-tint px-3 py-1 font-mono text-xs text-teal">
+            <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-teal" />
+            {MUSCLES.length} muscles · عضلة
+          </span>
+          <h1 dir="ltr" className="mt-3 text-start font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">
+            Facial Muscles
+          </h1>
+          <p className="mt-1 text-sm font-semibold text-ink-muted sm:text-base">
+            أطلس عضلات الوجه
+          </p>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-soft sm:text-base">
+            اضغط أي عضلة على الوجه أو اخترها من القائمة. جرّب التعابير لترى العضلات تعمل معاً، ثم اختبر نفسك.
+            الواجهة بالعربية، والمصطلحات العلمية بالإنجليزية كما تُدرَّس.
+          </p>
+        </header>
+
+        <FaceAtlas />
+      </main>
+    </>
+  );
+}
+===.backup/anatomy-before-3d/app__anatomy__page.tsx===
+// app/anatomy/page.tsx
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { BackgroundPattern } from '@/components/BackgroundPattern';
+import { IconArrowLeft, IconLock } from '@/components/ui/Icons';
+import { MUSCLES } from '@/lib/anatomy-data';
+
+export const metadata: Metadata = {
+  title: 'الأطالس التفاعلية — لوازم',
+  description: 'مجموعة من الأطالس التشريحية والنسيجية التفاعلية لطلاب كلية الطب.',
+};
+
+// ==================== Icons (محلية) ====================
+function IconFace({ className = 'h-6 w-6' }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="9.5" cy="10" r="0.5" fill="currentColor" />
+      <circle cx="14.5" cy="10" r="0.5" fill="currentColor" />
+      <path d="M8.5 14.5c1 0.9 2.2 1.5 3.5 1.5s2.5-0.6 3.5-1.5" />
+    </svg>
+  );
+}
+
+function IconMicroscope() {
+  return (
+    <svg
+      className="h-6 w-6"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M6 18h8" />
+      <path d="M3 22h18" />
+      <path d="M14 22a7 7 0 100-14h-1" />
+      <path d="M9 14h2" />
+      <path d="M9 12a2 2 0 01-2-2V6h6v4a2 2 0 01-2 2z" />
+      <path d="M12 6V3a1 1 0 00-1-1H9a1 1 0 00-1 1v3" />
+    </svg>
+  );
+}
+
+// ==================== Atlas Card ====================
+interface AtlasCardProps {
+  href: string | null;
+  titleEn: string;
+  titleAr: string;
+  description: string;
+  icon: React.ReactNode;
+  accent: 'teal' | 'gold' | 'coral';
+  available: boolean;
+}
+
+function AtlasCard({
+  href,
+  titleEn,
+  titleAr,
+  description,
+  icon,
+  accent,
+  available,
+}: AtlasCardProps) {
+  const accentClass = {
+    teal: 'bg-teal-soft text-teal',
+    gold: 'bg-gold-soft text-gold-ink',
+    coral: 'bg-coral-soft text-coral-ink',
+  }[accent];
+
+  const content = (
+    <>
+      <div className="flex items-start justify-between gap-2">
+        <span
+          aria-hidden="true"
+          className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-card ${accentClass}`}
+        >
+          {icon}
+        </span>
+        {available ? (
+          <span className="inline-flex items-center rounded-chip bg-gold-tint px-2 py-0.5 text-[11px] font-bold text-gold-ink ring-1 ring-gold/30">
+            جديد
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 rounded-chip bg-ink/5 px-2 py-0.5 text-[11px] font-bold text-ink-muted">
+            <IconLock aria-hidden="true" className="h-3 w-3" />
+            قيد التطوير
+          </span>
+        )}
+      </div>
+
+      <h3
+        dir="ltr"
+        className="mt-4 text-start font-display text-xl font-bold leading-tight text-ink group-hover:text-teal"
+      >
+        {titleEn}
+      </h3>
+      <p className="mt-0.5 text-sm font-semibold text-ink-muted">{titleAr}</p>
+
+      <p className="mt-3 text-sm leading-relaxed text-ink-soft">{description}</p>
+
+      {available && (
+        <span className="mt-auto flex items-center gap-1.5 pt-4 text-sm font-bold text-teal">
+          <span>افتح الأطلس</span>
+          <IconArrowLeft
+            aria-hidden="true"
+            className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1 motion-reduce:transition-none"
+          />
+        </span>
+      )}
+    </>
+  );
+
+  if (!available || !href) {
+    return (
+      <div
+        aria-disabled="true"
+        className="flex cursor-not-allowed flex-col rounded-card border border-dashed border-line bg-paper-soft/60 p-5 opacity-70"
+      >
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      className="group flex flex-col rounded-card border border-line bg-paper-soft p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-teal/40 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+    >
+      {content}
+    </Link>
+  );
+}
+
+// ==================== Page ====================
+export default function AnatomyHubPage() {
+  return (
+    <>
+      <BackgroundPattern />
+      <main className="relative mx-auto max-w-5xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10">
+        <Link
+          href="/"
+          className="group inline-flex items-center gap-1.5 rounded-field text-sm font-semibold text-teal transition-colors hover:text-teal-hover motion-reduce:transition-none"
+        >
+          <span className="transition-transform duration-200 group-hover:-translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0">
+            <IconArrowLeft aria-hidden="true" className="h-4 w-4" />
+          </span>
+          رجوع إلى لوحة الأقسام
+        </Link>
+
+        <header className="mt-6 animate-slide-up motion-reduce:animate-none">
+          <span className="inline-flex items-center gap-1.5 rounded-chip border border-teal/20 bg-teal-tint px-3 py-1 font-mono text-xs text-teal">
+            <span
+              aria-hidden="true"
+              className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal motion-reduce:animate-none"
+            />
+            مراجع تفاعلية
+          </span>
+
+          <h1 className="mt-3 font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">
+            الأطالس التفاعلية
+          </h1>
+
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-soft sm:text-base">
+            رسوم تشريحية ونسيجية تفاعلية — تستكشفها بيدك لتثبيت المعلومة. جميع
+            المصطلحات العلمية بالإنجليزية كما تُدرَّس.
+          </p>
+        </header>
+
+        <section aria-labelledby="atlases-heading" className="mt-10">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 animate-slide-up motion-reduce:animate-none">
+            <AtlasCard
+              href="/anatomy/face"
+              titleEn="Facial Muscles"
+              titleAr="أطلس التشريح"
+              description={`${MUSCLES.length} عضلة تفاعلية مع الحركات التعبيرية — ابتسامة، عبوس، رفع الحاجب، وغيرها.`}
+              icon={<IconFace />}
+              accent="teal"
+              available
+            />
+
+            <AtlasCard
+              href={null}
+              titleEn="Histology"
+              titleAr="أطلس الأنسجة"
+              description="شرائح نسيجية تفاعلية للأنسجة الأساسية الأربعة (الطلائية، الضامة، العضلية، العصبية)."
+              icon={<IconMicroscope />}
+              accent="coral"
+              available={false}
+            />
+          </div>
+        </section>
+      </main>
+    </>
+  );
+}
+===.backup/anatomy-before-3d/components__anatomy__ExpressionPreview.tsx===
+'use client';
+
+// components/anatomy/ExpressionPreview.tsx
+import { memo, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { computeFace, scalePose, type Pose } from '@/lib/anatomy-pose';
+
+const CYCLE = 3400;
+const ease = (x: number): number => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
+
+function kAt(t: number): number {
+  const c = t % CYCLE;
+  if (c < 800) return ease(c / 800);
+  if (c < 1900) return 1;
+  if (c < 2600) return 1 - ease((c - 1900) / 700);
+  return 0;
+}
+
+function phaseForK(k: number): number {
+  const x = k < 0.5 ? Math.sqrt(k / 2) : 1 - Math.sqrt((1 - k) / 2);
+  return x * 800;
+}
+
+interface Props {
+  pose: Pose;
+  poseKey: string;
+  onK?: (k: number) => void;
+}
+
+function ExpressionPreview({ pose, poseKey, onK }: Props) {
+  const uid = useId().replace(/:/g, '');
+  const clipL = `${uid}-cl`;
+  const clipR = `${uid}-cr`;
+
+  const [playing, setPlaying] = useState(true);
+  const [k, setK] = useState(0);
+  const kRef = useRef(0);
+  const lastKey = useRef(poseKey);
+
+  useEffect(() => {
+    try {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        setPlaying(false);
+        kRef.current = 1;
+        setK(1);
+      }
+    } catch {
+      /* تجاهل */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!playing) return;
+    const resume = lastKey.current === poseKey;
+    lastKey.current = poseKey;
+    const start = performance.now() - (resume ? phaseForK(kRef.current) : 0);
+    let raf = 0;
+    const frame = (now: number) => {
+      const next = kAt(now - start);
+      if (Math.abs(next - kRef.current) > 0.002) {
+        kRef.current = next;
+        setK(next);
+      }
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, [playing, poseKey]);
+
+  useEffect(() => {
+    onK?.(k);
+  }, [k, onK]);
+
+  const f = useMemo(() => computeFace(scalePose(pose, k)), [pose, k]);
+  const contracted = k > 0.5;
+
+  return (
+    <div className="fa-plate fa-preview">
+      <svg viewBox="0 0 220 270" aria-hidden="true" style={{ direction: 'ltr' }}>
+        <defs>
+          <clipPath id={clipL}><path d={f.eyeL} /></clipPath>
+          <clipPath id={clipR}><path d={f.eyeR} /></clipPath>
+        </defs>
+
+        <path d="M84,206 L82,270" className="fa-pl" />
+        <path d="M136,206 L138,270" className="fa-pl" />
+        <ellipse cx="36" cy="112" rx="5" ry="14" className="fa-pl" style={{ fill: 'var(--fa-skin)' }} />
+        <ellipse cx="184" cy="112" rx="5" ry="14" className="fa-pl" style={{ fill: 'var(--fa-skin)' }} />
+        <path d={f.head} className="fa-pl" style={{ fill: 'var(--fa-skin)' }} />
+
+        <g style={{ opacity: f.op.neck }}>
+          <path className="fa-pw" d="M92,214 L86,262" />
+          <path className="fa-pw" d="M100,218 L96,262" />
+          <path className="fa-pw" d="M128,214 L134,262" />
+          <path className="fa-pw" d="M120,218 L124,262" />
+        </g>
+        <g style={{ opacity: f.op.forehead }}>
+          <path className="fa-pw" d="M70,44 Q110,40 150,44" />
+          <path className="fa-pw" d="M66,54 Q110,50 154,54" />
+          <path className="fa-pw" d="M66,64 Q110,60 154,64" />
+        </g>
+        <g style={{ opacity: f.op.glabella }}>
+          <path className="fa-pw" d="M104,78 L104.5,92" />
+          <path className="fa-pw" d="M116,78 L115.5,92" />
+        </g>
+        <g style={{ opacity: f.op.nose }}>
+          <path className="fa-pw" d="M101,95 L119,95" />
+          <path className="fa-pw" d="M102,101 L118,101" />
+        </g>
+        <g style={{ opacity: f.op.squint }}>
+          <path className="fa-pw" d="M158,92 L170,86" />
+          <path className="fa-pw" d="M160,98 L173,98" />
+          <path className="fa-pw" d="M158,104 L170,110" />
+          <path className="fa-pw" d="M62,92 L50,86" />
+          <path className="fa-pw" d="M60,98 L47,98" />
+          <path className="fa-pw" d="M62,104 L50,110" />
+        </g>
+        <g style={{ opacity: f.op.temple }}>
+          <path className="fa-pw" d="M52,66 Q47,84 52,104" />
+          <path className="fa-pw" d="M168,66 Q173,84 168,104" />
+        </g>
+        <g style={{ opacity: f.op.clench }}>
+          <path className="fa-pw" style={{ strokeWidth: 2 }} d="M62,156 Q56,174 66,192" />
+          <path className="fa-pw" style={{ strokeWidth: 2 }} d="M158,156 Q164,174 154,192" />
+        </g>
+        <g style={{ opacity: f.op.cheek }}>
+          <path className="fa-pw" d="M150,148 Q158,166 148,186" />
+          <path className="fa-pw" d="M70,148 Q62,166 72,186" />
+        </g>
+        <g style={{ opacity: f.op.chin }}>
+          <path className="fa-pw" d="M96,198 Q110,193 124,198" />
+          <circle cx="102" cy="206" r="1" style={{ fill: 'var(--fa-ink)' }} />
+          <circle cx="110" cy="209" r="1" style={{ fill: 'var(--fa-ink)' }} />
+          <circle cx="118" cy="206" r="1" style={{ fill: 'var(--fa-ink)' }} />
+          <circle cx="106" cy="213" r="1" style={{ fill: 'var(--fa-ink)' }} />
+          <circle cx="114" cy="213" r="1" style={{ fill: 'var(--fa-ink)' }} />
+        </g>
+
+        <path d={f.nlfR} className="fa-pw" style={{ opacity: f.nlfOpacity }} />
+        <path d={f.nlfL} className="fa-pw" style={{ opacity: f.nlfOpacity }} />
+        <path d={f.marR} className="fa-pw" style={{ opacity: f.marOpacity }} />
+        <path d={f.marL} className="fa-pw" style={{ opacity: f.marOpacity }} />
+        <g style={{ opacity: f.op.purse }}>
+          {f.purse.map((d, i) => (
+            <path key={i} d={d} className="fa-pw" />
+          ))}
+        </g>
+
+        <path className="fa-pl" style={{ strokeOpacity: 0.35 }} d="M104,100 Q101,128 98,146" />
+        <path className="fa-pl" style={{ strokeOpacity: 0.35 }} d="M116,100 Q119,128 122,146" />
+        <path d={f.noseWingL} className="fa-pl" />
+        <path d={f.noseWingR} className="fa-pl" />
+        <path d={f.noseBase} className="fa-pl" />
+        <ellipse cx={f.nostril.lx} cy={f.nostril.y} rx={f.nostril.rad} ry="1.8" fill="var(--fa-ink)" opacity=".55" />
+        <ellipse cx={f.nostril.rx} cy={f.nostril.y} rx={f.nostril.rad} ry="1.8" fill="var(--fa-ink)" opacity=".55" />
+
+        <path d={f.eyeL} className="fa-pl" style={{ fill: 'var(--fa-eye)' }} />
+        <path d={f.eyeR} className="fa-pl" style={{ fill: 'var(--fa-eye)' }} />
+        <circle cx="80" cy="98" r="5.6" style={{ fill: 'var(--fa-iris)', opacity: f.irisOpacity }} clipPath={`url(#${clipL})`} />
+        <circle cx="140" cy="98" r="5.6" style={{ fill: 'var(--fa-iris)', opacity: f.irisOpacity }} clipPath={`url(#${clipR})`} />
+        <circle cx="80" cy="98" r="2.4" style={{ fill: 'var(--fa-ink)', opacity: f.irisOpacity }} clipPath={`url(#${clipL})`} />
+        <circle cx="140" cy="98" r="2.4" style={{ fill: 'var(--fa-ink)', opacity: f.irisOpacity }} clipPath={`url(#${clipR})`} />
+
+        <path d={f.browL} className="fa-pl" style={{ strokeWidth: 3.2 }} />
+        <path d={f.browR} className="fa-pl" style={{ strokeWidth: 3.2 }} />
+        <path d={f.mouth} className="fa-pl" style={{ fill: 'var(--fa-lip)' }} />
+      </svg>
+
+      <button
+        type="button"
+        className="fa-play"
+        aria-label={playing ? 'إيقاف الحركة' : 'تشغيل الحركة'}
+        onClick={() => setPlaying((p) => !p)}
+      >
+        {playing ? (
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <rect x="2" y="1.5" width="2.8" height="9" fill="currentColor" />
+            <rect x="7.2" y="1.5" width="2.8" height="9" fill="currentColor" />
+          </svg>
+        ) : (
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <path d="M3 1.5 L10 6 L3 10.5 Z" fill="currentColor" />
+          </svg>
+        )}
+      </button>
+
+      <div className="fa-pstate">{contracted ? 'منقبضة' : 'مسترخية'}</div>
+
+      <input
+        type="range"
+        min={0}
+        max={100}
+        value={Math.round(k * 100)}
+        aria-label="درجة الانقباض"
+        className="fa-range"
+        onChange={(e) => {
+          const v = Number(e.target.value) / 100;
+          setPlaying(false);
+          kRef.current = v;
+          setK(v);
+        }}
+      />
+    </div>
+  );
+}
+
+export default memo(ExpressionPreview);
+===.backup/anatomy-before-3d/components__anatomy__face-atlas.css===
+/* components/anatomy/face-atlas.css */
+
+.fa-plate {
+  --fa-bg: #ECEFF0; --fa-surface: #F7F9F9; --fa-ink: #14232B; --fa-muted: #55666E; --fa-line: #CAD3D7;
+  --fa-fascia: #EADFD5; --fa-skin: #E9C4B0; --fa-lip: #D98A84; --fa-brow: #4A3228;
+  --fa-eye: #F6F5F2; --fa-iris: #4F6A74; --fa-mouth: #6E2A2D;
+  --fa-muscle: #C4574F; --fa-muscle-hover: #D8746B; --fa-muscle-edge: #8B2E2A;
+  --fa-fibre: #7E2824; --fa-fibre-hi: #EBA096;
+  --fa-sel: #F5B83D; --fa-sel-edge: #14232B; --fa-sel-fibre: #9C6410;
+  --fa-ok: #4FB47F; --fa-bad: #E0634A;
+  color: var(--fa-ink);
+}
+
+/* ---------- التخطيط ---------- */
+.fa-layout {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "card" "stage";
+}
+
+/* سطح المكتب: البطاقة على اليمين وتكون Sticky */
+@media (min-width: 880px) {
+  .fa-layout {
+    grid-template-columns: minmax(0, 1fr) 380px;
+    grid-template-areas: "stage card";
+    align-items: start;
+  }
+}
+
+.fa-card { grid-area: card; min-width: 0; z-index: 10; }
+.fa-stage { grid-area: stage; min-width: 0; }
+
+/* تثبيت البطاقة فقط على الشاشات الكبيرة */
+@media (min-width: 880px) {
+  .fa-card.is-sticky { position: sticky; top: calc(var(--nav-h, 0px) + 8px); }
+  .fa-card.is-quiz { position: sticky; top: calc(var(--nav-h, 0px) + 12px); }
+}
+
+.fa-card-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 112px;
+  gap: 12px;
+  align-items: start;
+}
+@media (min-width: 880px) { .fa-card-main { grid-template-columns: minmax(0, 1fr) 128px; } }
+
+.fa-scroll { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.fa-scroll > * { flex: none; }
+
+/* ---------- لوحة الرسم ---------- */
+.fa-figure {
+  --R: .7407;
+  position: relative;
+  background: var(--fa-surface);
+  border: 1px solid var(--fa-line);
+  border-radius: 14px;
+  padding: 8px;
+  display: flex;
+  justify-content: center;
+}
+.fa-figure svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: var(--R);
+  /* يضمن ألا يتجاوز الرسم 68% من ارتفاع الشاشة على الشاشات الكبيرة */
+  max-width: calc(68vh * var(--R));
+  touch-action: manipulation;
+  direction: ltr;
+}
+
+/* ---------- العناصر الرسومية ---------- */
+.fa-base-fascia { fill: var(--fa-fascia); stroke: var(--fa-line); stroke-width: 1.2; }
+.fa-base-skin { fill: var(--fa-skin); stroke: var(--fa-muscle-edge); stroke-opacity: .5; stroke-width: .8; }
+
+.fa-m { cursor: pointer; transition: opacity .2s; }
+.fa-mo { fill: var(--fa-muscle); stroke: var(--fa-muscle-edge); stroke-width: .9; stroke-linejoin: round; }
+.fa-fa { fill: none; stroke: var(--fa-fibre); stroke-opacity: .5; stroke-width: .7; stroke-linecap: round; }
+.fa-fb { fill: none; stroke: var(--fa-fibre-hi); stroke-opacity: .55; stroke-width: .7; stroke-linecap: round; }
+.fa-m:hover .fa-mo { fill: var(--fa-muscle-hover); }
+.fa-m:focus-visible { outline: none; }
+.fa-m:focus-visible .fa-mo { stroke: var(--fa-ink); stroke-width: 2; }
+.fa-m.is-dim { opacity: .16; }
+.fa-m.is-dim:hover { opacity: .55; }
+.fa-m.is-hi .fa-mo { stroke: var(--fa-ink); stroke-width: 1.3; }
+
+.fa-sel { pointer-events: none; cursor: default; }
+.fa-sel .fa-mo { fill: var(--fa-sel); fill-opacity: calc(.78 + .22 * var(--k, 1)); stroke: var(--fa-sel-edge); stroke-width: 1.5; }
+.fa-sel .fa-fa { stroke: var(--fa-sel-fibre); stroke-opacity: .7; }
+.fa-sel .fa-fb { stroke: #fff; stroke-opacity: .55; }
+.fa-sel-ok .fa-mo { fill: var(--fa-ok); fill-opacity: .92; }
+.fa-sel-bad .fa-mo { fill: var(--fa-bad); fill-opacity: .92; }
+.fa-sel-ok .fa-fa, .fa-sel-bad .fa-fa { stroke: #0d2b1c; stroke-opacity: .55; }
+
+.fa-decor { pointer-events: none; }
+.fa-thin { fill: none; stroke: var(--fa-ink); stroke-opacity: .4; stroke-width: 1.1; }
+
+.fa-halo { fill: none; stroke: var(--fa-surface); stroke-width: 4.6; stroke-linecap: round; stroke-linejoin: round; }
+.fa-arrow { fill: none; stroke: var(--fa-ink); stroke-width: 2.2; stroke-linecap: round; stroke-dasharray: 5 4; animation: fa-flow .9s linear infinite; }
+.fa-ahead { fill: var(--fa-ink); stroke: var(--fa-surface); stroke-width: 1.2; stroke-linejoin: round; }
+@keyframes fa-flow { to { stroke-dashoffset: -9; } }
+
+.fa-lab { font-family: inherit; fill: var(--fa-ink); paint-order: stroke; stroke: var(--fa-surface); stroke-linejoin: round; cursor: pointer; }
+.fa-lab.is-sel { font-weight: 700; }
+.fa-leader { stroke: var(--fa-ink); stroke-opacity: .55; pointer-events: none; fill: none; }
+.fa-ldot { fill: var(--fa-ink); pointer-events: none; }
+
+.fa-tip {
+  position: absolute; pointer-events: none; z-index: 3;
+  background: #14232B; color: #F7F9F9; font-size: 12px; padding: 3px 8px; border-radius: 6px;
+  white-space: nowrap; transform: translate(-50%, -140%); direction: ltr;
+}
+.fa-tip[hidden] { display: none; }
+
+/* ---------- معاينة التعبير ---------- */
+.fa-preview { position: relative; border-radius: 10px; }
+.fa-preview > svg { display: block; width: 100%; height: auto; background: var(--fa-bg); border-radius: 8px; }
+.fa-pl { fill: none; stroke: var(--fa-ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.fa-pw { fill: none; stroke: var(--fa-ink); stroke-width: 1.2; stroke-linecap: round; }
+.fa-pstate { font-size: 11px; color: var(--fa-muted); text-align: center; margin-top: 2px; }
+.fa-play {
+  position: absolute; inset-inline-start: 4px; top: 4px; width: 26px; height: 26px; border-radius: 50%;
+  border: 1px solid var(--fa-line); background: var(--fa-surface); color: var(--fa-ink);
+  display: grid; place-items: center; cursor: pointer; padding: 0;
+}
+.fa-play:focus-visible, .fa-range:focus-visible { outline: 2px solid var(--fa-sel); outline-offset: 2px; }
+.fa-range { width: 100%; margin: 4px 0 0; accent-color: var(--fa-muscle); cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fa-arrow { animation: none; }
+  .fa-m { transition: none; }
+}
+===.backup/anatomy-before-3d/components__anatomy__FaceAtlas.tsx===
+'use client';
+
+// components/anatomy/FaceAtlas.tsx
+import { memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties, KeyboardEvent, MouseEvent, PointerEvent } from 'react';
+import './face-atlas.css';
+
+import { MUSCLES, MUSCLE_GROUPS, MUSCLE_BY_ID, ZOOMS, type ZoomId } from '@/lib/anatomy-data';
+import { GEOMETRY } from '@/lib/anatomy-geometry';
+import { canvasRatio, layoutLabels, viewBoxFor, type ViewBox } from '@/lib/anatomy-view';
+import { combinePoses, type Pose } from '@/lib/anatomy-pose';
+import { ACTION_AR, EXPRESSIONS, PEARLS_AR } from '@/lib/anatomy-ar';
+import {
+  EXAM_TIPS,
+  FACIAL_BRANCHES,
+  MUSCLES_BY_BRANCH,
+  BRANCH_MNEMONIC,
+  branchesOf,
+  innervationOf,
+  pharyngealArchOf,
+  type FacialBranch,
+} from '@/lib/anatomy-extras';
+import { makeRound } from '@/lib/anatomy-quiz';
+
+import ExpressionPreview from './ExpressionPreview';
+import QuizPanel, { type QuizState } from './QuizPanel';
+import AtlasExtras from './AtlasExtras';
+import { badge, btnGhost, chip, chipSmall } from './ui-classes';
+
+// ==================== ثوابت ====================
+type Mode = 'explore' | 'quiz';
+type DetailTab = 'anatomy' | 'nerve' | 'clinical';
+type BranchFilter = FacialBranch | 'v3' | null;
+type Tone = 'sel' | 'ok' | 'bad';
+interface SelItem { id: string; tone: Tone }
+
+const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
+const MIRROR = 'translate(400 0) scale(-1 1)';
+const BEST_KEY = 'anatomy-face-quiz-best';
+const DEFAULT_ID = 'zmaj';
+const ROUND_SIZE = 10;
+const V3_IDS: readonly string[] = MUSCLES.filter((m) => innervationOf(m) === 'V3').map((m) => m.id);
+
+const TAB_LABEL: Record<DetailTab, string> = {
+  anatomy: 'Anatomy',
+  nerve: 'Nerve',
+  clinical: 'Clinical',
+};
+
+// ==================== طبقات الرسم الثابتة ====================
+const FaceBase = memo(function FaceBase() {
+  return (
+    <g>
+      <path d="M138,380 L134,540 L266,540 L262,380 Z" className="fa-base-fascia" />
+      {[76, 324].map((cx) => (
+        <g key={cx}>
+          <ellipse cx={cx} cy={212} rx={12} ry={28} className="fa-base-skin" />
+          <path d={cx < 200 ? 'M80,196 Q70,212 80,230' : 'M320,196 Q330,212 320,230'} className="fa-thin" />
+        </g>
+      ))}
+      <path
+        d="M200,18 C120,18 80,70 80,150 C80,220 84,280 94,330 C104,372 138,412 200,430 C262,412 296,372 306,330 C316,280 320,220 320,150 C320,70 280,18 200,18 Z"
+        className="fa-base-fascia"
+      />
+      <path
+        d="M200,236 C190,252 182,278 180,296 C179,312 190,326 200,326 C210,326 221,312 220,296 C218,278 210,252 200,236 Z"
+        className="fa-base-skin"
+      />
+    </g>
+  );
+});
+
+const FaceDecor = memo(function FaceDecor({ clipId }: { clipId: string }) {
+  const side = (mirror: boolean) => (
+    <g key={mirror ? 'l' : 'r'} transform={mirror ? MIRROR : undefined}>
+      <path d="M207,172 C222,154 262,146 296,166 C264,156 226,162 207,172 Z" fill="var(--fa-brow)" stroke="var(--fa-brow)" strokeWidth={1.2} strokeLinejoin="round" />
+      <path d="M226,201 Q248,187 270,201 Q248,214 226,201 Z" fill="var(--fa-eye)" />
+      <circle cx={248} cy={201} r={8.2} fill="var(--fa-iris)" clipPath={`url(#${clipId})`} />
+      <circle cx={248} cy={201} r={3.4} fill="var(--fa-ink)" clipPath={`url(#${clipId})`} />
+      <path d="M224,201 Q248,184 272,201" fill="none" stroke="var(--fa-ink)" strokeWidth={1.5} strokeLinecap="round" />
+      <path d="M226,201 Q248,214 270,201" fill="none" stroke="var(--fa-ink)" strokeOpacity={0.5} strokeWidth={0.9} />
+      <ellipse cx={210} cy={314} rx={6.5} ry={3.4} fill="var(--fa-mouth)" />
+      <path d="M222,296 Q226,308 218,320" fill="none" stroke="var(--fa-muscle-edge)" strokeOpacity={0.55} strokeWidth={1.1} strokeLinecap="round" />
+    </g>
+  );
+  return (
+    <>
+      {side(false)}
+      {side(true)}
+      <path d="M162,347 C174,338 188,330 200,336 C212,330 226,338 238,347 C224,350 210,350 200,350 C190,350 176,350 162,347 Z" fill="var(--fa-lip)" stroke="var(--fa-mouth)" strokeWidth={0.8} strokeLinejoin="round" />
+      <path d="M163,348 C176,351 190,351 200,351 C210,351 224,351 237,348 C230,362 216,368 200,368 C184,368 170,362 163,348 Z" fill="var(--fa-lip)" stroke="var(--fa-mouth)" strokeWidth={0.8} strokeLinejoin="round" />
+    </>
+  );
+});
+
+// ==================== طبقة العضلات ====================
+const MusclesLayer = memo(function MusclesLayer({
+  highlight,
+  hideNames,
+}: {
+  highlight: ReadonlySet<string> | null;
+  hideNames: boolean;
+}) {
+  return (
+    <>
+      {MUSCLES.flatMap((m) => {
+        const geo = GEOMETRY[m.id];
+        if (!geo) return [];
+        const cls =
+          highlight === null ? 'fa-m' : highlight.has(m.id) ? 'fa-m is-hi' : 'fa-m is-dim';
+        return (m.paired ? [0, 1] : [0]).map((s) => (
+          <g
+            key={`${m.id}-${s}`}
+            className={cls}
+            data-id={m.id}
+            transform={s ? MIRROR : undefined}
+            {...(s === 0
+              ? { role: 'button', tabIndex: 0, 'aria-label': hideNames ? 'Muscle' : m.en }
+              : { 'aria-hidden': true })}
+          >
+            <path d={geo.d} className="fa-mo" fillRule={geo.evenodd ? 'evenodd' : undefined} />
+            <path d={geo.dark} className="fa-fa" />
+            <path d={geo.light} className="fa-fb" />
+          </g>
+        ));
+      })}
+    </>
+  );
+});
+
+function SelLayer({ items }: { items: readonly SelItem[] }) {
+  return (
+    <>
+      {items.flatMap(({ id, tone }) => {
+        const m = MUSCLE_BY_ID[id];
+        const geo = GEOMETRY[id];
+        if (!m || !geo) return [];
+        return (m.paired ? [0, 1] : [0]).map((s) => (
+          <g
+            key={`${id}-${s}-${tone}`}
+            className={tone === 'sel' ? 'fa-m fa-sel' : `fa-m fa-sel fa-sel-${tone}`}
+            transform={s ? MIRROR : undefined}
+          >
+            <path d={geo.d} className="fa-mo" fillRule={geo.evenodd ? 'evenodd' : undefined} />
+            <path d={geo.dark} className="fa-fa" />
+            <path d={geo.light} className="fa-fb" />
+          </g>
+        ));
+      })}
+    </>
+  );
+}
+
+function Arrow({ a, mirror }: { a: readonly [number, number, number, number]; mirror: boolean }) {
+  const [x1, y1, x2, y2] = a;
+  const ang = Math.atan2(y2 - y1, x2 - x1);
+  const s = 8;
+  const ex = x2 - 2.5 * Math.cos(ang);
+  const ey = y2 - 2.5 * Math.sin(ang);
+  const h1x = x2 - s * Math.cos(ang - 0.45);
+  const h1y = y2 - s * Math.sin(ang - 0.45);
+  const h2x = x2 - s * Math.cos(ang + 0.45);
+  const h2y = y2 - s * Math.sin(ang + 0.45);
+  const line = `M${x1},${y1} L${ex.toFixed(1)},${ey.toFixed(1)}`;
+  return (
+    <g transform={mirror ? MIRROR : undefined}>
+      <path d={line} className="fa-halo" />
+      <path d={line} className="fa-arrow" />
+      <path d={`M${x2},${y2} L${h1x.toFixed(1)},${h1y.toFixed(1)} L${h2x.toFixed(1)},${h2y.toFixed(1)} Z`} className="fa-ahead" />
+    </g>
+  );
+}
+
+function ArrowsLayer({ ids }: { ids: readonly string[] }) {
+  return (
+    <>
+      {ids.flatMap((id) => {
+        const m = MUSCLE_BY_ID[id];
+        if (!m) return [];
+        return m.arrows.flatMap((a, i) => {
+          const out = [<Arrow key={`${id}-${i}-0`} a={a} mirror={false} />];
+          if (m.paired) out.push(<Arrow key={`${id}-${i}-1`} a={a} mirror />);
+          return out;
+        });
+      })}
+    </>
+  );
+}
+
+// ==================== المكوّن الرئيسي ====================
+export default function FaceAtlas() {
+  const uid = useId().replace(/:/g, '');
+  const clipId = `${uid}-eye`;
+
+  // ----- الحالة -----
+  const [mode, setMode] = useState<Mode>('explore');
+  const [selectedId, setSelectedId] = useState<string | null>(DEFAULT_ID);
+  const [expressionId, setExpressionId] = useState<string | null>(null);
+  const [branch, setBranch] = useState<BranchFilter>(null);
+  const [zoom, setZoom] = useState<ZoomId>('whole');
+  const [labelsOn, setLabelsOn] = useState(false);
+  const [vb, setVb] = useState<ViewBox>(() => viewBoxFor('whole', false));
+  const [svgW, setSvgW] = useState(0);
+  const [emW, setEmW] = useState<Record<string, number>>({});
+  const [query, setQuery] = useState('');
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [tab, setTab] = useState<DetailTab>('anatomy');
+  const [quiz, setQuiz] = useState<QuizState | null>(null);
+  const [best, setBest] = useState(0);
+  const [copied, setCopied] = useState(false);
+
+  // ----- مراجع -----
+  const svgRef = useRef<SVGSVGElement>(null);
+  const figRef = useRef<HTMLDivElement>(null);
+  const tipRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLElement>(null);
+  const measureRef = useRef<SVGTextElement>(null);
+  const vbRef = useRef<ViewBox>(vb);
+  const labelsOnRef = useRef(false);
+  const animRef = useRef(0);
+  const reducedRef = useRef(false);
+  const interacted = useRef(false);
+  const bestRef = useRef(0);
+
+  // ==================== الكاميرا ====================
+  const animateTo = useCallback((to: ViewBox, instant = false) => {
+    cancelAnimationFrame(animRef.current);
+    const from = vbRef.current;
+    if (instant || reducedRef.current) {
+      vbRef.current = to;
+      setVb(to);
+      return;
+    }
+    const t0 = performance.now();
+    const step = (t: number) => {
+      const k = Math.min(1, (t - t0) / 450);
+      const e = 1 - Math.pow(1 - k, 3);
+      const mix = (i: 0 | 1 | 2 | 3): number => from[i] + (to[i] - from[i]) * e;
+      const next: ViewBox = [mix(0), mix(1), mix(2), mix(3)];
+      vbRef.current = next;
+      setVb(next);
+      if (k < 1) animRef.current = requestAnimationFrame(step);
+    };
+    animRef.current = requestAnimationFrame(step);
+  }, []);
+
+  const changeZoom = useCallback(
+    (z: ZoomId, instant = false) => {
+      setZoom(z);
+      animateTo(viewBoxFor(z, labelsOnRef.current), instant);
+    },
+    [animateTo],
+  );
+
+  const toggleLabels = useCallback(() => {
+    const next = !labelsOnRef.current;
+    labelsOnRef.current = next;
+    setLabelsOn(next);
+    animateTo(viewBoxFor(zoom, next), true);
+  }, [animateTo, zoom]);
+
+  useEffect(() => () => cancelAnimationFrame(animRef.current), []);
+
+  // ==================== بدء التشغيل ====================
+  useIsoLayoutEffect(() => {
+    try {
+      reducedRef.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch {
+      /* تجاهل */
+    }
+
+    let wantLabels = false;
+    try {
+      // إخفاء التسميات افتراضياً على الجوال (أقل من 1024px)
+      wantLabels = window.matchMedia('(min-width: 1024px)').matches;
+    } catch {
+      /* تجاهل */
+    }
+
+    let startZoom: ZoomId = 'whole';
+    try {
+      const p = new URLSearchParams(window.location.search);
+      const mid = p.get('m');
+      const xid = p.get('x');
+      if (xid && EXPRESSIONS.some((e) => e.id === xid)) {
+        setExpressionId(xid);
+        setSelectedId(null);
+      } else if (mid && MUSCLE_BY_ID[mid]) {
+        setSelectedId(mid);
+        startZoom = MUSCLE_BY_ID[mid].zoom;
+      }
+    } catch {
+      /* تجاهل */
+    }
+
+    labelsOnRef.current = wantLabels;
+    setLabelsOn(wantLabels);
+    setZoom(startZoom);
+    const v = viewBoxFor(startZoom, wantLabels);
+    vbRef.current = v;
+    setVb(v);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const n = Number(localStorage.getItem(BEST_KEY));
+      if (Number.isFinite(n) && n > 0) {
+        bestRef.current = n;
+        setBest(n);
+      }
+    } catch {
+      /* تجاهل */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!interacted.current || mode !== 'explore') return;
+    try {
+      const p = new URLSearchParams();
+      if (expressionId) p.set('x', expressionId);
+      else if (selectedId) p.set('m', selectedId);
+      const qs = p.toString();
+      window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
+    } catch {
+      /* تجاهل */
+    }
+  }, [selectedId, expressionId, mode]);
+
+  // ==================== القياسات ====================
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el) return;
+    setSvgW(el.getBoundingClientRect().width);
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width;
+      if (w) setSvgW(w);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = () => {
+      const t = measureRef.current;
+      if (!t || cancelled || typeof t.getComputedTextLength !== 'function') return;
+      const next: Record<string, number> = {};
+      for (const m of MUSCLES) {
+        const text = m.short ?? m.en;
+        t.textContent = text;
+        const len = t.getComputedTextLength();
+        if (len > 0) next[text] = len / 100;
+      }
+      t.textContent = '';
+      if (Object.keys(next).length) setEmW(next);
+    };
+    run();
+    try {
+      void document.fonts?.ready.then(run);
+    } catch {
+      /* تجاهل */
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // ==================== التحديد ====================
+  const scrollToFigure = useCallback(() => {
+    const fig = figRef.current;
+    const card = cardRef.current;
+    if (!fig) return;
+    const navH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nav-h')) || 0;
+    let stuck = 0;
+    if (card && getComputedStyle(card).position === 'sticky' && window.matchMedia('(max-width: 879px)').matches) {
+      stuck = card.offsetHeight;
+    }
+    const top = window.scrollY + fig.getBoundingClientRect().top - navH - stuck - 12;
+    window.scrollTo({ top: Math.max(0, top), behavior: reducedRef.current ? 'auto' : 'smooth' });
+  }, []);
+
+  const selectMuscle = useCallback(
+    (id: string, opts?: { zoom?: boolean; scroll?: boolean }) => {
+      const m = MUSCLE_BY_ID[id];
+      if (!m) return;
+      interacted.current = true;
+      setSelectedId(id);
+      setExpressionId(null);
+      if (opts?.zoom) changeZoom(m.zoom);
+      if (opts?.scroll) scrollToFigure();
+    },
+    [changeZoom, scrollToFigure],
+  );
+
+  const selectExpression = useCallback(
+    (id: string) => {
+      interacted.current = true;
+      if (expressionId === id) {
+        setExpressionId(null);
+        setSelectedId((prev) => prev ?? DEFAULT_ID);
+        return;
+      }
+      setExpressionId(id);
+      setSelectedId(null);
+      setBranch(null);
+      changeZoom('whole');
+    },
+    [changeZoom, expressionId],
+  );
+
+  const toggleBranch = useCallback((b: Exclude<BranchFilter, null>) => {
+    setBranch((prev) => (prev === b ? null : b));
+    setExpressionId(null);
+    setSelectedId((prev) => prev ?? DEFAULT_ID);
+  }, []);
+
+  // ==================== الاختبار ====================
+  const startQuiz = useCallback(() => {
+    setQuiz({
+      questions: makeRound(ROUND_SIZE),
+      index: 0,
+      picked: null,
+      score: 0,
+      streak: 0,
+      bestStreak: 0,
+      missed: [],
+      done: false,
+    });
+    setMode('quiz');
+  }, []);
+
+  const exitQuiz = useCallback(() => {
+    setMode('explore');
+    setQuiz(null);
+    changeZoom('whole');
+  }, [changeZoom]);
+
+  const answerQuiz = useCallback((choice: string) => {
+    setQuiz((prev) => {
+      if (!prev || prev.picked !== null || prev.done) return prev;
+      const q = prev.questions[prev.index];
+      if (!q) return prev;
+      const ok = choice === q.correct;
+      const streak = ok ? prev.streak + 1 : 0;
+      return {
+        ...prev,
+        picked: choice,
+        score: prev.score + (ok ? 1 : 0),
+        streak,
+        bestStreak: Math.max(prev.bestStreak, streak),
+        missed: ok || prev.missed.includes(q.id) ? prev.missed : [...prev.missed, q.id],
+      };
+    });
+  }, []);
+
+  const nextQuiz = useCallback(() => {
+    setQuiz((prev) => {
+      if (!prev || prev.picked === null) return prev;
+      const next = prev.index + 1;
+      if (next >= prev.questions.length) return { ...prev, done: true };
+      return { ...prev, index: next, picked: null };
+    });
+  }, []);
+
+  const reviewFromQuiz = useCallback(
+    (id: string) => {
+      setMode('explore');
+      setQuiz(null);
+      selectMuscle(id, { zoom: true, scroll: true });
+    },
+    [selectMuscle],
+  );
+
+  const currentQ = mode === 'quiz' && quiz && !quiz.done ? (quiz.questions[quiz.index] ?? null) : null;
+
+  useEffect(() => {
+    if (mode !== 'quiz') return;
+    const m = currentQ ? MUSCLE_BY_ID[currentQ.id] : undefined;
+    if (m && currentQ && (currentQ.kind === 'locate' || currentQ.kind === 'identify' || currentQ.kind === 'branch')) {
+      changeZoom(m.zoom);
+    } else {
+      changeZoom('whole');
+    }
+  }, [mode, currentQ, changeZoom]);
+
+  useEffect(() => {
+    if (!quiz?.done) return;
+    const b = Math.max(bestRef.current, quiz.score);
+    if (b !== bestRef.current) {
+      bestRef.current = b;
+      setBest(b);
+      try {
+        localStorage.setItem(BEST_KEY, String(b));
+      } catch {
+        /* تجاهل */
+      }
+    }
+  }, [quiz?.done, quiz?.score]);
+
+  const handlePick = useCallback(
+    (id: string) => {
+      if (mode === 'quiz') {
+        if (currentQ?.kind === 'locate' && quiz?.picked === null) answerQuiz(id);
+        return;
+      }
+      selectMuscle(id);
+    },
+    [mode, currentQ, quiz?.picked, answerQuiz, selectMuscle],
+  );
+
+  // ==================== مشتقات العرض ====================
+  const selected = selectedId ? (MUSCLE_BY_ID[selectedId] ?? null) : null;
+  const expression = expressionId ? (EXPRESSIONS.find((e) => e.id === expressionId) ?? null) : null;
+
+  const highlight = useMemo<ReadonlySet<string> | null>(() => {
+    if (mode === 'quiz') return null;
+    if (expression) return new Set(expression.muscles.map((x) => x.id));
+    if (branch === 'v3') return new Set(V3_IDS);
+    if (branch) return new Set(MUSCLES_BY_BRANCH[branch]);
+    return null;
+  }, [mode, expression, branch]);
+
+  const pose = useMemo<Pose>(() => {
+    if (expression) {
+      return combinePoses(
+        expression.muscles.map((x) => ({ pose: MUSCLE_BY_ID[x.id]?.pose ?? {}, w: x.w ?? 1 })),
+        expression.extra,
+      );
+    }
+    return selected?.pose ?? {};
+  }, [expression, selected]);
+  const poseKey = expression ? `x:${expression.id}` : `m:${selectedId ?? ''}`;
+
+  const selItems = useMemo<SelItem[]>(() => {
+    if (mode === 'explore') {
+      if (expression) return expression.muscles.map((x) => ({ id: x.id, tone: 'sel' as const }));
+      return selectedId ? [{ id: selectedId, tone: 'sel' as const }] : [];
+    }
+    if (!currentQ || !quiz) return [];
+    const picked = quiz.picked;
+    const items: SelItem[] = [];
+    if (currentQ.kind === 'identify' || currentQ.kind === 'branch') {
+      items.push({ id: currentQ.id, tone: picked !== null ? 'ok' : 'sel' });
+    } else if (currentQ.kind === 'locate') {
+      if (picked !== null) {
+        if (picked !== '__skip' && picked !== currentQ.id && MUSCLE_BY_ID[picked]) items.push({ id: picked, tone: 'bad' });
+        items.push({ id: currentQ.id, tone: 'ok' });
+      }
+    } else if (picked !== null) {
+      items.push({ id: currentQ.id, tone: 'ok' });
+    }
+    return items;
+  }, [mode, expression, selectedId, currentQ, quiz]);
+
+  const arrowIds = useMemo<string[]>(() => {
+    if (mode === 'explore') return expression ? expression.muscles.map((x) => x.id) : selectedId ? [selectedId] : [];
+    if (!currentQ || !quiz || quiz.picked === null) return [];
+    return [currentQ.id];
+  }, [mode, expression, selectedId, currentQ, quiz]);
+
+  const showLabels = labelsOn && mode === 'explore';
+  const layout = useMemo(
+    () => (showLabels ? layoutLabels(vb, svgW, (t) => emW[t] ?? t.length * 0.55) : { fs: 0, items: [] }),
+    [showLabels, vb, svgW, emW],
+  );
+
+  const onK = useCallback((k: number) => {
+    svgRef.current?.style.setProperty('--k', k.toFixed(3));
+  }, []);
+
+  // ==================== أحداث الرسم ====================
+  const idFromEvent = (e: { target: EventTarget }): string | null => {
+    const t = (e.target as Element).closest?.('[data-id]');
+    return t?.getAttribute('data-id') ?? null;
+  };
+
+  const onLayerClick = (e: MouseEvent<SVGGElement>) => {
+    const id = idFromEvent(e);
+    if (id) handlePick(id);
+  };
+
+  const onLayerKey = (e: KeyboardEvent<SVGGElement>) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const id = idFromEvent(e);
+    if (id) {
+      e.preventDefault();
+      handlePick(id);
+    }
+  };
+
+  const onLayerMove = (e: PointerEvent<SVGGElement>) => {
+    const tip = tipRef.current;
+    const fig = figRef.current;
+    if (!tip || !fig || e.pointerType !== 'mouse' || mode === 'quiz') return;
+    const id = idFromEvent(e);
+    if (!id) {
+      tip.hidden = true;
+      return;
+    }
+    const r = fig.getBoundingClientRect();
+    tip.textContent = MUSCLE_BY_ID[id]?.en ?? '';
+    tip.style.left = `${e.clientX - r.left}px`;
+    tip.style.top = `${e.clientY - r.top}px`;
+    tip.hidden = false;
+  };
+
+  const hideTip = () => {
+    if (tipRef.current) tipRef.current.hidden = true;
+  };
+
+  const share = async () => {
+    const qs = expressionId ? `x=${expressionId}` : selectedId ? `m=${selectedId}` : '';
+    const url = `${window.location.origin}${window.location.pathname}${qs ? `?${qs}` : ''}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'Facial Muscles — Lawazem', url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1800);
+      }
+    } catch {
+      /* المستخدم ألغى المشاركة */
+    }
+  };
+
+  // ==================== الفهرس ====================
+  const q = query.trim().toLowerCase();
+  const groups = useMemo(
+    () =>
+      MUSCLE_GROUPS.map((g) => ({
+        g,
+        ids: g.ids.filter((id) => {
+          if (!q) return true;
+          const m = MUSCLE_BY_ID[id];
+          if (!m) return false;
+          return [m.en, m.short, m.region, ACTION_AR[id], id].join(' ').toLowerCase().includes(q);
+        }),
+      })).filter((x) => x.ids.length > 0),
+    [q],
+  );
+
+  // ==================== العرض ====================
+  const statusText = expression
+    ? `${expression.en} — ${expression.ar}`
+    : selected
+      ? selected.en
+      : '';
+
+  const inn = selected ? innervationOf(selected) : null;
+  const arch = selected ? pharyngealArchOf(selected) : null;
+  const selBranches = selected ? branchesOf(selected) : [];
+  
+  // حساب النسبة هنا لتتوافق مع حالة التسميات
+  const dynamicR = canvasRatio(zoom, labelsOn);
+  const cardClass = `fa-card rounded-card border border-line bg-paper-soft p-3 shadow-sm sm:p-3.5 ${mode === 'quiz' ? 'is-quiz' : 'is-sticky'}`;
+
+  return (
+    <div>
+      {/* ---- شريط الأعلى ---- */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex gap-1.5" role="group" aria-label="Atlas mode">
+          <button type="button" className={chip} aria-pressed={mode === 'explore'} onClick={() => (mode === 'quiz' ? exitQuiz() : undefined)}>
+            استكشاف
+          </button>
+          <button type="button" className={chip} aria-pressed={mode === 'quiz'} onClick={() => (mode === 'explore' ? startQuiz() : undefined)}>
+            اختبر نفسك
+          </button>
+        </div>
+        {mode === 'explore' && (
+          <button type="button" className={btnGhost} onClick={share}>
+            {copied ? 'تم نسخ الرابط ✓' : 'مشاركة العضلة'}
+          </button>
+        )}
+      </div>
+
+      <p className="sr-only" role="status" aria-live="polite">{mode === 'explore' ? statusText : ''}</p>
+
+      <div className="fa-layout mt-3">
+        {/* ================= البطاقة ================= */}
+        <section ref={cardRef} className={cardClass} aria-label={mode === 'quiz' ? 'Quiz' : 'Muscle info'}>
+          {mode === 'quiz' && quiz ? (
+            <QuizPanel
+              state={quiz}
+              best={best}
+              onAnswer={answerQuiz}
+              onNext={nextQuiz}
+              onRestart={startQuiz}
+              onExit={exitQuiz}
+              onReview={reviewFromQuiz}
+            />
+          ) : (
+            <>
+              <div className="fa-card-main">
+                <div className="min-w-0">
+                  <p className="text-[11.5px] font-bold tracking-wide text-ink-muted">
+                    {expression ? 'Expression' : selected?.region}
+                  </p>
+
+                  {expression ? (
+                    <>
+                      <h2 dir="ltr" className="mt-0.5 text-start font-display text-2xl font-bold leading-tight text-ink">
+                        {expression.en}
+                      </h2>
+                      <p className="mt-0.5 text-sm font-semibold text-ink-muted">{expression.ar}</p>
+                      {expression.noteEn ? (
+                        <>
+                          <p dir="ltr" className="mt-1.5 text-start text-sm leading-relaxed text-ink-soft">{expression.noteEn}</p>
+                          <p className="mt-1 text-[12.5px] leading-relaxed text-ink-muted">{expression.note}</p>
+                        </>
+                      ) : (
+                        <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">{expression.note}</p>
+                      )}
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {expression.muscles.map((x) => (
+                          <button key={x.id} type="button" dir="ltr" className={chipSmall} aria-pressed={false} onClick={() => selectMuscle(x.id, { zoom: true })}>
+                            {MUSCLE_BY_ID[x.id]?.short ?? MUSCLE_BY_ID[x.id]?.en}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    selected && (
+                      <>
+                        <h2 dir="ltr" className="mt-0.5 text-start font-display text-2xl font-bold leading-tight text-ink">
+                          {selected.en}
+                        </h2>
+                        <p dir="ltr" className="mt-1.5 text-start text-sm leading-relaxed text-ink">{selected.actEn}</p>
+                        <p className="mt-1.5 text-[13px] leading-relaxed text-ink-muted">{ACTION_AR[selected.id]}</p>
+                        <div className="mt-2 flex flex-wrap gap-1.5" dir="ltr">
+                          {inn === 'VII' && <span className={badge}>CN VII</span>}
+                          {inn === 'V3' && <span className={badge}>CN V3</span>}
+                          {arch && <span className={badge}>Arch {arch}</span>}
+                          {selBranches.map((b) => (
+                            <span key={b} className={badge}>{FACIAL_BRANCHES.find((x) => x.id === b)?.en}</span>
+                          ))}
+                        </div>
+                      </>
+                    )
+                  )}
+                </div>
+
+                <ExpressionPreview pose={pose} poseKey={poseKey} onK={onK} />
+              </div>
+
+              {selected && !expression && (
+                <div className="mt-2 border-t border-line pt-2">
+                  <button
+                    type="button"
+                    aria-expanded={detailsOpen}
+                    onClick={() => setDetailsOpen((o) => !o)}
+                    className="text-sm font-semibold text-ink-soft hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
+                  >
+                    {detailsOpen ? '− ' : '+ '}
+                    <span dir="ltr">Origin, Insertion, Nerve & Clinical</span>
+                  </button>
+
+                  {detailsOpen && (
+                    <div className="mt-2">
+                      <div role="group" aria-label="Muscle details" className="flex gap-1.5">
+                        {(Object.keys(TAB_LABEL) as DetailTab[]).map((t) => (
+                          <button key={t} type="button" aria-pressed={tab === t} className={chipSmall} onClick={() => setTab(t)}>
+                            <bdi dir="ltr">{TAB_LABEL[t]}</bdi>
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="mt-2 max-h-[34vh] overflow-auto text-[13px] leading-snug">
+                        {tab === 'anatomy' && (
+                          <dl dir="ltr" className="text-left">
+                            <dt className="text-[11px] font-bold uppercase tracking-wide text-ink-muted">Origin</dt>
+                            <dd className="text-ink-soft">{selected.origin}</dd>
+                            <dt className="mt-2 text-[11px] font-bold uppercase tracking-wide text-ink-muted">Insertion</dt>
+                            <dd className="text-ink-soft">{selected.insertion}</dd>
+                          </dl>
+                        )}
+
+                        {tab === 'nerve' && (
+                          <div>
+                            <p dir="ltr" className="text-left text-ink-soft">{selected.nerve}</p>
+                            {arch && (
+                              <p className="mt-2 text-ink-soft">
+                                {arch === 2
+                                  ? 'من القوس البلعومي الثاني → عضلات التعبير تُغذّيها العصب الوجهي (VII).'
+                                  : 'من القوس البلعومي الأول → عضلات المضغ يغذّيها العصب مثلث التوائم (V3).'}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {tab === 'clinical' && (
+                          <div>
+                            <p dir="ltr" className="text-left text-ink-soft">{selected.clin}</p>
+                            {PEARLS_AR[selected.id] && (
+                              <p className="mt-2 rounded-field border border-gold/30 bg-gold-tint p-2 text-ink">{PEARLS_AR[selected.id]}</p>
+                            )}
+                            {EXAM_TIPS[selected.id] && (
+                              <p className="mt-2 text-ink-soft">
+                                <span className="font-bold text-ink">How to examine: </span>
+                                <bdi dir="ltr">{EXAM_TIPS[selected.id]?.en}</bdi>
+                                <span className="mt-0.5 block text-[12px] text-ink-muted">{EXAM_TIPS[selected.id]?.ar}</span>
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </section>
+
+        {/* ================= المسرح ================= */}
+        <section className="fa-stage">
+          <div className="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label="Zoom">
+            {(Object.keys(ZOOMS) as ZoomId[]).map((k) => (
+              <button key={k} type="button" className={chip} aria-pressed={zoom === k} onClick={() => changeZoom(k)}>
+                {ZOOMS[k].labelAr}
+              </button>
+            ))}
+            {mode === 'explore' && (
+              <>
+                <span className="mx-0.5 hidden w-px self-stretch bg-line md:block" aria-hidden="true" />
+                <button type="button" className={`${chip} hidden md:inline-flex`} aria-pressed={labelsOn} onClick={toggleLabels}>
+                  Labels
+                </button>
+              </>
+            )}
+          </div>
+
+          {mode === 'explore' && (
+            <div className="mt-2 grid gap-1.5">
+              <div className="fa-scroll" role="group" aria-label="Filter by nerve">
+                <span className="self-center pe-1 text-xs font-bold text-ink-muted">Nerve</span>
+                <button type="button" className={chipSmall} aria-pressed={branch === null && !expression} onClick={() => { setBranch(null); setExpressionId(null); setSelectedId((p) => p ?? DEFAULT_ID); }}>
+                  All
+                </button>
+                {FACIAL_BRANCHES.map((b) => (
+                  <button key={b.id} type="button" dir="ltr" className={chipSmall} aria-pressed={branch === b.id} onClick={() => toggleBranch(b.id)}>
+                    {b.en}
+                  </button>
+                ))}
+                <button type="button" className={chipSmall} aria-pressed={branch === 'v3'} onClick={() => toggleBranch('v3')}>
+                  V3 · Mastication
+                </button>
+              </div>
+
+              <div className="fa-scroll" role="group" aria-label="Expressions">
+                <span className="self-center pe-1 text-xs font-bold text-ink-muted">Expressions</span>
+                {EXPRESSIONS.map((x) => (
+                  <button key={x.id} type="button" className={chipSmall} aria-pressed={expressionId === x.id} onClick={() => selectExpression(x.id)}>
+                    <span dir="ltr">{x.en}</span> <span className="text-ink-muted">· {x.ar}</span>
+                  </button>
+                ))}
+              </div>
+
+              {branch && branch !== 'v3' && (
+                <p className="text-xs text-ink-muted">
+                  <bdi dir="ltr" className="font-mono">{BRANCH_MNEMONIC}</bdi> — Muscles highlighted receive this branch.
+                </p>
+              )}
+              {branch === 'v3' && (
+                <p className="text-xs text-ink-muted">Muscles of mastication shown: masseter, temporalis.</p>
+              )}
+            </div>
+          )}
+
+          <div ref={figRef} className="fa-plate fa-figure mt-2" style={{ '--R': dynamicR.toFixed(4) } as CSSProperties}>
+            <svg
+              ref={svgRef}
+              viewBox={vb.map((n) => n.toFixed(2)).join(' ')}
+              role="group"
+              aria-label="Anatomical drawing of the facial muscles"
+            >
+              <defs>
+                <clipPath id={clipId} clipPathUnits="userSpaceOnUse">
+                  <path d="M226,201 Q248,187 270,201 Q248,214 226,201 Z" />
+                </clipPath>
+              </defs>
+
+              <FaceBase />
+
+              <g onClick={onLayerClick} onKeyDown={onLayerKey} onPointerMove={onLayerMove} onPointerLeave={hideTip}>
+                <MusclesLayer highlight={highlight} hideNames={mode === 'quiz'} />
+              </g>
+
+              <g>
+                <SelLayer items={selItems} />
+              </g>
+
+              <g className="fa-decor">
+                <FaceDecor clipId={clipId} />
+              </g>
+
+              <g className="fa-decor">
+                <ArrowsLayer ids={arrowIds} />
+              </g>
+
+              {showLabels && layout.fs > 0 && (
+                <g>
+                  {layout.items.map((it) => (
+                    <g key={it.id}>
+                      <text
+                        x={it.tx}
+                        y={it.ty}
+                        fontSize={layout.fs}
+                        textAnchor={it.anchor}
+                        strokeWidth={layout.fs * 0.3}
+                        className={selectedId === it.id && !expression ? 'fa-lab is-sel' : 'fa-lab'}
+                        onClick={() => handlePick(it.id)}
+                      >
+                        {it.text}
+                      </text>
+                      <line x1={it.sx} y1={it.sy} x2={it.ax} y2={it.ay} className="fa-leader" strokeWidth={layout.fs * 0.07} />
+                      <circle cx={it.ax} cy={it.ay} r={layout.fs * 0.2} className="fa-ldot" />
+                    </g>
+                  ))}
+                </g>
+              )}
+
+              <text ref={measureRef} className="fa-lab" fontSize={100} x={0} y={0} visibility="hidden" aria-hidden="true" />
+            </svg>
+
+            <div ref={tipRef} className="fa-tip" hidden />
+          </div>
+
+          <p className="mt-2 text-xs leading-relaxed text-ink-muted">
+            Simplified study illustration. Arrows show the direction of pull on contraction.
+          </p>
+        </section>
+      </div>
+
+      {/* ================= الفهرس ================= */}
+      {mode === 'explore' && (
+        <section aria-label="Muscle list" className="mt-8">
+          <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line pb-2">
+            <h2 className="font-display text-lg font-bold text-ink">Muscle Index</h2>
+            <label className="block w-full sm:w-auto">
+              <span className="sr-only">Search for a muscle</span>
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search: smile, nasal, jaw..."
+                dir="ltr"
+                className="w-full rounded-field border border-line bg-paper-soft px-3 py-1.5 text-sm text-ink placeholder:text-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal sm:w-56"
+              />
+            </label>
+          </div>
+
+          {groups.length === 0 && <p className="mt-4 text-sm text-ink-muted">No matching results.</p>}
+
+          {groups.map(({ g, ids }) => (
+            <div key={g.labelEn}>
+              <h3 className="mb-1.5 mt-4 text-[11.5px] font-bold tracking-wide text-ink-muted">
+                <bdi dir="ltr">{g.labelEn}</bdi> · {g.label}
+              </h3>
+              <div className="flex flex-wrap gap-1.5">
+                {ids.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    dir="ltr"
+                    className={chip}
+                    aria-pressed={!expression && selectedId === id}
+                    onClick={() => selectMuscle(id, { zoom: true, scroll: true })}
+                  >
+                    {MUSCLE_BY_ID[id]?.en}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {mode === 'explore' && <AtlasExtras onSelect={(id) => selectMuscle(id, { zoom: true, scroll: true })} />}
+    </div>
+  );
+}
+===.backup/anatomy-before-3d/lib__anatomy-ar.ts===
+// lib/anatomy-ar.ts
+import type { Pose } from './anatomy-pose';
+
+export const ACTION_AR: Readonly<Record<string, string>> = {
+  platysma: 'تشدّ جلد الرقبة وتسحب الشفة السفلى والفك للأسفل (تظهر كشرائط عند الجهد أو التكشير).',
+  masseter: 'ترفع الفك السفلي (إغلاق الفم) — عضلة مضغ رئيسية.',
+  temporalis: 'ترفع الفك السفلي، وأليافها الخلفية تسحبه للخلف — عضلة مضغ.',
+  frontalis: 'ترفع الحاجبين وتُجعّد الجبين أفقياً (الدهشة).',
+  buccinator: 'تضغط الخد على الأسنان فتُبقي الطعام بينها أثناء المضغ، وتُستعمل في النفخ والمصّ.',
+  orbOris: 'تُغلق الشفتين وتضمّهما (التقبيل، الصفير، الكلام).',
+  orbOculi: 'تُغلق الجفون: الجزء الجفني للرمش الخفيف، والجزء الحجاجي للإغماض القوي.',
+  nasalis: 'الجزء المستعرض يضغط فتحتي الأنف، والجزء الجناحي يوسّعهما.',
+  llsan: 'ترفع الشفة العليا وتوسّع فتحة الأنف (تعبير الاشمئزاز).',
+  lls: 'ترفع الشفة العليا وتعمّق الثلم الأنفي الشفوي (nasolabial fold).',
+  zmin: 'ترفع الشفة العليا وتساهم في الثلم الأنفي الشفوي.',
+  zmaj: 'تسحب زاوية الفم للأعلى والخارج (الابتسام).',
+  lao: 'ترفع زاوية الفم (تساعد على الابتسام).',
+  risorius: 'تسحب زاوية الفم للخارج (التكشير / الابتسامة العريضة).',
+  dao: 'تخفض زاوية الفم (العبوس، الحزن).',
+  dli: 'تخفض الشفة السفلى وتسحبها قليلاً للجانب.',
+  mentalis: 'ترفع الشفة السفلى وتبرزها وتُجعّد جلد الذقن (التذمّر، الشك).',
+  corrugator: 'تسحب الحاجبين للداخل والأسفل فتُحدث خطوط العبوس العمودية.',
+  procerus: 'تسحب الطرف الإنسي للحاجبين للأسفل فتُحدث تجاعيد مستعرضة فوق جسر الأنف.',
+  depSepti: 'تسحب حاجز الأنف وطرفه للأسفل وتوسّع فتحتي الأنف.',
+};
+
+export const PEARLS_AR: Readonly<Record<string, string>> = {
+  buccinator:
+    'فخ امتحاني: عضلة تعبير (الوجهي – الفرع الشدقي) وليست عضلة مضغ رغم دورها في المضغ. الـ long buccal nerve (فرع V3) يخترقها حسّياً فقط ولا يغذّيها حركياً.',
+  platysma:
+    'عضلة في الرقبة لكنها تُغذّى بالوجهي (الفرع العنقي)، لأنها من القوس البلعومي الثاني.',
+  frontalis:
+    'الجبين محفوظ في شلل الـ UMN لأن القشرة تغذّي الوجه العلوي من الجهتين، ويُشلّ في شلل الـ LMN (مثل Bell’s palsy).',
+  orbOculi:
+    'في Bell’s palsy تعجز العين عن الإغلاق (lagophthalmos) فيجفّ القرنية وقد تتقرّح؛ تحتاج حماية بالقطرة والغطاء.',
+  masseter:
+    'عضلة مضغ تغذّيها V3 وليس الوجهي؛ تشنّجها يسبب trismus.',
+  mentalis:
+    'تغذّيها marginal mandibular branch — أكثر فروع الوجهي عرضة للأذى في جراحات الفك السفلي والغدة تحت الفك.',
+};
+
+export interface Expression {
+  id: string;
+  ar: string;
+  en: string;
+  muscles: readonly { id: string; w?: number }[];
+  extra?: Pose;
+  /** ملاحظة عربية (تظهر بخط أصغر بعد الإنجليزية) */
+  note: string;
+  /** ملاحظة إنجليزية (تظهر أولاً — الإنجليزية أوضح) */
+  noteEn?: string;
+}
+
+export const EXPRESSIONS: readonly Expression[] = [
+  {
+    id: 'smile',
+    ar: 'ابتسامة',
+    en: 'Smile',
+    muscles: [{ id: 'zmaj' }, { id: 'lao', w: 0.6 }, { id: 'zmin', w: 0.6 }, { id: 'orbOculi', w: 0.35 }],
+    note: 'في الابتسامة الحقيقية (Duchenne) تشارك الـ orbicularis oculi أيضاً فتتجعّد زوايا العينين.',
+    noteEn:
+      'In a genuine (Duchenne) smile, the orbicularis oculi also contracts, creasing the corners of the eyes.',
+  },
+  {
+    id: 'frown',
+    ar: 'عبوس / تركيز',
+    en: 'Frown',
+    muscles: [{ id: 'corrugator' }, { id: 'procerus' }, { id: 'dao', w: 0.6 }],
+    note: 'الـ corrugator والـ procerus يُنزلان الحاجبين ويقرّبانهم، والـ depressor anguli oris يخفض زاويتي الفم.',
+    noteEn:
+      'The corrugator and procerus pull the brows down and inward, while depressor anguli oris depresses the corners of the mouth.',
+  },
+  {
+    id: 'surprise',
+    ar: 'دهشة',
+    en: 'Surprise',
+    muscles: [{ id: 'frontalis' }],
+    extra: { eye: -0.35, jaw: 0.55 },
+    note: 'الـ frontalis يرفع الحاجبين. ويشارك في فتح العين على اتساعها الـ levator palpebrae superioris (CN III) وهي ليست عضلة وجه، وانخفاض الفك ليس من عضلات هذا الأطلس.',
+    noteEn:
+      'Frontalis raises the eyebrows. Widening the eye also involves the levator palpebrae superioris (CN III), which is not a facial muscle; jaw opening is also not shown here.',
+  },
+  {
+    id: 'sadness',
+    ar: 'حزن',
+    en: 'Sadness',
+    muscles: [{ id: 'dao' }, { id: 'mentalis', w: 0.8 }, { id: 'corrugator', w: 0.5 }],
+    note: 'الـ depressor anguli oris والـ mentalis يخفضان زاويتي الفم ويرفعان الشفة السفلى، مع شدّ الحاجبين للداخل. الرسم تقريبي.',
+    noteEn:
+      'Depressor anguli oris and mentalis depress the mouth corners and raise the lower lip, while the brows pull inward. The drawing is approximate.',
+  },
+  {
+    id: 'disgust',
+    ar: 'اشمئزاز',
+    en: 'Disgust',
+    muscles: [{ id: 'llsan' }, { id: 'lls' }, { id: 'procerus', w: 0.7 }],
+    note: 'الـ levator labii superioris alaeque nasi والـ levator labii superioris يرفعان الشفة العليا والأنف، والـ procerus يُجعّد جسر الأنف.',
+    noteEn:
+      'Levator labii superioris alaeque nasi and levator labii superioris raise the upper lip and dilate the nose, while procerus creases the bridge of the nose.',
+  },
+];
+===.backup/anatomy-before-3d/lib__anatomy-data.ts===
+// lib/anatomy-data.ts
+/**
+ * بيانات أطلس عضلات الوجه.
+ * المصطلحات الطبية بالإنجليزية (كما تُدرَّس في كلية الطب).
+ * الواجهة (العناوين، التبويبات، الأزرار) بالعربية.
+ */
+
+// ==================== Types ====================
+export type ZoomId = 'whole' | 'eyes' | 'nose' | 'mouth' | 'side' | 'neck';
+
+export interface FanGeometry {
+  type: 'fan';
+  n: number;
+  bulge: number;
+  A: readonly number[];
+  B: readonly number[];
+}
+
+export interface RingGeometry {
+  type: 'ring';
+  n: number;
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+  irx: number;
+  iry: number;
+}
+
+export type Geometry = FanGeometry | RingGeometry;
+
+export interface Muscle {
+  id: string;
+  paired: boolean;
+  zoom: ZoomId;
+  geometry: Geometry;
+  en: string;
+  short?: string;
+  label: { s: 'L' | 'R'; x: number; y: number };
+  nerve: string;
+  origin: string;
+  insertion: string;
+  actEn: string;
+  clin: string;
+  arrows: readonly (readonly [number, number, number, number])[];
+  pose: Record<string, number>;
+  region?: string;
+}
+
+// ==================== Muscles ====================
+export const MUSCLES: readonly Muscle[] = [
+  {
+    id: 'platysma',
+    paired: true,
+    zoom: 'neck',
+    geometry: { type: 'fan', n: 13, bulge: 3,
+      A: [206, 530, 206, 490, 204, 462, 204, 436],
+      B: [262, 530, 262, 490, 264, 440, 262, 398] },
+    en: 'Platysma',
+    label: { s: 'R', x: 240, y: 470 },
+    nerve: 'Facial nerve (CN VII), cervical branch',
+    origin: 'Fascia over the upper pectoralis major and deltoid',
+    insertion: 'Inferior border of the mandible, skin of the lower face and angle of the mouth',
+    actEn: 'Depresses the mandible and lower lip, and tenses the skin of the neck.',
+    clin: 'Stands out as vertical bands in the neck during effort or grimacing.',
+    arrows: [[236, 438, 246, 500]],
+    pose: { ld: 0.6, jaw: 0.35, nk: 1, smile: -0.3 },
+  },
+  {
+    id: 'masseter',
+    paired: true,
+    zoom: 'side',
+    geometry: { type: 'fan', n: 12, bulge: 4,
+      A: [280, 296, 280, 320, 276, 350, 270, 372],
+      B: [304, 290, 308, 312, 306, 340, 292, 364] },
+    en: 'Masseter',
+    label: { s: 'R', x: 296, y: 332 },
+    nerve: 'Mandibular nerve (CN V3), masseteric nerve',
+    origin: 'Zygomatic arch',
+    insertion: 'Lateral surface of the ramus and angle of the mandible',
+    actEn: 'Elevates the mandible (closes the jaw). It is a main muscle of mastication.',
+    clin: 'A muscle of mastication, so it is supplied by the trigeminal nerve, not the facial nerve. Spasm causes trismus.',
+    arrows: [[292, 376, 292, 316]],
+    pose: { cl: 1 },
+  },
+  {
+    id: 'temporalis',
+    paired: true,
+    zoom: 'side',
+    geometry: { type: 'fan', n: 13, bulge: 4,
+      A: [296, 258, 290, 226, 288, 186, 294, 132],
+      B: [300, 260, 314, 228, 322, 196, 312, 140] },
+    en: 'Temporalis',
+    label: { s: 'R', x: 306, y: 196 },
+    nerve: 'Mandibular nerve (CN V3), deep temporal nerves',
+    origin: 'Temporal fossa and temporal fascia',
+    insertion: 'Coronoid process and anterior border of the ramus of the mandible',
+    actEn: 'Elevates the mandible; its posterior fibres retract it (chewing).',
+    clin: 'A muscle of mastication; it bulges at the temple when you clench your teeth.',
+    arrows: [[304, 252, 306, 192]],
+    pose: { tb: 1, cl: 0.5 },
+  },
+  {
+    id: 'frontalis',
+    paired: true,
+    zoom: 'eyes',
+    geometry: { type: 'fan', n: 16, bulge: 6,
+      A: [204, 152, 203, 120, 204, 96, 208, 66],
+      B: [292, 156, 298, 128, 296, 100, 282, 84] },
+    en: 'Frontalis',
+    label: { s: 'L', x: 250, y: 104 },
+    nerve: 'Facial nerve (CN VII), temporal branch',
+    origin: 'Epicranial aponeurosis (galea aponeurotica)',
+    insertion: 'Skin of the eyebrows and forehead',
+    actEn: 'Raises the eyebrows and wrinkles the forehead horizontally (surprise).',
+    clin: 'In an upper motor neuron facial palsy the forehead is spared (bilateral cortical input); in a lower motor neuron palsy such as Bell’s palsy it is paralysed.',
+    arrows: [[236, 146, 236, 108], [270, 150, 270, 116]],
+    pose: { br: 1, fh: 1 },
+  },
+  {
+    id: 'buccinator',
+    paired: true,
+    zoom: 'mouth',
+    geometry: { type: 'fan', n: 10, bulge: 3,
+      A: [254, 358, 268, 352, 282, 348, 294, 347],
+      B: [256, 362, 262, 372, 268, 380, 274, 383] },
+    en: 'Buccinator',
+    label: { s: 'R', x: 272, y: 368 },
+    nerve: 'Facial nerve (CN VII), buccal branch',
+    origin: 'Maxilla and mandible (alveolar processes opposite the molars), pterygomandibular raphe',
+    insertion: 'Orbicularis oris at the angle of the mouth (modiolus)',
+    actEn: 'Compresses the cheek against the teeth: keeps food between the teeth while chewing, and is used in blowing and sucking.',
+    clin: 'In facial palsy food collects between the cheek and the gums.',
+    arrows: [[262, 370, 292, 362]],
+    pose: { ck: 1, out: 0.3 },
+  },
+  {
+    id: 'orbOris',
+    paired: false,
+    zoom: 'mouth',
+    geometry: { type: 'ring', n: 13, cx: 200, cy: 347, rx: 54, ry: 25, irx: 34, iry: 7 },
+    en: 'Orbicularis oris',
+    label: { s: 'R', x: 216, y: 327 },
+    nerve: 'Facial nerve (CN VII), buccal and marginal mandibular branches',
+    origin: 'Modiolus, maxilla and mandible near the midline; fibres of the other perioral muscles',
+    insertion: 'Skin and mucous membrane of the lips (fibres encircle the mouth)',
+    actEn: 'Closes and purses the lips (kissing, whistling, speech).',
+    clin: 'Weakness causes drooling and difficulty whistling or blowing.',
+    arrows: [[146, 346, 166, 346], [254, 346, 234, 346], [200, 318, 200, 336], [200, 376, 200, 358]],
+    pose: { purse: 1 },
+  },
+  {
+    id: 'orbOculi',
+    paired: true,
+    zoom: 'eyes',
+    geometry: { type: 'ring', n: 15, cx: 248, cy: 202, rx: 46, ry: 35, irx: 21, iry: 8 },
+    en: 'Orbicularis oculi',
+    label: { s: 'R', x: 284, y: 226 },
+    nerve: 'Facial nerve (CN VII), temporal and zygomatic branches',
+    origin: 'Medial orbital margin, medial palpebral ligament, lacrimal bone',
+    insertion: 'Skin around the orbit, eyelids (tarsal plates), lateral palpebral raphe',
+    actEn: 'Closes the eyelids: the palpebral part blinks gently, the orbital part squeezes the eye shut forcefully.',
+    clin: 'In Bell’s palsy the eye cannot close (lagophthalmos), risking dry eye and corneal ulceration.',
+    arrows: [[300, 202, 278, 202], [248, 160, 248, 182], [248, 244, 248, 222]],
+    pose: { eye: 1, sq: 1, bd: 0.4 },
+  },
+  {
+    id: 'nasalis',
+    paired: true,
+    zoom: 'nose',
+    geometry: { type: 'fan', n: 8, bulge: 2,
+      A: [226, 300, 222, 282, 216, 262, 208, 244],
+      B: [214, 304, 212, 286, 208, 266, 204, 248] },
+    en: 'Nasalis',
+    label: { s: 'L', x: 214, y: 270 },
+    nerve: 'Facial nerve (CN VII), buccal branch',
+    origin: 'Maxilla (above the lateral incisor)',
+    insertion: 'Transverse part: aponeurosis over the bridge of the nose. Alar part: alar cartilage',
+    actEn: 'Transverse part compresses the nostrils; alar part flares them.',
+    clin: 'The nostrils flare in respiratory distress.',
+    arrows: [[228, 302, 246, 306]],
+    pose: { flare: 1 },
+  },
+  {
+    id: 'llsan',
+    paired: true,
+    zoom: 'nose',
+    geometry: { type: 'fan', n: 8, bulge: 2,
+      A: [224, 236, 222, 256, 222, 282, 224, 310],
+      B: [234, 238, 236, 258, 238, 284, 234, 314] },
+    en: 'Levator labii superioris alaeque nasi',
+    short: 'Lev. labii sup. alaeque nasi',
+    label: { s: 'R', x: 233, y: 280 },
+    nerve: 'Facial nerve (CN VII), zygomatic and buccal branches',
+    origin: 'Frontal process of the maxilla',
+    insertion: 'Alar cartilage and skin of the upper lip',
+    actEn: 'Elevates the upper lip and dilates the nostril.',
+    clin: 'Takes part in the expression of disgust (sneer).',
+    arrows: [[236, 318, 234, 262]],
+    pose: { lu: 1, flare: 1, nlf: 1 },
+  },
+  {
+    id: 'lls',
+    paired: true,
+    zoom: 'nose',
+    geometry: { type: 'fan', n: 10, bulge: 3,
+      A: [244, 240, 242, 262, 238, 290, 232, 318],
+      B: [262, 244, 260, 266, 252, 296, 246, 324] },
+    en: 'Levator labii superioris',
+    label: { s: 'L', x: 252, y: 272 },
+    nerve: 'Facial nerve (CN VII), zygomatic and buccal branches',
+    origin: 'Infraorbital margin of the maxilla (above the infraorbital foramen)',
+    insertion: 'Skin and muscle of the upper lip',
+    actEn: 'Elevates the upper lip and deepens the nasolabial fold.',
+    clin: 'Lies over the infraorbital foramen, the site of an infraorbital nerve block.',
+    arrows: [[250, 318, 254, 264]],
+    pose: { lu: 1, nlf: 1 },
+  },
+  {
+    id: 'zmin',
+    paired: true,
+    zoom: 'nose',
+    geometry: { type: 'fan', n: 7, bulge: 2,
+      A: [270, 252, 268, 272, 260, 300, 252, 322],
+      B: [282, 258, 280, 280, 270, 306, 260, 326] },
+    en: 'Zygomaticus minor',
+    label: { s: 'L', x: 276, y: 288 },
+    nerve: 'Facial nerve (CN VII), zygomatic and buccal branches',
+    origin: 'Lateral surface of the zygomatic bone',
+    insertion: 'Upper lip (blends with orbicularis oris)',
+    actEn: 'Elevates the upper lip and contributes to the nasolabial fold.',
+    clin: 'Lies medial to zygomaticus major.',
+    arrows: [[262, 322, 278, 264]],
+    pose: { lu: 0.6, nlf: 0.8, smile: 0.2 },
+  },
+  {
+    id: 'zmaj',
+    paired: true,
+    zoom: 'mouth',
+    geometry: { type: 'fan', n: 9, bulge: 2,
+      A: [292, 262, 284, 286, 270, 312, 252, 346],
+      B: [304, 272, 296, 300, 278, 326, 256, 356] },
+    en: 'Zygomaticus major',
+    label: { s: 'R', x: 278, y: 304 },
+    nerve: 'Facial nerve (CN VII), zygomatic and buccal branches',
+    origin: 'Zygomatic bone (anterior to the zygomaticotemporal suture)',
+    insertion: 'Angle of the mouth (modiolus)',
+    actEn: 'Draws the angle of the mouth upward and laterally (smiling).',
+    clin: 'The main smiling muscle. In Bell’s palsy the corner of the mouth droops on the affected side.',
+    arrows: [[254, 354, 294, 284]],
+    pose: { smile: 1, out: 0.6, nlf: 0.8 },
+  },
+  {
+    id: 'lao',
+    paired: true,
+    zoom: 'mouth',
+    geometry: { type: 'fan', n: 6, bulge: 2,
+      A: [243, 322, 242, 332, 243, 342, 245, 352],
+      B: [256, 322, 257, 332, 256, 342, 252, 352] },
+    en: 'Levator anguli oris',
+    label: { s: 'L', x: 250, y: 338 },
+    nerve: 'Facial nerve (CN VII), buccal branch',
+    origin: 'Canine fossa of the maxilla (below the infraorbital foramen)',
+    insertion: 'Angle of the mouth (modiolus)',
+    actEn: 'Elevates the angle of the mouth (assists in smiling).',
+    clin: 'A deep muscle lying beneath levator labii superioris.',
+    arrows: [[248, 346, 248, 304]],
+    pose: { smile: 0.6, lu: 0.2, nlf: 0.8 },
+  },
+  {
+    id: 'risorius',
+    paired: true,
+    zoom: 'mouth',
+    geometry: { type: 'fan', n: 6, bulge: 1,
+      A: [300, 330, 286, 336, 270, 342, 254, 347],
+      B: [302, 340, 288, 348, 272, 355, 255, 355] },
+    en: 'Risorius',
+    label: { s: 'L', x: 284, y: 344 },
+    nerve: 'Facial nerve (CN VII), buccal branch',
+    origin: 'Parotid fascia and fascia over the masseter',
+    insertion: 'Skin at the angle of the mouth (modiolus)',
+    actEn: 'Retracts the angle of the mouth laterally (grin / grimace).',
+    clin: 'A weak muscle that is absent in some people.',
+    arrows: [[258, 350, 298, 334]],
+    pose: { out: 1, smile: 0.15 },
+  },
+  {
+    id: 'dao',
+    paired: true,
+    zoom: 'mouth',
+    geometry: { type: 'fan', n: 9, bulge: 3,
+      A: [251, 358, 252, 372, 254, 386, 256, 398],
+      B: [250, 360, 246, 374, 242, 386, 238, 396] },
+    en: 'Depressor anguli oris',
+    label: { s: 'R', x: 250, y: 384 },
+    nerve: 'Facial nerve (CN VII), marginal mandibular branch',
+    origin: 'Oblique line of the mandible',
+    insertion: 'Angle of the mouth (modiolus)',
+    actEn: 'Depresses the angle of the mouth (frowning, sadness).',
+    clin: 'Gives the downturned mouth of sadness; weakness of the marginal mandibular branch makes the smile asymmetric.',
+    arrows: [[254, 362, 256, 400]],
+    pose: { smile: -1, mar: 1 },
+  },
+  {
+    id: 'dli',
+    paired: true,
+    zoom: 'mouth',
+    geometry: { type: 'fan', n: 8, bulge: 3,
+      A: [238, 400, 236, 392, 232, 382, 230, 372],
+      B: [222, 404, 221, 394, 218, 384, 216, 374] },
+    en: 'Depressor labii inferioris',
+    label: { s: 'L', x: 228, y: 388 },
+    nerve: 'Facial nerve (CN VII), marginal mandibular branch',
+    origin: 'Oblique line of the mandible (between the symphysis and the mental foramen)',
+    insertion: 'Skin of the lower lip and orbicularis oris',
+    actEn: 'Depresses the lower lip and draws it slightly laterally.',
+    clin: 'Exposes the lower teeth in speaking and smiling.',
+    arrows: [[228, 376, 232, 408]],
+    pose: { ld: 1, out: 0.2 },
+  },
+  {
+    id: 'mentalis',
+    paired: true,
+    zoom: 'mouth',
+    geometry: { type: 'fan', n: 7, bulge: 5,
+      A: [202, 386, 201, 398, 200, 410, 202, 424],
+      B: [204, 386, 214, 396, 216, 412, 204, 426] },
+    en: 'Mentalis',
+    label: { s: 'L', x: 207, y: 410 },
+    nerve: 'Facial nerve (CN VII), marginal mandibular branch',
+    origin: 'Incisive fossa of the mandible',
+    insertion: 'Skin of the chin',
+    actEn: 'Elevates and protrudes the lower lip and wrinkles the skin of the chin (pouting, doubt).',
+    clin: 'Overactivity gives a dimpled, "pebbled" chin.',
+    arrows: [[206, 424, 206, 390]],
+    pose: { lup: 1, ped: 1, purse: 0.25 },
+  },
+  {
+    id: 'corrugator',
+    paired: true,
+    zoom: 'eyes',
+    geometry: { type: 'fan', n: 7, bulge: 2,
+      A: [212, 170, 226, 160, 244, 152, 266, 150],
+      B: [214, 178, 228, 172, 246, 160, 268, 158] },
+    en: 'Corrugator supercilii',
+    label: { s: 'R', x: 246, y: 158 },
+    nerve: 'Facial nerve (CN VII), temporal and zygomatic branches',
+    origin: 'Medial end of the superciliary arch',
+    insertion: 'Skin of the medial half of the eyebrow',
+    actEn: 'Draws the eyebrows medially and downward, producing vertical frown lines.',
+    clin: 'Responsible for the vertical frown lines between the eyebrows.',
+    arrows: [[264, 156, 222, 174]],
+    pose: { bi: 1, bd: 0.35, gl: 1 },
+  },
+  {
+    id: 'procerus',
+    paired: false,
+    zoom: 'eyes',
+    geometry: { type: 'fan', n: 8, bulge: 3,
+      A: [197, 232, 196, 210, 193, 192, 190, 172],
+      B: [203, 232, 204, 210, 207, 192, 210, 172] },
+    en: 'Procerus',
+    label: { s: 'R', x: 204, y: 198 },
+    nerve: 'Facial nerve (CN VII), temporal and zygomatic branches',
+    origin: 'Nasal bone and upper lateral nasal cartilage',
+    insertion: 'Skin of the glabella (between the eyebrows)',
+    actEn: 'Pulls the medial end of the eyebrows downward, creating transverse wrinkles over the bridge of the nose.',
+    clin: 'Works with corrugator to give an angry or concentrating look.',
+    arrows: [[200, 176, 200, 224]],
+    pose: { bd: 0.8, bi: 0.3, nr: 1 },
+  },
+  {
+    id: 'depSepti',
+    paired: false,
+    zoom: 'nose',
+    geometry: { type: 'fan', n: 5, bulge: 2,
+      A: [197, 326, 197, 316, 197, 308, 198, 300],
+      B: [203, 326, 203, 316, 203, 308, 202, 300] },
+    en: 'Depressor septi nasi',
+    label: { s: 'L', x: 200, y: 314 },
+    nerve: 'Facial nerve (CN VII), buccal branch',
+    origin: 'Maxilla (above the central incisor)',
+    insertion: 'Nasal septum and alar part of nasalis',
+    actEn: 'Pulls the nasal septum and the tip of the nose downward and widens the nostrils.',
+    clin: 'Pulls the nose tip down when smiling in some people.',
+    arrows: [[200, 304, 200, 330]],
+    pose: { td: 1, flare: 0.5 },
+  },
+];
+
+// ==================== Groups (with Arabic translations) ====================
+export const MUSCLE_GROUPS: readonly {
+  label: string;
+  labelEn: string;
+  ids: readonly string[];
+}[] = [
+  { label: 'الجبين والحاجب', labelEn: 'Forehead & brow', ids: ['frontalis', 'corrugator', 'procerus'] },
+  { label: 'حول العين',      labelEn: 'Around the eye',    ids: ['orbOculi'] },
+  { label: 'الأنف',           labelEn: 'Nose',             ids: ['nasalis', 'depSepti', 'llsan'] },
+  { label: 'الشفة العليا والوجنة', labelEn: 'Upper lip & cheek', ids: ['lls', 'zmin', 'zmaj', 'lao', 'risorius', 'buccinator'] },
+  { label: 'الفم والذقن',    labelEn: 'Mouth & chin',     ids: ['orbOris', 'dao', 'dli', 'mentalis'] },
+  { label: 'الرقبة',          labelEn: 'Neck',             ids: ['platysma'] },
+  { label: 'المضغ (عصب مثلث التوائم V3)', labelEn: 'Mastication (V3)', ids: ['masseter', 'temporalis'] },
+];
+
+// ==================== Zoom Presets ====================
+export interface ZoomPreset {
+  center: readonly [number, number];
+  size: number;
+  labelAr: string;
+  labelEn: string;
+}
+
+export const ZOOMS: Record<ZoomId, ZoomPreset> = {
+  whole: { center: [200, 270], size: 400, labelAr: 'الوجه كامل',      labelEn: 'Whole face' },
+  eyes:  { center: [200, 165], size: 230, labelAr: 'الجبين والعينان', labelEn: 'Forehead & eyes' },
+  nose:  { center: [210, 285], size: 170, labelAr: 'الأنف',            labelEn: 'Nose' },
+  mouth: { center: [215, 365], size: 210, labelAr: 'الفم والذقن',      labelEn: 'Mouth & chin' },
+  side:  { center: [255, 230], size: 200, labelAr: 'الوجنة والصدغ',    labelEn: 'Cheek & temple' },
+  neck:  { center: [200, 390], size: 280, labelAr: 'الرقبة',           labelEn: 'Neck' },
+};
+
+// ==================== Lookup Helpers ====================
+export const MUSCLE_BY_ID: Record<string, Muscle> = (() => {
+  const map: Record<string, Muscle> = {};
+  for (const m of MUSCLES) map[m.id] = m;
+  return map;
+})();
+
+// Attach region names for display
+for (const g of MUSCLE_GROUPS) {
+  for (const id of g.ids) {
+    if (MUSCLE_BY_ID[id]) MUSCLE_BY_ID[id].region = g.label;
+  }
+}
+===.backup/anatomy-before-3d/lib__anatomy-extras.ts===
+// lib/anatomy-extras.ts
+import { MUSCLES, MUSCLE_GROUPS, type Muscle } from './anatomy-data';
+
+export type FacialBranch = 'temporal' | 'zygomatic' | 'buccal' | 'marginal' | 'cervical';
+
+export const FACIAL_BRANCHES: readonly {
+  id: FacialBranch;
+  en: string;
+  ar: string;
+  match: string;
+}[] = [
+  { id: 'temporal',  en: 'Temporal',            ar: 'الصدغي',        match: 'temporal' },
+  { id: 'zygomatic', en: 'Zygomatic',           ar: 'الوجني',        match: 'zygomatic' },
+  { id: 'buccal',    en: 'Buccal',              ar: 'الشدقي',        match: 'buccal' },
+  { id: 'marginal',  en: 'Marginal mandibular', ar: 'الفكي الهامشي', match: 'marginal mandibular' },
+  { id: 'cervical',  en: 'Cervical',            ar: 'العنقي',        match: 'cervical' },
+];
+
+export const BRANCH_MNEMONIC = 'To Zanzibar By Motor Car';
+
+export type Innervation = 'VII' | 'V3';
+
+export function innervationOf(m: Muscle): Innervation | null {
+  if (m.nerve.includes('CN VII')) return 'VII';
+  if (m.nerve.includes('CN V3')) return 'V3';
+  return null;
+}
+
+export function branchesOf(m: Muscle): FacialBranch[] {
+  if (innervationOf(m) !== 'VII') return [];
+  const n = m.nerve.toLowerCase();
+  return FACIAL_BRANCHES.filter((b) => n.includes(b.match)).map((b) => b.id);
+}
+
+export function pharyngealArchOf(m: Muscle): 1 | 2 | null {
+  const inn = innervationOf(m);
+  return inn === 'VII' ? 2 : inn === 'V3' ? 1 : null;
+}
+
+export const MUSCLES_BY_BRANCH: Record<FacialBranch, string[]> = (() => {
+  const out: Record<FacialBranch, string[]> = {
+    temporal: [], zygomatic: [], buccal: [], marginal: [], cervical: [],
+  };
+  for (const m of MUSCLES) for (const b of branchesOf(m)) out[b].push(m.id);
+  return out;
+})();
+
+export interface ExtraMuscle {
+  id: string;
+  en: string;
+  nerve: string;
+  origin: string;
+  insertion: string;
+  actEn: string;
+  clin: string;
+}
+
+export const EXTRA_MUSCLES: readonly ExtraMuscle[] = [
+  {
+    id: 'lateralPterygoid',
+    en: 'Lateral pterygoid',
+    nerve: 'Mandibular nerve (CN V3), nerve to lateral pterygoid',
+    origin: 'Upper head: infratemporal surface and crest of the greater wing of the sphenoid. Lower head: lateral surface of the lateral pterygoid plate',
+    insertion: 'Pterygoid fovea on the neck of the mandible, articular disc and capsule of the TMJ',
+    actEn: 'Protrudes the mandible and opens the jaw; acting alone on one side it moves the jaw to the opposite side.',
+    clin: 'The only muscle of mastication that opens the jaw. With unilateral weakness the jaw deviates toward the weak side on opening.',
+  },
+  {
+    id: 'medialPterygoid',
+    en: 'Medial pterygoid',
+    nerve: 'Mandibular nerve (CN V3), nerve to medial pterygoid',
+    origin: 'Deep head: medial surface of the lateral pterygoid plate and pyramidal process of the palatine bone. Superficial head: tuberosity of the maxilla',
+    insertion: 'Medial surface of the ramus and angle of the mandible',
+    actEn: 'Elevates the mandible and assists protrusion and side-to-side movement.',
+    clin: 'Forms a muscular sling with the masseter around the angle of the mandible.',
+  },
+  {
+    id: 'occipitalis',
+    en: 'Occipitalis (occipital belly of occipitofrontalis)',
+    nerve: 'Facial nerve (CN VII), posterior auricular branch',
+    origin: 'Lateral part of the highest nuchal line of the occipital bone and the mastoid process',
+    insertion: 'Epicranial aponeurosis (galea aponeurotica)',
+    actEn: 'Retracts the scalp and fixes the galea so that frontalis can raise the eyebrows.',
+    clin: 'The posterior auricular nerve leaves just below the stylomastoid foramen, so it is lost in a nerve lesion at or above that point.',
+  },
+  {
+    id: 'auricular',
+    en: 'Auricular muscles (anterior, superior, posterior)',
+    nerve: 'Facial nerve (CN VII): temporal branch (anterior, superior), posterior auricular nerve (posterior)',
+    origin: 'Temporal fascia and galea (anterior, superior); mastoid process (posterior)',
+    insertion: 'Different parts of the auricle',
+    actEn: 'Draw the ear forward, up and back; rudimentary in most people.',
+    clin: 'Vestigial in humans, but still supplied by the facial nerve.',
+  },
+];
+

@@ -1,0 +1,2829 @@
+﻿      await postJson('/api/admin/subjects', { password, action: 'edit', id, name: editName.trim(), stage: editStage });
+      cancelEdit();
+      toast.show('تم الحفظ', 'success');
+      load();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الحفظ', 'error');
+    } finally { setSaving(false); }
+  }
+
+  async function handleDelete(s: Subject) {
+    const ok = await confirm(`حذف مادة «${s.name}» سيحذف كل الملازم والأسئلة المرتبطة بها نهائيًا. هل أنت متأكد؟`, { variant: 'danger', confirmLabel: 'حذف' });
+    if (!ok) return;
+    try {
+      await postJson('/api/admin/subjects', { password, action: 'delete', id: s.id });
+      toast.show('تم الحذف', 'success');
+      load();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الحذف', 'error');
+    }
+  }
+
+  return (
+    <section>
+      <form
+        onSubmit={handleAdd}
+        className="mb-5 flex flex-wrap gap-2 rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm dark:bg-paper/80"
+      >
+        <Input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="اسم المادة الجديدة"
+          required
+          maxLength={200}
+          className="min-w-[200px] flex-1"
+        />
+        <Select
+          value={stage}
+          onChange={(e) => setStage(e.target.value as Stage | '')}
+          required
+          className="w-full sm:w-44"
+          aria-label="المرحلة"
+        >
+          <option value="">اختر المرحلة</option>
+          {STAGES.map((st) => <option key={st} value={st}>{st}</option>)}
+        </Select>
+        <Button type="submit" loading={adding} disabled={!name.trim() || !stage}>إضافة</Button>
+      </form>
+
+      {loading ? (
+        <div className="space-y-2">
+          {[0, 1, 2].map((i) => <div key={i} className="h-16 skeleton-shimmer rounded-2xl" />)}
+        </div>
+      ) : subjects.length === 0 ? (
+        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center backdrop-blur-sm dark:bg-paper/80">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-teal/8 text-teal">
+            <IconBook />
+          </div>
+          <p className="mt-4 font-bold text-ink/70">لا توجد مواد مضافة حالياً.</p>
+          <p className="mt-1 text-sm text-ink/50">أضف أول مادة من الأعلى</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {subjects.map((s) => {
+            const isEditing = editingId === s.id;
+            return (
+              <div
+                key={s.id}
+                className="group flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 hover:border-teal/20 hover:shadow-[0_4px_16px_rgba(14,74,74,0.06)] dark:bg-paper/80 dark:hover:shadow-[0_4px_16px_rgba(0,0,0,0.30)]"
+              >
+                {isEditing ? (
+                  <>
+                    <Input
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      maxLength={200}
+                      className="min-w-[180px] flex-1"
+                      autoFocus
+                    />
+                    <Select
+                      value={editStage}
+                      onChange={(e) => setEditStage(e.target.value as Stage | '')}
+                      className="w-full sm:w-44"
+                      aria-label="المرحلة"
+                    >
+                      {STAGES.map((st) => <option key={st} value={st}>{st}</option>)}
+                    </Select>
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => saveEdit(s.id)} loading={saving} disabled={!editName.trim() || !editStage}>حفظ</Button>
+                      <Button size="sm" variant="secondary" onClick={cancelEdit} disabled={saving}>إلغاء</Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-baseline gap-2">
+                        <span className="font-bold text-ink">{s.name}</span>
+                        <span className="rounded-full bg-teal/8 px-2 py-0.5 font-mono text-xs text-teal/70 dark:bg-teal/15 dark:text-teal">{s.stage}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-shrink-0 gap-1.5">
+                      <Button size="sm" variant="secondary" onClick={() => startEdit(s)} icon={<IconEdit />}>
+                        تعديل
+                      </Button>
+                      <Button size="sm" variant="danger" onClick={() => handleDelete(s)} icon={<IconTrash />}>
+                        حذف
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+```
+
+## app\admin\_components\useAdminAuth.ts
+
+```ts
+// app/admin/_components/useAdminAuth.ts
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import { postJson, ApiError } from '@/lib/api-client';
+import { STORAGE_KEYS } from '@/lib/constants';
+
+interface UseAdminAuthResult {
+  password: string;
+  authenticated: boolean;
+  loading: boolean;
+  error: string;
+  login: (pw: string) => Promise<boolean>;
+  logout: () => void;
+}
+
+export function useAdminAuth(): UseAdminAuthResult {
+  const [password, setPassword] = useState('');
+  const [authenticated, setAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const login = useCallback(async (pw: string): Promise<boolean> => {
+    const trimmed = pw.trim();
+    if (!trimmed) {
+      setError('أدخل كلمة المرور');
+      return false;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      await postJson('/api/admin/subjects', { password: trimmed, action: 'list' });
+      sessionStorage.setItem(STORAGE_KEYS.adminPassword, trimmed);
+      setPassword(trimmed);
+      setAuthenticated(true);
+      return true;
+    } catch (err) {
+      const message =
+        err instanceof ApiError && err.status === 401
+          ? 'كلمة المرور غير صحيحة'
+          : 'صار خطأ، حاول مرة ثانية.';
+      setError(message);
+      sessionStorage.removeItem(STORAGE_KEYS.adminPassword);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const logout = useCallback(() => {
+    sessionStorage.removeItem(STORAGE_KEYS.adminPassword);
+    setPassword('');
+    setAuthenticated(false);
+    setError('');
+  }, []);
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem(STORAGE_KEYS.adminPassword);
+    if (saved) login(saved);
+  }, [login]);
+
+  return { password, authenticated, loading, error, login, logout };
+}
+```
+
+## app\anatomy\page.tsx
+
+```tsx
+// app/anatomy/page.tsx
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { BackgroundPattern } from '@/components/BackgroundPattern';
+import { IconArrowLeft, IconLock } from '@/components/ui/Icons';
+import { MUSCLES } from '@/lib/anatomy-data';
+
+export const metadata: Metadata = {
+  title: 'الأطالس التفاعلية — لوازم',
+  description: 'مجموعة من الأطالس التشريحية والنسيجية التفاعلية لطلاب كلية الطب.',
+};
+
+// ==================== Icons (محلية) ====================
+function IconFace({ className = 'h-6 w-6' }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="9.5" cy="10" r="0.5" fill="currentColor" />
+      <circle cx="14.5" cy="10" r="0.5" fill="currentColor" />
+      <path d="M8.5 14.5c1 0.9 2.2 1.5 3.5 1.5s2.5-0.6 3.5-1.5" />
+    </svg>
+  );
+}
+
+function IconMicroscope() {
+  return (
+    <svg
+      className="h-6 w-6"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M6 18h8" />
+      <path d="M3 22h18" />
+      <path d="M14 22a7 7 0 100-14h-1" />
+      <path d="M9 14h2" />
+      <path d="M9 12a2 2 0 01-2-2V6h6v4a2 2 0 01-2 2z" />
+      <path d="M12 6V3a1 1 0 00-1-1H9a1 1 0 00-1 1v3" />
+    </svg>
+  );
+}
+
+// ==================== Atlas Card ====================
+interface AtlasCardProps {
+  href: string | null;
+  titleEn: string;
+  titleAr: string;
+  description: string;
+  icon: React.ReactNode;
+  accent: 'teal' | 'gold' | 'coral';
+  available: boolean;
+}
+
+function AtlasCard({
+  href,
+  titleEn,
+  titleAr,
+  description,
+  icon,
+  accent,
+  available,
+}: AtlasCardProps) {
+  const accentClass = {
+    teal: 'bg-teal-soft text-teal',
+    gold: 'bg-gold-soft text-gold-ink',
+    coral: 'bg-coral-soft text-coral-ink',
+  }[accent];
+
+  const content = (
+    <>
+      <div className="flex items-start justify-between gap-2">
+        <span
+          aria-hidden="true"
+          className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-card ${accentClass}`}
+        >
+          {icon}
+        </span>
+        {available ? (
+          <span className="inline-flex items-center rounded-chip bg-gold-tint px-2 py-0.5 text-[11px] font-bold text-gold-ink ring-1 ring-gold/30">
+            جديد
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 rounded-chip bg-ink/5 px-2 py-0.5 text-[11px] font-bold text-ink-muted">
+            <IconLock aria-hidden="true" className="h-3 w-3" />
+            قيد التطوير
+          </span>
+        )}
+      </div>
+
+      <h3
+        dir="ltr"
+        className="mt-4 text-start font-display text-xl font-bold leading-tight text-ink group-hover:text-teal"
+      >
+        {titleEn}
+      </h3>
+      <p className="mt-0.5 text-sm font-semibold text-ink-muted">{titleAr}</p>
+
+      <p className="mt-3 text-sm leading-relaxed text-ink-soft">{description}</p>
+
+      {available && (
+        <span className="mt-auto flex items-center gap-1.5 pt-4 text-sm font-bold text-teal">
+          <span>افتح الأطلس</span>
+          <IconArrowLeft
+            aria-hidden="true"
+            className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1 motion-reduce:transition-none"
+          />
+        </span>
+      )}
+    </>
+  );
+
+  if (!available || !href) {
+    return (
+      <div
+        aria-disabled="true"
+        className="flex cursor-not-allowed flex-col rounded-card border border-dashed border-line bg-paper-soft/60 p-5 opacity-70"
+      >
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      className="group flex flex-col rounded-card border border-line bg-paper-soft p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-teal/40 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+    >
+      {content}
+    </Link>
+  );
+}
+
+// ==================== Page ====================
+export default function AnatomyHubPage() {
+  return (
+    <>
+      <BackgroundPattern />
+      <main className="relative mx-auto max-w-5xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10">
+        <Link
+          href="/"
+          className="group inline-flex items-center gap-1.5 rounded-field text-sm font-semibold text-teal transition-colors hover:text-teal-hover motion-reduce:transition-none"
+        >
+          <span className="transition-transform duration-200 group-hover:-translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0">
+            <IconArrowLeft aria-hidden="true" className="h-4 w-4" />
+          </span>
+          رجوع إلى لوحة الأقسام
+        </Link>
+
+        <header className="mt-6 animate-slide-up motion-reduce:animate-none">
+          <span className="inline-flex items-center gap-1.5 rounded-chip border border-teal/20 bg-teal-tint px-3 py-1 font-mono text-xs text-teal">
+            <span
+              aria-hidden="true"
+              className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal motion-reduce:animate-none"
+            />
+            مراجع تفاعلية
+          </span>
+
+          <h1 className="mt-3 font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">
+            الأطالس التفاعلية
+          </h1>
+
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-soft sm:text-base">
+            رسوم تشريحية ونسيجية تفاعلية — تستكشفها بيدك لتثبيت المعلومة. جميع
+            المصطلحات العلمية بالإنجليزية كما تُدرَّس.
+          </p>
+        </header>
+
+        <section aria-labelledby="atlases-heading" className="mt-10">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 animate-slide-up motion-reduce:animate-none">
+            <AtlasCard
+              href="/anatomy/face"
+              titleEn="Facial Muscles"
+              titleAr="أطلس التشريح"
+              description={`${MUSCLES.length} عضلة تفاعلية مع الحركات التعبيرية — ابتسامة، عبوس، رفع الحاجب، وغيرها.`}
+              icon={<IconFace />}
+              accent="teal"
+              available
+            />
+
+            <AtlasCard
+              href={null}
+              titleEn="Histology"
+              titleAr="أطلس الأنسجة"
+              description="شرائح نسيجية تفاعلية للأنسجة الأساسية الأربعة (الطلائية، الضامة، العضلية، العصبية)."
+              icon={<IconMicroscope />}
+              accent="coral"
+              available={false}
+            />
+          </div>
+        </section>
+      </main>
+    </>
+  );
+}
+```
+
+## app\anatomy\face\page.tsx
+
+```tsx
+// app/anatomy/face/page.tsx
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { BackgroundPattern } from '@/components/BackgroundPattern';
+import { IconArrowLeft } from '@/components/ui/Icons';
+import FaceAtlas from '@/components/anatomy/FaceAtlas';
+import { MUSCLES } from '@/lib/anatomy-data';
+
+export const metadata: Metadata = {
+  title: 'Facial Muscles — لوازم',
+  description:
+    'Interactive facial muscle atlas: origin, insertion, nerve supply and action, with expressions and a self-test.',
+};
+
+export default function FaceAtlasPage() {
+  return (
+    <>
+      <BackgroundPattern />
+      <main className="relative mx-auto max-w-6xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10">
+        <Link
+          href="/#atlases"
+          className="group inline-flex items-center gap-1.5 rounded-field text-sm font-semibold text-teal transition-colors hover:text-teal-hover motion-reduce:transition-none"
+        >
+          <span className="transition-transform duration-200 group-hover:-translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0">
+            <IconArrowLeft aria-hidden="true" className="h-4 w-4" />
+          </span>
+          رجوع إلى قائمة الأطالس
+        </Link>
+
+        <header className="mt-6 mb-6 animate-slide-up motion-reduce:animate-none">
+          <span className="inline-flex items-center gap-1.5 rounded-chip border border-teal/20 bg-teal-tint px-3 py-1 font-mono text-xs text-teal">
+            <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-teal" />
+            {MUSCLES.length} muscles · عضلة
+          </span>
+          <h1 dir="ltr" className="mt-3 text-start font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">
+            Facial Muscles
+          </h1>
+          <p className="mt-1 text-sm font-semibold text-ink-muted sm:text-base">
+            أطلس عضلات الوجه
+          </p>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-soft sm:text-base">
+            اضغط أي عضلة على الوجه أو اخترها من القائمة. جرّب التعابير لترى العضلات تعمل معاً، ثم اختبر نفسك.
+            الواجهة بالعربية، والمصطلحات العلمية بالإنجليزية كما تُدرَّس.
+          </p>
+        </header>
+
+        <FaceAtlas />
+      </main>
+    </>
+  );
+}
+```
+
+## app\api\admin\announcements\route.ts
+
+```ts
+// app/api/admin/announcements/route.ts
+import { NextResponse } from 'next/server';
+import {
+  jsonError,
+  safeOptionalString,
+  safeString,
+} from '@/lib/api-server';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { sendAnnouncement } from '@/lib/telegram-notifications';
+import { STAGES } from '@/lib/constants';
+
+// ==================== Roles ====================
+type Role = 'super_admin' | 'admin' | 'publisher';
+
+function resolveRole(
+  password: unknown
+): { ok: true; role: Role } | { ok: false } {
+  if (typeof password !== 'string' || password.length === 0) {
+    return { ok: false };
+  }
+
+  const superPw = process.env.SUPER_ADMIN_PASSWORD;
+  if (superPw && password === superPw) {
+    return { ok: true, role: 'super_admin' };
+  }
+
+  const adminPw = process.env.ADMIN_PASSWORD;
+  if (adminPw && password === adminPw) {
+    return { ok: true, role: 'admin' };
+  }
+
+  const pubPw = process.env.PUBLISHER_PASSWORD;
+  if (pubPw && password === pubPw) {
+    return { ok: true, role: 'publisher' };
+  }
+
+  return { ok: false };
+}
+
+// ==================== Helpers ====================
+function parseStage(value: unknown): string | null {
+  const s = safeOptionalString(value, 100);
+  if (!s) return null;
+  return (STAGES as readonly string[]).includes(s) ? s : null;
+}
+
+function isValidUrl(value: string): boolean {
+  try {
+    const u = new URL(value);
+    return u.protocol === 'https:' || u.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+interface AnnouncementRow {
+  id: string;
+  title: string;
+  body: string;
+  stage: string | null;
+  link_url: string | null;
+  link_label: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'sent' | 'failed';
+  created_by: string;
+  created_at: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  reviewed_note: string | null;
+  sent_at: string | null;
+  sent_count: number;
+  sent_error: string | null;
+}
+
+// ==================== Route ====================
+export async function POST(request: Request) {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('الطلب غير صالح', 400);
+  }
+
+  const auth = resolveRole(body.password);
+  if (!auth.ok) {
+    return jsonError('كلمة المرور غير صحيحة', 401);
+  }
+  const { role } = auth;
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const action = typeof body.action === 'string' ? body.action : '';
+
+  // ==================== whoami ====================
+  if (action === 'whoami') {
+    return NextResponse.json({
+      role,
+      canApprove: role === 'super_admin',
+      canEdit: role === 'super_admin',
+      canDelete: role === 'super_admin',
+    });
+  }
+
+  // ==================== create ====================
+  if (action === 'create') {
+    // publisher / admin / super_admin — الكل ينشئ كـ pending
+    // الموافقة والإرسال تحتاج super_admin.
+    const title = safeString(body.title, 200);
+    const text = safeString(body.body, 2000);
+    const stage = parseStage(body.stage);
+    const link_url = safeOptionalString(body.link_url, 1000);
+    const link_label = safeOptionalString(body.link_label, 60);
+    const created_by = safeString(body.created_by, 100);
+
+    if (!title) return jsonError('العنوان مطلوب');
+    if (!text) return jsonError('نص التبليغ مطلوب');
+    if (!created_by) return jsonError('الاسم مطلوب');
+    if (link_url && !isValidUrl(link_url)) {
+      return jsonError('رابط غير صالح (يجب أن يبدأ بـ http أو https)');
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('telegram_announcements')
+      .insert({
+        title,
+        body: text,
+        stage,
+        link_url,
+        link_label,
+        created_by,
+        // super_admin يُنشئ pending أيضاً — لكنه يعتمد زر "موافقة وإرسال" فوراً
+        status: 'pending',
+      })
+      .select('id')
+      .single<{ id: string }>();
+
+    if (error || !data) {
+      console.error('announcement create error:', error?.message);
+      return jsonError('فشل إنشاء التبليغ', 500);
+    }
+
+        // إشعار فوري للمشرفين الأعلى (fire-and-forget)
+    void (async () => {
+      try {
+        const { notifySuperAdminsNewAnnouncement } = await import('@/lib/telegram-notifications');
+        await notifySuperAdminsNewAnnouncement({
+          id: data.id,
+          title,
+          body: text,
+          stage,
+          created_by,
+        });
+      } catch (err) {
+        console.error('[announcement notify] error:', err);
+      }
+    })();
+
+    return NextResponse.json({
+      success: true,
+      id: data.id,
+      status: 'pending',
+      requires_approval: true,
+    });
+  }
+
+  // ==================== list_mine ====================
+  if (action === 'list_mine') {
+    const created_by = safeString(body.created_by, 100);
+    if (!created_by) return jsonError('الاسم مطلوب');
+
+    const { data, error } = await supabaseAdmin
+      .from('telegram_announcements')
+      .select('*')
+      .eq('created_by', created_by)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.error('announcement list_mine error:', error.message);
+      return jsonError('فشل تحميل تبليغاتك', 500);
+    }
+
+    return NextResponse.json({ items: (data ?? []) as AnnouncementRow[] });
+  }
+
+  // ==================== list_pending ====================
+  if (action === 'list_pending') {
+    if (role !== 'super_admin' && role !== 'admin') {
+      return jsonError('غير مصرح', 403);
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('telegram_announcements')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('announcement list_pending error:', error.message);
+      return jsonError('فشل تحميل القائمة', 500);
+    }
+
+    return NextResponse.json({ items: (data ?? []) as AnnouncementRow[] });
+  }
+
+  // ==================== list_history ====================
+  if (action === 'list_history') {
+    if (role !== 'super_admin' && role !== 'admin') {
+      return jsonError('غير مصرح', 403);
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('telegram_announcements')
+      .select('*')
+      .in('status', ['sent', 'failed', 'rejected'])
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) {
+      console.error('announcement list_history error:', error.message);
+      return jsonError('فشل تحميل السجل', 500);
+    }
+
+    return NextResponse.json({ items: (data ?? []) as AnnouncementRow[] });
+  }
+
+  // ==================== pending_count ====================
+  if (action === 'pending_count') {
+    if (role !== 'super_admin' && role !== 'admin') {
+      return jsonError('غير مصرح', 403);
+    }
+
+    const { count, error } = await supabaseAdmin
+      .from('telegram_announcements')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending');
+
+    if (error) return NextResponse.json({ count: 0 });
+    return NextResponse.json({ count: count ?? 0 });
+  }
+
+  // ==================== approve (super_admin فقط) ====================
+  if (action === 'approve') {
+    if (role !== 'super_admin') {
+      return jsonError('غير مصرح — الموافقة تتطلب صلاحية المشرف الأعلى', 403);
+    }
+
+    const id = safeString(body.id, 100);
+    if (!id) return jsonError('id مطلوب');
+
+    const { data: existing } = await supabaseAdmin
+      .from('telegram_announcements')
+      .select('status')
+      .eq('id', id)
+      .maybeSingle<{ status: string }>();
+
+    if (!existing) return jsonError('التبليغ غير موجود', 404);
+    if (existing.status !== 'pending') {
+      return jsonError('لا يمكن الموافقة على تبليغ بحالة ' + existing.status);
+    }
+
+    await supabaseAdmin
+      .from('telegram_announcements')
+      .update({
+        status: 'approved',
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: 'super_admin',
+      })
+      .eq('id', id);
+
+    let result;
+    try {
+      result = await sendAnnouncement(id);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'خطأ غير معروف';
+      await supabaseAdmin
+        .from('telegram_announcements')
+        .update({ status: 'failed', sent_error: msg })
+        .eq('id', id);
+      return jsonError('فشل الإرسال: ' + msg, 500);
+    }
+
+    if (result.error) {
+      await supabaseAdmin
+        .from('telegram_announcements')
+        .update({
+          status: 'failed',
+          sent_error: result.error,
+          sent_count: result.sent,
+        })
+        .eq('id', id);
+      return jsonError('فشل الإرسال: ' + result.error, 500);
+    }
+
+    await supabaseAdmin
+      .from('telegram_announcements')
+      .update({
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+        sent_count: result.sent,
+        sent_error: result.failed > 0 ? `فشل ${result.failed}` : null,
+      })
+      .eq('id', id);
+
+    return NextResponse.json({
+      success: true,
+      sent: result.sent,
+      failed: result.failed,
+    });
+  }
+
+  // ==================== reject (super_admin فقط) ====================
+  if (action === 'reject') {
+    if (role !== 'super_admin') {
+      return jsonError('غير مصرح', 403);
+    }
+
+    const id = safeString(body.id, 100);
+    const note = safeOptionalString(body.note, 500);
+
+    if (!id) return jsonError('id مطلوب');
+
+    const { error } = await supabaseAdmin
+      .from('telegram_announcements')
+      .update({
+        status: 'rejected',
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: 'super_admin',
+        reviewed_note: note,
+      })
+      .eq('id', id)
+      .eq('status', 'pending');
+
+    if (error) {
+      console.error('announcement reject error:', error.message);
+      return jsonError('فشل الرفض', 500);
+    }
+    return NextResponse.json({ success: true });
+  }
+
+  // ==================== edit (super_admin فقط — لتصحيح النص قبل الإرسال) ====================
+  if (action === 'edit') {
+    if (role !== 'super_admin') {
+      return jsonError('غير مصرح', 403);
+    }
+
+    const id = safeString(body.id, 100);
+    const title = safeString(body.title, 200);
+    const text = safeString(body.body, 2000);
+    const stage = parseStage(body.stage);
+    const link_url = safeOptionalString(body.link_url, 1000);
+    const link_label = safeOptionalString(body.link_label, 60);
+
+    if (!id) return jsonError('id مطلوب');
+    if (!title) return jsonError('العنوان مطلوب');
+    if (!text) return jsonError('النص مطلوب');
+    if (link_url && !isValidUrl(link_url)) {
+      return jsonError('رابط غير صالح');
+    }
+
+    const { error } = await supabaseAdmin
+      .from('telegram_announcements')
+      .update({ title, body: text, stage, link_url, link_label })
+      .eq('id', id)
+      .eq('status', 'pending');
+
+    if (error) {
+      console.error('announcement edit error:', error.message);
+      return jsonError('فشل التعديل', 500);
+    }
+    return NextResponse.json({ success: true });
+  }
+
+  // ==================== resend (super_admin فقط) ====================
+  if (action === 'resend') {
+    if (role !== 'super_admin') {
+      return jsonError('غير مصرح', 403);
+    }
+
+    const id = safeString(body.id, 100);
+    if (!id) return jsonError('id مطلوب');
+
+    const result = await sendAnnouncement(id);
+
+    if (result.error) {
+      await supabaseAdmin
+        .from('telegram_announcements')
+        .update({
+          status: 'failed',
+          sent_error: result.error,
+          sent_count: result.sent,
+        })
+        .eq('id', id);
+      return jsonError('فشل الإرسال: ' + result.error, 500);
+    }
+
+    await supabaseAdmin
+      .from('telegram_announcements')
+      .update({
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+        sent_count: result.sent,
+        sent_error: result.failed > 0 ? `فشل ${result.failed}` : null,
+      })
+      .eq('id', id);
+
+    return NextResponse.json({
+      success: true,
+      sent: result.sent,
+      failed: result.failed,
+    });
+  }
+
+  // ==================== delete (super_admin فقط) ====================
+  if (action === 'delete') {
+    if (role !== 'super_admin') {
+      return jsonError('غير مصرح', 403);
+    }
+
+    const id = safeString(body.id, 100);
+    if (!id) return jsonError('id مطلوب');
+
+    const { error } = await supabaseAdmin
+      .from('telegram_announcements')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('announcement delete error:', error.message);
+      return jsonError('فشل الحذف', 500);
+    }
+    return NextResponse.json({ success: true });
+  }
+
+  return jsonError('إجراء غير معروف');
+}
+```
+
+## app\api\admin\channels\route.ts
+
+```ts
+// app/api/admin/channels/route.ts
+import { NextResponse } from 'next/server';
+import { adminGuard, jsonError, safeOptionalString, safeString } from '@/lib/api-server';
+
+export async function POST(request: Request) {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('الطلب غير صالح', 400);
+  }
+
+  const guard = adminGuard(body.password);
+  if (!guard.ok) return guard.response;
+  const { supabaseAdmin } = guard;
+
+  const action = typeof body.action === 'string' ? body.action : '';
+
+  switch (action) {
+    case 'list': {
+      const { data, error } = await supabaseAdmin
+        .from('channels')
+        .select('*')
+        .order('created_at');
+
+      if (error) {
+        console.error('channels list error:', error.message);
+        return jsonError('فشل تحميل القنوات', 500);
+      }
+      return NextResponse.json({ channels: data ?? [] });
+    }
+
+    case 'add': {
+      const name = safeString(body.name, 200);
+      const stage = safeString(body.stage, 100);
+      const description = safeOptionalString(body.description, 1000);
+      const telegram_link = safeString(body.telegram_link, 500);
+      const channel_password = safeOptionalString(body.channel_password, 200);
+
+      if (!name) return jsonError('اسم القناة مطلوب');
+      if (!stage) return jsonError('المرحلة مطلوبة');
+      if (!telegram_link) return jsonError('رابط تليكرام مطلوب');
+
+      const { error } = await supabaseAdmin.from('channels').insert({
+        name,
+        stage,
+        description,
+        telegram_link,
+        channel_password,
+      });
+
+      if (error) {
+        console.error('channels add error:', error.message);
+        return jsonError('فشل إضافة القناة', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    case 'edit': {
+      const id = safeString(body.id, 100);
+      const name = safeString(body.name, 200);
+      const stage = safeString(body.stage, 100);
+      const description = safeOptionalString(body.description, 1000);
+      const telegram_link = safeString(body.telegram_link, 500);
+      const channel_password = safeOptionalString(body.channel_password, 200);
+
+      if (!id) return jsonError('id مطلوب');
+      if (!name) return jsonError('اسم القناة مطلوب');
+      if (!stage) return jsonError('المرحلة مطلوبة');
+      if (!telegram_link) return jsonError('رابط تليكرام مطلوب');
+
+      const { error } = await supabaseAdmin
+        .from('channels')
+        .update({
+          name,
+          stage,
+          description,
+          telegram_link,
+          channel_password,
+        })
+        .eq('id', id);
+
+      if (error) {
+        console.error('channels edit error:', error.message);
+        return jsonError('فشل تعديل القناة', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    case 'delete': {
+      const id = safeString(body.id, 100);
+      if (!id) return jsonError('id مطلوب');
+
+      const { error } = await supabaseAdmin.from('channels').delete().eq('id', id);
+
+      if (error) {
+        console.error('channels delete error:', error.message);
+        return jsonError('فشل حذف القناة', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    default:
+      return jsonError('إجراء غير معروف');
+  }
+}
+```
+
+## app\api\admin\grade-files\route.ts
+
+```ts
+// app/api/admin/grade-files/route.ts
+import { NextResponse } from 'next/server';
+import { adminGuard, jsonError, safeOptionalString, safeString } from '@/lib/api-server';
+import { GRADE_TYPES, type GradeType } from '@/lib/constants';
+
+// ==================== Parsers ====================
+function parseGradeType(v: unknown): GradeType | null {
+  if (typeof v !== 'string') return null;
+  return (GRADE_TYPES as readonly string[]).includes(v) ? (v as GradeType) : null;
+}
+
+function parseYear(v: unknown): number | null {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  if (n < 1990 || n > 2100) return null;
+  return Math.floor(n);
+}
+
+// ==================== Route ====================
+export async function POST(request: Request) {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('الطلب غير صالح', 400);
+  }
+
+  const guard = adminGuard(body.password);
+  if (!guard.ok) return guard.response;
+  const { supabaseAdmin } = guard;
+
+  const action = typeof body.action === 'string' ? body.action : '';
+
+  switch (action) {
+    // ═══ list (لجميع المواد) ═══
+    case 'list': {
+      const { data, error } = await supabaseAdmin
+        .from('grade_files')
+        .select('*, subjects(name, stage)')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('grade-files list error:', error.message);
+        return jsonError('فشل تحميل الدرجات', 500);
+      }
+      return NextResponse.json({ items: data ?? [] });
+    }
+
+    // ═══ add ═══
+    case 'add': {
+      const subject_id = safeString(body.subject_id, 100);
+      const title = safeString(body.title, 300);
+      const grade_type = parseGradeType(body.grade_type);
+      const professor_name = safeOptionalString(body.professor_name, 200);
+      const year = parseYear(body.year);
+      const notes = safeOptionalString(body.notes, 500);
+      const file_path = safeString(body.file_path, 2000);
+
+      if (!subject_id) return jsonError('اختر المادة');
+      if (!title) return jsonError('العنوان مطلوب');
+      if (!grade_type) return jsonError('نوع الدرجة غير صالح');
+      if (!file_path) return jsonError('رابط الملف مطلوب');
+
+      const { error } = await supabaseAdmin.from('grade_files').insert({
+        subject_id,
+        title,
+        grade_type,
+        professor_name,
+        year,
+        notes,
+        file_path,
+      });
+
+      if (error) {
+        console.error('grade-files add error:', error.message);
+        return jsonError('فشل الإضافة', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // ═══ edit ═══
+    case 'edit': {
+      const id = safeString(body.id, 100);
+      const subject_id = safeString(body.subject_id, 100);
+      const title = safeString(body.title, 300);
+      const grade_type = parseGradeType(body.grade_type);
+      const professor_name = safeOptionalString(body.professor_name, 200);
+      const year = parseYear(body.year);
+      const notes = safeOptionalString(body.notes, 500);
+      const file_path = safeString(body.file_path, 2000);
+
+      if (!id) return jsonError('id مطلوب');
+      if (!subject_id) return jsonError('اختر المادة');
+      if (!title) return jsonError('العنوان مطلوب');
+      if (!grade_type) return jsonError('نوع الدرجة غير صالح');
+      if (!file_path) return jsonError('رابط الملف مطلوب');
+
+      const { error } = await supabaseAdmin
+        .from('grade_files')
+        .update({
+          subject_id,
+          title,
+          grade_type,
+          professor_name,
+          year,
+          notes,
+          file_path,
+        })
+        .eq('id', id);
+
+      if (error) {
+        console.error('grade-files edit error:', error.message);
+        return jsonError('فشل التعديل', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // ═══ delete ═══
+    case 'delete': {
+      const id = safeString(body.id, 100);
+      if (!id) return jsonError('id مطلوب');
+
+      const { error } = await supabaseAdmin
+        .from('grade_files')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('grade-files delete error:', error.message);
+        return jsonError('فشل الحذف', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    default:
+      return jsonError('إجراء غير معروف');
+  }
+}
+```
+
+## app\api\admin\lecture-notes\route.ts
+
+```ts
+// app/api/admin/lecture-notes/route.ts
+import { NextResponse } from 'next/server';
+import { adminGuard, jsonError, safeOptionalString, safeString } from '@/lib/api-server';
+import { notifyNewLectureNote } from '@/lib/telegram-notifications';
+import type { Group, Track } from '@/lib/types';
+
+// ==================== Parsers ====================
+function parseLectureNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.floor(n);
+}
+
+function parseYear(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  if (n < 1990 || n > 2100) return null;
+  return Math.floor(n);
+}
+
+function parseTrack(value: unknown): Track | null {
+  if (value === 'نظري' || value === 'عملي') return value;
+  return null;
+}
+
+function parseGroup(value: unknown): Group | null {
+  if (value === null || value === undefined || value === '') return null;
+  if (value === 'A' || value === 'B') return value;
+  return null;
+}
+
+function parseTags(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const cleaned = value
+    .filter((t): t is string => typeof t === 'string')
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0 && t.length <= 50)
+    .slice(0, 10);
+  return Array.from(new Set(cleaned));
+}
+
+// ==================== Route ====================
+export async function POST(request: Request) {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('الطلب غير صالح', 400);
+  }
+
+  const guard = adminGuard(body.password);
+  if (!guard.ok) return guard.response;
+  const { supabaseAdmin } = guard;
+
+  const action = typeof body.action === 'string' ? body.action : '';
+
+  switch (action) {
+    // ==================== list ====================
+    case 'list': {
+      const { data, error } = await supabaseAdmin
+        .from('lecture_notes')
+        .select('*, subjects(name)')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('lecture-notes list error:', error.message);
+        return jsonError('فشل تحميل الملازم', 500);
+      }
+      return NextResponse.json({ materials: data ?? [] });
+    }
+
+    // ==================== add ====================
+    case 'add': {
+      const subject_id = safeString(body.subject_id, 100);
+      const title = safeString(body.title, 300);
+      const professor_name = safeOptionalString(body.professor_name, 200);
+      const lecture_number = parseLectureNumber(body.lecture_number);
+      const track = parseTrack(body.track);
+      const tags = parseTags(body.tags);
+      const year = parseYear(body.year);
+      const group_name = parseGroup(body.group_name);
+      const file_path = safeString(body.file_path, 2000);
+
+      if (!subject_id) return jsonError('اختر المادة');
+      if (!title) return jsonError('عنوان الملزمة مطلوب');
+      if (!track) return jsonError('اختر نظري أو عملي');
+      if (!file_path) return jsonError('رابط الملف مطلوب');
+
+      const { data: inserted, error } = await supabaseAdmin
+        .from('lecture_notes')
+        .insert({
+          subject_id,
+          title,
+          professor_name,
+          lecture_number,
+          track,
+          tags,
+          year,
+          group_name,
+          file_path,
+          status: 'approved',
+        })
+        .select('id')
+        .single<{ id: string }>();
+
+      if (error || !inserted) {
+        console.error('lecture-notes add error:', error?.message);
+        return jsonError('فشل إضافة الملزمة', 500);
+      }
+
+      // 🔔 إشعار المشتركين — fire-and-forget
+      void (async () => {
+        try {
+          const { data: subject } = await supabaseAdmin
+            .from('subjects')
+            .select('name, stage')
+            .eq('id', subject_id)
+            .maybeSingle<{ name: string; stage: string }>();
+
+          if (subject) {
+            await notifyNewLectureNote({
+              id: inserted.id,
+              title,
+              subject_name: subject.name,
+              professor_name,
+              stage: subject.stage,
+              group_name,
+            });
+          }
+        } catch (err) {
+          console.error('[notify] add notification error:', err);
+        }
+      })();
+
+      return NextResponse.json({ success: true, id: inserted.id });
+    }
+
+    // ==================== edit ====================
+    case 'edit': {
+      const id = safeString(body.id, 100);
+      const subject_id = safeString(body.subject_id, 100);
+      const title = safeString(body.title, 300);
+      const professor_name = safeOptionalString(body.professor_name, 200);
+      const lecture_number = parseLectureNumber(body.lecture_number);
+      const track = parseTrack(body.track);
+      const tags = parseTags(body.tags);
+      const year = parseYear(body.year);
+      const group_name = parseGroup(body.group_name);
+      const file_path = safeString(body.file_path, 2000);
+
+      if (!id) return jsonError('id مطلوب');
+      if (!subject_id) return jsonError('اختر المادة');
+      if (!title) return jsonError('عنوان الملزمة مطلوب');
+      if (!track) return jsonError('اختر نظري أو عملي');
+      if (!file_path) return jsonError('رابط الملف مطلوب');
+
+      const { error } = await supabaseAdmin
+        .from('lecture_notes')
+        .update({
+          subject_id,
+          title,
+          professor_name,
+          lecture_number,
+          track,
+          tags,
+          year,
+          group_name,
+          file_path,
+        })
+        .eq('id', id);
+
+      if (error) {
+        console.error('lecture-notes edit error:', error.message);
+        return jsonError('فشل تعديل الملزمة', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // ==================== delete ====================
+    case 'delete': {
+      const id = safeString(body.id, 100);
+      if (!id) return jsonError('id مطلوب');
+
+      const { error } = await supabaseAdmin
+        .from('lecture_notes')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('lecture-notes delete error:', error.message);
+        return jsonError('فشل حذف الملزمة', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // ==================== reports_list ====================
+    case 'reports_list': {
+      const { data, error } = await supabaseAdmin
+        .from('lecture_note_reports')
+        .select(`
+          id,
+          lecture_note_id,
+          reason,
+          note,
+          created_at,
+          resolved_at,
+          resolved_action,
+          lecture_notes(
+            id,
+            title,
+            subject_id,
+            professor_name,
+            year,
+            file_path,
+            subjects(name)
+          )
+        `)
+        .is('resolved_at', null)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('reports_list error:', error.message);
+        return jsonError('فشل تحميل البلاغات', 500);
+      }
+      return NextResponse.json({ reports: data ?? [] });
+    }
+
+    // ==================== report_resolve ====================
+    case 'report_resolve': {
+      const id = safeString(body.id, 100);
+      const resolved_action = body.resolved_action === 'deleted' ? 'deleted' : 'ignored';
+
+      if (!id) return jsonError('id مطلوب');
+
+      const { error } = await supabaseAdmin
+        .from('lecture_note_reports')
+        .update({
+          resolved_at: new Date().toISOString(),
+          resolved_action,
+        })
+        .eq('id', id);
+
+      if (error) {
+        console.error('report_resolve error:', error.message);
+        return jsonError('فشل معالجة البلاغ', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // ==================== reports_resolve_all_for_note ====================
+    case 'reports_resolve_all_for_note': {
+      const lecture_note_id = safeString(body.lecture_note_id, 100);
+      const resolved_action = body.resolved_action === 'deleted' ? 'deleted' : 'ignored';
+
+      if (!lecture_note_id) return jsonError('lecture_note_id مطلوب');
+
+      const { error } = await supabaseAdmin
+        .from('lecture_note_reports')
+        .update({
+          resolved_at: new Date().toISOString(),
+          resolved_action,
+        })
+        .eq('lecture_note_id', lecture_note_id)
+        .is('resolved_at', null);
+
+      if (error) {
+        console.error('reports_resolve_all_for_note error:', error.message);
+        return jsonError('فشل معالجة البلاغات', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    default:
+      return jsonError('إجراء غير معروف');
+  }
+}
+```
+
+## app\api\admin\schedules\route.ts
+
+```ts
+// app/api/admin/schedules/route.ts
+import { NextResponse } from 'next/server';
+import { adminGuard, jsonError, safeString } from '@/lib/api-server';
+
+export async function POST(request: Request) {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('الطلب غير صالح', 400);
+  }
+
+  const guard = adminGuard(body.password);
+  if (!guard.ok) return guard.response;
+  const { supabaseAdmin } = guard;
+
+  const action = typeof body.action === 'string' ? body.action : '';
+
+  switch (action) {
+    case 'list': {
+      const { data, error } = await supabaseAdmin
+        .from('schedules')
+        .select('*')
+        .order('stage');
+
+      if (error) {
+        console.error('schedules list error:', error.message);
+        return jsonError('فشل تحميل الجداول', 500);
+      }
+      return NextResponse.json({ schedules: data ?? [] });
+    }
+
+    case 'update': {
+      const stage = safeString(body.stage, 100);
+      const image_url = safeString(body.image_url, 2000);
+
+      if (!stage) return jsonError('المرحلة مطلوبة');
+      if (!image_url) return jsonError('رابط الصورة مطلوب');
+
+      const { data: existing, error: fetchError } = await supabaseAdmin
+        .from('schedules')
+        .select('stage')
+        .eq('stage', stage)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('schedules fetch error:', fetchError.message);
+        return jsonError('فشل التحقق من الجدول', 500);
+      }
+
+      const payload = { image_url, updated_at: new Date().toISOString() };
+
+      const { error } = existing
+        ? await supabaseAdmin.from('schedules').update(payload).eq('stage', stage)
+        : await supabaseAdmin.from('schedules').insert({ stage, ...payload });
+
+      if (error) {
+        console.error('schedules update error:', error.message);
+        return jsonError('فشل تحديث الجدول', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    default:
+      return jsonError('إجراء غير معروف');
+  }
+}
+```
+
+## app\api\admin\subjects\route.ts
+
+```ts
+// app/api/admin/subjects/route.ts
+import { NextResponse } from 'next/server';
+import { adminGuard, jsonError, safeString } from '@/lib/api-server';
+
+export async function POST(request: Request) {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('الطلب غير صالح', 400);
+  }
+
+  const guard = adminGuard(body.password);
+  if (!guard.ok) return guard.response;
+  const { supabaseAdmin } = guard;
+
+  const action = typeof body.action === 'string' ? body.action : '';
+
+  switch (action) {
+    case 'list': {
+      const { data, error } = await supabaseAdmin
+        .from('subjects')
+        .select('*')
+        .order('created_at');
+
+      if (error) {
+        console.error('subjects list error:', error.message);
+        return jsonError('فشل تحميل المواد', 500);
+      }
+      return NextResponse.json({ subjects: data ?? [] });
+    }
+
+    case 'add': {
+      const name = safeString(body.name, 200);
+      const stage = safeString(body.stage, 100);
+
+      if (!name) return jsonError('اسم المادة مطلوب');
+      if (!stage) return jsonError('المرحلة مطلوبة');
+
+      const { error } = await supabaseAdmin
+        .from('subjects')
+        .insert({ name, stage });
+
+      if (error) {
+        console.error('subjects add error:', error.message);
+        return jsonError('فشل إضافة المادة', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    case 'edit': {
+      const id = safeString(body.id, 100);
+      const name = safeString(body.name, 200);
+      const stage = safeString(body.stage, 100);
+
+      if (!id) return jsonError('id مطلوب');
+      if (!name) return jsonError('اسم المادة مطلوب');
+      if (!stage) return jsonError('المرحلة مطلوبة');
+
+      const { error } = await supabaseAdmin
+        .from('subjects')
+        .update({ name, stage })
+        .eq('id', id);
+
+      if (error) {
+        console.error('subjects edit error:', error.message);
+        return jsonError('فشل تعديل المادة', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    case 'delete': {
+      const id = safeString(body.id, 100);
+      if (!id) return jsonError('id مطلوب');
+
+      const { error } = await supabaseAdmin.from('subjects').delete().eq('id', id);
+
+      if (error) {
+        console.error('subjects delete error:', error.message);
+        return jsonError('فشل حذف المادة', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    default:
+      return jsonError('إجراء غير معروف');
+  }
+}
+```
+
+## app\api\channel\content\route.ts
+
+```ts
+// app/api/channel/content/route.ts
+import { NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { jsonError, safeOptionalString, safeString } from '@/lib/api-server';
+import { CONTENT_TYPES } from '@/lib/constants';
+import type { ContentType, FileEntry } from '@/lib/types';
+
+// ==================== Types ====================
+
+interface ChannelRow {
+  id: string;
+  name: string;
+  stage: string;
+  description: string | null;
+  telegram_link: string;
+  channel_password: string | null;
+  image_url: string | null;
+  views: number | null;
+}
+
+type SupabaseAdmin = ReturnType<typeof getSupabaseAdmin>;
+
+// ==================== Helpers ====================
+
+function parseFileUrls(value: unknown): FileEntry[] {
+  if (!Array.isArray(value)) return [];
+
+  const result: FileEntry[] = [];
+  for (const entry of value) {
+    if (!entry || typeof entry !== 'object') continue;
+    const e = entry as Record<string, unknown>;
+    const url = safeString(e.url, 2000);
+    if (!url) continue;
+    const label = safeOptionalString(e.label, 200);
+    result.push({ url, label });
+  }
+  return result;
+}
+
+function parseContentType(value: unknown): ContentType | null {
+  if (typeof value !== 'string') return null;
+  return (CONTENT_TYPES as readonly string[]).includes(value)
+    ? (value as ContentType)
+    : null;
+}
+
+function parseDueDate(value: unknown): string | null {
+  const s = safeOptionalString(value, 20);
+  if (!s) return null;
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return null;
+  return s;
+}
+
+async function verifyChannel(
+  supabaseAdmin: SupabaseAdmin,
+  channelId: string,
+  password: string
+): Promise<ChannelRow | null> {
+  if (!channelId || !password) return null;
+
+  const { data, error } = await supabaseAdmin
+    .from('channels')
+    .select('id, name, stage, description, telegram_link, channel_password, image_url, views')
+    .eq('id', channelId)
+    .maybeSingle<ChannelRow>();
+
+  if (error || !data) return null;
+  if (!data.channel_password) return null;
+  if (data.channel_password !== password) return null;
+  return data;
+}
+
+async function assertContentOwnership(
+  supabaseAdmin: SupabaseAdmin,
+  contentId: string,
+  channelId: string
+): Promise<boolean> {
+  const { data, error } = await supabaseAdmin
+    .from('channel_content')
+    .select('channel_id')
+    .eq('id', contentId)
+    .maybeSingle<{ channel_id: string }>();
+
+  if (error || !data) return false;
+  return data.channel_id === channelId;
+}
+
+function parseIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const out = new Set<string>();
+  for (const v of value) {
+    if (typeof v !== 'string') continue;
+    const t = v.trim();
+    if (t && t.length <= 100) out.add(t);
+    if (out.size >= 100) break;
+  }
+  return Array.from(out);
+}
+
+// ==================== Route ====================
+
+export async function POST(request: Request) {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('الطلب غير صالح', 400);
+  }
+
+  const action = typeof body.action === 'string' ? body.action : '';
+  const channel_id = safeString(body.channel_id, 100);
+  const password = safeString(body.password, 200);
+
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const channel = await verifyChannel(supabaseAdmin, channel_id, password);
+  if (!channel) {
+    return jsonError('كلمة المرور غير صحيحة', 401);
+  }
+
+  switch (action) {
+    // ==================== login ====================
+    case 'login': {
+      return NextResponse.json({
+        channel: {
+          id: channel.id,
+          name: channel.name,
+          stage: channel.stage,
+          description: channel.description,
+          telegram_link: channel.telegram_link,
+          image_url: channel.image_url,
+          views: channel.views ?? 0,
+        },
+      });
+    }
+
+    // ==================== list ====================
+    case 'list': {
+      const { data, error } = await supabaseAdmin
+        .from('channel_content')
+        .select('*')
+        .eq('channel_id', channel.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('channel content list error:', error.message);
+        return jsonError('فشل تحميل المحتوى', 500);
+      }
+      return NextResponse.json({ items: data ?? [] });
+    }
+
+    // ==================== add ====================
+    case 'add': {
+      const content_type = parseContentType(body.content_type);
+      const title = safeString(body.title, 300);
+      const description = safeOptionalString(body.description, 2000);
+      const due_date = parseDueDate(body.due_date);
+      const folder = safeOptionalString(body.folder, 200);
+      const file_urls = parseFileUrls(body.file_urls);
+      const pinned = !!body.pinned;
+
+      if (!content_type) return jsonError('نوع المحتوى غير صالح');
+      if (!title) return jsonError('العنوان مطلوب');
+
+      const { error } = await supabaseAdmin.from('channel_content').insert({
+        channel_id: channel.id,
+        content_type,
+        title,
+        description,
+        due_date,
+        folder,
+        file_urls,
+        pinned,
+      });
+
+      if (error) {
+        console.error('channel content add error:', error.message);
+        return jsonError('فشل إضافة المحتوى', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // ==================== edit ====================
+    case 'edit': {
+      const id = safeString(body.id, 100);
+      if (!id) return jsonError('id مطلوب');
+
+      const owns = await assertContentOwnership(supabaseAdmin, id, channel.id);
+      if (!owns) return jsonError('غير مصرح', 403);
+
+      const content_type = parseContentType(body.content_type);
+      const title = safeString(body.title, 300);
+      const description = safeOptionalString(body.description, 2000);
+      const due_date = parseDueDate(body.due_date);
+      const folder = safeOptionalString(body.folder, 200);
+      const file_urls = parseFileUrls(body.file_urls);
+      const pinned = !!body.pinned;
+
+      if (!content_type) return jsonError('نوع المحتوى غير صالح');
+      if (!title) return jsonError('العنوان مطلوب');
+
+      const { error } = await supabaseAdmin
+        .from('channel_content')
+        .update({
+          content_type,
+          title,
+          description,
+          due_date,
+          folder,
+          file_urls,
+          pinned,
+        })
+        .eq('id', id);
+
+      if (error) {
+        console.error('channel content edit error:', error.message);
+        return jsonError('فشل تعديل المحتوى', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // ==================== toggle_pin ====================
+    case 'toggle_pin': {
+      const id = safeString(body.id, 100);
+      if (!id) return jsonError('id مطلوب');
+
+      const { data: existing, error: fetchError } = await supabaseAdmin
+        .from('channel_content')
+        .select('channel_id, pinned')
+        .eq('id', id)
+        .maybeSingle<{ channel_id: string; pinned: boolean }>();
+
+      if (fetchError || !existing || existing.channel_id !== channel.id) {
+        return jsonError('غير مصرح', 403);
+      }
+
+      const { error } = await supabaseAdmin
+        .from('channel_content')
+        .update({ pinned: !existing.pinned })
+        .eq('id', id);
+
+      if (error) {
+        console.error('channel content toggle_pin error:', error.message);
+        return jsonError('فشل تحديث التثبيت', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // ==================== delete ====================
+    case 'delete': {
+      const id = safeString(body.id, 100);
+      if (!id) return jsonError('id مطلوب');
+
+      const owns = await assertContentOwnership(supabaseAdmin, id, channel.id);
+      if (!owns) return jsonError('غير مصرح', 403);
+
+      const { error } = await supabaseAdmin
+        .from('channel_content')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('channel content delete error:', error.message);
+        return jsonError('فشل حذف المحتوى', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // ==================== update_channel ====================
+    case 'update_channel': {
+      const description = safeOptionalString(body.description, 2000);
+      const image_url = safeOptionalString(body.image_url, 2000);
+
+      const { error } = await supabaseAdmin
+        .from('channels')
+        .update({ description, image_url })
+        .eq('id', channel.id);
+
+      if (error) {
+        console.error('channel update error:', error.message);
+        return jsonError('فشل تحديث بيانات القناة', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // ==================== change_password ====================
+    case 'change_password': {
+      const new_password = safeString(body.new_password, 200);
+
+      if (!new_password) return jsonError('كلمة المرور الجديدة مطلوبة');
+      if (new_password.length < 4) {
+        return jsonError('كلمة المرور الجديدة قصيرة جدًا (4 أحرف على الأقل)');
+      }
+
+      const { error } = await supabaseAdmin
+        .from('channels')
+        .update({ channel_password: new_password })
+        .eq('id', channel.id);
+
+      if (error) {
+        console.error('channel change_password error:', error.message);
+        return jsonError('فشل تغيير كلمة المرور', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // ==================== duplicate ====================
+    case 'duplicate': {
+      const id = safeString(body.id, 100);
+      if (!id) return jsonError('id مطلوب');
+
+      const { data: src, error: srcError } = await supabaseAdmin
+        .from('channel_content')
+        .select('channel_id, content_type, title, description, due_date, folder, file_urls')
+        .eq('id', id)
+        .eq('channel_id', channel.id)
+        .maybeSingle<{
+          channel_id: string;
+          content_type: string;
+          title: string;
+          description: string | null;
+          due_date: string | null;
+          folder: string | null;
+          file_urls: unknown;
+        }>();
+
+      if (srcError || !src) return jsonError('غير مصرح', 403);
+
+      const { error } = await supabaseAdmin.from('channel_content').insert({
+        channel_id: channel.id,
+        content_type: src.content_type,
+        title: `${src.title} (نسخة)`.slice(0, 300),
+        description: src.description,
+        due_date: src.due_date,
+        folder: src.folder,
+        file_urls: src.file_urls,
+        pinned: false,
+      });
+
+      if (error) {
+        console.error('channel content duplicate error:', error.message);
+        return jsonError('فشل نسخ المنشور', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // ==================== bulk_delete ====================
+    case 'bulk_delete': {
+      const ids = parseIds(body.ids);
+      if (ids.length === 0) return jsonError('لم يتم تحديد منشورات');
+
+      const { error } = await supabaseAdmin
+        .from('channel_content')
+        .delete()
+        .eq('channel_id', channel.id)
+        .in('id', ids);
+
+      if (error) {
+        console.error('channel content bulk_delete error:', error.message);
+        return jsonError('فشل حذف المنشورات', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // ==================== bulk_pin ====================
+    case 'bulk_pin': {
+      const ids = parseIds(body.ids);
+      if (ids.length === 0) return jsonError('لم يتم تحديد منشورات');
+
+      const { error } = await supabaseAdmin
+        .from('channel_content')
+        .update({ pinned: !!body.pinned })
+        .eq('channel_id', channel.id)
+        .in('id', ids);
+
+      if (error) {
+        console.error('channel content bulk_pin error:', error.message);
+        return jsonError('فشل تحديث التثبيت', 500);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    default:
+      return jsonError('إجراء غير معروف');
+  }
+}
+```
+
+## app\api\channel\view\route.ts
+
+```ts
+// app/api/channel/view/route.ts
+import { NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { jsonError } from '@/lib/api-server';
+
+/**
+ * زيادة عدّاد الزيارات باستخدام RPC atomic.
+ * يتطلب دالة SQL على Supabase اسمها increment_channel_views(channel_id uuid)
+ * (شوف الملاحظة تحت).
+ */
+export async function POST(request: Request) {
+  let body: { channel_id?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('الطلب غير صالح', 400);
+  }
+
+  const channelId = typeof body.channel_id === 'string' ? body.channel_id : '';
+  if (!channelId) return jsonError('channel_id مطلوب', 400);
+
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const { data, error } = await supabaseAdmin.rpc('increment_channel_views', {
+    p_channel_id: channelId,
+  });
+
+  if (error) {
+    console.error('increment_channel_views error:', error.message);
+    // نرجّع 404 لو القناة ما موجودة، وإلا 500
+    if (error.code === 'P0002' /* no_data_found */) {
+      return jsonError('قناة غير موجودة', 404);
+    }
+    return jsonError('فشل تحديث العدّاد', 500);
+  }
+
+  return NextResponse.json({ success: true, views: data });
+}
+```
+
+## app\api\cron\morning\route.ts
+
+```ts
+// app/api/cron/morning/route.ts
+import { NextResponse } from 'next/server';
+import { sendMorningDigest } from '@/lib/telegram-notifications';
+
+// Vercel Cron يرسل هذا الـheader تلقائياً
+function isAuthorized(request: Request): boolean {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) {
+    // لو ما ضبطت CRON_SECRET، نسمح فقط من Vercel Cron
+    // في الإنتاج لازم تضبطه
+    return process.env.NODE_ENV !== 'production';
+  }
+  const auth = request.headers.get('authorization');
+  return auth === `Bearer ${secret}`;
+}
+
+export async function GET(request: Request) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const result = await sendMorningDigest();
+    return NextResponse.json({
+      ok: true,
+      sent: result.sent,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error('[cron/morning] error:', err);
+    return NextResponse.json(
+      {
+        ok: false,
+        error: err instanceof Error ? err.message : 'unknown',
+      },
+      { status: 500 }
+    );
+  }
+}
+```
+
+## app\api\cron\streak\route.ts
+
+```ts
+// app/api/cron/streak/route.ts
+import { NextResponse } from 'next/server';
+import { sendStreakReminder } from '@/lib/telegram-notifications';
+
+function isAuthorized(request: Request): boolean {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) {
+    return process.env.NODE_ENV !== 'production';
+  }
+  const auth = request.headers.get('authorization');
+  return auth === `Bearer ${secret}`;
+}
+
+export async function GET(request: Request) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const result = await sendStreakReminder();
+    return NextResponse.json({
+      ok: true,
+      sent: result.sent,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error('[cron/streak] error:', err);
+    return NextResponse.json(
+      {
+        ok: false,
+        error: err instanceof Error ? err.message : 'unknown',
+      },
+      { status: 500 }
+    );
+  }
+}
+```
+
+## app\api\dictionary\route.ts
+
+```ts
+// app/api/dictionary/route.ts
+import { NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { jsonError, safeString } from '@/lib/api-server';
+import { MEDICAL_CATEGORIES } from '@/lib/constants';
+import type { MedicalCategory } from '@/lib/types';
+
+// ==================== Normalization ====================
+function normalizeTerm(term: string): string {
+  return term
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[^\w\u0600-\u06FF\s-]/g, '');
+}
+
+function parseCategory(v: unknown): MedicalCategory | null {
+  if (typeof v !== 'string') return null;
+  return (MEDICAL_CATEGORIES as readonly string[]).includes(v)
+    ? (v as MedicalCategory)
+    : null;
+}
+
+// ==================== Groq System Prompt (Lookup) ====================
+function buildLookupPrompt(): string {
+  return `You are a medical terminology expert for second-year medical students at an Iraqi university. Students study in English but think and speak in Arabic.
+
+Your task: analyze a medical term and return ONLY a valid JSON object with this exact structure:
+
+{
+  "arabic_translation": "الترجمة العربية الدقيقة",
+  "meaning": "شرح مختصر بجملة واحدة بالعربية",
+  "root_breakdown": "تفكيك الكلمة (prefix + root + suffix) مع معنى كل جزء بالعربية — أو null إن لم يكن لها جذور يونانية/لاتينية",
+  "clinical_note": "ملاحظة سريرية مهمة بجملة واحدة — أو null إن لم تكن متأكداً 100%",
+  "similar_terms": ["term1", "term2", "term3"],
+  "category": "one of: general, anatomy, physiology, pathology, pharmacology, microbiology, biochemistry, histology, embryology, immunology, clinical"
+}
+
+STRICT RULES:
+1. Return ONLY the JSON object — no preamble, no markdown fences, no explanation.
+2. If the term is not a recognized medical term, return: {"error": "not_medical"}
+3. For clinical_note: if you are not 100% confident about the clinical fact, return null. Do NOT guess. Do NOT fabricate.
+4. Keep meaning and clinical_note short — one clear sentence each.
+5. similar_terms: 2-4 related terms that students often confuse with this one, or that are commonly studied alongside it. English terms only.
+6. root_breakdown: only if the term has Greek/Latin roots. Otherwise null.
+7. All Arabic text must be in Modern Standard Arabic (فصحى), clear for a 2nd-year student.
+8. category must be exactly one of the listed values — choose the most relevant one.`;
+}
+
+// ==================== Groq System Prompt (Deep) ====================
+function buildDeepPrompt(): string {
+  return `You are a senior medical educator writing an IN-DEPTH explanation of a medical term for a second-year medical student in Iraq. The student already knows a short definition — now they need a comprehensive understanding.
+
+Return ONLY a valid JSON object with this exact structure:
+
+{
+  "overview": "نظرة عامة موسعة (3-4 جمل) تشرح المصطلح في سياقه الطبي والدراسي",
+  "mechanism": "الآلية/الوظيفة/كيف يعمل بالتفصيل (3-5 جمل). إن كان المصطلح بنية تشريحية، اشرح تركيبها ووظائفها. إن كان مرضي، اشرح الباثوفسيولوجي.",
+  "clinical": "الأهمية السريرية: متى يظهر؟ ما الأمراض المرتبطة؟ ما اللي يهم الطالب يعرفه للامتحان وللمرضى (3-4 جمل)",
+  "confusions": [
+    "مصطلح مشابه 1 — ما الفرق الدقيق (جملة واحدة)",
+    "مصطلح مشابه 2 — ما الفرق الدقيق"
+  ],
+  "mnemonic": "ذاكرة مساعدة (إن أمكن) — جملة أو اختصار يساعد على الحفظ. أو null إن لم توجد طريقة طبيعية"
+}
+
+STRICT RULES:
+1. Return ONLY the JSON object — no preamble, no markdown fences, no explanation.
+2. Do NOT fabricate clinical facts. If you are not confident about something, omit it or keep it general.
+3. All Arabic text must be clear Modern Standard Arabic (فصحى) suitable for a 2nd-year student.
+4. confusions: 1-3 items. Each item combines term + why confused in one string.
+5. mnemonics: only include if genuinely useful — do NOT force one.
+6. Keep total response under 600 words.`;
+}
+
+// ==================== Parse Groq Response ====================
+interface LookupResult {
+  arabic_translation: string;
+  meaning: string;
+  root_breakdown: string | null;
+  clinical_note: string | null;
+  similar_terms: string[];
+  category: MedicalCategory;
+}
+
+interface DeepResult {
+  overview: string;
+  mechanism: string;
+  clinical: string;
+  confusions: string[];
+  mnemonic: string | null;
+}
+
+function stripFences(raw: string): string {
+  let cleaned = raw.trim();
+  cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/i, '');
+  cleaned = cleaned.replace(/\s*```$/i, '');
+  return cleaned;
+}
+
+function parseLookup(raw: string): LookupResult | null {
+  try {
+    const parsed = JSON.parse(stripFences(raw));
+    if (parsed.error === 'not_medical') return null;
+
+    if (
+      typeof parsed.arabic_translation !== 'string' ||
+      typeof parsed.meaning !== 'string'
+    ) {
+      return null;
+    }
+
+    const category = parseCategory(parsed.category) ?? 'general';
+
+    return {
+      arabic_translation: String(parsed.arabic_translation).slice(0, 300),
+      meaning: String(parsed.meaning).slice(0, 500),
+      root_breakdown:
+        typeof parsed.root_breakdown === 'string'
+          ? parsed.root_breakdown.slice(0, 500)
+          : null,
+      clinical_note:
+        typeof parsed.clinical_note === 'string'
+          ? parsed.clinical_note.slice(0, 500)
+          : null,
+      similar_terms: Array.isArray(parsed.similar_terms)
+        ? parsed.similar_terms
+            .filter((t: unknown): t is string => typeof t === 'string')
+            .map((t: string) => t.trim())
+            .filter((t: string) => t.length > 0 && t.length <= 60)
+            .slice(0, 4)
+        : [],
+      category,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function parseDeep(raw: string): DeepResult | null {
+  try {
+    const parsed = JSON.parse(stripFences(raw));
+
+    if (
+      typeof parsed.overview !== 'string' ||
+      typeof parsed.mechanism !== 'string' ||
+      typeof parsed.clinical !== 'string'
+    ) {
+      return null;
+    }
+
+    return {
+      overview: String(parsed.overview).slice(0, 1200),
+      mechanism: String(parsed.mechanism).slice(0, 1500),
+      clinical: String(parsed.clinical).slice(0, 1200),
+      confusions: Array.isArray(parsed.confusions)
+        ? parsed.confusions
+            .filter((c: unknown): c is string => typeof c === 'string')
+            .map((c: string) => c.trim().slice(0, 400))
+            .filter(Boolean)
+            .slice(0, 3)
+        : [],
+      mnemonic:
+        typeof parsed.mnemonic === 'string' && parsed.mnemonic.trim()
+          ? parsed.mnemonic.trim().slice(0, 400)
+          : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// ==================== Groq call ====================
+async function callGroq(
+  systemPrompt: string,
+  userMessage: string,
+  maxTokens: number,
+  temperature: number
+): Promise<string | null> {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    console.error('GROQ_API_KEY غير مُعد');
+    return null;
+  }
+
+  const res = await fetch(
+    'https://api.groq.com/openai/v1/chat/completions',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'openai/gpt-oss-120b',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage },
+        ],
+        temperature,
+        max_tokens: maxTokens,
+        response_format: { type: 'json_object' },
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const errBody = await res.text();
+    console.error('Groq error:', res.status, errBody.slice(0, 500));
+    return null;
+  }
+
+  const data = (await res.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  return data.choices?.[0]?.message?.content ?? null;
+}
+
+// ==================== Route ====================
+export async function POST(request: Request) {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('الطلب غير صالح', 400);
+  }
+
+  const action = typeof body.action === 'string' ? body.action : 'lookup';
+  const supabaseAdmin = getSupabaseAdmin();
+
+  // ==================== popular ====================
+  if (action === 'popular') {
+    const categoryFilter = parseCategory(body.category);
+
+    let query = supabaseAdmin
+      .from('medical_terms_cache')
+      .select('term, arabic_translation, hit_count, category')
+      .order('hit_count', { ascending: false })
+      .limit(12);
+
+    if (categoryFilter) {
+      query = query.eq('category', categoryFilter);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('dictionary popular error:', error.message);
+      return jsonError('فشل تحميل المصطلحات الشائعة', 500);
+    }
+    return NextResponse.json({ terms: data ?? [] });
+  }
+
+  // ==================== categories_stats ====================
+  if (action === 'categories_stats') {
+    const { data, error } = await supabaseAdmin
+      .from('medical_terms_cache')
+      .select('category');
+
+    if (error) {
+      console.error('dictionary categories_stats error:', error.message);
+      return jsonError('فشل تحميل التصنيفات', 500);
+    }
+
+    const counts: Record<string, number> = {};
+    for (const row of (data ?? []) as Array<{ category: string | null }>) {
+      const cat = row.category ?? 'general';
+      counts[cat] = (counts[cat] ?? 0) + 1;
+    }
+    return NextResponse.json({ counts });
+  }
+
+  // ==================== deep ====================
+  if (action === 'deep') {
+    const term = safeString(body.term, 100);
+    if (!term || term.length < 2) {
+      return jsonError('المصطلح مطلوب');
+    }
+
+    const normalized = normalizeTerm(term);
+    if (!normalized) return jsonError('المصطلح غير صالح');
+
+    // ابحث في الـcache أولاً
+    const { data: cached } = await supabaseAdmin
+      .from('medical_terms_cache')
+      .select('id, deep_explanation')
+      .eq('term_normalized', normalized)
+      .maybeSingle<{ id: string; deep_explanation: string | null }>();
+
+    if (cached?.deep_explanation) {
+      try {
+        const parsed = JSON.parse(cached.deep_explanation) as DeepResult;
+        if (parsed?.overview && parsed?.mechanism) {
+          return NextResponse.json({ deep: parsed, cached: true });
+        }
+      } catch {
+        // نكمل للـAI
+      }
+    }
+
+    const content = await callGroq(
+      buildDeepPrompt(),
+      `Medical term: "${term}"`,
+      1500,
+      0.4
+    );
+    if (!content) {
+      return jsonError(
+        'فشل الاتصال بخدمة الذكاء الاصطناعي. حاول مرة ثانية.',
+        502
+      );
+    }
+
+    const parsed = parseDeep(content);
+    if (!parsed) {
+      return jsonError(
+        'لم نستطع توليد شرح عميق لهذا المصطلح. جرّب مرة ثانية.',
+        502
+      );
+    }
+
+    // احفظ في الـcache
+    if (cached?.id) {
+      await supabaseAdmin
+        .from('medical_terms_cache')
+        .update({ deep_explanation: JSON.stringify(parsed) })
+        .eq('id', cached.id);
+    }
+
+    return NextResponse.json({ deep: parsed, cached: false });
+  }
+
+  // ==================== lookup (افتراضي) ====================
+  const term = safeString(body.term, 100);
+  if (!term || term.length < 2) {
+    return jsonError('أدخل مصطلحاً طبياً (حرفان على الأقل)');
+  }
+
+  const normalized = normalizeTerm(term);
+  if (!normalized) {
+    return jsonError('المصطلح غير صالح');
+  }
+
+  // 1. ابحث في الـcache
+  const { data: cached } = await supabaseAdmin
+    .from('medical_terms_cache')
+    .select('*')
+    .eq('term_normalized', normalized)
+    .maybeSingle();
+
+  if (cached) {
+    // زد العدّاد (fire and forget)
+    void supabaseAdmin
+      .from('medical_terms_cache')
+      .update({ hit_count: (cached.hit_count ?? 0) + 1 })
+      .eq('id', cached.id)
+      .then(() => {});
+
+    return NextResponse.json({ result: cached, cached: true });
+  }
+
+  // 2. لو ما موجود — استخدم Groq
+  const content = await callGroq(
+    buildLookupPrompt(),
+    `Medical term: "${term}"`,
+    700,
+    0.3
+  );
+
+  if (!content) {
+    return jsonError('فشل الاتصال بخدمة الذكاء الاصطناعي', 502);
+  }
+
+  const parsed = parseLookup(content);
+  if (!parsed) {
+    return jsonError(
+      'لم نتعرف على هذا المصطلح. تأكد من كتابته بشكل صحيح.',
+      404
+    );
+  }
+
+  // 3. احفظ في الـcache
+  const { data: saved, error: saveError } = await supabaseAdmin
+    .from('medical_terms_cache')
+    .insert({
+      term: term.slice(0, 100),
+      term_normalized: normalized,
+      arabic_translation: parsed.arabic_translation,
+      meaning: parsed.meaning,
+      root_breakdown: parsed.root_breakdown,
+      clinical_note: parsed.clinical_note,
+      similar_terms: parsed.similar_terms,
+      category: parsed.category,
+      hit_count: 1,
+    })
+    .select('*')
+    .single();
+
+  if (saveError) {
+    console.error('dictionary save error:', saveError.message);
+    return NextResponse.json({
+      result: { term, ...parsed, hit_count: 1 },
+      cached: false,
+    });
+  }
+
+  return NextResponse.json({ result: saved, cached: false });
+}
+```
+
+## app\api\feed\route.ts
+
+```ts
+// app/api/feed/route.ts
+import { NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { jsonError, safeString } from '@/lib/api-server';
+
+// ==================== Types ====================
+type FeedType = 'lecture_note' | 'channel' | 'subject' | 'channel_content';
+
+interface FeedItem {
+  id: string;
+  type: FeedType;
+  title: string;
+  context: string;
+  created_at: string;
+  link: string | null;
+}
+
+// ==================== Helpers ====================
+/**
+ * Supabase قد يُرجِع العلاقة كمصفوفة (شكل افتراضي لأنواعه المولّدة)
+ * أو ككائن (لو كانت العلاقة 1-to-1). هذه الدالة تتعامل مع الشكلين.
+ */
+function pickRelationName(rel: unknown): string {
+  if (!rel) return '';
+  if (Array.isArray(rel)) {
+    const first = rel[0] as { name?: unknown } | undefined;
+    return typeof first?.name === 'string' ? first.name : '';
+  }
+  if (typeof rel === 'object') {
+    const name = (rel as { name?: unknown }).name;
+    return typeof name === 'string' ? name : '';
+  }
+  return '';
+}
+
+// ==================== Route ====================
+export async function POST(request: Request) {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('الطلب غير صالح', 400);
+  }
+
+  const stage = safeString(body.stage, 100);
+  if (!stage) return jsonError('المرحلة مطلوبة');
+
+  const supabaseAdmin = getSupabaseAdmin();
+  const items: FeedItem[] = [];
+
+  // ==================== 1. lecture_notes ====================
+  const { data: notes } = await supabaseAdmin
+    .from('lecture_notes')
+    .select('id, title, file_path, created_at, subjects!inner(name, stage)')
+    .eq('subjects.stage', stage)
+    .order('created_at', { ascending: false })
+    .limit(8);
+
+  if (notes) {
+    for (const n of notes as Array<{
+      id: string;
+      title: string;
+      file_path: string | null;
+      created_at: string;
+      subjects: unknown;
+    }>) {
+      if (!n.created_at) continue;
+      items.push({
+        id: n.id,
+        type: 'lecture_note',
+        title: n.title,
+        context: pickRelationName(n.subjects),
+        created_at: n.created_at,
+        link: n.file_path ?? null,
+      });
+    }
+  }
+
+  // ==================== 2. channels ====================
+  const { data: channels } = await supabaseAdmin
+    .from('channels')
+    .select('id, name, description, telegram_link, created_at')
+    .eq('stage', stage)
+    .order('created_at', { ascending: false })
+    .limit(5);
+
+  if (channels) {
+    for (const c of channels as Array<{
+      id: string;
+      name: string;
+      description: string | null;
+      telegram_link: string | null;
+      created_at: string;
+    }>) {
+      if (!c.created_at) continue;
+      items.push({
+        id: c.id,
+        type: 'channel',
+        title: c.name,
+        context: c.description?.trim() || 'قناة جديدة',
+        created_at: c.created_at,
+        link: c.telegram_link ?? null,
+      });
+    }
+  }
+
+  // ==================== 3. subjects ====================
+  const { data: subjects } = await supabaseAdmin
+    .from('subjects')
+    .select('id, name, created_at')
+    .eq('stage', stage)
+    .order('created_at', { ascending: false })
+    .limit(3);
+
+  if (subjects) {
+    for (const s of subjects as Array<{
+      id: string;
+      name: string;
+      created_at: string | null;
+    }>) {
+      if (!s.created_at) continue;
+      items.push({
+        id: s.id,
+        type: 'subject',
+        title: s.name,
+        context: 'مادة جديدة',
+        created_at: s.created_at,
+        link: null,
+      });
+    }
+  }
+
+  // ==================== 4. channel_content ====================
+  const { data: content } = await supabaseAdmin
+    .from('channel_content')
+    .select('id, title, file_urls, created_at, channels!inner(name, stage)')
+    .eq('channels.stage', stage)
+    .order('created_at', { ascending: false })
+    .limit(5);
+
+  if (content) {
+    for (const c of content as Array<{
+      id: string;
+      title: string;
+      file_urls: unknown;
+      created_at: string;
+      channels: unknown;
+    }>) {
+      if (!c.created_at) continue;
+      const files = Array.isArray(c.file_urls) ? c.file_urls : [];
+      const first = files[0] as { url?: unknown } | undefined;
+      const firstUrl = typeof first?.url === 'string' ? first.url : null;
+      items.push({
+        id: c.id,
+        type: 'channel_content',
+        title: c.title,
+        context: pickRelationName(c.channels),
+        created_at: c.created_at,
+        link: firstUrl,
+      });
+    }
+  }
+
+  // ==================== Merge & Sort ====================
+  items.sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+  const top = items.slice(0, 12);
+
+  return NextResponse.json({ items: top });
+}
+```
+
+## app\api\group-swap\route.ts
+
+```ts
+// app/api/group-swap/route.ts
+import { NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { jsonError, safeOptionalString, safeString } from '@/lib/api-server';
+
+const GROUPS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
+function parseGroup(v: unknown): string | null {
+  if (typeof v !== 'string') return null;
+  const upper = v.toUpperCase().trim();
+  return GROUPS.includes(upper) ? upper : null;
+}
+
+function normalizeUsername(u: string): string {
+  return u.trim().replace(/^@/, '').toLowerCase();
+}
+
+export async function POST(request: Request) {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('الطلب غير صالح', 400);
+  }
+
+  const action = typeof body.action === 'string' ? body.action : '';
+  const supabaseAdmin = getSupabaseAdmin();
+
+  switch (action) {
+    // ==================== list ====================
+    case 'list': {
+      const { data, error } = await supabaseAdmin
+        .from('group_swap_requests')
+        .select('id, student_name, telegram_username, current_group, target_group, notes, status, created_at')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('group-swap list error:', error.message);
+        return jsonError('فشل تحميل الطلبات', 500);
+      }
+      return NextResponse.json({ requests: data ?? [] });
+    }
+
+    // ==================== add ====================
+    case 'add': {
+      const student_name = safeString(body.student_name, 100);
+      const rawUsername = safeString(body.telegram_username, 100);
+      const telegram_username = normalizeUsername(rawUsername);
+      const current_group = parseGroup(body.current_group);
+      const target_group = parseGroup(body.target_group);
+      const notes = safeOptionalString(body.notes, 300);
+
+      if (!student_name) return jsonError('الاسم مطلوب');
+      if (!telegram_username) return jsonError('يوزر التليكرام مطلوب');
+      if (!current_group) return jsonError('اختر الكروب الحالي');
+      if (!target_group) return jsonError('اختر الكروب المطلوب');
+      if (current_group === target_group) {
+        return jsonError('الكروب الحالي والكروب المطلوب متطابقان');
+      }
+
+      // ✅ منع التكرار: نفس اليوزر عنده طلب مفتوح
+      const { data: existing } = await supabaseAdmin
+        .from('group_swap_requests')
+        .select('id')
+        .ilike('telegram_username', telegram_username)
+        .eq('status', 'pending')
+        .maybeSingle();
+
+      if (existing) {
+        return jsonError(
+          'لديك طلب مفتوح بالفعل بهذا اليوزر. يجب حذفه أولاً قبل إنشاء طلب جديد.'
+        );
+      }
+
+      const owner_secret = crypto.randomUUID();
+
+      const { data, error } = await supabaseAdmin
+        .from('group_swap_requests')
+        .insert({
+          student_name,
+          telegram_username,
+          current_group,
+          target_group,
+          notes,
+          owner_secret,
+        })
+        .select('id')
+        .single();
+
+      if (error) {
+        console.error('group-swap add error:', error.message);
+        return jsonError('فشل إضافة الطلب', 500);
+      }
+
+      return NextResponse.json({
+        success: true,
+        id: data.id,
+        owner_secret,
+      });
+    }
+
+    // ==================== delete ====================
+    case 'delete': {
+      const id = safeString(body.id, 100);
+      const owner_secret = safeString(body.owner_secret, 100);
+      const rawUsername = safeString(body.telegram_username, 100);
+      const telegram_username = rawUsername ? normalizeUsername(rawUsername) : '';
+
+      if (!id) return jsonError('id مطلوب');
+
+      const { data: existing, error: fetchError } = await supabaseAdmin
+        .from('group_swap_requests')
+        .select('owner_secret, telegram_username')
+        .eq('id', id)
+        .maybeSingle<{ owner_secret: string; telegram_username: string }>();
+
+      if (fetchError || !existing) {

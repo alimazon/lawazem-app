@@ -1,0 +1,2786 @@
+﻿  --elev-1: 0 1px 2px rgb(var(--shadow-rgb) / 0.04);
+  --elev-2: 0 1px 3px rgb(var(--shadow-rgb) / 0.06);
+  --elev-3: 0 2px 6px rgb(var(--shadow-rgb) / 0.07);
+  --elev-4: 0 4px 12px rgb(var(--shadow-rgb) / 0.09);
+  --elev-5: 0 8px 24px rgb(var(--shadow-rgb) / 0.12);
+
+  --shadow-xs: var(--elev-1);
+  --shadow-sm: var(--elev-2);
+  --shadow-md: var(--elev-3);
+  --shadow-lg: var(--elev-4);
+  --shadow-xl: var(--elev-5);
+
+  --link-color: #244E63;
+}
+
+/* ============================================
+   Dark — Ink on Dark Paper
+   ============================================ */
+.dark {
+  --paper: #141A1E;
+  --paper-deep: #0C1014;
+  --paper-soft: #1D262B;
+
+  --ink: #F1F3F0;
+  --ink-soft: #BAC4C8;
+  --ink-muted: #8B959A;
+
+  --teal: #9CD2E5;
+  --teal-light: #B0DCEA;
+  --teal-glow: #C4E6F0;
+  --teal-hover: #7ABDD4;
+  --teal-active: #5FA8C2;
+  --teal-soft: rgba(156, 210, 229, 0.12);
+  --teal-tint: rgba(156, 210, 229, 0.08);
+  --on-teal: #10232B;
+
+  --gold: #F2A18C;
+  --gold-light: #F5B8A6;
+  --gold-hover: #E88A72;
+  --gold-active: #DC7860;
+  --gold-soft: rgba(242, 161, 140, 0.12);
+  --gold-tint: rgba(242, 161, 140, 0.08);
+  --gold-ink: #F5B8A6;
+  --on-gold: #2A1712;
+
+  --navy: #8FA5B0;
+  --navy-light: #A8BCC6;
+  --navy-soft: rgba(143, 165, 176, 0.12);
+  --navy-ink: #A8BCC6;
+
+  --success: #7BC28A;
+  --success-soft: rgba(123, 194, 138, 0.14);
+  --success-ink: #A0D4AB;
+  --info: #9CD2E5;
+  --info-soft: rgba(156, 210, 229, 0.14);
+  --info-ink: #B0DCEA;
+  --warning: #E8BC6A;
+  --warning-soft: rgba(232, 188, 106, 0.14);
+  --warning-ink: #F0CE8A;
+
+  --coral: #F2A18C;
+  --coral-soft: rgba(242, 161, 140, 0.14);
+  --coral-ink: #F5B8A6;
+  --coral-strong: #F2A18C;
+  --on-coral: #2A1712;
+
+  --amber: #E8BC6A;
+  --amber-soft: rgba(232, 188, 106, 0.14);
+
+  --line: #3B484E;
+  --line-soft: #2A363B;
+  --line-strong: #4F5D63;
+  --line-ink: #F1F3F0;
+
+  --disabled-bg: #202A30;
+  --disabled-ink: #5E6A70;
+  --focus-ring: #9CD2E5;
+  --field-border: #4F5D63;
+  --overlay: rgba(0, 0, 0, 0.72);
+  --glass-bg: rgba(20, 26, 30, 0.94);
+  --grain-opacity: 0.02;
+
+  --shadow-rgb: 0 0 0;
+  --elev-1: 0 1px 2px rgb(var(--shadow-rgb) / 0.4);
+  --elev-2: 0 1px 3px rgb(var(--shadow-rgb) / 0.5);
+  --elev-3: 0 2px 6px rgb(var(--shadow-rgb) / 0.55);
+  --elev-4: 0 4px 12px rgb(var(--shadow-rgb) / 0.6);
+  --elev-5: 0 8px 24px rgb(var(--shadow-rgb) / 0.7);
+
+  --link-color: #9CD2E5;
+}
+
+/* ============================================
+   Tokens مشتركة
+   ============================================ */
+:root {
+  --fs-display: clamp(2rem, 1.5rem + 2.5vw, 3.5rem);     --lh-display: 1.2;
+  --fs-h1: clamp(1.75rem, 1.4rem + 1.6vw, 2.5rem);       --lh-h1: 1.25;
+  --fs-h2: clamp(1.375rem, 1.2rem + 0.8vw, 1.875rem);    --lh-h2: 1.3;
+  --fs-h3: clamp(1.125rem, 1.05rem + 0.4vw, 1.375rem);   --lh-h3: 1.4;
+  --fs-h4: 1rem;                                         --lh-h4: 1.5;
+  --fs-lead: 1.0625rem;                                  --lh-lead: 1.8;
+  --fs-body: 1rem;                                       --lh-body: 1.75;
+  --fs-small: 0.875rem;                                  --lh-small: 1.65;
+  --fs-caption: 0.75rem;                                 --lh-caption: 1.55;
+
+  /* Radius — 6px للبطاقات */
+  --r-field: 0.375rem;
+  --r-card: 0.375rem;
+  --r-chip: 999px;
+
+  --measure: 42rem;
+  --nav-h: 3.75rem;
+  --gutter: clamp(1rem, 4vw, 2rem);
+  --section-y: clamp(2.5rem, 6vw, 4rem);
+
+  --z-sticky: 20; --z-nav: 30; --z-dropdown: 40;
+  --z-overlay: 50; --z-modal: 60; --z-toast: 70;
+
+  --ease-editorial: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms; --dur-base: 200ms; --dur-slow: 350ms;
+}
+
+/* ============================================
+   Tailwind Theme Mapping
+   ============================================ */
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-deep: var(--paper-deep);
+  --color-paper-soft: var(--paper-soft);
+
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-muted: var(--ink-muted);
+
+  --color-teal: var(--teal);
+  --color-teal-light: var(--teal-light);
+  --color-teal-glow: var(--teal-glow);
+  --color-teal-soft: var(--teal-soft);
+  --color-teal-tint: var(--teal-tint);
+  --color-teal-hover: var(--teal-hover);
+  --color-teal-active: var(--teal-active);
+  --color-on-teal: var(--on-teal);
+
+  --color-navy: var(--navy);
+  --color-navy-light: var(--navy-light);
+  --color-navy-soft: var(--navy-soft);
+  --color-navy-ink: var(--navy-ink);
+
+  --color-gold: var(--gold);
+  --color-gold-light: var(--gold-light);
+  --color-gold-hover: var(--gold-hover);
+  --color-gold-soft: var(--gold-soft);
+  --color-gold-tint: var(--gold-tint);
+  --color-gold-ink: var(--gold-ink);
+  --color-on-gold: var(--on-gold);
+
+  --color-coral: var(--coral);
+  --color-coral-soft: var(--coral-soft);
+  --color-coral-ink: var(--coral-ink);
+  --color-coral-strong: var(--coral-strong);
+  --color-on-coral: var(--on-coral);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-ink: var(--success-ink);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-ink: var(--info-ink);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-ink: var(--warning-ink);
+  --color-danger: var(--coral-strong);
+  --color-danger-soft: var(--coral-soft);
+  --color-danger-ink: var(--coral-ink);
+
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-line-strong: var(--line-strong);
+  --color-line-ink: var(--line-ink);
+
+  --color-disabled: var(--disabled-bg);
+  --color-disabled-ink: var(--disabled-ink);
+  --color-focus: var(--focus-ring);
+  --color-field-border: var(--field-border);
+  --color-overlay: var(--overlay);
+
+  /* Fonts */
+  --font-display: "Readex Pro", "Segoe UI", Tahoma, system-ui, sans-serif;
+  --font-body: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, system-ui, sans-serif;
+  --font-kufi: "Readex Pro", system-ui, sans-serif;
+  --font-sans: var(--font-body);
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --text-display: var(--fs-display);  --text-display--line-height: var(--lh-display);
+  --text-h1: var(--fs-h1);            --text-h1--line-height: var(--lh-h1);
+  --text-h2: var(--fs-h2);            --text-h2--line-height: var(--lh-h2);
+  --text-h3: var(--fs-h3);            --text-h3--line-height: var(--lh-h3);
+  --text-h4: var(--fs-h4);            --text-h4--line-height: var(--lh-h4);
+  --text-lead: var(--fs-lead);        --text-lead--line-height: var(--lh-lead);
+  --text-body: var(--fs-body);        --text-body--line-height: var(--lh-body);
+  --text-small: var(--fs-small);      --text-small--line-height: var(--lh-small);
+  --text-caption: var(--fs-caption);  --text-caption--line-height: var(--lh-caption);
+
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+
+  --radius-field: var(--r-field);
+  --radius-card: var(--r-card);
+  --radius-chip: var(--r-chip);
+  --spacing-section: var(--section-y);
+  --spacing-gutter: var(--gutter);
+  --container-measure: var(--measure);
+
+  --animate-fade-in: fadeIn 0.25s ease-out;
+  --animate-slide-up: slideUp 0.3s var(--ease-editorial);
+  --animate-scale-in: scaleIn 0.2s var(--ease-editorial);
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+  --animate-ink-fade: inkFade 0.4s var(--ease-editorial);
+}
+
+/* ============================================
+   Keyframes
+   ============================================ */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes inkFade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ✨ دائرة المؤقت (study-session) */
+@keyframes ringBlink { 50% { opacity: 0.25; } }
+@keyframes ringBreathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.035); }
+}
+@keyframes ringWarn { 50% { opacity: 0.25; } }
+@keyframes ringBloom {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ============================================
+   Base
+   ============================================ */
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-block-start: calc(var(--nav-h) + 1rem);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+  }
+
+  html.dark { color-scheme: dark; }
+
+  body {
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    font-weight: 400;
+    font-kerning: normal;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Headings — Readex Pro */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.005em;
+    text-wrap: balance;
+  }
+
+  h1 { line-height: var(--lh-h1); font-weight: 700; }
+  h2 { line-height: var(--lh-h2); font-weight: 600; }
+  h3 { line-height: var(--lh-h3); font-weight: 600; }
+
+  p { text-wrap: pretty; }
+
+  .font-mono, code, kbd, pre, .num {
+    font-family: var(--font-mono);
+    font-feature-settings: "tnum" 1, "zero" 1;
+  }
+
+  a, button, input, select, textarea, summary, [role="button"] {
+    transition-property: color, background-color, border-color, opacity, transform, box-shadow;
+    transition-duration: var(--dur-base);
+    transition-timing-function: var(--ease-editorial);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--gold) 25%, transparent);
+    color: var(--ink);
+  }
+
+  * { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--line-strong); }
+
+  select option, select optgroup {
+    background-color: var(--paper-soft);
+    color: var(--ink);
+  }
+}
+
+/* ============================================
+   Utilities
+   ============================================ */
+@utility skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--ink) 5%, transparent) 0%,
+    color-mix(in srgb, var(--ink) 11%, transparent) 50%,
+    color-mix(in srgb, var(--ink) 5%, transparent) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@utility ink-reveal {
+  animation: inkFade 0.45s var(--ease-editorial) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+@utility icon-sm { inline-size: 1rem; block-size: 1rem; flex-shrink: 0; }
+@utility icon-md { inline-size: 1.25rem; block-size: 1.25rem; flex-shrink: 0; }
+@utility icon-lg { inline-size: 1.5rem; block-size: 1.5rem; flex-shrink: 0; }
+
+@utility break-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@utility num-inline {
+  display: inline-block;
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* ✨ حركات دائرة المؤقت */
+@utility ring-colon {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: ringBlink 1s steps(1, end) infinite;
+  }
+}
+@utility ring-breathe {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: ringBreathe 6s ease-in-out infinite;
+  }
+}
+@utility ring-warn {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: ringWarn 1s ease-in-out infinite;
+  }
+}
+@utility ring-bloom {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: ringBloom 1.2s var(--ease-editorial) both;
+  }
+}
+
+/* ============================================
+   CAMPUS INK ORNAMENTS
+   ============================================ */
+
+@utility kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--gold-ink);
+  line-height: 1;
+  &::before {
+    content: '';
+    inline-size: 1rem;
+    block-size: 2px;
+    background: var(--gold);
+  }
+}
+
+@utility editorial-underline {
+  position: relative;
+  display: inline-block;
+  &::after {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-end: -0.375rem;
+    inline-size: 2.5rem;
+    block-size: 2px;
+    background: var(--teal);
+  }
+}
+
+@utility divider-campus {
+  position: relative;
+  block-size: 8px;
+  margin-block: 1.5rem;
+  &::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline: 0;
+    block-size: 1px;
+    background: var(--line-strong);
+  }
+  &::after {
+    content: '';
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    inline-size: 6px;
+    block-size: 6px;
+    background: var(--paper);
+    border: 1px solid var(--gold);
+    transform: translate(-50%, -50%) rotate(45deg);
+  }
+}
+
+@utility masthead-rule {
+  position: relative;
+  padding-block-start: 0.875rem;
+  border-block-start: 2px solid var(--teal);
+  &::after {
+    content: '';
+    position: absolute;
+    inset-block-start: 4px;
+    inset-inline: 0;
+    block-size: 1px;
+    background: var(--line-strong);
+  }
+}
+
+@utility margin-mark {
+  position: relative;
+  padding-inline-start: 1rem;
+  &::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-start: 0.55em;
+    inline-size: 4px;
+    block-size: 4px;
+    background: var(--gold);
+    transform: rotate(45deg);
+  }
+}
+
+@utility paper-texture {
+  position: relative;
+  isolation: isolate;
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: var(--grain-opacity);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .15 0 0 0 0 .17 0 0 0 0 .18 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+
+/* ============================================
+   Prose
+   ============================================ */
+@utility prose-editorial {
+  max-inline-size: var(--measure);
+  font-size: 1.0625rem;
+  line-height: 1.85;
+  color: var(--ink);
+
+  & > * + * { margin-block-start: 1.25em; }
+  & h2 { font-size: var(--fs-h2); line-height: var(--lh-h2); margin-block-start: 2em; }
+  & h3 { font-size: var(--fs-h3); line-height: var(--lh-h3); margin-block-start: 1.75em; }
+  & h4 { font-size: var(--fs-h4); margin-block-start: 1.5em; }
+  & :is(h2, h3, h4) + * { margin-block-start: 0.75em; }
+  & p:first-of-type { font-size: var(--fs-lead); line-height: var(--lh-lead); color: var(--ink-soft); }
+  & a {
+    color: var(--link-color);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--gold) 70%, transparent);
+    text-underline-offset: 0.3em;
+  }
+  & a:hover { text-decoration-color: currentColor; }
+  & strong { font-weight: 600; }
+  & ul, & ol { padding-inline-start: 1.5em; }
+  & ul { list-style: disc; }
+  & ol { list-style: decimal; }
+  & li + li { margin-block-start: 0.5em; }
+  & li::marker { color: var(--gold); }
+  & blockquote {
+    padding-inline-start: 1.25rem;
+    border-inline-start: 3px solid var(--gold);
+    color: var(--ink-soft);
+    font-family: var(--font-display);
+    font-size: var(--fs-h4);
+    line-height: 1.75;
+  }
+  & :not(pre) > code {
+    padding: 0.1em 0.4em;
+    border-radius: 0.25rem;
+    background: var(--paper-deep);
+    font-size: 0.9em;
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+  & pre {
+    direction: ltr;
+    overflow-x: auto;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-field);
+    background: var(--paper-deep);
+    font-size: var(--fs-small);
+    line-height: 1.7;
+  }
+  & img, & figure { max-inline-size: 100%; border-radius: var(--r-field); }
+  & figcaption { margin-block-start: 0.5em; font-size: var(--fs-caption); color: var(--ink-muted); }
+  & table { inline-size: 100%; border-collapse: collapse; font-size: var(--fs-small); }
+  & th, & td { padding: 0.625rem 0.75rem; border-block-end: 1px solid var(--line); text-align: start; }
+  & th { font-weight: 600; border-block-end-color: var(--line-strong); }
+  & hr { border: 0; block-size: 1px; background: var(--line); margin-block: 2.5em; }
+}
+
+/* ============================================
+   Components
+   ============================================ */
+@utility card-editorial {
+  background-color: var(--paper-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  box-shadow: var(--elev-1);
+  transition-property: border-color, box-shadow, transform, background-color;
+  transition-duration: var(--dur-slow);
+  transition-timing-function: var(--ease-editorial);
+}
+
+@utility card-editorial-hover {
+  transition-property: border-color, box-shadow, transform;
+  transition-duration: var(--dur-slow);
+  transition-timing-function: var(--ease-editorial);
+  @media (hover: hover) {
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--elev-3);
+      border-color: color-mix(in srgb, var(--teal) 45%, var(--line));
+    }
+  }
+  &:active { transform: translateY(0); }
+}
+
+@utility link-editorial {
+  color: var(--link-color);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--gold) 70%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.3em;
+  &:hover { text-decoration-color: currentColor; text-decoration-thickness: 2px; }
+}
+
+@utility field-editorial {
+  inline-size: 100%;
+  min-block-size: 2.75rem;
+  padding-block: 0.625rem;
+  padding-inline: 0.875rem;
+  color: var(--ink);
+  background-color: var(--paper-soft);
+  font-size: var(--fs-body);
+  border: 1px solid var(--field-border);
+  border-radius: var(--r-field);
+  @media (min-width: 40rem) { font-size: var(--fs-small); }
+  &::placeholder { color: var(--ink-muted); }
+  &:hover { border-color: color-mix(in srgb, var(--teal) 45%, var(--field-border)); }
+  &:focus-visible { border-color: var(--teal); outline-offset: 2px; }
+  &:disabled { background: var(--disabled-bg); color: var(--disabled-ink); cursor: not-allowed; }
+  &[aria-invalid="true"] { border-color: var(--coral-strong); }
+}
+
+@utility nav-glass {
+  background-color: var(--glass-bg);
+  -webkit-backdrop-filter: blur(12px) saturate(1.15);
+  backdrop-filter: blur(12px) saturate(1.15);
+  border-block-end: 1px solid var(--line);
+}
+
+@utility stage-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding-block: 0.25rem;
+  padding-inline: 0.625rem;
+  border-radius: var(--r-chip);
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--teal);
+  background-color: var(--teal-soft);
+  border: 1px solid color-mix(in srgb, var(--teal) 20%, transparent);
+}
+
+@utility bento-lg { grid-column: span 2; grid-row: span 2; }
+@utility bento-wide { grid-column: span 2; grid-row: span 1; }
+@utility bento-sm { grid-column: span 1; grid-row: span 1; }
+
+@utility badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding-block: 0.125rem;
+  padding-inline: 0.5rem;
+  border-radius: 0.25rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  line-height: 1.6;
+  white-space: nowrap;
+  color: var(--b-fg, var(--ink-soft));
+  background-color: var(--b-bg, var(--paper-deep));
+  border: 1px solid var(--b-bd, var(--line));
+}
+@utility badge-neutral { --b-fg: var(--ink-soft); --b-bg: var(--paper-deep); --b-bd: var(--line); }
+@utility badge-teal { --b-fg: var(--teal); --b-bg: var(--teal-soft); --b-bd: color-mix(in srgb, var(--teal) 22%, transparent); }
+@utility badge-gold { --b-fg: var(--gold-ink); --b-bg: var(--gold-soft); --b-bd: color-mix(in srgb, var(--gold) 40%, transparent); }
+@utility badge-coral { --b-fg: var(--coral-ink); --b-bg: var(--coral-soft); --b-bd: color-mix(in srgb, var(--coral) 30%, transparent); }
+@utility badge-navy { --b-fg: var(--navy-ink); --b-bg: var(--navy-soft); --b-bd: color-mix(in srgb, var(--navy) 25%, transparent); }
+@utility badge-success { --b-fg: var(--success-ink); --b-bg: var(--success-soft); --b-bd: color-mix(in srgb, var(--success) 30%, transparent); }
+@utility badge-info { --b-fg: var(--info-ink); --b-bg: var(--info-soft); --b-bd: color-mix(in srgb, var(--info) 30%, transparent); }
+@utility badge-warning { --b-fg: var(--warning-ink); --b-bg: var(--warning-soft); --b-bd: color-mix(in srgb, var(--warning) 40%, transparent); }
+@utility badge-solid { --b-fg: var(--on-teal); --b-bg: var(--teal); --b-bd: var(--teal); }
+
+@utility defer-render {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 600px;
+}
+
+@utility defer-item {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 100px;
+}
+
+@utility pb-safe { padding-block-end: max(1rem, env(safe-area-inset-bottom)); }
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+/* خلفية الصفحة */
+@utility campus-paper {
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%, color-mix(in srgb, var(--gold) 4%, transparent), transparent 70%),
+    var(--paper);
+}
+
+/* ============================================
+   Reduced Motion
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  html { color-scheme: light; }
+  body { background: #fff; color: #000; }
+  .no-print, .nav-glass { display: none !important; }
+}
+
+/* ============================================
+   Reveal on scroll
+   ============================================ */
+.reveal-scroll {
+  opacity: 0;
+  transform: translateY(var(--reveal-y, 12px));
+  transition:
+    opacity 400ms cubic-bezier(0.16, 1, 0.3, 1) var(--reveal-delay, 0ms),
+    transform 500ms cubic-bezier(0.16, 1, 0.3, 1) var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+.reveal-scroll[data-revealed='true'] {
+  opacity: 1;
+  transform: translateY(0);
+  will-change: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-scroll {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ============================================
+   منع refresh المتصفح الأصلي (Chrome Android)
+   ============================================ */
+html {
+  overscroll-behavior-y: contain;
+}
+
+/* ============================================
+   Responsive Guard Rails
+   ============================================ */
+
+/* 1. منع أي تمرير أفقي غير مقصود */
+html,
+body {
+  max-width: 100vw;
+  overflow-x: clip;
+}
+
+/* 2. اللمسات: كل زر/رابط تفاعلي ≥ 44px على الموبايل */
+@media (pointer: coarse) {
+  button,
+  [role='button'],
+  a[href],
+  input[type='checkbox'],
+  input[type='radio'],
+  summary {
+    min-height: 44px;
+  }
+
+  a.card-editorial,
+  a[role='listitem'],
+  [role='listitem'] a,
+  button[data-compact] {
+    min-height: 0;
+  }
+}
+
+/* 3. على الشاشات الصغيرة جداً (320-360px) */
+@media (max-width: 360px) {
+  :root {
+    --gutter: 0.875rem;
+    --section-y: 2rem;
+  }
+
+  h1 {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* 4. الصور والـSVG لا تتجاوز حاوياتها */
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+/* 5. النصوص الطويلة */
+body {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* 6. جداول فيها أعمدة كثيرة */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+/* 7. لوحة المفاتيح على iOS */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+===app/gpa/_components/GradesTab.tsx===
+// app/gpa/_components/GradesTab.tsx
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabaseClient';
+import { useStudentStage } from '@/hooks/useStudentStage';
+import { Input } from '@/components/ui/Field';
+import {
+  GRADE_TYPE_COLORS,
+  GRADE_TYPE_EMOJIS,
+  GRADE_TYPE_LABELS,
+  GRADE_TYPES,
+  type GradeType,
+} from '@/lib/constants';
+import { IconInbox, IconSearch, IconWarning } from '@/components/ui/Icons';
+import type { Subject } from '@/lib/types';
+
+// ==================== Types ====================
+interface GradeFile {
+  id: string;
+  subject_id: string;
+  title: string;
+  grade_type: GradeType;
+  professor_name: string | null;
+  year: number | null;
+  notes: string | null;
+  file_path: string;
+  created_at: string;
+  subjects: { name: string } | Array<{ name: string }> | null;
+}
+
+interface SubjectGroup {
+  subjectId: string;
+  subjectName: string;
+  items: GradeFile[];
+}
+
+// ==================== Inline Icon ====================
+function IconGrades() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M9 4h6M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  );
+}
+
+// ==================== Helpers ====================
+function getSubjectName(rel: GradeFile['subjects']): string {
+  if (!rel) return '—';
+  if (Array.isArray(rel)) return rel[0]?.name ?? '—';
+  return rel.name ?? '—';
+}
+
+// ==================== Skeleton ====================
+function Skeleton() {
+  return (
+    <div className="space-y-6" aria-busy="true">
+      <span className="sr-only">جارٍ التحميل…</span>
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="space-y-3">
+          <div className="h-6 w-40 skeleton-shimmer rounded motion-reduce:animate-none" />
+          <div className="grid gap-2 sm:grid-cols-2">
+            {[0, 1, 2, 3].map((j) => (
+              <div
+                key={j}
+                className="h-24 skeleton-shimmer rounded-card motion-reduce:animate-none"
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ==================== Main ====================
+export function GradesTab() {
+  const { stage, ready } = useStudentStage();
+
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [items, setItems] = useState<GradeFile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState<'all' | GradeType>('all');
+
+  // ===== تحميل =====
+  useEffect(() => {
+    if (!stage) return;
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setError('');
+
+      try {
+        const { data: subjectsData } = await supabase
+          .from('subjects')
+          .select('*')
+          .eq('stage', stage)
+          .order('name');
+
+        if (cancelled) return;
+
+        const subjectList = (subjectsData ?? []) as Subject[];
+        setSubjects(subjectList);
+
+        if (subjectList.length === 0) {
+          setItems([]);
+          setLoading(false);
+          return;
+        }
+
+        const subjectIds = subjectList.map((s) => s.id);
+
+        const { data: filesData, error: filesErr } = await supabase
+          .from('grade_files')
+          .select('*, subjects(name)')
+          .in('subject_id', subjectIds)
+          .order('created_at', { ascending: false });
+
+        if (cancelled) return;
+
+        if (filesErr) {
+          setError(filesErr.message);
+          setItems([]);
+        } else {
+          setItems((filesData ?? []) as GradeFile[]);
+        }
+      } catch (e: unknown) {
+        if (cancelled) return;
+        setError(e instanceof Error ? e.message : 'خطأ غير معروف');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [stage]);
+
+  // ===== الفلترة والتجميع =====
+  const groups = useMemo<SubjectGroup[]>(() => {
+    const term = search.trim().toLowerCase();
+
+    const filteredItems = items
+      .filter((i) => filterType === 'all' || i.grade_type === filterType)
+      .filter((i) => {
+        if (!term) return true;
+        const haystack = [
+          i.title,
+          i.professor_name ?? '',
+          getSubjectName(i.subjects),
+          i.notes ?? '',
+        ]
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(term);
+      });
+
+    const map = new Map<string, SubjectGroup>();
+    for (const s of subjects) {
+      map.set(s.id, {
+        subjectId: s.id,
+        subjectName: s.name,
+        items: [],
+      });
+    }
+    for (const item of filteredItems) {
+      const group = map.get(item.subject_id);
+      if (group) group.items.push(item);
+    }
+
+    return Array.from(map.values()).filter((g) => g.items.length > 0);
+  }, [items, subjects, search, filterType]);
+
+  // ===== حالات =====
+  if (!ready) {
+    return <Skeleton />;
+  }
+
+  if (loading) {
+    return <Skeleton />;
+  }
+
+  if (error) {
+    return (
+      <div
+        role="alert"
+        className="flex items-start gap-3 rounded-card border border-coral/30 bg-coral/5 p-4"
+      >
+        <IconWarning className="mt-0.5 h-5 w-5 flex-shrink-0 text-coral-ink" />
+        <div>
+          <p className="text-sm font-bold text-coral-ink">خطأ</p>
+          <p className="mt-1 break-anywhere text-xs text-ink-soft">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (subjects.length === 0) {
+    return (
+      <div className="rounded-card border border-line bg-paper-soft p-12 text-center">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-card bg-teal/8 text-teal">
+          <IconInbox className="h-8 w-8" />
+        </div>
+        <p className="mt-4 font-bold text-ink-soft">
+          لا توجد مواد مضافة لمرحلتك.
+        </p>
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="rounded-card border border-line bg-paper-soft p-12 text-center">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-card bg-teal/8 text-teal">
+          <IconInbox className="h-8 w-8" />
+        </div>
+        <p className="mt-4 font-bold text-ink-soft">
+          لا توجد ملفات درجات بعد.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* رأس */}
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="flex items-center gap-2 text-xl font-black text-ink sm:text-2xl">
+            <IconGrades />
+            الدرجات
+          </h2>
+          <p className="mt-1 text-xs leading-relaxed text-ink-muted">
+            أرشيف ملفات الدرجات — كوزات، امتحانات يومية، فصلية، وفاينل.
+          </p>
+        </div>
+        {stage && (
+          <span className="stage-badge hidden sm:inline-flex">{stage}</span>
+        )}
+      </div>
+
+      {/* الفلاتر */}
+      <div className="flex flex-wrap gap-2">
+        <div className="relative min-w-[180px] flex-1">
+          <IconSearch className="pointer-events-none absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
+          <Input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="ابحث..."
+            className="pe-10"
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        <button
+          type="button"
+          onClick={() => setFilterType('all')}
+          className={`rounded-chip px-3 py-1.5 text-xs font-bold transition-all ${
+            filterType === 'all'
+              ? 'bg-teal text-on-teal'
+              : 'bg-ink/5 text-ink-soft hover:bg-ink/10 dark:bg-white/5'
+          }`}
+        >
+          الكل ({items.length})
+        </button>
+        {GRADE_TYPES.map((t) => {
+          const count = items.filter((i) => i.grade_type === t).length;
+          if (count === 0) return null;
+          return (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setFilterType(filterType === t ? 'all' : t)}
+              className={`rounded-chip px-3 py-1.5 text-xs font-bold transition-all ${
+                filterType === t
+                  ? 'bg-teal text-on-teal'
+                  : 'bg-ink/5 text-ink-soft hover:bg-ink/10 dark:bg-white/5'
+              }`}
+            >
+              {GRADE_TYPE_EMOJIS[t]} {GRADE_TYPE_LABELS[t]} ({count})
+            </button>
+          );
+        })}
+      </div>
+
+      {/* القائمة */}
+      {groups.length === 0 ? (
+        <div className="rounded-card border border-line bg-paper-soft p-8 text-center">
+          <p className="font-bold text-ink-soft">لا نتائج مطابقة</p>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {groups.map((group) => (
+            <section key={group.subjectId}>
+              <h3 className="mb-3 flex items-baseline gap-2 border-b border-line pb-2 font-display text-lg font-bold text-ink">
+                {group.subjectName}
+                <span className="font-mono text-xs font-normal text-ink-muted">
+                  {group.items.length}
+                </span>
+              </h3>
+
+              <ul className="grid gap-2 sm:grid-cols-2">
+                {group.items.map((item) => {
+                  const typeStyle = GRADE_TYPE_COLORS[item.grade_type];
+                  return (
+                    <li key={item.id}>
+                      <a
+                        href={item.file_path}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group flex h-full items-start gap-3 rounded-card border border-line bg-paper-soft p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-teal/40 hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-field text-lg ${typeStyle}`}
+                        >
+                          {GRADE_TYPE_EMOJIS[item.grade_type]}
+                        </span>
+
+                        <span className="min-w-0 flex-1">
+                          <span className="flex flex-wrap items-center gap-1.5">
+                            <span className="break-anywhere text-sm font-bold text-ink group-hover:text-teal">
+                              {item.title}
+                            </span>
+                            {item.year != null && (
+                              <span className="rounded-md bg-ink/5 px-1.5 py-0.5 font-mono text-[10px] font-bold text-ink/50 dark:bg-white/10">
+                                {item.year}
+                              </span>
+                            )}
+                          </span>
+                          <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-muted">
+                            <span className="font-bold">
+                              {GRADE_TYPE_LABELS[item.grade_type]}
+                            </span>
+                            {item.professor_name && (
+                              <>
+                                <span>·</span>
+                                <span className="truncate">
+                                  د. {item.professor_name}
+                                </span>
+                              </>
+                            )}
+                          </span>
+                          {item.notes && (
+                            <span className="mt-1 line-clamp-2 block text-xs text-ink-soft">
+                              {item.notes}
+                            </span>
+                          )}
+                        </span>
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+===app/gpa/page.tsx===
+// app/gpa/page.tsx
+'use client';
+
+import {
+  Suspense,
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+} from 'react';
+import Link from 'next/link';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
+import { useStudentStage } from '@/hooks/useStudentStage';
+import { Button } from '@/components/ui/Button';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { Input } from '@/components/ui/Field';
+import {
+  IconArrowRight,
+  IconChart,
+  IconCheck,
+  IconChevronDown,
+  IconTarget,
+  IconTrending,
+  IconWarning,
+} from '@/components/ui/Icons';
+import type { Subject } from '@/lib/types';
+import { GradesTab } from './_components/GradesTab';
+
+// ==================== Constants ====================
+interface ComponentDef {
+  key: string;
+  label: string;
+  defaultMax: number;
+}
+
+const COMPONENTS: readonly ComponentDef[] = [
+  { key: 'first', label: 'الفصل الأول', defaultMax: 10 },
+  { key: 'mid', label: 'المد', defaultMax: 20 },
+  { key: 'second', label: 'الفصل الثاني', defaultMax: 10 },
+  { key: 'finalTheory', label: 'الفاينل (نظري)', defaultMax: 40 },
+  { key: 'finalPractical', label: 'الفاينل (عملي)', defaultMax: 20 },
+] as const;
+
+interface TargetDef {
+  value: number;
+  label: string;
+  short: string;
+}
+
+const TARGETS: readonly TargetDef[] = [
+  { value: 50, label: 'مقبول', short: 'مقبول' },
+  { value: 60, label: 'متوسط', short: 'متوسط' },
+  { value: 70, label: 'جيد', short: 'جيد' },
+  { value: 80, label: 'جيد جداً', short: 'جيد جداً' },
+  { value: 90, label: 'امتياز', short: 'امتياز' },
+] as const;
+
+const TARGET_KEY_PREFIX = 'gpa_target_';
+const SCORES_KEY_PREFIX = 'gpa_scores_';
+
+const EPS = 1e-9;
+
+type Tab = 'gpa' | 'grades';
+
+// ==================== Types ====================
+interface ComponentData {
+  max: string;
+  score: string;
+}
+type SubjectScores = Record<string, ComponentData>;
+type AllScores = Record<string, SubjectScores>;
+
+interface TargetAnalysis {
+  currentScore: number;
+  totalMax: number;
+  remainingMax: number;
+  targetScore: number;
+  needFromRemaining: number;
+  achieved: boolean;
+  impossible: boolean;
+  noData: boolean;
+  allEntered: boolean;
+}
+
+interface ComponentIssues {
+  max: string | null;
+  score: string | null;
+}
+
+// ==================== Storage ====================
+function readStorage(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeStorage(key: string, value: string): boolean {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ==================== Helpers ====================
+function defaultSubjectScores(): SubjectScores {
+  const obj: SubjectScores = {};
+  for (const c of COMPONENTS) obj[c.key] = { max: String(c.defaultMax), score: '' };
+  return obj;
+}
+
+function toStringValue(v: unknown, fallback: string): string {
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' && Number.isFinite(v)) return String(v);
+  return fallback;
+}
+
+function sanitizeSubjectScores(raw: unknown): SubjectScores {
+  const defaults = defaultSubjectScores();
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return defaults;
+  const source = raw as Record<string, unknown>;
+  const result: SubjectScores = {};
+  for (const c of COMPONENTS) {
+    const fallback = defaults[c.key];
+    const item = source[c.key];
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      result[c.key] = fallback;
+      continue;
+    }
+    const rec = item as Record<string, unknown>;
+    result[c.key] = {
+      max: toStringValue(rec.max, fallback.max),
+      score: toStringValue(rec.score, fallback.score),
+    };
+  }
+  return result;
+}
+
+function safeParseScores(raw: string | null): Record<string, unknown> {
+  if (!raw) return {};
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
+      return parsed as Record<string, unknown>;
+  } catch {
+    /* ignore */
+  }
+  return {};
+}
+
+function normalizeNumericInput(raw: string): string {
+  let s = raw
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/[\u066B\u066C,\u060C]/g, '.')
+    .replace(/[^\d.]/g, '');
+  const firstDot = s.indexOf('.');
+  if (firstDot !== -1) {
+    s = s.slice(0, firstDot + 1) + s.slice(firstDot + 1).replace(/\./g, '');
+  }
+  return s.slice(0, 6);
+}
+
+function fmtNum(n: number): string {
+  const r = Math.round(n * 10) / 10;
+  return Number.isInteger(r) ? String(r) : r.toFixed(1);
+}
+
+function fmtNeed(n: number): string {
+  return fmtNum(Math.ceil(n * 10 - EPS) / 10);
+}
+
+function getComponentIssues(comp: ComponentData): ComponentIssues {
+  const maxNum = Number(comp.max);
+  const maxInvalid = comp.max.trim() === '' || Number.isNaN(maxNum) || maxNum <= 0;
+  const max = maxInvalid ? 'الدرجة العظمى يجب أن تكون أكبر من صفر' : null;
+
+  let score: string | null = null;
+  if (comp.score !== '') {
+    const scoreNum = Number(comp.score);
+    if (Number.isNaN(scoreNum)) {
+      score = 'أدخل رقماً صحيحاً';
+    } else if (!maxInvalid && scoreNum > maxNum + EPS) {
+      score = `الدرجة أكبر من الحد الأقصى (${fmtNum(maxNum)})`;
+    }
+  }
+  return { max, score };
+}
+
+function calculatePercentage(subjectScores: SubjectScores | undefined): number | null {
+  if (!subjectScores) return null;
+  let totalMax = 0;
+  let totalScore = 0;
+  let anyEntered = false;
+
+  for (const c of COMPONENTS) {
+    const comp = subjectScores[c.key];
+    if (!comp || comp.score === '') continue;
+    const scoreNum = Number(comp.score);
+    const maxNum = Number(comp.max);
+    if (Number.isNaN(scoreNum) || Number.isNaN(maxNum) || maxNum <= 0) continue;
+    if (scoreNum < 0 || scoreNum > maxNum) continue;
+    anyEntered = true;
+    totalMax += maxNum;
+    totalScore += scoreNum;
+  }
+  if (!anyEntered || totalMax === 0) return null;
+  return (totalScore / totalMax) * 100;
+}
+
+function analyzeForTarget(
+  subjectScores: SubjectScores | undefined,
+  targetPercent: number,
+): TargetAnalysis {
+  const base: TargetAnalysis = {
+    currentScore: 0,
+    totalMax: 0,
+    remainingMax: 0,
+    targetScore: 0,
+    needFromRemaining: 0,
+    achieved: false,
+    impossible: false,
+    noData: true,
+    allEntered: false,
+  };
+
+  if (!subjectScores) return base;
+
+  let currentScore = 0;
+  let totalMax = 0;
+  let remainingMax = 0;
+  let enteredCount = 0;
+
+  for (const c of COMPONENTS) {
+    const comp = subjectScores[c.key];
+    if (!comp) continue;
+    const maxNum = Number(comp.max);
+    if (Number.isNaN(maxNum) || maxNum <= 0) continue;
+
+    totalMax += maxNum;
+
+    if (comp.score === '') {
+      remainingMax += maxNum;
+    } else {
+      const scoreNum = Number(comp.score);
+      if (Number.isNaN(scoreNum) || scoreNum < 0 || scoreNum > maxNum) {
+        remainingMax += maxNum;
+        continue;
+      }
+      currentScore += scoreNum;
+      enteredCount++;
+    }
+  }
+
+  if (totalMax === 0) return base;
+
+  const targetScore = (targetPercent / 100) * totalMax;
+  const needFromRemaining = targetScore - currentScore;
+  const achieved = needFromRemaining <= EPS;
+  const impossible = !achieved && needFromRemaining > remainingMax + EPS;
+  const noData = enteredCount === 0;
+  const allEntered = remainingMax === 0;
+
+  return {
+    currentScore,
+    totalMax,
+    remainingMax,
+    targetScore,
+    needFromRemaining,
+    achieved,
+    impossible,
+    noData,
+    allEntered,
+  };
+}
+
+function getScoreColor(pct: number): string {
+  if (pct >= 85) return 'bg-teal/10 text-teal dark:bg-teal/20';
+  if (pct >= 70) return 'bg-teal/8 text-teal';
+  if (pct >= 50) return 'bg-gold/15 text-gold-ink dark:bg-gold/25';
+  return 'bg-coral/15 text-coral-ink dark:bg-coral/25';
+}
+
+function getGradeLabel(pct: number): string {
+  if (pct >= 90) return 'امتياز';
+  if (pct >= 80) return 'جيد جداً';
+  if (pct >= 70) return 'جيد';
+  if (pct >= 60) return 'متوسط';
+  if (pct >= 50) return 'مقبول';
+  return 'دون النجاح';
+}
+
+function hasAnyScore(scores: SubjectScores | undefined): boolean {
+  if (!scores) return false;
+  return COMPONENTS.some((c) => (scores[c.key]?.score ?? '') !== '');
+}
+
+// ==================== Skeleton ====================
+function Skeleton() {
+  return (
+    <div className="mt-6 space-y-2" role="status" aria-busy="true">
+      <span className="sr-only">جارٍ التحميل…</span>
+      {[0, 1, 2, 3].map((i) => (
+        <div
+          key={i}
+          aria-hidden="true"
+          className="flex items-center justify-between rounded-card border border-line bg-paper-soft p-4"
+        >
+          <div className="h-4 w-40 skeleton-shimmer rounded motion-reduce:animate-none" />
+          <div className="h-6 w-16 skeleton-shimmer rounded-chip motion-reduce:animate-none" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function BackLink() {
+  return (
+    <Link
+      href="/"
+      className="group inline-flex items-center gap-1.5 text-sm font-bold text-teal transition-colors hover:text-teal-hover"
+    >
+      <span className="transition-transform duration-200 motion-reduce:transition-none rtl:group-hover:translate-x-1 ltr:group-hover:-translate-x-1">
+        <IconArrowRight className="h-4 w-4 ltr:rotate-180" />
+      </span>
+      رجوع إلى لوحة الأقسام
+    </Link>
+  );
+}
+
+// ==================== Icon: Grades ====================
+function IconGradesInline() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M9 4h6M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  );
+}
+
+// ==================== Target Selector ====================
+function TargetSelector({
+  target,
+  onChange,
+}: {
+  target: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div
+      className="rounded-card border border-line bg-paper-soft p-4"
+      role="group"
+      aria-labelledby="gpa-target-title"
+    >
+      <div className="mb-3 flex items-center gap-2">
+        <span
+          aria-hidden="true"
+          className="flex h-8 w-8 items-center justify-center rounded-field bg-teal/10 text-teal"
+        >
+          <IconTarget className="h-4 w-4" />
+        </span>
+        <div>
+          <p id="gpa-target-title" className="text-sm font-bold text-ink">
+            هدفي في كل مادة
+          </p>
+          <p className="text-[11px] text-ink-muted">
+            اختر هدفك، وسنخبرك بكم تحتاج في المتبقي
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-5 gap-1.5">
+        {TARGETS.map((t) => {
+          const active = target === t.value;
+          return (
+            <button
+              key={t.value}
+              type="button"
+              onClick={() => onChange(t.value)}
+              aria-pressed={active}
+              aria-label={`${t.label}، ${t.value} بالمئة`}
+              className={`rounded-field border px-1 py-2.5 text-center transition-all duration-200 motion-reduce:transition-none active:scale-95 ${
+                active
+                  ? 'border-teal bg-teal text-on-teal shadow-sm'
+                  : 'border-line bg-paper text-ink-soft hover:border-teal/40'
+              }`}
+            >
+              <p
+                aria-hidden="true"
+                className={`font-mono text-base font-bold leading-none ${
+                  active ? '' : 'text-ink'
+                }`}
+              >
+                {t.value}
+                <span className="text-[10px]">%</span>
+              </p>
+              <p
+                aria-hidden="true"
+                className={`mt-0.5 truncate text-[9px] font-bold ${
+                  active ? 'text-on-teal/90' : 'text-ink-muted'
+                }`}
+              >
+                {t.short}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ==================== Target Analysis Card ====================
+function TargetAnalysisCard({
+  analysis,
+  target,
+  subjectName,
+}: {
+  analysis: TargetAnalysis;
+  target: number;
+  subjectName: string;
+}) {
+  if (analysis.noData) {
+    return (
+      <div className="rounded-card border border-line bg-paper p-4 text-center">
+        <p className="text-sm text-ink-muted">أدخل أي درجة لتظهر لك التوقعات</p>
+      </div>
+    );
+  }
+
+  if (analysis.achieved) {
+    return (
+      <div className="rounded-card border border-teal/30 bg-teal/5 p-4">
+        <div className="flex items-start gap-3">
+          <span
+            aria-hidden="true"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-field bg-teal text-on-teal"
+          >
+            <IconCheck className="h-4 w-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-teal">
+              ضمنت {getGradeLabel(target)} في {subjectName}
+            </p>
+            <p className="mt-0.5 text-xs text-ink-soft">
+              حتى لو جبت صفر في المتبقي، لسا محقق هدفك.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (analysis.impossible) {
+    return (
+      <div className="rounded-card border border-coral/30 bg-coral/5 p-4">
+        <div className="flex items-start gap-3">
+          <span
+            aria-hidden="true"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-field bg-coral text-on-coral"
+          >
+            <IconWarning className="h-4 w-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-coral-ink">
+              صعب تحقيق {getGradeLabel(target)} في {subjectName}
+            </p>
+            <p className="mt-0.5 text-xs text-ink-soft">
+              تحتاج {fmtNeed(analysis.needFromRemaining)} درجة، والحد الأقصى
+              المتبقي {fmtNum(analysis.remainingMax)} فقط.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const progressPct =
+    analysis.targetScore > 0
+      ? Math.min(
+          100,
+          Math.max(0, (analysis.currentScore / analysis.targetScore) * 100),
+        )
+      : 0;
+
+  return (
+    <div className="rounded-card border border-gold/30 bg-gold/5 p-4">
+      <div className="flex items-start gap-3">
+        <span
+          aria-hidden="true"
+          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-field bg-gold text-on-gold"
+        >
+          <IconTrending className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-ink">
+            تحتاج{' '}
+            <span className="text-lg text-gold-ink">
+              {fmtNeed(analysis.needFromRemaining)}
+            </span>{' '}
+            درجة
+          </p>
+          <p className="mt-0.5 text-xs text-ink-soft">
+            من أصل <strong>{fmtNum(analysis.remainingMax)}</strong> متبقية لتحقق
+            تقدير {getGradeLabel(target)} في {subjectName}
+          </p>
+
+          <div className="mt-3">
+            <div className="mb-1 flex items-center justify-between text-[10px] font-bold text-ink-muted">
+              <span>حالياً: {fmtNum(analysis.currentScore)}</span>
+              <span>الهدف: {fmtNum(analysis.targetScore)}</span>
+            </div>
+            <div
+              aria-hidden="true"
+              className="h-2 overflow-hidden rounded-chip bg-ink/8 dark:bg-white/10"
+            >
+              <div
+                className="h-full rounded-chip bg-gradient-to-l from-gold to-gold-light transition-all duration-500 motion-reduce:transition-none"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==================== Status Chip ====================
+function StatusChip({
+  analysis,
+  target,
+}: {
+  analysis: TargetAnalysis;
+  target: number;
+}) {
+  if (analysis.noData) return null;
+
+  if (analysis.achieved) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-chip bg-teal/15 px-2 py-0.5 text-[10px] font-bold text-teal">
+        <IconCheck className="h-3 w-3" />
+        ضمنت {getGradeLabel(target)}
+      </span>
+    );
+  }
+
+  if (analysis.impossible) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-chip bg-coral/15 px-2 py-0.5 text-[10px] font-bold text-coral-ink">
+        <IconWarning className="h-3 w-3" />
+        {getGradeLabel(target)} صعب
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 rounded-chip bg-gold/20 px-2 py-0.5 text-[10px] font-bold text-gold-ink">
+      <IconTrending className="h-3 w-3" />
+      تحتاج {fmtNeed(analysis.needFromRemaining)} لـ{getGradeLabel(target)}
+    </span>
+  );
+}
+
+// ==================== Subject Row ====================
+interface SubjectRowProps {
+  subject: Subject;
+  index: number;
+  scores: SubjectScores | undefined;
+  target: number;
+  isOpen: boolean;
+  onToggle: (subjectId: string) => void;
+  onUpdate: (
+    subjectId: string,
+    componentKey: string,
+    field: 'max' | 'score',
+    value: string,
+  ) => void;
+  onClear: (subjectId: string, subjectName: string) => void;
+}
+
+const SubjectRow = memo(function SubjectRow({
+  subject,
+  index,
+  scores,
+  target,
+  isOpen,
+  onToggle,
+  onUpdate,
+  onClear,
+}: SubjectRowProps) {
+  const percentage = useMemo(() => calculatePercentage(scores), [scores]);
+  const analysis = useMemo(
+    () => analyzeForTarget(scores, target),
+    [scores, target],
+  );
+  const scoreColor = percentage !== null ? getScoreColor(percentage) : '';
+  const panelId = `gpa-panel-${subject.id}`;
+  const triggerId = `gpa-trigger-${subject.id}`;
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'Enter') return;
+    const el = e.target;
+    if (!(el instanceof HTMLInputElement) || !el.hasAttribute('data-gpa-score'))
+      return;
+    e.preventDefault();
+    const inputs = Array.from(
+      e.currentTarget.querySelectorAll<HTMLInputElement>(
+        'input[data-gpa-score]',
+      ),
+    );
+    const next = inputs[inputs.indexOf(el) + 1];
+    if (next) next.focus();
+    else el.blur();
+  };
+
+  return (
+    <div
+      style={{ animationDelay: `${index * 40}ms` }}
+      className="overflow-hidden rounded-card border border-line bg-paper-soft transition-all duration-200 motion-reduce:transition-none animate-slide-up motion-reduce:animate-none"
+    >
+      <button
+        id={triggerId}
+        type="button"
+        onClick={() => onToggle(subject.id)}
+        aria-expanded={isOpen}
+        aria-controls={panelId}
+        className="flex w-full items-center justify-between gap-3 p-4 text-start transition-colors hover:bg-paper"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-bold text-ink">{subject.name}</span>
+            {subject.units != null && (
+              <span className="text-xs text-ink-muted">
+                ({subject.units} وحدة)
+              </span>
+            )}
+          </div>
+          <div className="mt-1">
+            <StatusChip analysis={analysis} target={target} />
+          </div>
+        </div>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          {percentage !== null ? (
+            <span
+              className={`rounded-chip px-3 py-1 text-sm font-bold ${scoreColor}`}
+              aria-label={`النسبة ${percentage.toFixed(1)} بالمئة`}
+            >
+              {percentage.toFixed(1)}%
+            </span>
+          ) : (
+            <span
+              className="text-sm text-ink-muted"
+              aria-label="لم تُدخل درجات بعد"
+            >
+              —
+            </span>
+          )}
+          <IconChevronDown
+            aria-hidden="true"
+            className={`h-4 w-4 flex-shrink-0 text-ink-muted transition-transform duration-200 motion-reduce:transition-none ${
+              isOpen ? 'rotate-180' : ''
+            }`}
+          />
+        </div>
+      </button>
+
+      <div
+        id={panelId}
+        role="region"
+        aria-labelledby={triggerId}
+        inert={!isOpen}
+        className={`grid transition-all duration-300 motion-reduce:transition-none ease-[var(--ease-editorial)] ${
+          isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div
+            className="space-y-4 border-t border-line bg-paper/40 p-4"
+            onKeyDown={handleKeyDown}
+          >
+            <TargetAnalysisCard
+              analysis={analysis}
+              target={target}
+              subjectName={subject.name}
+            />
+
+            <div className="space-y-3">
+              {COMPONENTS.map((c) => {
+                const comp: ComponentData = scores?.[c.key] ?? {
+                  max: '',
+                  score: '',
+                };
+                const issues = getComponentIssues(comp);
+                const issueText = issues.score ?? issues.max;
+                const scoreId = `${subject.id}-${c.key}-score`;
+                const maxId = `${subject.id}-${c.key}-max`;
+                const errId = `${subject.id}-${c.key}-err`;
+                return (
+                  <div
+                    key={c.key}
+                    role="group"
+                    aria-label={c.label}
+                    className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1"
+                  >
+                    <label
+                      htmlFor={scoreId}
+                      className="w-full text-sm font-medium text-ink-soft sm:w-28"
+                    >
+                      {c.label}
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id={scoreId}
+                        type="text"
+                        inputMode="decimal"
+                        dir="ltr"
+                        autoComplete="off"
+                        enterKeyHint="next"
+                        data-gpa-score=""
+                        value={comp.score}
+                        onChange={(e) =>
+                          onUpdate(
+                            subject.id,
+                            c.key,
+                            'score',
+                            normalizeNumericInput(e.target.value),
+                          )
+                        }
+                        onFocus={(e) => e.currentTarget.select()}
+                        placeholder="درجتك"
+                        aria-invalid={issues.score !== null}
+                        aria-describedby={issueText ? errId : undefined}
+                        className="w-20 text-center"
+                      />
+                      <span
+                        className="text-sm text-ink-muted"
+                        aria-hidden="true"
+                      >
+                        من
+                      </span>
+                      <Input
+                        id={maxId}
+                        type="text"
+                        inputMode="decimal"
+                        dir="ltr"
+                        autoComplete="off"
+                        value={comp.max}
+                        onChange={(e) =>
+                          onUpdate(
+                            subject.id,
+                            c.key,
+                            'max',
+                            normalizeNumericInput(e.target.value),
+                          )
+                        }
+                        onFocus={(e) => e.currentTarget.select()}
+                        aria-label={`الدرجة العظمى لـ${c.label}`}
+                        aria-invalid={issues.max !== null}
+                        aria-describedby={issues.max ? errId : undefined}
+                        className="w-16 text-center"
+                      />
+                    </div>
+                    {issueText && (
+                      <p
+                        id={errId}
+                        className="basis-full text-xs font-medium text-coral-ink"
+                      >
+                        {issueText}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {hasAnyScore(scores) && (
+              <div className="flex justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onClear(subject.id, subject.name)}
+                  className="text-coral-ink hover:bg-coral/10"
+                >
+                  مسح درجات هذه المادة
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// ==================== GPA Tab ====================
+function GpaTab() {
+  const { stage, ready } = useStudentStage();
+  const confirm = useConfirm();
+
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [scores, setScores] = useState<AllScores>({});
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [target, setTarget] = useState<number>(50);
+  const [storageFailed, setStorageFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const storageKey = stage ? `${SCORES_KEY_PREFIX}${stage}` : '';
+  const targetKey = stage ? `${TARGET_KEY_PREFIX}${stage}` : '';
+
+  const dirtyRef = useRef(false);
+  const orphansRef = useRef<Record<string, unknown>>({});
+
+  // ---- تحميل الهدف ----
+  useEffect(() => {
+    if (!targetKey) return;
+    const saved = Number(readStorage(targetKey));
+    if (Number.isFinite(saved) && TARGETS.some((t) => t.value === saved)) {
+      setTarget(saved);
+    }
+  }, [targetKey]);
+
+  // ---- تحميل المواد + الدرجات ----
+  useEffect(() => {
+    if (!stage) return;
+    let cancelled = false;
+
+    async function loadData() {
+      setLoading(true);
+      setError('');
+
+      const { data, error: fetchError } = await supabase
+        .from('subjects')
+        .select('id, name, stage, units')
+        .eq('stage', stage)
+        .order('name');
+
+      if (cancelled) return;
+      if (fetchError) {
+        setError(fetchError.message);
+        setLoading(false);
+        return;
+      }
+
+      const subjectList = (data ?? []) as Subject[];
+      const saved = safeParseScores(readStorage(`${SCORES_KEY_PREFIX}${stage}`));
+      const ids = new Set(subjectList.map((s) => s.id));
+
+      const merged: AllScores = {};
+      for (const s of subjectList)
+        merged[s.id] = sanitizeSubjectScores(saved[s.id]);
+
+      const orphans: Record<string, unknown> = {};
+      for (const [id, value] of Object.entries(saved)) {
+        if (!ids.has(id)) orphans[id] = value;
+      }
+
+      orphansRef.current = orphans;
+      dirtyRef.current = false;
+      setSubjects(subjectList);
+      setScores(merged);
+      setLoading(false);
+    }
+    loadData();
+    return () => {
+      cancelled = true;
+    };
+  }, [stage, reloadKey]);
+
+  // ---- حفظ الدرجات ----
+  useEffect(() => {
+    if (!storageKey || !dirtyRef.current) return;
+    const ok = writeStorage(
+      storageKey,
+      JSON.stringify({ ...orphansRef.current, ...scores }),
+    );
+    setStorageFailed((prev) => (prev === !ok ? prev : !ok));
+  }, [scores, storageKey]);
+
+  const handleTargetChange = useCallback(
+    (value: number) => {
+      setTarget(value);
+      if (targetKey) writeStorage(targetKey, String(value));
+    },
+    [targetKey],
+  );
+
+  const updateComponent = useCallback(
+    (
+      subjectId: string,
+      componentKey: string,
+      field: 'max' | 'score',
+      value: string,
+    ) => {
+      dirtyRef.current = true;
+      setScores((prev) => {
+        const subject = prev[subjectId] ?? defaultSubjectScores();
+        const current: ComponentData = subject[componentKey] ?? {
+          max: '',
+          score: '',
+        };
+        return {
+          ...prev,
+          [subjectId]: {
+            ...subject,
+            [componentKey]: { ...current, [field]: value },
+          },
+        };
+      });
+    },
+    [],
+  );
+
+  const toggleExpand = useCallback((subjectId: string) => {
+    setExpanded((prev) => ({ ...prev, [subjectId]: !prev[subjectId] }));
+  }, []);
+
+  const clearSubject = useCallback(
+    async (subjectId: string, subjectName: string) => {
+      const ok = await confirm(
+        `حذف كل درجات مادة «${subjectName}». هل أنت متأكد؟`,
+        {
+          variant: 'danger',
+          confirmLabel: 'حذف',
+        },
+      );
+      if (!ok) return;
+      dirtyRef.current = true;
+      setScores((prev) => ({ ...prev, [subjectId]: defaultSubjectScores() }));
+    },
+    [confirm],
+  );
+
+  const resetScores = useCallback(async () => {
+    const ok = await confirm(
+      'حذف كل الدرجات المدخلة لهذه المرحلة. هل أنت متأكد؟',
+      {
+        variant: 'danger',
+        confirmLabel: 'حذف',
+      },
+    );
+    if (!ok) return;
+    const cleared: AllScores = {};
+    for (const s of subjects) cleared[s.id] = defaultSubjectScores();
+    orphansRef.current = {};
+    dirtyRef.current = true;
+    setScores(cleared);
+  }, [confirm, subjects]);
+
+  // ---- إحصاءات ----
+  const stats = useMemo(() => {
+    let weightedSum = 0;
+    let totalUnits = 0;
+    let simpleSum = 0;
+    let enteredCount = 0;
+    let withoutUnits = 0;
+
+    for (const s of subjects) {
+      const pct = calculatePercentage(scores[s.id]);
+      if (pct === null) continue;
+      enteredCount++;
+      simpleSum += pct;
+      const units = Number(s.units ?? 0);
+      if (Number.isFinite(units) && units > 0) {
+        totalUnits += units;
+        weightedSum += units * pct;
+      } else {
+        withoutUnits++;
+      }
+    }
+
+    const usedSimple = enteredCount > 0 && totalUnits === 0;
+    const average =
+      totalUnits > 0
+        ? weightedSum / totalUnits
+        : usedSimple
+          ? simpleSum / enteredCount
+          : null;
+
+    return {
+      average,
+      usedSimple,
+      skippedUnits: usedSimple ? 0 : withoutUnits,
+      allFilled: subjects.length > 0 && enteredCount === subjects.length,
+      progress:
+        subjects.length > 0 ? (enteredCount / subjects.length) * 100 : 0,
+      enteredCount,
+    };
+  }, [subjects, scores]);
+
+  if (!ready) {
+    return <Skeleton />;
+  }
+
+  return (
+    <div className="space-y-6">
+      {loading && <Skeleton />}
+
+      {!loading && error && (
+        <div
+          role="alert"
+          className="rounded-card border border-coral/30 bg-coral/5 p-4 text-sm text-coral-ink"
+        >
+          <p className="font-bold">خطأ في الاتصال بقاعدة البيانات</p>
+          <p className="mt-1 opacity-80">{error}</p>
+          <div className="mt-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="text-coral-ink hover:bg-coral/10"
+            >
+              إعادة المحاولة
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {!loading && !error && subjects.length === 0 && (
+        <div className="rounded-card border border-line bg-paper-soft p-10 text-center">
+          <div
+            aria-hidden="true"
+            className="mx-auto flex h-20 w-20 items-center justify-center rounded-card bg-teal/8 text-teal"
+          >
+            <IconChart className="h-10 w-10" />
+          </div>
+          <p className="mt-4 font-bold text-ink-soft">
+            لا توجد مواد مضافة لمرحلتك حالياً.
+          </p>
+        </div>
+      )}
+
+      {!loading && !error && subjects.length > 0 && (
+        <>
+          {storageFailed && (
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-card border border-gold/30 bg-gold/5 p-3 text-xs text-ink-soft"
+            >
+              <IconWarning
+                aria-hidden="true"
+                className="mt-0.5 h-4 w-4 flex-shrink-0 text-gold-ink"
+              />
+              <p>
+                تعذّر حفظ درجاتك على هذا الجهاز. ستبقى ظاهرة ما دمت في الصفحة
+                فقط.
+              </p>
+            </div>
+          )}
+
+          <TargetSelector target={target} onChange={handleTargetChange} />
+
+          {stats.enteredCount > 0 && !stats.allFilled && (
+            <div>
+              <div className="mb-1.5 flex items-center justify-between text-xs font-bold text-ink-muted">
+                <span id="gpa-progress-label">التقدم</span>
+                <span>
+                  {stats.enteredCount} من {subjects.length} مادة
+                </span>
+              </div>
+              <div
+                role="progressbar"
+                aria-labelledby="gpa-progress-label"
+                aria-valuemin={0}
+                aria-valuemax={subjects.length}
+                aria-valuenow={stats.enteredCount}
+                aria-valuetext={`${stats.enteredCount} من ${subjects.length} مادة`}
+                className="h-2 overflow-hidden rounded-chip bg-ink/8 dark:bg-white/10"
+              >
+                <div
+                  className="h-full rounded-chip bg-gradient-to-l from-teal to-teal-light transition-all duration-500 motion-reduce:transition-none"
+                  style={{ width: `${stats.progress}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            {subjects.map((s, idx) => (
+              <SubjectRow
+                key={s.id}
+                subject={s}
+                index={idx}
+                scores={scores[s.id]}
+                target={target}
+                isOpen={!!expanded[s.id]}
+                onToggle={toggleExpand}
+                onUpdate={updateComponent}
+                onClear={clearSubject}
+              />
+            ))}
+          </div>
+
+          <div
+            aria-live="polite"
+            className="overflow-hidden rounded-card border border-line bg-gradient-to-bl from-teal/5 via-teal/3 to-gold/5 p-6 text-center shadow-sm"
+          >
+            {stats.average !== null ? (
+              <>
+                <p className="text-sm font-bold text-ink-soft">
+                  {stats.allFilled ? 'معدلك النهائي' : 'معدلك الحالي (جزئي)'}
+                </p>
+                <p
+                  dir="ltr"
+                  className="mt-2 bg-gradient-to-l from-teal to-teal-light bg-clip-text font-mono text-5xl font-bold text-transparent"
+                >
+                  {stats.average.toFixed(2)}
+                  <span className="text-2xl">%</span>
+                </p>
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-chip bg-paper px-3 py-1 text-xs font-bold text-ink-soft">
+                    التقدير: {getGradeLabel(stats.average)}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-chip bg-paper px-3 py-1 text-xs font-bold text-ink-soft">
+                    <IconTarget
+                      aria-hidden="true"
+                      className="h-3.5 w-3.5 text-teal"
+                    />
+                    هدفك: {getGradeLabel(target)}
+                  </span>
+                </div>
+                {stats.usedSimple && (
+                  <p className="mt-3 text-[11px] text-ink-muted">
+                    لم تُحدَّد وحدات المواد، فاحتُسب المتوسط البسيط.
+                  </p>
+                )}
+                {stats.skippedUnits > 0 && (
+                  <p className="mt-3 text-[11px] text-ink-muted">
+                    {stats.skippedUnits} مادة بلا وحدات لم تدخل في حساب المعدل.
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-ink-muted">
+                أدخل درجاتك ليظهر معدلك.
+              </p>
+            )}
+          </div>
+
+          <div className="text-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={resetScores}
+              className="text-coral-ink hover:bg-coral/10"
+            >
+              مسح كل الدرجات
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ==================== Content (يقرأ useSearchParams) ====================
+function GpaPageContent() {
+  const { stage } = useStudentStage();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const initialTab = searchParams.get('tab') === 'grades' ? 'grades' : 'gpa';
+  const [tab, setTab] = useState<Tab>(initialTab);
+
+  // مزامنة الرابط مع التبويب
+  const handleTabChange = useCallback(
+    (newTab: Tab) => {
+      setTab(newTab);
+      const params = new URLSearchParams(searchParams.toString());
+      if (newTab === 'grades') {
+        params.set('tab', 'grades');
+      } else {
+        params.delete('tab');
+      }
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [router, pathname, searchParams],
+  );
+
+  return (
+    <main className="mx-auto max-w-2xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10">
+      <BackLink />
+
+      <div className="mt-6 animate-slide-up motion-reduce:animate-none">
+        <span className="stage-badge">{stage}</span>
+        <h1 className="mt-3 font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">
+          المعدل والدرجات
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+          احسب معدلك الموزون حسب وحدات موادك، وتصفّح ملفات الدرجات السابقة.
+        </p>
+      </div>
+
+      {/* Tabs */}
+      <div
+        role="tablist"
+        aria-label="أقسام المعدل والدرجات"
+        className="mt-6 flex gap-1.5 rounded-2xl border border-line bg-white/60 p-1.5 backdrop-blur-sm dark:bg-white/[0.04] animate-slide-up motion-reduce:animate-none"
+        style={{ animationDelay: '80ms' }}
+      >
+        <button
+          role="tab"
+          aria-selected={tab === 'gpa'}
+          onClick={() => handleTabChange('gpa')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 motion-reduce:transition-none ${
+            tab === 'gpa'
+              ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.30)]'
+              : 'text-ink/60 hover:bg-ink/5 hover:text-ink'
+          }`}
+        >
+          <IconChart aria-hidden="true" className="h-4 w-4" />
+          <span>المعدل</span>
+        </button>
+        <button
+          role="tab"
+          aria-selected={tab === 'grades'}
+          onClick={() => handleTabChange('grades')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 motion-reduce:transition-none ${
+            tab === 'grades'
+              ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.30)]'
+              : 'text-ink/60 hover:bg-ink/5 hover:text-ink'
+          }`}
+        >
+          <IconGradesInline />
+          <span>الدرجات</span>
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      <div className="mt-6">
+        <div hidden={tab !== 'gpa'}>
+          <GpaTab />
+        </div>
+        <div hidden={tab !== 'grades'}>
+          <GradesTab />
+        </div>
+      </div>
+    </main>
+  );
+}
+
+// ==================== Page (يغلّف في Suspense) ====================
+export default function GpaPage() {
+  return (
+    <Suspense fallback={<Skeleton />}>
+      <GpaPageContent />
+    </Suspense>
+  );
+}
+===app/grades/page.tsx===
+// app/grades/page.tsx
+import { redirect } from 'next/navigation';
+
+export default function GradesRedirectPage() {
+  redirect('/gpa?tab=grades');
+}
+===app/group-swap/page.tsx===
+// app/group-swap/page.tsx
+'use client';
+
+import Link from 'next/link';
+import { useStudentStage } from '@/hooks/useStudentStage';
+
+// ==================== Icons ====================
+function IconArrowLeft() {
+  return (
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2.5}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M11 17l-5-5m0 0l5-5m-5 5h12"
+      />
+    </svg>
+  );
+}
+
+function IconClock() {
+  return (
+    <svg
+      className="h-10 w-10"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2" />
+    </svg>
+  );
+}
+
+// ==================== Page ====================
+export default function GroupSwapPage() {
+  const { stage, ready } = useStudentStage();
+
+  if (!ready) {
+    return (
+      <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
+        <div className="h-64 skeleton-shimmer rounded-card" />
+      </main>
+    );
+  }
+
+  return (
+    <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
+      <Link
+        href="/"
+        className="group inline-flex items-center gap-1.5 text-sm font-semibold text-teal/80 transition-colors hover:text-teal"
+      >
+        <span className="transition-transform duration-200 group-hover:translate-x-1">
+          <IconArrowLeft />
+        </span>
+        رجوع إلى لوحة الأقسام
+      </Link>
+
+      <div className="mt-8 ink-reveal">
+        <div className="card-editorial overflow-hidden">
+          {/* Banner */}
+          <div className="border-b border-line bg-teal px-6 py-8 text-center">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-chip border-2 border-gold/40 bg-teal-hover text-gold">
+              <IconClock />
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="p-6 text-center sm:p-8">
+            <p className="kicker justify-center">قريباً</p>
+            <h1 className="mt-2 font-display text-2xl font-bold text-ink sm:text-3xl">
+              تبديل الكروبات
+            </h1>
+
+            <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-ink-soft sm:text-base">
+              هذه الميزة ستتيح للطلاب تبديل كروبات العملي بسهولة تامة.
+              نعمل حالياً على تجهيزها، وستكون متاحة قريباً لكل المراحل.
+            </p>
+
+            <div className="mx-auto mt-6 inline-flex items-center gap-2 rounded-chip border border-gold/40 bg-gold-soft px-4 py-2 text-xs font-semibold text-gold-ink">
+              <span aria-hidden="true">◆</span>
+              المرحلة الحالية: {stage}
+            </div>
+
+            <div className="mt-8 flex flex-wrap justify-center gap-2">
+              <Link
+                href="/lawazem"
+                className="inline-flex items-center gap-1.5 rounded-field bg-teal px-5 py-2.5 text-sm font-semibold text-on-teal transition-colors hover:bg-teal-hover active:scale-[0.98]"
+              >
+                تصفح الملازم
+              </Link>
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1.5 rounded-field border border-line-strong bg-paper-soft px-5 py-2.5 text-sm font-semibold text-ink-soft transition-colors hover:border-gold/40 hover:bg-paper-deep hover:text-ink active:scale-[0.98]"
+              >
+                العودة للرئيسية
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Note */}
+        <p className="mt-6 text-center text-xs leading-relaxed text-ink-muted">
+          سنعلن عن إطلاق الميزة عبر قنوات المنصة الرسمية.
+        </p>
+      </div>
+    </main>
+  );
+}
+===app/histology/[slug]/page.tsx===
+// app/histology/[slug]/page.tsx
+'use client';
+
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import { HISTOLOGY_CATEGORIES, HISTOLOGY_SLIDES } from '@/lib/histology-seed';
+import {
+  IconArrowLeft,
+  IconClose,
+  IconWarning,
+} from '@/components/ui/Icons';
+
+// ==================== Types ====================
+interface Category {
+  id: string;
+  slug: string;
+  name_ar: string;
+  name_en: string;
+  description: string | null;
+  icon_emoji: string | null;
+}
+
+interface Slide {
+  id: string;
+  title_ar: string;
+  title_en: string | null;
+  description: string | null;
+  image_url: string;
+  thumbnail_url: string | null;
+  stain: string | null;
+  magnification: string | null;
+  display_order: number;
+}
+
+// ==================== Viewer Component ====================
+function SlideViewer({
+  slide,
+  onClose,
+}: {
+  slide: Slide;
+  onClose: () => void;
+}) {
+  const viewerRef = useRef<HTMLDivElement>(null);
+  const osdRef = useRef<any>(null);
+  const [zoomLevel, setZoomLevel] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function initViewer() {
+      const OpenSeadragon = (await import('openseadragon')).default;
+      if (cancelled || !viewerRef.current) return;
+
+      // ⚠️ مهم: نتأكد من أن الـdiv فارغ قبل التهيئة
+      viewerRef.current.innerHTML = '';
+
+      const viewer = OpenSeadragon({
+        element: viewerRef.current,
+        prefixUrl:
+          'https://cdn.jsdelivr.net/npm/openseadragon@4.1.0/build/openseadragon/images/',
+        tileSources: {
+          type: 'image',
+          url: slide.image_url,
+        },
+        showNavigator: true,
+        navigatorPosition: 'BOTTOM_RIGHT',
+        navigatorSizeRatio: 0.15,
+        showRotationControl: false,
+        showFullPageControl: false,
+        showHomeControl: true,
+        showZoomControl: true,
+        gestureSettingsMouse: {
+          clickToZoom: false,
+          dblClickToZoom: true,
+          scrollToZoom: true,
+        },
+        gestureSettingsTouch: {
+          pinchToZoom: true,
+          flickEnabled: true,
+        },
+        visibilityRatio: 0.5,
+        minZoomImageRatio: 0.8,
+        maxZoomPixelRatio: 4,
+        animationTime: 0.6,
+      });
+
+      viewer.addHandler('zoom', (event: any) => {
+        setZoomLevel(Math.round(event.zoom * 100) / 100);
+      });
+
+      osdRef.current = viewer;
+    }
+
+    void initViewer();
+
+    return () => {
+      cancelled = true;
+      if (osdRef.current) {
+        osdRef.current.destroy();
+        osdRef.current = null;
+      }
+    };
+  }, [slide.image_url]);
+
+  // Escape لإغلاق العارض
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={slide.title_ar}
+      className="fixed inset-0 z-[80] flex flex-col bg-[#0B1114] text-white"
+    >
+      {/* ═══ Top Bar ═══ */}
+      <header className="flex flex-shrink-0 flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate font-display text-base font-bold text-white sm:text-lg">
+            {slide.title_ar}
+          </h2>
+          {slide.title_en && (
+            <p className="truncate font-mono text-[11px] text-white/50">
+              {slide.title_en}
+            </p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="hidden items-center gap-3 rounded-chip bg-white/5 px-3 py-1 text-[11px] font-mono text-white/70 sm:flex">
+            {slide.stain && <span>🧪 {slide.stain}</span>}
+            {slide.magnification && <span>🔍 {slide.magnification}</span>}
+            <span>⚡ {zoomLevel.toFixed(1)}×</span>
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="إغلاق العارض"
+            className="flex h-9 w-9 items-center justify-center rounded-field bg-white/10 text-white transition-colors hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
+          >
+            <IconClose className="h-4 w-4" />
+          </button>
+        </div>
+      </header>
+
+      {/* ═══ Viewer ═══ */}
+      <div
+        ref={viewerRef}
+        className="min-h-0 flex-1 bg-[#05080A]"
+        style={{ cursor: 'grab' }}
+      />
+
+      {/* ═══ Bottom Info (mobile) ═══ */}
+      {slide.description && (
+        <footer className="flex-shrink-0 border-t border-white/10 bg-black/40 px-4 py-3 text-xs leading-relaxed text-white/70 backdrop-blur-sm sm:hidden">
+          {slide.description}
+        </footer>
+      )}
+    </div>
+  );
+}
+
+// ==================== Slide Card ====================
+function SlideCard({
+  slide,
+  index,
+  onClick,
+}: {
+  slide: Slide;
+  index: number;
+  onClick: () => void;
+}) {
+  const [imageError, setImageError] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{ animationDelay: `${Math.min(index * 50, 300)}ms` }}
+      className="group relative flex flex-col overflow-hidden rounded-card border border-line bg-paper-soft text-start transition-all duration-300 hover:-translate-y-0.5 hover:border-teal/40 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none motion-reduce:hover:translate-y-0 animate-slide-up motion-reduce:animate-none"
+    >
+      {/* Image Preview */}
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-ink/5">
+        {!imageError ? (
+          <>
+            {!loaded && (
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 skeleton-shimmer motion-reduce:animate-none"
+              />
+            )}
+            <img
+              src={slide.thumbnail_url ?? slide.image_url}
+              alt={slide.title_ar}
+              loading="lazy"
+              onLoad={() => setLoaded(true)}
+              onError={() => setImageError(true)}
+              className={`h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100 ${
+                loaded ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
+          </>
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-ink-muted">
+            <span className="text-4xl">🔬</span>
+          </div>
+        )}
+

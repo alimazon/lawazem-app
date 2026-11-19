@@ -1,0 +1,2528 @@
+﻿            <fieldset
+              aria-describedby={noFormats ? 'sp-formats-error' : undefined}
+            >
+              <legend className="mb-3 flex w-full items-center justify-between gap-2 text-sm font-bold text-ink">
+                <span className="flex items-center gap-1.5">
+                  <IconSparkles
+                    aria-hidden="true"
+                    className="h-4 w-4 text-teal"
+                  />
+                  شكل الشرح
+                </span>
+                <span className="text-xs font-normal text-ink-muted">
+                  {selectedFormats.length} محدد
+                </span>
+              </legend>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {STUDY_FORMATS.map((f) => (
+                  <FormatCard
+                    key={f}
+                    format={f}
+                    selected={selectedFormats.includes(f)}
+                    onToggle={() => toggleFormat(f)}
+                  />
+                ))}
+              </div>
+              {noFormats && (
+                <p
+                  id="sp-formats-error"
+                  role="alert"
+                  className="mt-2 text-xs font-bold text-coral-ink"
+                >
+                  اختر طريقة شرح واحدة على الأقل.
+                </p>
+              )}
+            </fieldset>
+
+            {/* اللغة */}
+            <div>
+              <span className="mb-2 block text-sm font-bold text-ink">
+                لغة البرومبت
+              </span>
+              <div
+                role="radiogroup"
+                aria-label="لغة البرومبت"
+                className="inline-flex rounded-field border border-line bg-paper-deep/50 p-1"
+              >
+                {(['ar', 'en'] as const).map((lang) => {
+                  const active = language === lang;
+                  return (
+                    <button
+                      key={lang}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => setLanguage(lang)}
+                      className={[
+                        'min-w-[100px] rounded-[calc(var(--r-field)-2px)] px-4 py-1.5 text-sm font-bold',
+                        'transition-all duration-200 ease-[var(--ease-editorial)] motion-reduce:transition-none',
+                        active
+                          ? 'bg-teal text-on-teal shadow-sm'
+                          : 'text-ink-soft hover:text-ink',
+                      ].join(' ')}
+                    >
+                      {lang === 'ar' ? 'العربية' : 'English'}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              size="lg"
+              loading={generating}
+              disabled={!canGenerate}
+              icon={!generating ? <IconSparkles /> : undefined}
+              fullWidth
+            >
+              {generating ? 'جاري التوليد...' : 'توليد البرومبت'}
+            </Button>
+
+            <p className="hidden text-center text-[11px] text-ink-muted sm:block">
+              نصيحة: اضغط{' '}
+              <kbd className="rounded border border-line bg-paper-deep px-1.5 py-0.5 font-mono">
+                Ctrl
+              </kbd>{' '}
+              +{' '}
+              <kbd className="rounded border border-line bg-paper-deep px-1.5 py-0.5 font-mono">
+                Enter
+              </kbd>{' '}
+              للتوليد السريع
+            </p>
+
+            <p className="sr-only" role="status" aria-live="polite">
+              {generating ? 'جاري توليد البرومبت' : ''}
+            </p>
+          </form>
+
+          {/* ===== Right: Preview / Progress / Result ===== */}
+          <aside className="space-y-4 lg:sticky lg:top-[calc(var(--nav-h)+1rem)] lg:h-fit">
+            {generating ? (
+              <div className="card-editorial p-5 animate-slide-up motion-reduce:animate-none">
+                <div className="mb-4 flex items-center gap-3">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-field bg-teal/15 text-teal">
+                    <svg
+                      className="h-4 w-4 animate-spin"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        opacity="0.25"
+                      />
+                      <path
+                        d="M22 12a10 10 0 0 1-10 10"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </span>
+                  <div>
+                    <p className="text-sm font-bold text-ink">
+                      يبني البرومبت الآن
+                    </p>
+                    <p className="text-[11px] text-ink-muted">ثوانٍ قليلة…</p>
+                  </div>
+                </div>
+                <ProgressSteps active={progressStep} />
+              </div>
+            ) : result ? (
+              <ResultPanel
+                result={result}
+                stale={isStale}
+                onCopy={handleCopy}
+                copied={copied}
+                panelRef={resultRef}
+              />
+            ) : (
+              <EmptyPreview
+                subjectName={selectedSubject?.name ?? null}
+                methodLabel={methodLabel}
+                formats={selectedFormats}
+                language={language}
+              />
+            )}
+
+            {result && !generating && (
+              <button
+                type="button"
+                onClick={() => setResult(null)}
+                className="mx-auto flex items-center gap-1.5 rounded-field px-3 py-1.5 text-xs font-semibold text-ink-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+              >
+                <IconClose aria-hidden="true" className="h-3.5 w-3.5" />
+                إخفاء النتيجة
+              </button>
+            )}
+          </aside>
+        </div>
+      )}
+
+      {/* ==================== History ==================== */}
+      {!loadingSubjects && !subjectsError && (
+        <HistoryPanel
+          items={history}
+          onRestore={handleRestoreHistory}
+          onClear={handleClearHistory}
+        />
+      )}
+    </main>
+  );
+}
+===app/study-session/_components/HealthTab.tsx===
+// app/study-session/_components/HealthTab.tsx
+'use client';
+
+import { useMemo } from 'react';
+import Link from 'next/link';
+import { useStudentStage } from '@/hooks/useStudentStage';
+import { useStudyStats, formatHour } from '@/hooks/useStudyStats';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/Toast';
+import { Button } from '@/components/ui/Button';
+
+// ==================== Icons ====================
+function IconActivity() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 12h4l3-9 4 18 3-9h4" />
+    </svg>
+  );
+}
+function IconFire() {
+  return (
+    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 2c1 4 4 5 4 9a4 4 0 11-8 0c0-1 .5-2 1-2.5C8 10 7 12 7 14a5 5 0 1010 0c0-5-5-6-5-12z" />
+    </svg>
+  );
+}
+function IconEye() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  );
+}
+function IconCalendar() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  );
+}
+function IconTrophy() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 21l4-4 4 4M12 17a5 5 0 01-5-5V4h10v8a5 5 0 01-5 5z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 4H3v2a3 3 0 003 3M19 4h2v2a3 3 0 01-3 3" />
+    </svg>
+  );
+}
+function IconSparkles() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+    </svg>
+  );
+}
+function IconWarning() {
+  return (
+    <svg className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    </svg>
+  );
+}
+function IconTimer() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <circle cx="12" cy="13" r="8" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4l3 2M9 2h6" />
+    </svg>
+  );
+}
+
+// ==================== Stat Box ====================
+function StatBox({
+  icon,
+  label,
+  value,
+  suffix,
+  accent,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number | string;
+  suffix?: string;
+  accent: 'teal' | 'amber' | 'red';
+}) {
+  const styles = {
+    teal: 'bg-teal/10 text-teal dark:bg-teal/20',
+    amber: 'bg-amber/15 text-amber-800 dark:bg-amber/25 dark:text-amber-300',
+    red: 'bg-red-100 text-red-600 dark:bg-red-950/40 dark:text-red-300',
+  }[accent];
+
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-line bg-white/80 px-4 py-3 dark:bg-paper/80">
+      <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${styles}`}>
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <p className="text-xl font-black leading-none text-ink">
+          {value}
+          {suffix && <span className="text-sm">{suffix}</span>}
+        </p>
+        <p className="mt-0.5 truncate text-[11px] font-bold text-ink/50">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+// ==================== Weekly Chart ====================
+function WeeklyChart({ data }: { data: { day: string; count: number }[] }) {
+  const max = Math.max(1, ...data.map((d) => d.count));
+  return (
+    <div className="flex items-end justify-between gap-1.5 rounded-2xl border border-line bg-white/80 p-4 dark:bg-paper/80">
+      {data.map((d, i) => {
+        const heightPct = (d.count / max) * 100;
+        return (
+          <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
+            <span className="text-[10px] font-black text-ink/60">{d.count || ''}</span>
+            <div className="flex h-24 w-full items-end rounded-md bg-ink/5 dark:bg-white/5">
+              <div
+                className="w-full rounded-md bg-gradient-to-t from-teal to-teal-light transition-all duration-500 motion-reduce:transition-none"
+                style={{ height: `${Math.max(heightPct, d.count > 0 ? 8 : 0)}%` }}
+              />
+            </div>
+            <span className="truncate text-[9px] font-bold text-ink/50">{d.day}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ==================== Subject Row ====================
+function SubjectRow({
+  rank,
+  name,
+  sub,
+  variant,
+}: {
+  rank: number;
+  name: string;
+  sub: string;
+  variant: 'top' | 'weak';
+}) {
+  const styles =
+    variant === 'top'
+      ? 'bg-teal/10 text-teal dark:bg-teal/20'
+      : 'bg-amber/15 text-amber-800 dark:bg-amber/25 dark:text-amber-300';
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-line bg-white/70 px-3 py-2.5 dark:bg-white/[0.03]">
+      <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg font-mono text-sm font-black ${styles}`}>
+        {rank}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-bold text-ink">{name}</p>
+        <p className="text-[11px] text-ink/50">{sub}</p>
+      </div>
+    </div>
+  );
+}
+
+// ==================== Main ====================
+interface HealthTabProps {
+  onGoToTimer: () => void;
+}
+
+export function HealthTab({ onGoToTimer }: HealthTabProps) {
+  const { stage, ready } = useStudentStage();
+  const { analysis, mounted, reset } = useStudyStats();
+  const confirm = useConfirm();
+  const toast = useToast();
+
+  const hasData = useMemo(() => analysis.totalViews > 0, [analysis.totalViews]);
+
+  async function handleReset() {
+    const ok = await confirm(
+      'سيتم مسح كل إحصائياتك الدراسية. هل أنت متأكد؟',
+      { variant: 'danger', confirmLabel: 'مسح' },
+    );
+    if (!ok) return;
+    reset();
+    toast.show('تم مسح الإحصائيات', 'success');
+  }
+
+  if (!ready || !mounted) {
+    return (
+      <div className="space-y-4">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="h-32 skeleton-shimmer rounded-3xl motion-reduce:animate-none" />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* رأس */}
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="flex items-center gap-2 text-xl font-black text-ink sm:text-2xl">
+            <IconActivity />
+            صحتك الدراسية
+          </h2>
+          <p className="mt-1 text-xs leading-relaxed text-ink-muted">
+            تحليل شخصي لعاداتك — محفوظ على جهازك فقط.
+          </p>
+        </div>
+        {stage && <span className="stage-badge hidden sm:inline-flex">{stage}</span>}
+      </div>
+
+      {/* Empty */}
+      {!hasData && (
+        <div className="rounded-3xl border border-line bg-white/80 p-10 text-center dark:bg-paper/80">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-teal/8 text-teal dark:bg-teal/15">
+            <IconTimer />
+          </div>
+          <p className="mt-4 font-bold text-ink/70">ما زلنا نجمع بياناتك</p>
+          <p className="mt-1 text-sm text-ink/50">
+            ابدأ بجلسة دراسة، وسنبدأ بتحليل عاداتك.
+          </p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            <Button onClick={onGoToTimer} icon={<IconTimer />}>
+              ابدأ جلسة دراسة
+            </Button>
+            <Link
+              href="/lawazem"
+              className="inline-flex h-11 items-center rounded-field border border-line bg-paper-soft px-5 text-sm font-bold text-ink-soft transition-colors hover:border-teal/40 hover:text-teal"
+            >
+              تصفح الملازم
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {hasData && (
+        <>
+          {/* إحصائيات سريعة */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <StatBox
+              icon={<IconEye />}
+              label="إجمالي الفتحات"
+              value={analysis.totalViews}
+              accent="teal"
+            />
+            <StatBox
+              icon={<IconFire />}
+              label="أيام متتالية"
+              value={analysis.currentStreak}
+              accent="amber"
+            />
+            <StatBox
+              icon={<IconCalendar />}
+              label="أيام نشطة"
+              value={analysis.daysActive}
+              accent="teal"
+            />
+            {analysis.focusSessions > 0 && (
+              <StatBox
+                icon={<IconTimer />}
+                label="جلسات تركيز"
+                value={analysis.focusSessions}
+                accent="amber"
+              />
+            )}
+          </div>
+
+          {/* جلسات التركيز - تفصيل */}
+          {analysis.focusSessions > 0 && (
+            <div className="rounded-2xl border border-teal/30 bg-teal/[0.04] p-4 dark:border-teal/40 dark:bg-teal/10">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-teal text-white">
+                    <IconTimer />
+                  </span>
+                  <div>
+                    <p className="text-sm font-black text-ink">
+                      {analysis.focusSessions} جلسة تركيز
+                    </p>
+                    <p className="text-xs text-ink-soft">
+                      إجمالي{' '}
+                      <span className="num-inline font-mono font-bold text-teal">
+                        {analysis.focusMinutes}
+                      </span>{' '}
+                      دقيقة من التركيز العميق
+                    </p>
+                  </div>
+                </div>
+                <Button variant="secondary" size="sm" onClick={onGoToTimer}>
+                  جلسة جديدة
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* الرسم الأسبوعي */}
+          <div>
+            <h3 className="mb-3 flex items-center gap-2 text-base font-extrabold text-ink">
+              <IconCalendar />
+              آخر 7 أيام
+            </h3>
+            <WeeklyChart data={analysis.weeklyActivity} />
+          </div>
+
+          {/* أقوى المواد */}
+          {analysis.topSubjects.length > 0 && (
+            <div>
+              <h3 className="mb-3 flex items-center gap-2 text-base font-extrabold text-ink">
+                <IconTrophy />
+                أقوى موادك
+              </h3>
+              <div className="space-y-2">
+                {analysis.topSubjects.map((s, i) => (
+                  <SubjectRow
+                    key={s.name}
+                    rank={i + 1}
+                    name={s.name}
+                    sub={`${s.views} ${s.views === 1 ? 'فتحة' : 'فتحات'} · آخر مرة ${
+                      s.daysSince === 0 ? 'اليوم' : `قبل ${s.daysSince} يوم`
+                    }`}
+                    variant="top"
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* مواد تحتاج انتباه */}
+          {analysis.weakSubjects.length > 0 && (
+            <div>
+              <h3 className="mb-3 flex items-center gap-2 text-base font-extrabold text-ink">
+                <IconWarning />
+                مواد تحتاج انتباه
+              </h3>
+              <div className="space-y-2">
+                {analysis.weakSubjects.map((s, i) => (
+                  <SubjectRow
+                    key={s.name}
+                    rank={i + 1}
+                    name={s.name}
+                    sub={`ما لمستها منذ ${s.daysSince} يوم`}
+                    variant="weak"
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* وقت الذروة */}
+          {analysis.bestHour !== null && (
+            <div className="rounded-2xl border border-teal/20 bg-teal/[0.04] p-4 dark:border-teal/30 dark:bg-teal/10">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-teal/15 text-teal">
+                  <IconSparkles />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-black text-ink">
+                    وقت ذروتك: {formatHour(analysis.bestHour)}
+                  </p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-ink/60">
+                    هذا وقتك الأكثر إنتاجية — استغله للمواد الصعبة.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* الشارات */}
+          {analysis.badges.length > 0 && (
+            <div>
+              <h3 className="mb-3 flex items-center gap-2 text-base font-extrabold text-ink">
+                <IconTrophy />
+                شاراتك
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {analysis.badges.map((b, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-amber/40 bg-amber/10 px-3 py-1.5 text-xs font-black text-amber-800 dark:border-amber/50 dark:bg-amber/20 dark:text-amber-300"
+                  >
+                    <span className="text-base leading-none">{b.emoji}</span>
+                    {b.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* مسح */}
+          <div className="pt-2 text-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleReset}
+              className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
+            >
+              مسح كل الإحصائيات
+            </Button>
+          </div>
+
+          {/* تنويه */}
+          <div className="flex items-start gap-2 rounded-2xl border border-amber/30 bg-amber/8 p-4 text-xs text-ink/70 dark:bg-amber/15">
+            <span className="text-amber">
+              <IconWarning />
+            </span>
+            <p className="leading-relaxed">
+              <strong>ملاحظة:</strong> كل الإحصائيات محفوظة على جهازك فقط ولا
+              تُرسَل لأي مكان.
+            </p>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+===app/study-session/_components/SoundPicker.tsx===
+// app/study-session/_components/SoundPicker.tsx
+'use client';
+
+import { useMemo, useState } from 'react';
+import {
+  SOUND_CATEGORY_META,
+  getAvailableCategories,
+  soundsByCategory,
+  type SoundCategory,
+} from '@/lib/study-sounds';
+
+interface SoundPickerProps {
+  selectedId: string | null;
+  /** الصوت الذي يجري تحميله حالياً — null إن لم يكن هناك تحميل */
+  loadingId?: string | null;
+  onSelect: (id: string | null) => void;
+  volume: number;
+  onVolumeChange: (v: number) => void;
+}
+
+export function SoundPicker({
+  selectedId,
+  loadingId = null,
+  onSelect,
+  volume,
+  onVolumeChange,
+}: SoundPickerProps) {
+  const categories = useMemo(() => getAvailableCategories(), []);
+  const [activeCat, setActiveCat] = useState<SoundCategory>(
+    categories[0] ?? 'ambient',
+  );
+
+  const sounds = useMemo(() => soundsByCategory(activeCat), [activeCat]);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
+          <span aria-hidden="true">🎵</span>
+          صوت الخلفية
+        </h2>
+        {selectedId && (
+          <button
+            type="button"
+            onClick={() => onSelect(null)}
+            className="rounded-field px-2 py-1 text-xs font-semibold text-coral-ink transition-colors hover:bg-coral/10"
+          >
+            ⏹ إيقاف
+          </button>
+        )}
+      </div>
+
+      {/* Tabs للفئات */}
+      {categories.length > 1 && (
+        <div
+          role="tablist"
+          className="scrollbar-none -mx-1 flex gap-1 overflow-x-auto px-1"
+        >
+          {categories.map((cat) => {
+            const meta = SOUND_CATEGORY_META[cat];
+            const active = activeCat === cat;
+            return (
+              <button
+                key={cat}
+                role="tab"
+                aria-selected={active}
+                type="button"
+                onClick={() => setActiveCat(cat)}
+                className={`flex flex-shrink-0 items-center gap-1.5 rounded-chip px-3 py-1.5 text-xs font-bold transition-all duration-200 motion-reduce:transition-none ${
+                  active
+                    ? 'bg-teal text-on-teal'
+                    : 'bg-paper-deep text-ink-soft hover:bg-teal-tint hover:text-teal'
+                }`}
+              >
+                <span aria-hidden="true">{meta.emoji}</span>
+                <span className="whitespace-nowrap">{meta.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* أصوات الفئة */}
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+        {sounds.map((sound) => {
+          const active = selectedId === sound.id;
+          const loading = loadingId === sound.id;
+          return (
+            <button
+              key={sound.id}
+              type="button"
+              onClick={() => onSelect(active ? null : sound.id)}
+              disabled={loading}
+              aria-pressed={active}
+              aria-label={`${sound.label}${
+                active ? ' — يعمل الآن' : loading ? ' — جاري التحميل' : ''
+              }`}
+              className={`relative flex flex-col items-center gap-1 rounded-field border px-1.5 py-3 text-[11px] font-bold transition-all duration-200 motion-reduce:transition-none disabled:cursor-progress ${
+                active
+                  ? 'border-teal bg-teal-tint text-teal'
+                  : loading
+                    ? 'border-gold bg-gold-tint text-gold-ink'
+                    : 'border-line bg-paper-soft text-ink-soft hover:border-teal/40 hover:bg-teal-tint/40'
+              }`}
+            >
+              {/* مؤشر نشط / تحميل */}
+              {(active || loading) && (
+                <span
+                  aria-hidden="true"
+                  className={`absolute end-1.5 top-1.5 h-1.5 w-1.5 rounded-full motion-reduce:animate-none ${
+                    loading ? 'animate-pulse bg-gold' : 'animate-pulse bg-teal'
+                  }`}
+                />
+              )}
+
+              <span className="text-2xl leading-none" aria-hidden="true">
+                {loading ? (
+                  <svg
+                    className="h-6 w-6 animate-spin text-gold-ink motion-reduce:animate-none"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      opacity="0.25"
+                    />
+                    <path
+                      d="M22 12a10 10 0 0 1-10 10"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                ) : (
+                  sound.emoji
+                )}
+              </span>
+              <span className="truncate text-center leading-tight">
+                {loading ? 'جاري...' : sound.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* تلميح للملفات الكبيرة */}
+      {loadingId && (
+        <p
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-2 rounded-field border border-gold/30 bg-gold-tint/50 px-3 py-2 text-[11px] font-semibold text-gold-ink"
+        >
+          <span
+            aria-hidden="true"
+            className="h-1.5 w-1.5 animate-pulse rounded-full bg-gold-ink motion-reduce:animate-none"
+          />
+          الملف قيد التحميل — قد يستغرق بعض الوقت للملفات الكبيرة.
+        </p>
+      )}
+
+      {/* مستوى الصوت */}
+      {selectedId && (
+        <div className="space-y-2 border-t border-line-soft pt-3">
+          <label
+            htmlFor="sound-volume"
+            className="flex items-center justify-between text-xs font-bold text-ink-muted"
+          >
+            <span>مستوى الصوت</span>
+            <span className="num-inline font-mono">
+              {Math.round(volume * 100)}%
+            </span>
+          </label>
+          <input
+            id="sound-volume"
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={volume}
+            onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
+            dir="ltr"
+            className="w-full accent-teal"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+===app/study-session/_components/TimerRing.tsx===
+// app/study-session/_components/TimerRing.tsx
+'use client';
+
+interface TimerRingProps {
+  /** 0 إلى 1 — تقدم الوقت المنقضي */
+  progress: number;
+  remainingSeconds: number;
+  phase: 'study' | 'break';
+  status: 'idle' | 'running' | 'paused';
+  sessionIndex: number;
+  totalSessions: number;
+  /** توقيت انتهاء المرحلة الحالية (ms) — null عند عدم التشغيل */
+  endsAt: number | null;
+  /** آخر دقيقة */
+  warning: boolean;
+  /** اكتملت كل الجلسات للتو */
+  celebrate: boolean;
+}
+
+// ==================== Geometry ====================
+const SIZE = 300;
+const C = SIZE / 2;
+const ARC_R = 116;
+const ARC_STROKE = 5;
+const CIRCUMFERENCE = 2 * Math.PI * ARC_R;
+const TICK_COUNT = 60;
+
+interface Tick {
+  x1: string;
+  y1: string;
+  x2: string;
+  y2: string;
+  major: boolean;
+}
+
+// تُحسب مرة واحدة — toFixed لضمان تطابق الخادم والعميل
+const TICKS: readonly Tick[] = Array.from({ length: TICK_COUNT }, (_, i) => {
+  const a = (i / TICK_COUNT) * 2 * Math.PI;
+  const major = i % 5 === 0;
+  const r1 = major ? 129 : 135;
+  const r2 = 143;
+  return {
+    x1: (C + r1 * Math.cos(a)).toFixed(2),
+    y1: (C + r1 * Math.sin(a)).toFixed(2),
+    x2: (C + r2 * Math.cos(a)).toFixed(2),
+    y2: (C + r2 * Math.sin(a)).toFixed(2),
+    major,
+  };
+});
+
+function pad(n: number): string {
+  return String(n).padStart(2, '0');
+}
+
+function clockParts(ts: number): { time: string; period: string } {
+  const d = new Date(ts);
+  const h = d.getHours();
+  return {
+    time: `${h % 12 || 12}:${pad(d.getMinutes())}`,
+    period: h >= 12 ? 'م' : 'ص',
+  };
+}
+
+export function TimerRing({
+  progress,
+  remainingSeconds,
+  phase,
+  status,
+  sessionIndex,
+  totalSessions,
+  endsAt,
+  warning,
+  celebrate,
+}: TimerRingProps) {
+  const clamped = Math.min(1, Math.max(0, progress));
+  const dashOffset = CIRCUMFERENCE * (1 - clamped);
+  const litTicks = Math.floor(clamped * TICK_COUNT);
+
+  const minutes = Math.floor(remainingSeconds / 60);
+  const seconds = remainingSeconds % 60;
+
+  const isStudy = phase === 'study';
+  const isRunning = status === 'running';
+  const breathing = !isStudy && isRunning;
+  const ringColor = isStudy || celebrate ? 'var(--teal)' : 'var(--gold)';
+
+  // الانتقال الناعم فقط أثناء التشغيل — حتى لا يدور المؤشر للخلف عند الإعادة
+  const smooth = isRunning
+    ? 'stroke-dashoffset 400ms linear, stroke 300ms ease'
+    : 'stroke 300ms ease';
+
+  const statusText = celebrate
+    ? '✓ اكتملت جلساتك'
+    : status === 'idle'
+      ? 'جاهز للبدء'
+      : status === 'paused'
+        ? 'متوقف مؤقتاً'
+        : isStudy
+          ? '🎯 وقت التركيز'
+          : '☕ وقت الراحة';
+
+  // أثناء الراحة: الجلسة المنتهية هي sessionIndex (وليس التالية)
+  const currentSession = Math.min(
+    isStudy ? sessionIndex + 1 : sessionIndex,
+    totalSessions,
+  );
+  const end = endsAt !== null ? clockParts(endsAt) : null;
+
+  return (
+    <div className="flex flex-col items-center gap-5">
+      {/* مؤشر الجلسات */}
+      <div
+        className="flex items-center gap-1.5"
+        role="img"
+        aria-label={`الجلسة ${currentSession} من ${totalSessions}`}
+      >
+        {Array.from({ length: totalSessions }).map((_, i) => {
+          const done = celebrate || i < sessionIndex;
+          const current = !celebrate && isStudy && i === sessionIndex && status !== 'idle';
+          return (
+            <span
+              key={i}
+              aria-hidden="true"
+              className={`h-2 w-2 rounded-full transition-all duration-300 motion-reduce:transition-none ${
+                done
+                  ? 'bg-teal'
+                  : current
+                    ? 'bg-teal/60 ring-2 ring-teal/30'
+                    : 'bg-line'
+              }`}
+            />
+          );
+        })}
+      </div>
+
+      {/* الدائرة */}
+      <div
+        className={`relative aspect-square w-full max-w-[320px] ${
+          breathing ? 'ring-breathe' : ''
+        }`}
+      >
+        <svg
+          viewBox={`0 0 ${SIZE} ${SIZE}`}
+          className="absolute inset-0 h-full w-full -rotate-90"
+          aria-hidden="true"
+        >
+          {/* هالة التنبيه — آخر دقيقة */}
+          {warning && (
+            <circle
+              cx={C}
+              cy={C}
+              r={148}
+              fill="none"
+              stroke={ringColor}
+              strokeWidth={1.5}
+              className="ring-warn"
+            />
+          )}
+
+          {/* هالة الاحتفال */}
+          {celebrate && (
+            <circle
+              cx={C}
+              cy={C}
+              r={124}
+              fill="none"
+              stroke="var(--gold)"
+              strokeWidth={1}
+              className="ring-bloom"
+              style={{ transformOrigin: 'center' }}
+            />
+          )}
+
+          {/* علامات المينا — تضيء مع التقدم */}
+          {TICKS.map((t, i) => (
+            <line
+              key={i}
+              x1={t.x1}
+              y1={t.y1}
+              x2={t.x2}
+              y2={t.y2}
+              stroke={i < litTicks ? ringColor : 'var(--line-strong)'}
+              strokeWidth={t.major ? 1.8 : 1}
+              strokeLinecap="round"
+              opacity={i < litTicks ? 1 : t.major ? 0.9 : 0.55}
+              style={{ transition: 'stroke 300ms ease, opacity 300ms ease' }}
+            />
+          ))}
+
+          {/* خط داخلي رفيع */}
+          <circle
+            cx={C}
+            cy={C}
+            r={103}
+            fill="none"
+            stroke="var(--line-soft)"
+            strokeWidth={1}
+          />
+
+          {/* المسار */}
+          <circle
+            cx={C}
+            cy={C}
+            r={ARC_R}
+            fill="none"
+            stroke="var(--line)"
+            strokeWidth={ARC_STROKE}
+          />
+
+          {/* القوس */}
+          <circle
+            cx={C}
+            cy={C}
+            r={ARC_R}
+            fill="none"
+            stroke={ringColor}
+            strokeWidth={ARC_STROKE}
+            strokeLinecap="round"
+            strokeDasharray={CIRCUMFERENCE}
+            strokeDashoffset={dashOffset}
+            style={{ transition: smooth }}
+          />
+
+          {/* رأس يتحرك على القوس */}
+          <g
+            style={{
+              transform: `rotate(${clamped * 360}deg)`,
+              transformOrigin: `${C}px ${C}px`,
+              transition: isRunning ? 'transform 400ms linear' : 'none',
+            }}
+          >
+            <circle
+              cx={C + ARC_R}
+              cy={C}
+              r={7}
+              fill="var(--paper-soft)"
+              stroke={ringColor}
+              strokeWidth={2.5}
+              style={{ transition: 'stroke 300ms ease' }}
+            />
+          </g>
+        </svg>
+
+        {/* المحتوى المركزي */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
+          <p className="text-xs font-bold tracking-wide text-ink-muted">
+            {statusText}
+          </p>
+          <p
+            role="timer"
+            dir="ltr"
+            aria-label={`${minutes} دقيقة و ${seconds} ثانية`}
+            className="font-mono text-5xl font-medium leading-none text-ink sm:text-6xl"
+            style={{ fontVariantNumeric: 'tabular-nums' }}
+          >
+            {pad(minutes)}
+            <span className={isRunning ? 'ring-colon' : ''}>:</span>
+            {pad(seconds)}
+          </p>
+          <p className="text-[11px] text-ink-muted">
+            الجلسة{' '}
+            <span className="num-inline font-mono">{currentSession}</span> من{' '}
+            <span className="num-inline font-mono">{totalSessions}</span>
+          </p>
+          <p className="h-4 text-[11px] text-ink-muted">
+            {end && (
+              <>
+                تنتهي الساعة{' '}
+                <span className="num-inline font-mono">{end.time}</span>{' '}
+                {end.period}
+              </>
+            )}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+===app/study-session/page.tsx===
+// app/study-session/page.tsx
+'use client';
+
+import Link from 'next/link';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react';
+import { useTheme } from '@/components/ThemeProvider';
+import { useToast } from '@/components/ui/Toast';
+import { Button } from '@/components/ui/Button';
+import { TimerRing } from './_components/TimerRing';
+import { SoundPicker } from './_components/SoundPicker';
+import { HealthTab } from './_components/HealthTab';
+import { ALERT_SOUND, findSound } from '@/lib/study-sounds';
+import { recordFocusSession, getTodayStr } from '@/hooks/useRecentViews';
+import {
+  IconArrowLeft,
+  IconClose,
+  IconExpand,
+  IconHealth,
+  IconPlay,
+  IconSun,
+  IconMoon,
+} from '@/components/ui/Icons';
+
+// ==================== Constants ====================
+const CONFIG_KEY = 'lawazem_focus_config_v1';
+const TODAY_KEY = 'lawazem_focus_today_v1';
+
+interface Preset {
+  id: string;
+  label: string;
+  hint: string;
+  study: number;
+  breakMin: number;
+  sessions: number;
+}
+
+const PRESETS: readonly Preset[] = [
+  { id: 'classic', label: '25 / 5', hint: 'كلاسيكي', study: 25, breakMin: 5, sessions: 4 },
+  { id: 'long', label: '50 / 10', hint: 'مطوّل', study: 50, breakMin: 10, sessions: 3 },
+  { id: 'deep', label: '90 / 15', hint: 'عميق', study: 90, breakMin: 15, sessions: 2 },
+] as const;
+
+const TIPS: readonly string[] = [
+  'ضع هاتفك بعيداً عن متناول يدك — ربع ساعة بلا إشعارات تصنع فرقاً.',
+  'اكتب هدف الجلسة قبل أن تبدأ؛ الهدف الواضح يختصر نصف الطريق.',
+  'في الراحة قم وتمدّد واشرب ماءً — ولا تنتقل إلى شاشة أخرى.',
+  'المراجعة الموزّعة أنفع من الحشو الليلي — كرّر قليلاً كل يوم.',
+  'ابدأ بالمادة الأصعب في وقت ذروتك، واترك الأخف لنهاية اليوم.',
+];
+
+type Status = 'idle' | 'running' | 'paused';
+type Phase = 'study' | 'break';
+type Tab = 'timer' | 'health';
+
+// ==================== Helpers ====================
+function clampInt(v: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, Math.round(v)));
+}
+
+function fmtTitle(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function readToday(): number {
+  try {
+    const raw = localStorage.getItem(TODAY_KEY);
+    if (!raw) return 0;
+    const p = JSON.parse(raw) as { d?: unknown; n?: unknown };
+    return p.d === getTodayStr() && typeof p.n === 'number' ? p.n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writeToday(n: number): void {
+  try {
+    localStorage.setItem(TODAY_KEY, JSON.stringify({ d: getTodayStr(), n }));
+  } catch {
+    /* ignore */
+  }
+}
+
+// ==================== Inline Icons ====================
+function IconPause() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <rect x="6" y="5" width="4" height="14" rx="1" />
+      <rect x="14" y="5" width="4" height="14" rx="1" />
+    </svg>
+  );
+}
+function IconRestart() {
+  return (
+    <svg
+      className="h-4 w-4"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M21 12a9 9 0 1 1-3-6.7" />
+      <path d="M21 4v5h-5" />
+    </svg>
+  );
+}
+function IconTimer() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <circle cx="12" cy="13" r="8" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4l3 2M9 2h6" />
+    </svg>
+  );
+}
+
+function Kbd({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className="rounded-[4px] border border-line bg-paper-deep px-1.5 py-0.5 font-mono text-[10px] text-ink-soft">
+      {children}
+    </kbd>
+  );
+}
+
+// ==================== Sound Loading Timeout (ms) ====================
+const SOUND_LOAD_TIMEOUT_MS = 45_000; // 45 ثانية للملفات الكبيرة جداً
+
+// ==================== Page ====================
+export default function StudySessionPage() {
+  const toast = useToast();
+  const { theme, toggleTheme } = useTheme();
+
+  const [tab, setTab] = useState<Tab>('timer');
+  const [focusMode, setFocusMode] = useState(false);
+
+  // Config
+  const [studyMin, setStudyMin] = useState(25);
+  const [breakMin, setBreakMin] = useState(5);
+  const [totalSessions, setTotalSessions] = useState(4);
+  const [task, setTask] = useState('');
+  const [hydrated, setHydrated] = useState(false);
+
+  // Runtime
+  const [status, setStatus] = useState<Status>('idle');
+  const [phase, setPhase] = useState<Phase>('study');
+  const [sessionIndex, setSessionIndex] = useState(0);
+  const [remaining, setRemaining] = useState(25 * 60);
+  const [deadline, setDeadline] = useState<number | null>(null);
+  const [celebrate, setCelebrate] = useState(false);
+
+  // Today / tips
+  const [todayCount, setTodayCount] = useState(0);
+  const [tipIdx, setTipIdx] = useState(0);
+
+  // Audio
+  const ambientAudioRef = useRef<HTMLAudioElement | null>(null);
+  const alertAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [selectedSound, setSelectedSound] = useState<string | null>(null);
+  const [soundLoading, setSoundLoading] = useState<string | null>(null);
+  const [volume, setVolume] = useState(0.5);
+
+  // Refs للتحكم بالمؤقّتات والـhandlers
+  const soundLoadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const soundCleanupRef = useRef<(() => void) | null>(null);
+
+  // ===== Hydrate config =====
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CONFIG_KEY);
+      if (raw) {
+        const c = JSON.parse(raw) as Partial<{
+          studyMin: number;
+          breakMin: number;
+          totalSessions: number;
+          task: string;
+        }>;
+        if (typeof c.studyMin === 'number') setStudyMin(clampInt(c.studyMin, 1, 180));
+        if (typeof c.breakMin === 'number') setBreakMin(clampInt(c.breakMin, 1, 60));
+        if (typeof c.totalSessions === 'number') setTotalSessions(clampInt(c.totalSessions, 1, 10));
+        if (typeof c.task === 'string') setTask(c.task.slice(0, 80));
+      }
+    } catch {
+      /* ignore */
+    }
+    setTodayCount(readToday());
+    const dayOfYear = Math.floor(Date.now() / 86_400_000);
+    setTipIdx(dayOfYear % TIPS.length);
+    setHydrated(true);
+  }, []);
+
+  // ===== Persist config =====
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(
+        CONFIG_KEY,
+        JSON.stringify({ studyMin, breakMin, totalSessions, task }),
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [hydrated, studyMin, breakMin, totalSessions, task]);
+
+  // ===== Sync remaining with studyMin when idle =====
+  useEffect(() => {
+    if (status === 'idle') setRemaining(studyMin * 60);
+  }, [studyMin, status]);
+
+  // ===== Setup alert audio =====
+  useEffect(() => {
+    const audio = new Audio(ALERT_SOUND);
+    audio.volume = 0.6;
+    audio.preload = 'auto';
+    alertAudioRef.current = audio;
+    return () => {
+      audio.pause();
+      audio.src = '';
+    };
+  }, []);
+
+  // ===== Cleanup sound on unmount =====
+  useEffect(() => {
+    return () => {
+      if (soundLoadTimeoutRef.current) {
+        clearTimeout(soundLoadTimeoutRef.current);
+      }
+      if (soundCleanupRef.current) {
+        soundCleanupRef.current();
+      }
+    };
+  }, []);
+
+  // ===== Celebrate auto-clear =====
+  useEffect(() => {
+    if (!celebrate) return;
+    const id = setTimeout(() => setCelebrate(false), 8000);
+    return () => clearTimeout(id);
+  }, [celebrate]);
+
+  // ===== Document title =====
+  const baseTitleRef = useRef('');
+  useEffect(() => {
+    baseTitleRef.current = document.title;
+    return () => {
+      document.title = baseTitleRef.current;
+    };
+  }, []);
+  useEffect(() => {
+    if (status === 'running') {
+      document.title = `${fmtTitle(remaining)} · ${phase === 'study' ? 'تركيز' : 'راحة'}`;
+    } else {
+      document.title = baseTitleRef.current;
+    }
+  }, [status, remaining, phase]);
+
+  // ===== Wake Lock =====
+  useEffect(() => {
+    if (status !== 'running') return;
+    if (typeof navigator === 'undefined' || !('wakeLock' in navigator)) return;
+
+    let cancelled = false;
+    const holder: { sentinel: WakeLockSentinel | null } = { sentinel: null };
+
+    const acquire = async () => {
+      try {
+        const s = await navigator.wakeLock.request('screen');
+        if (cancelled) {
+          void s.release().catch(() => {});
+          return;
+        }
+        holder.sentinel = s;
+      } catch {
+        /* غير مدعوم أو مرفوض */
+      }
+    };
+
+    const onVisibility = () => {
+      if (
+        document.visibilityState === 'visible' &&
+        (!holder.sentinel || holder.sentinel.released)
+      ) {
+        void acquire();
+      }
+    };
+
+    void acquire();
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', onVisibility);
+      void holder.sentinel?.release().catch(() => {});
+    };
+  }, [status]);
+
+  // ===== Phase transition handler =====
+  const handlePhaseComplete = useCallback(() => {
+    const alert = alertAudioRef.current;
+    if (alert) {
+      alert.currentTime = 0;
+      void alert.play().catch(() => {});
+    }
+
+    if (phase === 'study') {
+      recordFocusSession(studyMin);
+      const n = readToday() + 1;
+      writeToday(n);
+      setTodayCount(n);
+
+      const nextIndex = sessionIndex + 1;
+      if (nextIndex >= totalSessions) {
+        setStatus('idle');
+        setPhase('study');
+        setSessionIndex(0);
+        setRemaining(studyMin * 60);
+        setDeadline(null);
+        setCelebrate(true);
+        toast.show(
+          `🎉 أنجزت ${totalSessions} جلسات = ${totalSessions * studyMin} دقيقة!`,
+          'success',
+        );
+        return;
+      }
+      setPhase('break');
+      setSessionIndex(nextIndex);
+      setRemaining(breakMin * 60);
+      setDeadline(Date.now() + breakMin * 60 * 1000);
+      toast.show(`☕ راحة ${breakMin} دقائق`, 'info');
+    } else {
+      setPhase('study');
+      setRemaining(studyMin * 60);
+      setDeadline(Date.now() + studyMin * 60 * 1000);
+      toast.show(`🎯 لنبدأ الجلسة ${sessionIndex + 1}`, 'info');
+    }
+  }, [phase, sessionIndex, totalSessions, studyMin, breakMin, toast]);
+
+  const handlerRef = useRef(handlePhaseComplete);
+  useEffect(() => {
+    handlerRef.current = handlePhaseComplete;
+  }, [handlePhaseComplete]);
+
+  // ===== Timer interval =====
+  useEffect(() => {
+    if (status !== 'running' || deadline === null) return;
+    let cancelled = false;
+    const id = setInterval(() => {
+      if (cancelled) return;
+      const rem = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      if (rem <= 0) {
+        cancelled = true;
+        clearInterval(id);
+        handlerRef.current();
+        return;
+      }
+      setRemaining(rem);
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [status, deadline]);
+
+  // ===== Controls =====
+  const handleStart = useCallback(() => {
+    const alert = alertAudioRef.current;
+    if (alert) {
+      const v = alert.volume;
+      alert.volume = 0;
+      void alert
+        .play()
+        .then(() => {
+          alert.pause();
+          alert.currentTime = 0;
+          alert.volume = v;
+        })
+        .catch(() => {
+          alert.volume = v;
+        });
+    }
+
+    setCelebrate(false);
+
+    if (status === 'idle') {
+      setPhase('study');
+      setSessionIndex(0);
+      setRemaining(studyMin * 60);
+      setDeadline(Date.now() + studyMin * 60 * 1000);
+      setStatus('running');
+    } else if (status === 'paused') {
+      setDeadline(Date.now() + remaining * 1000);
+      setStatus('running');
+    }
+  }, [status, studyMin, remaining]);
+
+  const handlePause = useCallback(() => {
+    if (status !== 'running') return;
+    setStatus('paused');
+    setDeadline(null);
+  }, [status]);
+
+  const handleReset = useCallback(() => {
+    setStatus('idle');
+    setPhase('study');
+    setSessionIndex(0);
+    setRemaining(studyMin * 60);
+    setDeadline(null);
+    setCelebrate(false);
+  }, [studyMin]);
+
+  const handleToggle = useCallback(() => {
+    if (status === 'running') handlePause();
+    else handleStart();
+  }, [status, handlePause, handleStart]);
+
+  // ===== Keyboard shortcuts =====
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
+      const el = e.target as HTMLElement | null;
+      const tag = el?.tagName;
+      if (
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
+        el?.isContentEditable
+      ) {
+        return;
+      }
+
+      if (e.key === 'Escape' && focusMode) {
+        setFocusMode(false);
+        return;
+      }
+      if (tab !== 'timer') return;
+
+      if (e.code === 'Space') {
+        if (tag === 'BUTTON') return;
+        e.preventDefault();
+        handleToggle();
+      } else if (e.code === 'KeyR') {
+        if (status !== 'idle') handleReset();
+      } else if (e.code === 'KeyF') {
+        setFocusMode((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [tab, focusMode, status, handleToggle, handleReset]);
+
+  // ========================================================================
+  // 🔊 Sound Handling (مع دعم الملفات الكبيرة)
+  // ========================================================================
+  /**
+   * يوقف أي تحميل جاري، ويلغي المؤقّتات والـlisteners.
+   * يُستدعى قبل تشغيل صوت جديد، أو عند unmount.
+   */
+  const clearSoundLoad = useCallback(() => {
+    if (soundLoadTimeoutRef.current) {
+      clearTimeout(soundLoadTimeoutRef.current);
+      soundLoadTimeoutRef.current = null;
+    }
+    if (soundCleanupRef.current) {
+      soundCleanupRef.current();
+      soundCleanupRef.current = null;
+    }
+  }, []);
+
+  /**
+   * يعطي وصفاً مقروءاً لكود الخطأ في HTMLAudioElement.
+   */
+  const describeMediaError = useCallback((err: MediaError | null): string => {
+    if (!err) return 'تعذّر تشغيل الصوت';
+    switch (err.code) {
+      case 1:
+        return 'تم إلغاء التحميل';
+      case 2:
+        return 'خطأ في الشبكة — تحقق من اتصالك';
+      case 3:
+        return 'الملف تالف أو ناقص';
+      case 4:
+        return 'صيغة الملف غير مدعومة في متصفحك';
+      default:
+        return 'تعذّر تشغيل الصوت';
+    }
+  }, []);
+
+  const handleSoundSelect = useCallback(
+    (id: string | null) => {
+      const audio = ambientAudioRef.current;
+      if (!audio) return;
+
+      // أوقف أي صوت حالي + امسح أي تحميل معلّق
+      clearSoundLoad();
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
+
+      // إلغاء الاختيار
+      if (id === null || id === selectedSound) {
+        setSelectedSound(null);
+        setSoundLoading(null);
+        return;
+      }
+
+      const sound = findSound(id);
+      if (!sound) return;
+
+      // ضع الصوت في حالة تحميل
+      setSoundLoading(id);
+
+      // ═══ معالجات الأحداث ═══
+      const handleError = () => {
+        const msg = describeMediaError(audio.error);
+        console.error('[sound] error:', audio.error, sound.source);
+        toast.show(`${msg}: ${sound.label}`, 'error');
+        clearSoundLoad();
+        audio.removeAttribute('src');
+        audio.load();
+        setSelectedSound(null);
+        setSoundLoading(null);
+      };
+
+      const handleCanPlay = () => {
+        // الصوت جاهز للتشغيل — شغّله
+        clearSoundLoad();
+        audio.loop = sound.loop;
+        audio.volume = volume;
+        void audio
+          .play()
+          .then(() => {
+            setSelectedSound(id);
+            setSoundLoading(null);
+          })
+          .catch((playErr: unknown) => {
+            console.error('[sound] play failed:', playErr, sound.source);
+            const msg =
+              playErr instanceof DOMException && playErr.name === 'NotAllowedError'
+                ? 'المتصفح منع التشغيل — اضغط على الصفحة أولاً ثم أعد المحاولة'
+                : 'تعذّر تشغيل الصوت';
+            toast.show(msg, 'error');
+            setSelectedSound(null);
+            setSoundLoading(null);
+          });
+      };
+
+      audio.addEventListener('error', handleError);
+      audio.addEventListener('canplay', handleCanPlay);
+
+      // خزّن دالة التنظيف
+      soundCleanupRef.current = () => {
+        audio.removeEventListener('error', handleError);
+        audio.removeEventListener('canplay', handleCanPlay);
+      };
+
+      // ═══ ابدأ التحميل ═══
+      audio.preload = 'auto';
+      audio.src = sound.source;
+      audio.load();
+
+      // ═══ Timeout احتياطي للملفات الضخمة ═══
+      soundLoadTimeoutRef.current = setTimeout(() => {
+        // إذا الصوت بدأ يشتغل، تجاهل
+        if (!audio.paused && audio.readyState >= 2) return;
+        console.error('[sound] load timeout:', sound.source);
+        toast.show(
+          `انتهت مهلة التحميل لـ«${sound.label}» — الملف ضخم، جرّب مرة ثانية`,
+          'error',
+        );
+        clearSoundLoad();
+        audio.pause();
+        audio.removeAttribute('src');
+        audio.load();
+        setSelectedSound(null);
+        setSoundLoading(null);
+      }, SOUND_LOAD_TIMEOUT_MS);
+    },
+    [selectedSound, volume, toast, clearSoundLoad, describeMediaError],
+  );
+
+  const handleVolumeChange = useCallback((v: number) => {
+    setVolume(v);
+    if (ambientAudioRef.current) {
+      ambientAudioRef.current.volume = v;
+    }
+  }, []);
+
+  // ===== Derived =====
+  const activePreset =
+    PRESETS.find(
+      (p) =>
+        p.study === studyMin &&
+        p.breakMin === breakMin &&
+        p.sessions === totalSessions,
+    )?.id ?? null;
+
+  const totalForPhase = phase === 'study' ? studyMin * 60 : breakMin * 60;
+  const progress = totalForPhase > 0 ? 1 - remaining / totalForPhase : 0;
+  const isBreakActive = phase === 'break' && status !== 'idle';
+  const warning = status === 'running' && remaining <= 60 && remaining > 0;
+
+  const emptyMessage =
+    todayCount === 0
+      ? 'لسا ما بدأت اليوم — جلسة واحدة تكفي لتفتح الطريق.'
+      : `أنجزت ${todayCount} ${todayCount === 1 ? 'جلسة' : 'جلسات'} اليوم — استمر بهذا الإيقاع.`;
+
+  const shellClass = focusMode
+    ? 'campus-paper fixed inset-0 z-[60] overflow-y-auto'
+    : 'campus-paper relative min-h-[calc(100dvh-var(--nav-h))] pb-24 md:pb-10';
+
+  return (
+    <main className={shellClass}>
+      {/* ظلّ الراحة */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 transition-opacity duration-[1600ms] motion-reduce:transition-none"
+        style={{
+          opacity: isBreakActive ? 1 : 0,
+          background:
+            'radial-gradient(ellipse 80% 55% at 50% 35%, color-mix(in srgb, var(--gold) 9%, transparent), transparent 75%)',
+        }}
+      />
+
+      {/* خروج من الوضع الغامر */}
+      {focusMode && (
+        <button
+          type="button"
+          onClick={() => setFocusMode(false)}
+          aria-label="الخروج من الوضع الغامر"
+          className="fixed end-4 top-4 z-[70] flex h-10 w-10 items-center justify-center rounded-field border border-line bg-paper-soft text-ink-soft transition-colors hover:border-teal/40 hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
+        >
+          <IconClose aria-hidden="true" className="h-4 w-4" />
+        </button>
+      )}
+
+      <div
+        className={`relative mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10 ${
+          focusMode ? 'flex min-h-full flex-col justify-center' : ''
+        }`}
+      >
+        {!focusMode && (
+          <>
+            {/* Header */}
+            <header className="flex items-center justify-between gap-3">
+              <Link
+                href="/"
+                className="group inline-flex items-center gap-1.5 rounded-field text-sm font-semibold text-teal transition-colors hover:text-teal-hover motion-reduce:transition-none"
+              >
+                <span className="transition-transform duration-200 group-hover:-translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0">
+                  <IconArrowLeft aria-hidden="true" className="h-4 w-4" />
+                </span>
+                رجوع إلى لوحة الأقسام
+              </Link>
+
+              <button
+                type="button"
+                onClick={toggleTheme}
+                aria-label={theme === 'dark' ? 'الوضع النهاري' : 'الوضع الليلي'}
+                className="flex h-10 w-10 items-center justify-center rounded-field border border-line bg-paper-soft text-ink-soft transition-colors hover:border-teal/40 hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
+              >
+                {theme === 'dark' ? (
+                  <IconSun aria-hidden="true" className="h-4 w-4" />
+                ) : (
+                  <IconMoon aria-hidden="true" className="h-4 w-4" />
+                )}
+              </button>
+            </header>
+
+            {/* Title */}
+            <div className="mt-6 animate-slide-up motion-reduce:animate-none">
+              <span className="stage-badge">مساحة التركيز</span>
+              <h1 className="mt-3 font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">
+                جلسة دراسة
+              </h1>
+              <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-soft">
+                نظّم وقتك بجلسات تركيز وراحة. اختر صوت خلفية هادئ، وتابع تقدمك في
+                صحتك الدراسية.
+              </p>
+            </div>
+
+            {/* Tabs */}
+            <div
+              role="tablist"
+              aria-label="أقسام جلسة الدراسة"
+              className="mt-6 flex gap-1.5 rounded-2xl border border-line bg-white/60 p-1.5 backdrop-blur-sm dark:bg-white/[0.04] animate-slide-up motion-reduce:animate-none"
+            >
+              <button
+                role="tab"
+                aria-selected={tab === 'timer'}
+                onClick={() => setTab('timer')}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 motion-reduce:transition-none ${
+                  tab === 'timer'
+                    ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.30)]'
+                    : 'text-ink/60 hover:bg-ink/5 hover:text-ink'
+                }`}
+              >
+                <IconTimer />
+                <span>المؤقت</span>
+                {status === 'running' && (
+                  <span
+                    aria-hidden="true"
+                    className="h-1.5 w-1.5 animate-pulse rounded-full bg-current motion-reduce:animate-none"
+                  />
+                )}
+              </button>
+              <button
+                role="tab"
+                aria-selected={tab === 'health'}
+                onClick={() => setTab('health')}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 motion-reduce:transition-none ${
+                  tab === 'health'
+                    ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.30)]'
+                    : 'text-ink/60 hover:bg-ink/5 hover:text-ink'
+                }`}
+              >
+                <IconHealth aria-hidden="true" className="h-4 w-4" />
+                <span>صحتك الدراسية</span>
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Tab Content */}
+        <div className={focusMode ? '' : 'mt-6'}>
+          {/* ─── Timer Tab ─── */}
+          <div hidden={tab !== 'timer'}>
+            <div
+              className={`grid gap-6 ${
+                focusMode ? 'mx-auto w-full max-w-xl' : 'lg:grid-cols-[1fr_320px]'
+              }`}
+            >
+              <section
+                className={
+                  focusMode
+                    ? 'p-2 sm:p-4'
+                    : 'card-editorial paper-texture ink-reveal p-5 sm:p-8'
+                }
+                style={{ '--i': 0 } as CSSProperties}
+              >
+                {/* شريط علوي */}
+                {!focusMode && (
+                  <div className="mb-5 flex items-center justify-between gap-3">
+                    <span className="badge badge-teal">
+                      <span aria-hidden="true">🎯</span>
+                      اليوم:
+                      <span className="num-inline font-mono font-bold">
+                        {todayCount}
+                      </span>
+                      {todayCount === 1 ? 'جلسة' : 'جلسات'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setFocusMode(true)}
+                      aria-label="الوضع الغامر"
+                      title="الوضع الغامر (F)"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-field border border-line bg-paper-soft px-3 text-xs font-bold text-ink-soft transition-colors hover:border-teal/40 hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
+                    >
+                      <IconExpand aria-hidden="true" className="h-3.5 w-3.5" />
+                      <span>وضع غامر</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* مهمة الجلسة */}
+                {focusMode ? (
+                  task.trim() && (
+                    <p className="margin-mark mx-auto mb-4 max-w-sm text-center text-sm font-semibold text-ink-soft">
+                      {task}
+                    </p>
+                  )
+                ) : (
+                  <div className="mb-6">
+                    <label htmlFor="session-task" className="sr-only">
+                      مهمة الجلسة
+                    </label>
+                    <input
+                      id="session-task"
+                      type="text"
+                      value={task}
+                      maxLength={80}
+                      onChange={(e) => setTask(e.target.value)}
+                      placeholder="ماذا ستدرس الآن؟ مثال: فسلجة — المحاضرة 3"
+                      className="field-editorial text-center"
+                    />
+                  </div>
+                )}
+
+                <TimerRing
+                  progress={celebrate ? 1 : progress}
+                  remainingSeconds={remaining}
+                  phase={phase}
+                  status={status}
+                  sessionIndex={sessionIndex}
+                  totalSessions={totalSessions}
+                  endsAt={status === 'running' ? deadline : null}
+                  warning={warning}
+                  celebrate={celebrate}
+                />
+
+                {/* رسالة دافئة */}
+                {status === 'idle' && !celebrate && (
+                  <div className="mx-auto mt-6 max-w-sm text-center">
+                    <p className="text-sm font-semibold text-ink-soft">
+                      {emptyMessage}
+                    </p>
+                    <p className="mt-1.5 text-xs leading-relaxed text-ink-muted">
+                      {TIPS[tipIdx]}
+                    </p>
+                  </div>
+                )}
+
+                <div className="mt-8 flex flex-col gap-2 sm:flex-row sm:justify-center">
+                  {status !== 'running' ? (
+                    <Button
+                      size="lg"
+                      onClick={handleStart}
+                      className="w-full sm:w-auto sm:min-w-44"
+                      icon={<IconPlay aria-hidden="true" className="h-4 w-4" />}
+                    >
+                      {status === 'paused' ? 'متابعة' : 'بدء الجلسة'}
+                    </Button>
+                  ) : (
+                    <Button
+                      size="lg"
+                      variant="secondary"
+                      onClick={handlePause}
+                      className="w-full sm:w-auto sm:min-w-44"
+                      icon={<IconPause />}
+                    >
+                      إيقاف مؤقت
+                    </Button>
+                  )}
+                  {status !== 'idle' && (
+                    <Button
+                      size="lg"
+                      variant="ghost"
+                      onClick={handleReset}
+                      className="w-full sm:w-auto"
+                      icon={<IconRestart />}
+                    >
+                      إعادة
+                    </Button>
+                  )}
+                </div>
+
+                {/* اختصارات */}
+                <p className="mt-5 hidden items-center justify-center gap-3 text-[11px] text-ink-muted md:flex">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Kbd>Space</Kbd> بدء / إيقاف
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Kbd>R</Kbd> إعادة
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Kbd>F</Kbd> وضع غامر
+                  </span>
+                </p>
+              </section>
+
+              <aside className={focusMode ? 'hidden' : 'space-y-4'}>
+                {/* Presets */}
+                <div
+                  className="card-editorial ink-reveal p-5"
+                  style={{ '--i': 1 } as CSSProperties}
+                >
+                  <h2 className="mb-3 flex items-center gap-2 text-sm font-bold text-ink">
+                    <span aria-hidden="true">⏱️</span>
+                    إعدادات الجلسة
+                  </h2>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    {PRESETS.map((p) => {
+                      const active = activePreset === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            setStudyMin(p.study);
+                            setBreakMin(p.breakMin);
+                            setTotalSessions(p.sessions);
+                          }}
+                          disabled={status === 'running'}
+                          aria-pressed={active}
+                          className={`rounded-field border px-2 py-3 text-center text-xs font-bold transition-all duration-200 motion-reduce:transition-none disabled:opacity-50 ${
+                            active
+                              ? 'border-teal bg-teal-tint text-teal'
+                              : 'border-line bg-paper-soft text-ink-soft hover:border-teal/40'
+                          }`}
+                        >
+                          <p className="num-inline font-mono text-sm leading-none">
+                            {p.label}
+                          </p>
+                          <p className="mt-1 text-[10px] opacity-70">{p.hint}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between gap-3 border-t border-line-soft pt-4">
+                    <span className="text-xs font-bold text-ink-muted">
+                      عدد الجلسات
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setTotalSessions((s) => Math.max(1, s - 1))
+                        }
+                        disabled={status === 'running' || totalSessions <= 1}
+                        aria-label="تقليل"
+                        className="flex h-8 w-8 items-center justify-center rounded-field border border-line bg-paper-soft text-lg font-bold text-ink-soft transition-colors hover:border-teal/40 hover:text-teal disabled:opacity-40"
+                      >
+                        −
+                      </button>
+                      <span className="num-inline min-w-[2ch] text-center font-mono text-base font-bold text-ink">
+                        {totalSessions}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setTotalSessions((s) => Math.min(10, s + 1))
+                        }
+                        disabled={status === 'running' || totalSessions >= 10}
+                        aria-label="زيادة"
+                        className="flex h-8 w-8 items-center justify-center rounded-field border border-line bg-paper-soft text-lg font-bold text-ink-soft transition-colors hover:border-teal/40 hover:text-teal disabled:opacity-40"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sound */}
+                <div
+                  className="card-editorial ink-reveal p-5"
+                  style={{ '--i': 2 } as CSSProperties}
+                >
+                  <SoundPicker
+                    selectedId={selectedSound}
+                    loadingId={soundLoading}
+                    onSelect={handleSoundSelect}
+                    volume={volume}
+                    onVolumeChange={handleVolumeChange}
+                  />
+                </div>
+              </aside>
+            </div>
+          </div>
+
+          {/* ─── Health Tab ─── */}
+          <div hidden={tab !== 'health'}>
+            <HealthTab onGoToTimer={() => setTab('timer')} />
+          </div>
+        </div>
+      </div>
+
+      {/* Ambient audio element */}
+      <audio ref={ambientAudioRef} preload="none" />
+    </main>
+  );
+}
+===CLAUDE.md===
+@AGENTS.md
+
+===components/anatomy/Atlas3D.tsx===
+'use client';
+
+// components/anatomy/Atlas3D.tsx
+/**
+ * أطلس ثلاثي الأبعاد: الجمجمة والهيكل العظمي حتى الصدر، مع عضلات الوجه والرقبة.
+ * النموذج: public/atlas/head-neck(.glb|-lite.glb) — BodyParts3D (DBCLS) وZ-Anatomy (انظر ATTRIBUTION.md).
+ * الحالة العامة (التحديد، الاختبار، الفلاتر) في FaceAtlas؛ الرؤية والمقطع والشفافية محلية هنا.
+ */
+import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
+import { Html, OrbitControls, useGLTF, useProgress } from '@react-three/drei';
+import {
+  Suspense, useCallback, useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode,
+} from 'react';
+import {
+  Color, MathUtils, Plane, TOUCH, Vector3,
+  type BufferGeometry, type Group, type Mesh, type MeshStandardMaterial, type Object3D, type Scene as ThreeScene,
+} from 'three';
+
+import { MUSCLE_BY_ID, type ZoomId } from '@/lib/anatomy-data';
+import { DEPTH_LABEL, type Depth } from '@/lib/anatomy-layers';
+import { MUSCLE_MESHES } from '@/lib/anatomy-meshes';
+import type { Pose } from '@/lib/anatomy-pose';
+import {
+  ALL_CONTEXT_IDS, ALL_MUSCLE_GROUP_IDS, ALL_MUSCLE_IDS, DEFAULT_VISIBILITY, describePart, labelOfPart, partVisible,
+  presetVisibility, type PartInfo, type PresetId, type Visibility,
+} from './atlas3d-model';
+import Atlas3DTools, { SECTION_RANGE, VIEW_LABEL, type Section, type ToolState, type ViewId } from './Atlas3DTools';
+
+// ==================== الأنواع ====================
+type Tone = 'sel' | 'ok' | 'bad';
+
+export interface Atlas3DProps {
+  zoom: ZoomId;
+  selItems: readonly { id: string; tone: Tone }[];
+  highlight: ReadonlySet<string> | null;
+  arrowIds: readonly string[];
+  pose: Pose;
+  kRef: { current: number };
+  hideNames: boolean;
+  onPick: (id: string) => void;
+  onFail: () => void;
+  /** يطلب من الصفحة تقريب منطقة (عند اختيار إعداد مسبق) */
+  onZoomRequest?: (z: ZoomId) => void;
+}
+
+interface Palette { bone: string; muscle: string; context: string; sel: string; ok: string; bad: string; bg: string }
+
+const URL_FULL = '/atlas/head-neck.glb';
+const URL_LITE = '/atlas/head-neck-lite.glb';
+const FOV = 30;
+const QUALITY_KEY = 'anatomy-3d-quality';
+
+const LIGHT: Palette = { bone: '#E9E1CE', muscle: '#A8503A', context: '#C9AC9B', sel: '#0E6B73', ok: '#3D6E4A', bad: '#B8860B', bg: '#F7F6F1' };
+const DARK: Palette = { bone: '#D2CAB5', muscle: '#D98B73', context: '#8F7B72', sel: '#7FD3DC', ok: '#7BC28A', bad: '#E8BC6A', bg: '#1D262B' };
+
+function readPalette(el: HTMLElement): Palette {
+  const cs = getComputedStyle(el);
+  const v = (n: string): string => cs.getPropertyValue(n).trim();
+  let dark = false;
+  try {
+    const deep = v('--paper-deep');
+    dark = deep !== '' && new Color(deep).getHSL({ h: 0, s: 0, l: 0 }).l < 0.2;
+  } catch {
+    dark = false;
+  }
+  const fb = dark ? DARK : LIGHT;
+  let context = fb.context;
+  try {
+    context = `#${new Color(fb.muscle).lerp(new Color(fb.bone), 0.55).getHexString()}`;
+  } catch {
+    /* القيمة الاحتياطية */
+  }
+  return { ...fb, context, ok: v('--success') || fb.ok, bg: v('--paper-soft') || fb.bg };
+}
+
+const hash01 = (s: string): number => {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return ((h >>> 0) % 1000) / 1000;
+};
+
+// ==================== قطع النموذج ====================
+interface Part extends PartInfo {
+  label: string;
+  geometry: BufferGeometry;
+  center: Vector3;
+  radius: number;
+}
+
+function usePartList(url: string): Part[] {
+  const gltf = useGLTF(url);
+  return useMemo(() => {
+    const out: Part[] = [];
+    gltf.scene.traverse((o: Object3D) => {
+      const m = o as Mesh;
+      if (!m.isMesh) return;
+      const raw = (typeof m.userData.name === 'string' ? m.userData.name : m.name.replace(/_/g, ' ')) as string;
+      const info = describePart(raw);
+      m.geometry.computeBoundingBox();
+      const box = m.geometry.boundingBox;
+      const center = new Vector3();
+      let radius = 0.2;
+      if (box) {
+        box.getCenter(center);
+        radius = box.getSize(new Vector3()).length() / 2;
+      }
+      out.push({ ...info, label: labelOfPart(info, (id) => MUSCLE_BY_ID[id]?.en), geometry: m.geometry, center, radius });
+    });
+    return out;
+  }, [gltf]);
+}
+
+// ==================== الكاميرا ====================
+const FRAMES: Record<ZoomId, { target: [number, number, number]; height: number }> = {
+  whole: { target: [0, -1.1, 0.1], height: 6.3 },
+  eyes: { target: [0, 0.4, 0.8], height: 1.4 },
+  nose: { target: [0, 0.1, 0.9], height: 1.2 },
+  mouth: { target: [0, -0.45, 0.8], height: 1.3 },
+  side: { target: [0.6, 0.0, 0.3], height: 2.0 },
+  neck: { target: [0, -1.5, 0.0], height: 3.4 },
+  throat: { target: [0, -1.0, 0.4], height: 2.0 },
+  posterior: { target: [0.7, -1.3, -0.1], height: 2.2 },
+};
+
+const VIEW_DIR: Record<ViewId, [number, number, number]> = {
+  front: [0, 0.05, 1], left: [1, 0.05, 0], right: [-1, 0.05, 0], back: [0, 0.05, -1], top: [0, 1, 0.12], bottom: [0, -1, 0.2],
+};
+
+function reducedMotion(): boolean {
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+}
+
+interface FocusReq { id: string; n: number }
+
+function CameraRig({
+  zoom, view, focus, parts, controls, freeTouch,
+}: {
+  zoom: ZoomId;
+  view: { id: ViewId; n: number } | null;
+  focus: FocusReq | null;
+  parts: readonly Part[];
+  controls: { current: ComponentRef<typeof OrbitControls> | null };
+  freeTouch: boolean;
+}) {
+  const { camera, invalidate, size } = useThree();
+  const aspect = size.width / Math.max(1, size.height);
+  const goal = useRef<{ target: Vector3; dist: number; dir: Vector3 | null; instant: boolean } | null>(null);
+  const first = useRef(true);
+  const off = useMemo(() => new Vector3(), []);
+  const lastDist = useRef(8);
+
+  useEffect(() => {
+    const el = (controls.current as unknown as { domElement?: HTMLElement } | null)?.domElement;
+    if (el) el.style.touchAction = freeTouch ? 'none' : 'pan-y';
+  }, [controls, freeTouch]);
+
+  useEffect(() => {
+    const f = FRAMES[zoom];
+    const needW = Math.max(1.7, f.height * 0.62);
+    const fit = Math.max(f.height, needW / aspect);
+    const dist = fit / (2 * Math.tan(MathUtils.degToRad(FOV / 2)));
+    lastDist.current = dist;
+    goal.current = {
+      target: new Vector3(...f.target),
+      dist,
+      dir: first.current ? new Vector3(...VIEW_DIR.front).normalize() : null,
+      instant: first.current || reducedMotion(),
+    };
+    first.current = false;
+    invalidate();
+  }, [zoom, invalidate, aspect]);
+
+  useEffect(() => {
+    if (!view) return;
+    const g = goal.current;
+    goal.current = {
+      target: g?.target ?? new Vector3(...FRAMES[zoom].target),
+      dist: g?.dist ?? lastDist.current,
+      dir: new Vector3(...VIEW_DIR[view.id]).normalize(),
+      instant: reducedMotion(),
+    };
+    invalidate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, invalidate]);
+
+  // الانتقال إلى العضلة المحددة (الجهة الأقرب للكاميرا)
+  useEffect(() => {
+    if (!focus) return;
+    const cands = parts.filter((p) => p.muscleId === focus.id);
+    if (cands.length === 0) return;
+    let best = cands[0];
+    let bd = Infinity;
+    for (const p of cands) {
+      const d = p.center.distanceTo(camera.position);
+      if (d < bd) { bd = d; best = p; }
+    }
+    if (!best) return;
+    const radius = cands.filter((p) => Math.sign(p.center.x) === Math.sign(best.center.x)).reduce((m, p) => Math.max(m, p.radius), best.radius);
+    const dist = MathUtils.clamp(radius * 3.4, 1.3, 5);
+    lastDist.current = dist;
+    goal.current = { target: best.center.clone(), dist, dir: null, instant: reducedMotion() };
+    invalidate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus?.n]);
+
+  useFrame((_, dt) => {
+    const c = controls.current;
+    const g = goal.current;
+    if (!c || !g) return;
+    const k = g.instant ? 1 : 1 - Math.exp(-dt * 7);
+    off.copy(camera.position).sub(c.target);
+    let len = off.length();
+    if (len < 1e-4) off.set(0, 0.05, 1);
+    if (g.dir) off.normalize().lerp(g.dir, k).normalize();
+    else off.normalize();
+    len = MathUtils.lerp(len, g.dist, k);
+    off.multiplyScalar(len);
+    c.target.lerp(g.target, k);
+    camera.position.copy(c.target).add(off);
+    c.update();
+    const dirDone = !g.dir || off.clone().normalize().distanceTo(g.dir) < 0.01;
+    if (c.target.distanceTo(g.target) < 0.002 && Math.abs(len - g.dist) < 0.01 && dirDone) goal.current = null;
+    else invalidate();
+  });
+
+  return null;
+}
+
+// ==================== حركة الرأس والفك ====================
+const HEAD_PIVOT: [number, number, number] = [0, -0.09, -0.12];
+const JAW_PIVOT: [number, number, number] = [0, 0.18, 0.14];
+const neg = (p: [number, number, number]): [number, number, number] => [-p[0], -p[1], -p[2]];
+
+function HeadRig({ pose, kRef, children }: { pose: Pose; kRef: { current: number }; children: ReactNode }) {
+  const ref = useRef<Group>(null);
+  const invalidate = useThree((s) => s.invalidate);
+  const animated = (pose.tilt ?? 0) !== 0 || (pose.turn ?? 0) !== 0 || (pose.fx ?? 0) !== 0;
+
+  useFrame((_, dt) => {
+    const g = ref.current;
+    if (!g) return;
+    const k = kRef.current;
+    const tx = (pose.fx ?? 0) * k * 0.28;
+    const ty = (pose.turn ?? 0) * k * 0.45;
+    const tz = -(pose.tilt ?? 0) * k * 0.25;
+    g.rotation.x = MathUtils.damp(g.rotation.x, tx, 14, dt);
+    g.rotation.y = MathUtils.damp(g.rotation.y, ty, 14, dt);
+    g.rotation.z = MathUtils.damp(g.rotation.z, tz, 14, dt);
+    const moving = Math.abs(g.rotation.x - tx) > 5e-4 || Math.abs(g.rotation.y - ty) > 5e-4 || Math.abs(g.rotation.z - tz) > 5e-4;
+    if (animated || moving) invalidate();
+  });
+
+  return (
+    <group ref={ref} position={HEAD_PIVOT}>
+      <group position={neg(HEAD_PIVOT)}>{children}</group>
+    </group>
+  );
+}
+
+function JawRig({ pose, kRef, children }: { pose: Pose; kRef: { current: number }; children: ReactNode }) {
+  const ref = useRef<Group>(null);
+  const invalidate = useThree((s) => s.invalidate);
+  const animated = (pose.jaw ?? 0) !== 0;
+
+  useFrame((_, dt) => {
+    const g = ref.current;
+    if (!g) return;
+    const target = Math.max(0, pose.jaw ?? 0) * kRef.current * 0.2;
+    g.rotation.x = MathUtils.damp(g.rotation.x, target, 14, dt);
+    if (animated || Math.abs(g.rotation.x - target) > 5e-4) invalidate();
+  });
+
+  return (
+    <group ref={ref} position={JAW_PIVOT}>
+      <group position={neg(JAW_PIVOT)}>{children}</group>
+    </group>
+  );
+}
+
+// ==================== المواد ====================
+interface ShaderLike { fragmentShader: string; uniforms: Record<string, { value: unknown }> }
+
+/** إضاءة حافّة خفيفة (Fresnel) تُبرز شكل العضلة وحجمها */
+function rimPatch(shader: ShaderLike): void {
+  shader.uniforms.rimColor = { value: new Color('#ffffff') };
+  shader.fragmentShader = shader.fragmentShader
+    .replace('#include <common>', '#include <common>\nuniform vec3 rimColor;')
+    .replace(
+      '#include <emissivemap_fragment>',
+      '#include <emissivemap_fragment>\n  float rimF = pow(1.0 - saturate(dot(normalize(normal), normalize(vViewPosition))), 2.6);\n  totalEmissiveRadiance += rimColor * rimF * 0.2;',
+    );
+}
+
+// ==================== قطعة واحدة ====================
+interface Look {
+  palette: Palette;
+  tones: ReadonlyMap<string, Tone>;
+  highlight: ReadonlySet<string> | null;
+  vis: Visibility;
+  autoHide: ReadonlySet<string>;
+  peel: Depth;
+  boneOpacity: number;
+  muscleOpacity: number;
+  focus: boolean;
+  anySelected: boolean;
+  moving: boolean;
+  plane: Plane | null;
+  kRef: { current: number };
+  hover: string | null;
+  pickedKey: string | null;
+  setHover: (key: string | null, label?: string) => void;
+  onPickPart: (p: Part) => void;
+}
+
+function PartMesh({ part, look }: { part: Part; look: Look }) {
+  const gl = useThree((s) => s.gl);
+  const invalidate = useThree((s) => s.invalidate);
+  const mat = useRef<MeshStandardMaterial>(null);
+  const { palette, tones, highlight } = look;
+  const id = part.muscleId;
+  const tone = id ? tones.get(id) : look.pickedKey === part.key ? ('sel' as const) : undefined;
+  const pulse = tone === 'sel' && look.moving && id !== null;
+
+  useFrame(() => {
+    const m = mat.current;
+    if (!m || !pulse) return;
+    m.emissiveIntensity = 0.1 + 0.55 * look.kRef.current;
+    invalidate();
+  });
+
+  const baseColor = useMemo(() => {
+    const base = part.kind === 'bone' ? palette.bone : id ? palette.muscle : palette.context;
+    const c = new Color(base);
+    c.offsetHSL(0, 0, (hash01(part.name) - 0.5) * (part.kind === 'bone' ? 0.05 : 0.11));
+    return `#${c.getHexString()}`;
+  }, [part.kind, part.name, id, palette]);
+
+  const hidden =
+    !partVisible(part, look.vis, look.peel) || (id !== null && look.autoHide.has(id) && !tone);
+  if (hidden) return null;
+
+  const dim = id !== null && highlight !== null && !highlight.has(id) && !tone;
+  const faded = look.focus && look.anySelected && part.kind === 'muscle' && !tone;
+  const hovered = look.hover === part.key;
+  let color = baseColor;
+  if (tone === 'sel') color = palette.sel;
+  else if (tone === 'ok') color = palette.ok;
+  else if (tone === 'bad') color = palette.bad;
+  else if (hovered) color = `#${new Color(baseColor).lerp(new Color('#ffffff'), 0.25).getHexString()}`;
+
+  const base = part.kind === 'bone' ? look.boneOpacity : look.muscleOpacity;
+  const opacity = dim ? Math.min(base, 0.12) : faded ? Math.min(base, 0.3) : base;
+  const transparent = opacity < 1;
+  const sectioned = look.plane !== null;
+
+  return (
+    <mesh
+      key={sectioned ? 's' : 'n'}
+      geometry={part.geometry}
+      renderOrder={transparent ? 1 : 0}
+      onClick={(e: ThreeEvent<MouseEvent>) => {
+        e.stopPropagation();
+        if (e.delta > 6) return;
+        look.onPickPart(part);
+      }}
+      onPointerOver={(e: ThreeEvent<PointerEvent>) => {
+        e.stopPropagation();
+        look.setHover(part.key, part.label);
+        gl.domElement.style.cursor = 'pointer';
+      }}
+      onPointerOut={() => {
+        look.setHover(null);
+        gl.domElement.style.cursor = '';
+      }}
+    >
+      <meshStandardMaterial
+        ref={mat}
+        color={color}
+        emissive={tone || hovered ? color : '#000000'}
+        emissiveIntensity={tone === 'sel' ? 0.22 : tone ? 0.18 : hovered ? 0.1 : 0}
+        roughness={part.kind === 'bone' ? 0.8 : 0.46}
+        metalness={0.02}
+        transparent={transparent}
+        opacity={opacity}
+        depthWrite={!transparent}
+        side={sectioned ? 2 : 0}
+        clippingPlanes={look.plane ? [look.plane] : null}
+        onBeforeCompile={rimPatch}
+      />
+    </mesh>
+  );
+}
+
+// ==================== أسماء مثبّتة على العضلات المحددة ====================
+function PinnedLabels({ ids, parts }: { ids: readonly string[]; parts: readonly Part[] }) {
+  return (
+    <>
+      {ids.slice(0, 6).map((id) => (
+        <PinnedLabel key={id} id={id} parts={parts} />
+      ))}
+    </>
+  );
+}
+
+function PinnedLabel({ id, parts }: { id: string; parts: readonly Part[] }) {
+  const ref = useRef<Group>(null);
+  const cands = useMemo(() => parts.filter((p) => p.muscleId === id), [parts, id]);
+  const camera = useThree((s) => s.camera);
+
+  useFrame(() => {
+    const g = ref.current;
+    if (!g || cands.length === 0) return;
+    let best = cands[0];
+    let bd = Infinity;
+    for (const p of cands) {
+      const d = p.center.distanceTo(camera.position);
+      if (d < bd) { bd = d; best = p; }
+    }
+    if (best) g.position.copy(best.center);
+  });
+
+  if (cands.length === 0) return null;
+  const m = MUSCLE_BY_ID[id];
+  return (
+    <group ref={ref}>
+      <Html center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
+        <span className="fa3-pin" dir="ltr">{m?.short ?? m?.en ?? id}</span>
+      </Html>
+    </group>
+  );
+}
+
+// ==================== المشهد ====================
+interface SceneProps extends Atlas3DProps {
+  url: string;
+  palette: Palette;
+  ts: ToolState;
+  view: { id: ViewId; n: number } | null;
+  focusReq: FocusReq | null;
+  autoHide: ReadonlySet<string>;
+  hover: string | null;
+  pickedKey: string | null;
+  setHover: (key: string | null, label?: string) => void;
+  onPickPart: (p: Part) => void;
+  partsRef: { current: readonly Part[] };
+  captureRef: { current: (() => string | null) | null };
+  bg: string;
+}
+
+function Scene(props: SceneProps) {
+  const { ts } = props;
+  const parts = usePartList(props.url);
+  const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
+  const { gl, scene, camera, invalidate } = useThree();
+
+  useEffect(() => {
+    props.partsRef.current = parts;
+  }, [parts, props.partsRef]);
+
+  useEffect(() => {
+    gl.localClippingEnabled = true;
+  }, [gl]);
+
+  useEffect(() => {
+    props.captureRef.current = () => {
+      const prev = gl.getClearAlpha();
+      gl.setClearColor(new Color(props.bg), 1);
+      gl.render(scene as ThreeScene, camera);
+      const url = gl.domElement.toDataURL('image/png');
+      gl.setClearColor(new Color(props.bg), prev);
+      invalidate();
+      return url;
+    };
+    return () => {
+      props.captureRef.current = null;
+    };
+  }, [gl, scene, camera, invalidate, props.bg, props.captureRef]);
+
+  useFrame(() => {
+    if (ts.autoRotate) invalidate();
+  });
+
+  const plane = useMemo(() => new Plane(new Vector3(-1, 0, 0), 0), []);
+  if (ts.section.on) {
+    const n = ts.section.axis === 'x' ? [1, 0, 0] : ts.section.axis === 'y' ? [0, 1, 0] : [0, 0, 1];
+    const s = ts.section.flip ? 1 : -1;

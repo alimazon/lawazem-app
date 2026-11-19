@@ -1,0 +1,2710 @@
+﻿    .eq('stage', stage)
+    .order('created_at', { ascending: false })
+    .limit(3);
+
+  if (subjects) {
+    for (const s of subjects as Array<{
+      id: string;
+      name: string;
+      created_at: string | null;
+    }>) {
+      if (!s.created_at) continue;
+      items.push({
+        id: s.id,
+        type: 'subject',
+        title: s.name,
+        context: 'مادة جديدة',
+        created_at: s.created_at,
+        link: null,
+      });
+    }
+  }
+
+  // ==================== 4. channel_content ====================
+  const { data: content } = await supabaseAdmin
+    .from('channel_content')
+    .select('id, title, file_urls, created_at, channels!inner(name, stage)')
+    .eq('channels.stage', stage)
+    .order('created_at', { ascending: false })
+    .limit(5);
+
+  if (content) {
+    for (const c of content as Array<{
+      id: string;
+      title: string;
+      file_urls: unknown;
+      created_at: string;
+      channels: unknown;
+    }>) {
+      if (!c.created_at) continue;
+      const files = Array.isArray(c.file_urls) ? c.file_urls : [];
+      const first = files[0] as { url?: unknown } | undefined;
+      const firstUrl = typeof first?.url === 'string' ? first.url : null;
+      items.push({
+        id: c.id,
+        type: 'channel_content',
+        title: c.title,
+        context: pickRelationName(c.channels),
+        created_at: c.created_at,
+        link: firstUrl,
+      });
+    }
+  }
+
+  // ==================== Merge & Sort ====================
+  items.sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+  const top = items.slice(0, 12);
+
+  return NextResponse.json({ items: top });
+}
+===app/api/groups/by-code/route.ts===
+// app/api/groups/by-code/route.ts
+import { requireStudent } from '@/lib/groups/session';
+import { supabaseAdmin } from '@/lib/groups/supabase-admin';
+import { ok, fail, handleError } from '@/lib/groups/api-response';
+import type { PublicGroup } from '@/lib/types/groups';
+
+export async function POST(req: Request) {
+  try {
+    await requireStudent(req); // يجب أن يكون مسجلاً
+    const body = await req.json().catch(() => ({}));
+    const { code } = body;
+
+    if (!code) return fail('كود الكروب مطلوب');
+
+    const { data: g } = await supabaseAdmin
+      .from('sg_groups')
+      .select(`*, leader:sg_students!sg_groups_leader_id_fkey(full_name)`)
+      .eq('code', code.toUpperCase())
+      .maybeSingle();
+
+    if (!g) return fail('هذا الكروب غير موجود أو تم حذفه', 404);
+
+    const total = g.male_count + g.female_count;
+    const formatted: PublicGroup = {
+      ...g,
+      leader_name: g.leader?.full_name || null,
+      leader_username: null,
+      spots_left: Math.max(0, g.target_size - total),
+    };
+
+    return ok({ group: formatted });
+  } catch (err) {
+    return handleError(err);
+  }
+}
+===app/api/groups/create/route.ts===
+// app/api/groups/create/route.ts
+import { requireStudent } from '@/lib/groups/session';
+import { getSettings } from '@/lib/groups/access';
+import { supabaseAdmin } from '@/lib/groups/supabase-admin';
+import { ok, fail, handleError } from '@/lib/groups/api-response';
+
+function generateCode(): string {
+  return Math.random().toString(36).substring(2, 7).toUpperCase();
+}
+
+export async function POST(req: Request) {
+  try {
+    const student = await requireStudent(req);
+    const settings = await getSettings();
+
+    if (!settings.allow_create) return fail('إنشاء الكروبات متوقف حالياً');
+
+    // 1. التأكد من عدم وجوده في كروب مسبقاً
+    const { data: existingMember } = await supabaseAdmin
+      .from('sg_members')
+      .select('id')
+      .eq('student_id', student.id)
+      .maybeSingle();
+
+    if (existingMember) return fail('أنت عضو في كروب بالفعل. يجب مغادرته أولاً');
+
+    // 2. إنشاء الكود
+    let code = generateCode();
+    let isUnique = false;
+    while (!isUnique) {
+      const { data } = await supabaseAdmin.from('sg_groups').select('id').eq('code', code).maybeSingle();
+      if (!data) isUnique = true;
+      else code = generateCode();
+    }
+
+    // 3. إنشاء الكروب
+    const body = await req.json().catch(() => ({}));
+    const groupName = typeof body.name === 'string' ? body.name.trim().slice(0, 50) : null;
+
+    const { data: newGroup, error: groupError } = await supabaseAdmin
+      .from('sg_groups')
+      .insert({
+        code,
+        name: groupName || null,
+        leader_id: student.id,
+        target_size: settings.target_size,
+        male_count: student.gender === 'male' ? 1 : 0,
+        female_count: student.gender === 'female' ? 1 : 0,
+        study_year: student.study_year,
+      })
+      .select('*')
+      .single();
+
+    if (groupError || !newGroup) throw new Error('فشل إنشاء الكروب');
+
+    // 4. إضافة الطالب كقائد
+    const { error: memberError } = await supabaseAdmin.from('sg_members').insert({
+      group_id: newGroup.id,
+      student_id: student.id,
+      role: 'leader',
+    });
+
+    // إذا فشلت الإضافة، نحذف الكروب (تنظيف)
+    if (memberError) {
+      await supabaseAdmin.from('sg_groups').delete().eq('id', newGroup.id);
+      throw new Error('فشل تعيينك كقائد. حاول مجدداً');
+    }
+
+    return ok({ group: newGroup });
+  } catch (err) {
+    return handleError(err);
+  }
+}
+===app/api/groups/join-request/route.ts===
+// app/api/groups/join-request/route.ts
+import { requireStudent } from '@/lib/groups/session';
+import { supabaseAdmin } from '@/lib/groups/supabase-admin';
+import { ok, fail, handleError } from '@/lib/groups/api-response';
+
+export async function POST(req: Request) {
+  try {
+    const student = await requireStudent(req);
+    const body = await req.json().catch(() => ({}));
+    const { group_id } = body;
+
+    if (!group_id) return fail('معرف الكروب مطلوب');
+
+    // 1. التأكد من عدم وجوده في كروب
+    const { data: existingMember } = await supabaseAdmin
+      .from('sg_members')
+      .select('id')
+      .eq('student_id', student.id)
+      .maybeSingle();
+
+    if (existingMember) return fail('أنت عضو في كروب بالفعل');
+
+    // 2. التأكد من أن الكروب مفتوح
+    const { data: group } = await supabaseAdmin
+      .from('sg_groups')
+      .select('status')
+      .eq('id', group_id)
+      .maybeSingle();
+
+    if (!group || group.status !== 'open') return fail('هذا الكروب لا يقبل طلبات جديدة');
+
+    // 3. إرسال الطلب
+    const { error } = await supabaseAdmin.from('sg_requests').insert({
+      student_id: student.id,
+      group_id,
+      status: 'pending',
+    });
+
+    if (error) {
+      if (error.code === '23505') return fail('لديك طلب معلق بالفعل لهذا الكروب');
+      throw new Error('فشل إرسال الطلب');
+    }
+
+    return ok({ message: 'تم إرسال طلب الانضمام بنجاح' });
+  } catch (err) {
+    return handleError(err);
+  }
+}   
+===app/api/groups/kick/route.ts===
+// app/api/groups/kick/route.ts
+import { requireStudent } from '@/lib/groups/session';
+import { supabaseAdmin } from '@/lib/groups/supabase-admin';
+import { ok, fail, handleError } from '@/lib/groups/api-response';
+
+export async function POST(req: Request) {
+  try {
+    const student = await requireStudent(req);
+    const body = await req.json().catch(() => ({}));
+    const { group_id, student_id } = body;
+
+    if (!group_id || !student_id) return fail('بيانات ناقصة');
+
+    const { error } = await supabaseAdmin.rpc('sg_kick_member', {
+      p_group_id: group_id,
+      p_leader_id: student.id,
+      p_student_id: student_id,
+    });
+
+    if (error) throw new Error(error.message);
+    return ok({ message: 'تم طرد الطالب بنجاح' });
+  } catch (err) {
+    return handleError(err);
+  }
+}
+===app/api/groups/leave/route.ts===
+// app/api/groups/leave/route.ts
+import { requireStudent } from '@/lib/groups/session';
+import { supabaseAdmin } from '@/lib/groups/supabase-admin';
+import { ok, handleError } from '@/lib/groups/api-response';
+
+export async function POST(req: Request) {
+  try {
+    const student = await requireStudent(req);
+    
+    const { error } = await supabaseAdmin.rpc('sg_leave_group', {
+      p_student_id: student.id,
+    });
+    
+    if (error) throw new Error(error.message);
+    return ok({ message: 'تمت المغادرة بنجاح' });
+  } catch (err) {
+    return handleError(err);
+  }
+}
+===app/api/groups/list/route.ts===
+// app/api/groups/list/route.ts
+import { getStudentFromRequest } from '@/lib/groups/session';
+import { supabaseAdmin } from '@/lib/groups/supabase-admin';
+import { ok, fail, handleError } from '@/lib/groups/api-response';
+import type { PublicGroup } from '@/lib/types/groups';
+
+export async function POST(req: Request) {
+  try {
+    const student = await getStudentFromRequest(req);
+    if (!student) return fail('يجب تسجيل الدخول', 401);
+
+    // جلب الكروبات المفتوحة
+    const { data: groups, error } = await supabaseAdmin
+      .from('sg_groups')
+      .select(`
+        *,
+        leader:sg_students!sg_groups_leader_id_fkey(full_name, telegram_username)
+      `)
+      .eq('status', 'open')
+      .eq('study_year', student.study_year)
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error(error.message);
+
+    const formattedGroups: PublicGroup[] = (groups || []).map((g) => {
+      const total = g.male_count + g.female_count;
+      return {
+        ...g,
+        leader_name: g.leader?.full_name || null,
+        leader_username: g.leader?.telegram_username || null,
+        spots_left: Math.max(0, g.target_size - total),
+      };
+    });
+
+    return ok({ groups: formattedGroups });
+  } catch (err) {
+    return handleError(err);
+  }
+}
+===app/api/groups/match/route.ts===
+// app/api/groups/match/route.ts
+import { requireStudent } from '@/lib/groups/session';
+import { supabaseAdmin } from '@/lib/groups/supabase-admin';
+import { ok, fail, handleError } from '@/lib/groups/api-response';
+
+export async function POST(req: Request) {
+  try {
+    const student = await requireStudent(req);
+    const body = await req.json().catch(() => ({}));
+
+    if (body.action === 'join') {
+      // التأكد من عدم وجوده في كروب
+      const { data: member } = await supabaseAdmin.from('sg_members').select('id').eq('student_id', student.id).maybeSingle();
+      if (member) return fail('أنت في كروب بالفعل');
+
+      await supabaseAdmin.from('sg_match_queue').upsert({
+        student_id: student.id,
+        status: 'waiting',
+        joined_at: new Date().toISOString()
+      });
+      return ok({ message: 'تم الانضمام لقائمة الانتظار' });
+    }
+
+    if (body.action === 'leave') {
+      await supabaseAdmin.from('sg_match_queue').delete().eq('student_id', student.id);
+      return ok({ message: 'تم الخروج من قائمة الانتظار' });
+    }
+
+    // جلب الحالة
+    const { data: queue } = await supabaseAdmin.from('sg_match_queue').select('*').eq('student_id', student.id).maybeSingle();
+    return ok({ inQueue: queue?.status === 'waiting' });
+  } catch (err) {
+    return handleError(err);
+  }
+}
+===app/api/groups/me/route.ts===
+// app/api/groups/me/route.ts
+import { getStudentFromRequest } from '@/lib/groups/session';
+import { supabaseAdmin } from '@/lib/groups/supabase-admin';
+import { ok, fail, handleError } from '@/lib/groups/api-response';
+import type {
+  MeResponse,
+  MemberWithStudent,
+  Group,
+  Member,
+} from '@/lib/types/groups';
+
+export async function POST(req: Request) {
+  try {
+    const student = await getStudentFromRequest(req);
+    if (!student) return fail('يجب تسجيل الدخول', 401);
+
+    // عضوية الطالب (إن وجدت)
+    const { data: membershipRaw } = await supabaseAdmin
+      .from('sg_members')
+      .select('*')
+      .eq('student_id', student.id)
+      .maybeSingle();
+
+    const membership = (membershipRaw as Member) || null;
+
+    let group: Group | null = null;
+    let members: MemberWithStudent[] = [];
+    let isLeader = false;
+    let pendingRequests = 0;
+
+    if (membership) {
+      const { data: g } = await supabaseAdmin
+        .from('sg_groups')
+        .select('*')
+        .eq('id', membership.group_id)
+        .maybeSingle();
+      group = (g as Group) || null;
+      isLeader = membership.role === 'leader';
+
+      const { data: mems } = await supabaseAdmin
+        .from('sg_members')
+        .select('*, student:sg_students(*)')
+        .eq('group_id', membership.group_id)
+        .order('joined_at', { ascending: true });
+
+      members = (mems || []) as MemberWithStudent[];
+
+      if (isLeader) {
+        const { count } = await supabaseAdmin
+          .from('sg_requests')
+          .select('*', { count: 'exact', head: true })
+          .eq('group_id', membership.group_id)
+          .eq('status', 'pending');
+        pendingRequests = count || 0;
+      }
+    }
+
+    const response: MeResponse = {
+      student,
+      group,
+      membership,
+      members,
+      isLeader,
+      pendingRequests,
+    };
+    return ok(response);
+  } catch (err) {
+    return handleError(err);
+  }
+}
+===app/api/groups/my-requests/route.ts===
+// app/api/groups/my-requests/route.ts
+import { requireStudent } from '@/lib/groups/session';
+import { supabaseAdmin } from '@/lib/groups/supabase-admin';
+import { ok, fail, handleError } from '@/lib/groups/api-response';
+
+export async function POST(req: Request) {
+  try {
+    const student = await requireStudent(req);
+    const body = await req.json().catch(() => ({}));
+
+    // إلغاء طلب
+    if (body.action === 'cancel' && body.request_id) {
+      const { error } = await supabaseAdmin
+        .from('sg_requests')
+        .update({ status: 'cancelled', processed_at: new Date().toISOString() })
+        .eq('id', body.request_id)
+        .eq('student_id', student.id)
+        .eq('status', 'pending'); // لا يمكن إلغاء طلب تمت معالجته
+
+      if (error) throw new Error('فشل إلغاء الطلب');
+      return ok({ message: 'تم إلغاء الطلب' });
+    }
+
+    // جلب الطلبات المعلقة
+    const { data: requests } = await supabaseAdmin
+      .from('sg_requests')
+      .select('*, group:sg_groups(name, serial)')
+      .eq('student_id', student.id)
+      .eq('status', 'pending');
+
+    return ok({ requests: requests || [] });
+  } catch (err) {
+    return handleError(err);
+  }
+}
+===app/api/groups/notifications/route.ts===
+// app/api/groups/notifications/route.ts
+import { getStudentFromRequest } from '@/lib/groups/session';
+import { supabaseAdmin } from '@/lib/groups/supabase-admin';
+import { ok, fail, handleError } from '@/lib/groups/api-response';
+
+interface NotifBody {
+  mark_read?: string;
+  mark_all?: boolean;
+}
+
+export async function POST(req: Request) {
+  try {
+    const student = await getStudentFromRequest(req);
+    if (!student) return fail('يجب تسجيل الدخول', 401);
+
+    const body: NotifBody = await req.json().catch(() => ({}));
+
+    if (body.mark_read) {
+      await supabaseAdmin
+        .from('sg_notifications')
+        .update({ read_at: new Date().toISOString() })
+        .eq('id', body.mark_read)
+        .eq('student_id', student.id);
+    }
+
+    if (body.mark_all) {
+      await supabaseAdmin
+        .from('sg_notifications')
+        .update({ read_at: new Date().toISOString() })
+        .eq('student_id', student.id)
+        .is('read_at', null);
+    }
+
+    const { data: list } = await supabaseAdmin
+      .from('sg_notifications')
+      .select('*')
+      .eq('student_id', student.id)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    const unread = (list || []).filter((n) => !n.read_at).length;
+
+    return ok({ list: list || [], unread });
+  } catch (err) {
+    return handleError(err);
+  }
+}
+===app/api/groups/push/subscribe/route.ts===
+// app/api/groups/push/subscribe/route.ts
+import { requireStudent } from '@/lib/groups/session';
+import { supabaseAdmin } from '@/lib/groups/supabase-admin';
+import { ok, fail, handleError } from '@/lib/groups/api-response';
+
+export async function POST(req: Request) {
+  try {
+    const student = await requireStudent(req);
+    const body = await req.json().catch(() => ({}));
+    const { subscription } = body;
+
+    if (!subscription || !subscription.endpoint) return fail('بيانات الاشتراك غير صالحة');
+
+    const { error } = await supabaseAdmin.from('sg_push_subscriptions').upsert({
+      student_id: student.id,
+      endpoint: subscription.endpoint,
+      p256dh: subscription.keys.p256dh,
+      auth: subscription.keys.auth,
+    }, { onConflict: 'endpoint' });
+
+    if (error) throw new Error(error.message);
+    return ok({ message: 'تم حفظ الاشتراك' });
+  } catch (err) {
+    return handleError(err);
+  }
+}
+===app/api/groups/push/test/route.ts===
+// app/api/groups/push/test/route.ts
+import { requireStudent } from '@/lib/groups/session';
+import { supabaseAdmin } from '@/lib/groups/supabase-admin';
+import { ok, fail, handleError } from '@/lib/groups/api-response';
+import webpush from 'web-push';
+
+webpush.setVapidDetails(
+  process.env.VAPID_SUBJECT || 'mailto:admin@example.com',
+  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '',
+  process.env.VAPID_PRIVATE_KEY || ''
+);
+
+export async function POST(req: Request) {
+  try {
+    const student = await requireStudent(req);
+    
+    const { data: subs } = await supabaseAdmin
+      .from('sg_push_subscriptions')
+      .select('*')
+      .eq('student_id', student.id);
+
+    if (!subs || subs.length === 0) return fail('لا يوجد اشتراك إشعارات لهذا الحساب');
+
+    for (const sub of subs) {
+      try {
+        await webpush.sendNotification({
+          endpoint: sub.endpoint,
+          keys: { p256dh: sub.p256dh, auth: sub.auth }
+        }, JSON.stringify({
+          title: 'مرحباً من لوازم! 🎓',
+          body: 'إشعارات الهاتف تعمل بنجاح. ستصلك هنا تنبيهات القبول والطلبات.',
+          url: '/g/groups'
+        }));
+      } catch (e) {
+        console.error('Push error:', e);
+      }
+    }
+
+    return ok({ message: 'تم إرسال الإشعار التجريبي' });
+  } catch (err) {
+    return handleError(err);
+  }
+}
+===app/api/groups/register/route.ts===
+// app/api/groups/register/route.ts
+import { getAccessToken, getSettings, isRegistrationOpen } from '@/lib/groups/access';
+import { createSession } from '@/lib/groups/session';
+import { supabaseAdmin } from '@/lib/groups/supabase-admin';
+import { ok, fail, handleError } from '@/lib/groups/api-response';
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json().catch(() => ({}));
+    const { slug, telegram_username, full_name, gender } = body || {};
+
+    // 1) تحقق من الرابط
+    if (!slug || typeof slug !== 'string') return fail('رابط غير صالح');
+    const access = await getAccessToken(slug);
+    if (!access) return fail('هذا الرابط غير متاح أو منتهي الصلاحية', 403);
+
+    // 2) تحقق من حالة التسجيل
+    const settings = await getSettings();
+    if (!isRegistrationOpen(settings)) return fail('التسجيل مغلق حالياً', 403);
+
+    // 3) تحقق من المدخلات
+    if (typeof full_name !== 'string' || full_name.trim().length < 5) {
+      return fail('الاسم يجب أن يكون 5 أحرف على الأقل');
+    }
+    if (full_name.trim().length > 100) return fail('الاسم طويل جداً (الحد 100)');
+
+    if (typeof telegram_username !== 'string') return fail('معرف التليكرام مطلوب');
+    const cleanUsername = telegram_username.trim().replace(/^@+/, '');
+    if (!/^[A-Za-z0-9_]{5,32}$/.test(cleanUsername)) {
+      return fail('معرف التليكرام يجب أن يكون 5-32 حرفاً إنجليزياً أو رقماً أو _');
+    }
+
+    if (gender !== 'male' && gender !== 'female') {
+      return fail('الجنس يجب أن يكون male أو female');
+    }
+
+    // 4) منع التكرار
+    const { data: existing } = await supabaseAdmin
+      .from('sg_students')
+      .select('id')
+      .ilike('telegram_username', cleanUsername)
+      .maybeSingle();
+    if (existing) {
+      return fail('هذا المعرف مسجل مسبقاً. إذا كنت أنت، استخدم نفس المتصفح الذي سجلت منه');
+    }
+
+    // 5) إنشاء الطالب
+    const { data: student, error } = await supabaseAdmin
+      .from('sg_students')
+      .insert({
+        telegram_username: cleanUsername,
+        full_name: full_name.trim(),
+        gender,
+        study_year: access.study_year,
+      })
+      .select('*')
+      .single();
+
+    if (error || !student) return fail('فشل التسجيل: ' + (error?.message || 'خطأ غير معروف'));
+
+    // 6) إنشاء جلسة
+    const token = await createSession(student.id);
+
+    return ok({ token, student });
+  } catch (err) {
+    return handleError(err);
+  }
+}
+===app/api/groups/requests/handle/route.ts===
+// app/api/groups/requests/handle/route.ts
+import { requireStudent } from '@/lib/groups/session';
+import { supabaseAdmin } from '@/lib/groups/supabase-admin';
+import { ok, fail, handleError } from '@/lib/groups/api-response';
+
+export async function POST(req: Request) {
+  try {
+    const student = await requireStudent(req);
+    const body = await req.json().catch(() => ({}));
+    const { request_id, action } = body;
+
+    if (!request_id || !['accept', 'reject'].includes(action)) {
+      return fail('بيانات غير صالحة');
+    }
+
+    if (action === 'accept') {
+      const { error } = await supabaseAdmin.rpc('sg_accept_request', {
+        p_request_id: request_id,
+        p_leader_id: student.id,
+      });
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await supabaseAdmin.rpc('sg_reject_request', {
+        p_request_id: request_id,
+        p_leader_id: student.id,
+      });
+      if (error) throw new Error(error.message);
+    }
+
+    return ok({ message: 'تمت المعالجة بنجاح' });
+  } catch (err) {
+    return handleError(err);
+  }
+}
+===app/api/groups/requests/list/route.ts===
+// app/api/groups/requests/list/route.ts
+import { requireStudent } from '@/lib/groups/session';
+import { supabaseAdmin } from '@/lib/groups/supabase-admin';
+import { ok, fail, handleError } from '@/lib/groups/api-response';
+
+export async function POST(req: Request) {
+  try {
+    await req.json().catch(() => ({}));
+    const student = await requireStudent(req);
+
+    const { data: membership, error: memError } = await supabaseAdmin
+      .from('sg_members')
+      .select('group_id, role')
+      .eq('student_id', student.id)
+      .maybeSingle();
+
+    if (memError) throw new Error(memError.message);
+
+    if (!membership || membership.role !== 'leader') {
+      return fail('غير مصرح لك برؤية هذه الطلبات', 403);
+    }
+
+    const { data: requests, error } = await supabaseAdmin
+      .from('sg_requests')
+      .select('*, student:sg_students(*)')
+      .eq('group_id', membership.group_id)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true });
+
+    if (error) throw new Error(error.message);
+
+    return ok({ requests: requests || [] });
+  } catch (err) {
+    return handleError(err);
+  }
+}
+===app/api/group-swap/route.ts===
+// app/api/group-swap/route.ts
+import { NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { jsonError, safeOptionalString, safeString } from '@/lib/api-server';
+
+const GROUPS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
+function parseGroup(v: unknown): string | null {
+  if (typeof v !== 'string') return null;
+  const upper = v.toUpperCase().trim();
+  return GROUPS.includes(upper) ? upper : null;
+}
+
+function normalizeUsername(u: string): string {
+  return u.trim().replace(/^@/, '').toLowerCase();
+}
+
+export async function POST(request: Request) {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('الطلب غير صالح', 400);
+  }
+
+  const action = typeof body.action === 'string' ? body.action : '';
+  const supabaseAdmin = getSupabaseAdmin();
+
+  switch (action) {
+    // ==================== list ====================
+    case 'list': {
+      const { data, error } = await supabaseAdmin
+        .from('group_swap_requests')
+        .select('id, student_name, telegram_username, current_group, target_group, notes, status, created_at')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('group-swap list error:', error.message);
+        return jsonError('فشل تحميل الطلبات', 500);
+      }
+      return NextResponse.json({ requests: data ?? [] });
+    }
+
+    // ==================== add ====================
+    case 'add': {
+      const student_name = safeString(body.student_name, 100);
+      const rawUsername = safeString(body.telegram_username, 100);
+      const telegram_username = normalizeUsername(rawUsername);
+      const current_group = parseGroup(body.current_group);
+      const target_group = parseGroup(body.target_group);
+      const notes = safeOptionalString(body.notes, 300);
+
+      if (!student_name) return jsonError('الاسم مطلوب');
+      if (!telegram_username) return jsonError('يوزر التليكرام مطلوب');
+      if (!current_group) return jsonError('اختر الكروب الحالي');
+      if (!target_group) return jsonError('اختر الكروب المطلوب');
+      if (current_group === target_group) {
+        return jsonError('الكروب الحالي والكروب المطلوب متطابقان');
+      }
+
+      // ✅ منع التكرار: نفس اليوزر عنده طلب مفتوح
+      const { data: existing } = await supabaseAdmin
+        .from('group_swap_requests')
+        .select('id')
+        .ilike('telegram_username', telegram_username)
+        .eq('status', 'pending')
+        .maybeSingle();
+
+      if (existing) {
+        return jsonError(
+          'لديك طلب مفتوح بالفعل بهذا اليوزر. يجب حذفه أولاً قبل إنشاء طلب جديد.'
+        );
+      }
+
+      const owner_secret = crypto.randomUUID();
+
+      const { data, error } = await supabaseAdmin
+        .from('group_swap_requests')
+        .insert({
+          student_name,
+          telegram_username,
+          current_group,
+          target_group,
+          notes,
+          owner_secret,
+        })
+        .select('id')
+        .single();
+
+      if (error) {
+        console.error('group-swap add error:', error.message);
+        return jsonError('فشل إضافة الطلب', 500);
+      }
+
+      return NextResponse.json({
+        success: true,
+        id: data.id,
+        owner_secret,
+      });
+    }
+
+    // ==================== delete ====================
+    case 'delete': {
+      const id = safeString(body.id, 100);
+      const owner_secret = safeString(body.owner_secret, 100);
+      const rawUsername = safeString(body.telegram_username, 100);
+      const telegram_username = rawUsername ? normalizeUsername(rawUsername) : '';
+
+      if (!id) return jsonError('id مطلوب');
+
+      const { data: existing, error: fetchError } = await supabaseAdmin
+        .from('group_swap_requests')
+        .select('owner_secret, telegram_username')
+        .eq('id', id)
+        .maybeSingle<{ owner_secret: string; telegram_username: string }>();
+
+      if (fetchError || !existing) {
+        return jsonError('الطلب غير موجود', 404);
+      }
+
+      // ✅ تحقق: إما owner_secret صحيح، أو telegram_username مطابق
+      const isValidSecret = !!owner_secret && existing.owner_secret === owner_secret;
+      const isValidUsername =
+        !!telegram_username &&
+        normalizeUsername(existing.telegram_username) === telegram_username;
+
+      if (!isValidSecret && !isValidUsername) {
+        return jsonError('غير مصرح بحذف هذا الطلب', 403);
+      }
+
+      const { error } = await supabaseAdmin
+        .from('group_swap_requests')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('group-swap delete error:', error.message);
+        return jsonError('فشل حذف الطلب', 500);
+      }
+
+      return NextResponse.json({ success: true });
+    }
+
+    default:
+      return jsonError('إجراء غير معروف');
+  }
+}
+===app/api/reports/route.ts===
+// app/api/reports/route.ts
+import { NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { jsonError, safeOptionalString, safeString } from '@/lib/api-server';
+
+// ==================== Helpers ====================
+function parseReason(v: unknown): 'dead_link' | 'outdated' | null {
+  if (v === 'dead_link' || v === 'outdated') return v;
+  return null;
+}
+
+// hash خفيف للحد من البلاغات المكرّرة من نفس الجهاز
+function hashReporter(payload: string): string {
+  let hash = 0;
+  for (let i = 0; i < payload.length; i++) {
+    hash = (hash << 5) - hash + payload.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(36);
+}
+
+// ==================== Route ====================
+export async function POST(request: Request) {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('الطلب غير صالح', 400);
+  }
+
+  const action = typeof body.action === 'string' ? body.action : '';
+  const supabaseAdmin = getSupabaseAdmin();
+
+  switch (action) {
+    // ==================== create (public) ====================
+    case 'create': {
+      const lecture_note_id = safeString(body.lecture_note_id, 100);
+      const reason = parseReason(body.reason);
+      const note = safeOptionalString(body.note, 300);
+      const fingerprint = safeString(body.fingerprint, 200);
+
+      if (!lecture_note_id) return jsonError('لم يُحدد المصدر');
+      if (!reason) return jsonError('اختر سبباً صالحاً');
+
+      // تحقق من وجود الملزمة
+      const { data: noteExists } = await supabaseAdmin
+        .from('lecture_notes')
+        .select('id')
+        .eq('id', lecture_note_id)
+        .maybeSingle();
+
+      if (!noteExists) return jsonError('الملزمة غير موجودة', 404);
+
+      const reporter_hash = fingerprint ? hashReporter(fingerprint) : null;
+
+      // منع التكرار: نفس الجهاز + نفس الملزمة + نفس السبب (خلال 24 ساعة)
+      if (reporter_hash) {
+        const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { data: recent } = await supabaseAdmin
+          .from('lecture_note_reports')
+          .select('id')
+          .eq('lecture_note_id', lecture_note_id)
+          .eq('reason', reason)
+          .eq('reporter_hash', reporter_hash)
+          .gte('created_at', cutoff)
+          .maybeSingle();
+
+        if (recent) {
+          return NextResponse.json({ success: true, duplicate: true });
+        }
+      }
+
+      const { error } = await supabaseAdmin
+        .from('lecture_note_reports')
+        .insert({
+          lecture_note_id,
+          reason,
+          note,
+          reporter_hash,
+        });
+
+      if (error) {
+        console.error('report create error:', error.message);
+        return jsonError('فشل إرسال البلاغ', 500);
+      }
+
+      return NextResponse.json({ success: true, duplicate: false });
+    }
+
+    // ==================== counts (public) ====================
+    // يرجع عدد البلاغات لكل ملزمة (للاستخدام في الشارات)
+    case 'counts': {
+      const ids = Array.isArray(body.lecture_note_ids)
+        ? body.lecture_note_ids.filter((id): id is string => typeof id === 'string').slice(0, 200)
+        : [];
+
+      if (ids.length === 0) {
+        return NextResponse.json({ counts: {} });
+      }
+
+      const { data, error } = await supabaseAdmin
+        .from('lecture_note_report_counts')
+        .select('lecture_note_id, unresolved_count')
+        .in('lecture_note_id', ids);
+
+      if (error) {
+        console.error('report counts error:', error.message);
+        return jsonError('فشل تحميل البلاغات', 500);
+      }
+
+      const counts: Record<string, number> = {};
+      for (const row of data ?? []) {
+        counts[row.lecture_note_id] = row.unresolved_count;
+      }
+
+      return NextResponse.json({ counts });
+    }
+
+    default:
+      return jsonError('إجراء غير معروف');
+  }
+}
+===app/api/study-prompt/route.ts===
+// app/api/study-prompt/route.ts
+import { NextResponse } from 'next/server';
+import { jsonError, safeString } from '@/lib/api-server';
+import { MATERIAL_METHODS, STUDY_FORMATS, type StudyFormat } from '@/lib/constants';
+
+interface StudyPromptBody {
+  subject?: unknown;
+  materialMethod?: unknown;
+  formats?: unknown;
+  language?: unknown;
+}
+
+const VALID_FORMATS = new Set<string>(STUDY_FORMATS);
+const VALID_METHODS = new Set<string>(MATERIAL_METHODS.map((m) => m.value));
+
+// ==================== Helper: detect colloquial request ====================
+function hasColloquialFormat(formats: string[]): boolean {
+  return formats.some((f) => f.includes('اللهجة العراقية'));
+}
+
+// ==================== Helper: is incremental? ====================
+function isIncrementalMethod(method: string): boolean {
+  return (
+    method.includes('سلايد بكل رسالة') ||
+    method.includes('جزء بعد جزء')
+  );
+}
+
+// ==================== Prompt Builder ====================
+function buildSystemPrompt(
+  materialMethod: string,
+  formats: string[],
+  language: 'ar' | 'en',
+): string {
+  const isIncremental = isIncrementalMethod(materialMethod);
+  const hasColloquial = hasColloquialFormat(formats);
+
+  const incrementalRules = isIncremental
+    ? `
+- Treat each message from the student as ONE slide/part, and respond to EACH one individually and immediately — do not wait to accumulate several before responding.
+- Keep each requested format's output SMALL per slide/part — around 2 to 3 items only (e.g. 2-3 flashcards, 2-3 MCQ questions), never a large batch. Slides arrive one at a time and a big batch per slide is overwhelming.
+- If a comprehensive/final review format is among the requested formats, WAIT until the student explicitly signals they are done sending slides (e.g. says "خلصت" or "that's all" or similar) before producing that comprehensive review. That review alone can be longer/more thorough since it covers the whole lecture.`
+    : `
+- The student sends the whole material at once, so you can give one normal, appropriately sized response covering everything without per-slide restrictions.`;
+
+  const colloquialRules = hasColloquial
+    ? `
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 CRITICAL RULE FOR THE COLLOQUIAL IRAQI SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The student requested "ملخص باللهجة العراقية العامية" (Iraqi colloquial summary).
+When producing THIS specific format, follow these rules strictly:
+
+1. LANGUAGE: Write in NATURAL IRAQI DIALECT (اللهجة العراقية العامية).
+   - NOT Modern Standard Arabic (الفصحى)
+   - NOT Gulf / Egyptian / Levantine dialects
+   - If you don't know a word in Iraqi dialect, use the closest everyday Iraqi expression instead of MSA.
+
+2. TONE: Like an Iraqi medical student explaining to his close friends before an exam — casual, warm, motivating, no formality.
+
+3. APPROVED STYLE MARKERS (use these freely):
+   • "شنو تعرفون عن..."
+   • "المهم هنا إن..."
+   • "بالمختصر..."
+   • "زبدة الموضوع..."
+   • "خلي نكون صريحين..."
+   • "بنقطة وحدة:..."
+   • "لا تفوتونها لأن..."
+   • "هذا الجزء صعب شوية، لكن تخيلوا..."
+   • "شدوا حيلكم..."
+   • "لا تخافون..."
+
+4. FORBIDDEN WORDS & STYLE (never use these):
+   • "فإن" / "لذلك" / "يُعد" / "يتناول" / "يتميز" / "بالإضافة إلى ذلك"
+   • "المريض يعاني من..." (فصحى) — instead: "المريض يجيه..."
+   • "يمكن القول إن..." — instead: "باختصار..."
+   • Formal verbs ending in "ـات" like "يتضمن" — use "يشمل" or "بيه"
+
+5. STRUCTURE:
+   • Open with a hooking question or short observation
+   • 2-4 short paragraphs maximum, each focusing on ONE idea
+   • If a concept is clinically important, mark it: "⚠️ مهم للفاينل" or "🔥 ركزوا هنا"
+   • End with a motivational or memorable line
+
+6. LENGTH: Keep it SHORT and punchy. Around 150-250 words total. Do NOT pad.
+
+7. If the topic is complex, use simple metaphors:
+   • "الفكرة مثل..." / "تخيلوا إن..."
+
+8. Do NOT invent clinical facts. If unsure, skip the detail.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXAMPLE OF DESIRED OUTPUT STYLE (for reference only):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"شنو تعرفون عن الالتهاب؟ 🤔
+
+الفكرة الأساسية إن الجسم يشتغل مثل رجل إطفاء — يشتعل المكان بس لإصلاح الأضرار. العملية نفسها تخرب، بس الهدف إن الجسم يرجع مثل أول.
+
+بنقطة مهمة: السيتوكينات هي الرسائل يلي تتحكم بهذي العملية، وتفرزها خلايا المناعة.
+
+⚠️ مهم للفاينل: نفس الالتهاب يلي يحميك، لو زاد عن حده يصير هو سبب المرض — لهذا أمراض المناعة الذاتية خطيرة.
+
+شدوا حيلكم، هذي أساس كل شي جاي بعده 🔥"`
+    : '';
+
+  return `You are an expert prompt engineer specializing in medical education. Your ONLY job is to write a single, detailed, professional, ready-to-use prompt that a medical student can paste into any AI assistant (such as ChatGPT or Claude) to study a specific subject effectively.
+
+Context about how the student will interact with the target AI right after pasting your prompt:
+- Material delivery method: "${materialMethod}"
+
+If this method is incremental (one slide or one part sent per message, repeated across many messages until the lecture is done), your prompt MUST explicitly instruct the target AI to:${incrementalRules}
+
+The requested response formats the student wants from the target AI (apply the per-slide quantity rule above to each, except any comprehensive-review format):
+- ${formats.join('\n- ')}${colloquialRules}
+
+Rules you must follow strictly:
+- Do NOT answer the subject yourself. Do NOT explain the medical content. Do NOT provide any medical information directly — you only produce the prompt text.
+- Your entire output is ONLY the prompt text itself — nothing else. No preamble, no quotation marks wrapping it, no meta-commentary, no explanation of what you did.
+- The prompt you write should instruct the target AI to act as an expert, patient medical tutor, appropriate in depth and accuracy for a second-year medical student.
+- Make the prompt detailed and well-structured: a short role/context line, then clear numbered or bulleted instructions covering the material delivery method, the requested formats with their per-slide quantities, and the waiting/pacing behavior described above. Do not write a single vague sentence — be thorough enough that the target AI has no ambiguity about what to do.
+- Write the prompt itself in ${language === 'en' ? 'English' : 'Arabic'}.`;
+}
+
+// ==================== Route ====================
+export async function POST(request: Request) {
+  let body: StudyPromptBody;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('الطلب غير صالح', 400);
+  }
+
+  const subject = safeString(body.subject, 200);
+  const materialMethod = safeString(body.materialMethod, 500);
+  const language = body.language === 'en' ? 'en' : 'ar';
+
+  if (!subject) return jsonError('اختر المادة أول شي.');
+  if (!materialMethod) return jsonError('اختر طريقة إرسال المحتوى.');
+  if (!VALID_METHODS.has(materialMethod)) return jsonError('طريقة الإرسال غير معروفة.');
+
+  if (!Array.isArray(body.formats) || body.formats.length === 0) {
+    return jsonError('اختر طريقة شرح وحدة على الأقل.');
+  }
+
+  const formats = body.formats.filter(
+    (f): f is StudyFormat => typeof f === 'string' && VALID_FORMATS.has(f)
+  );
+
+  if (formats.length === 0) {
+    return jsonError('ما يو شكل شرح صالح.');
+  }
+  if (formats.length > STUDY_FORMATS.length) {
+    return jsonError('عدد أشكال الشرح غير صالح.');
+  }
+
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    console.error('GROQ_API_KEY غير مُعد');
+    return jsonError('خدمة الذكاء الاصطناعي غير مُعدّة على السيرفر.', 500);
+  }
+
+  const systemPrompt = buildSystemPrompt(materialMethod, formats, language);
+  const userMessage = `Subject: ${subject}
+Material delivery method: ${materialMethod}
+Requested formats: ${formats.join('، ')}`;
+
+  try {
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'openai/gpt-oss-120b',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage },
+        ],
+        temperature: 0.7,
+        max_tokens: 1800,
+      }),
+    });
+
+    if (!groqRes.ok) {
+      const errBody = await groqRes.text();
+      console.error('Groq error:', groqRes.status, errBody.slice(0, 500));
+      return jsonError(
+        `صار خطأ من خدمة الذكاء الاصطناعي (${groqRes.status}). حاول مرة ثانية بعد شوي.`,
+        502
+      );
+    }
+
+    const data = (await groqRes.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const generatedPrompt = data.choices?.[0]?.message?.content?.trim();
+
+    if (!generatedPrompt) {
+      return jsonError('ما وصل رد من الذكاء الاصطناعي. حاول مرة ثانية.', 502);
+    }
+
+    return NextResponse.json({ prompt: generatedPrompt });
+  } catch (err) {
+    console.error('Study prompt error:', err);
+    return jsonError('فشل الاتصال بخدمة الذكاء الاصطناعي.', 500);
+  }
+}
+===app/api/telegram/go/route.ts===
+// app/api/telegram/go/route.ts
+import { NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { safeString } from '@/lib/api-server';
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const noteId = safeString(url.searchParams.get('n'), 100);
+  const chatIdStr = safeString(url.searchParams.get('c'), 30);
+  const chatId = chatIdStr ? Number(chatIdStr) : NaN;
+
+  if (!noteId || !Number.isFinite(chatId)) {
+    return NextResponse.redirect(new URL('/', url.origin), 302);
+  }
+
+  const supabaseAdmin = getSupabaseAdmin();
+
+  // 1. اجلب الملزمة
+  const { data: note } = await supabaseAdmin
+    .from('lecture_notes')
+    .select('id, file_path')
+    .eq('id', noteId)
+    .maybeSingle<{ id: string; file_path: string }>();
+
+  if (!note) {
+    return NextResponse.redirect(new URL('/', url.origin), 302);
+  }
+
+  // 2. سجّل الفتح + حدّث الستريك
+  try {
+    await supabaseAdmin.from('telegram_opens').insert({
+      chat_id: chatId,
+      note_id: note.id,
+    });
+
+    await supabaseAdmin.rpc('update_telegram_streak', { p_chat_id: chatId });
+  } catch (err) {
+    console.error('[tg/go] tracking error:', err);
+    // نستمر بالتوجيه حتى لو فشل التسجيل
+  }
+
+  // 3. وجّه للرابط الفعلي
+  return NextResponse.redirect(note.file_path, 302);
+}
+===app/api/telegram/setup/route.ts===
+// app/api/telegram/setup/route.ts
+import { NextResponse } from 'next/server';
+import { setWebhook, deleteWebhook, getWebhookSecret } from '@/lib/telegram';
+import { jsonError, requireAdminPassword, safeString } from '@/lib/api-server';
+
+export async function POST(request: Request) {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('الطلب غير صالح', 400);
+  }
+
+  const password = safeString(body.password, 200);
+  if (!requireAdminPassword(password)) {
+    return jsonError('كلمة المرور غير صحيحة', 401);
+  }
+
+  const action = typeof body.action === 'string' ? body.action : 'set';
+
+  if (action === 'delete') {
+    const ok = await deleteWebhook();
+    return NextResponse.json({
+      ok,
+      message: ok ? 'تم حذف الـwebhook' : 'فشل الحذف',
+    });
+  }
+
+  const webhookUrl = safeString(body.webhook_url, 500);
+  if (!webhookUrl || !webhookUrl.startsWith('https://')) {
+    return jsonError('يجب إرسال webhook_url صحيح يبدأ بـ https://');
+  }
+
+  const secret = getWebhookSecret();
+  const result = await setWebhook(webhookUrl, secret);
+
+  return NextResponse.json({
+    ok: result.ok,
+    description: result.description,
+    secret_configured: !!secret,
+  });
+}
+===app/api/telegram/webhook/route.ts===
+// app/api/telegram/webhook/route.ts
+import { NextResponse } from 'next/server';
+import {
+  sendMessage,
+  answerCallbackQuery,
+  getWebhookSecret,
+} from '@/lib/telegram';
+import { getAdmin, type AdminRole } from '@/lib/telegram-admins';
+import { getSession, clearSession } from '@/lib/telegram/sessions';
+
+// ═══ Student handlers ═══
+import {
+  handleStart,
+  handleStageSelection,
+  handleGroupSelection,
+  handleSubjectToggle,
+  handleSubjectsDone,
+  handleToggleNotification,
+  handleSettingsNavigation,
+  handleStop,
+  handleStudentMenuButton,
+  sendHelp,
+  sendStreak,
+  sendSettings,
+} from '@/lib/telegram/handlers/student';
+
+// ═══ Announce handlers ═══
+import {
+  handleAnnounceStart,
+  handleTemplatePick,
+  handleEditTitleStart,
+  handleEditBodyStart,
+  handleAddLinkStart,
+  handleChooseStageStart,
+  handleStagePick,
+  handleBackToDraft,
+  handleAnnounceTextInput,
+  handleAnnounceSubmit,
+  handleAnnounceCancel,
+} from '@/lib/telegram/handlers/announce';
+
+// ═══ Admin handlers ═══
+// ملاحظة: لا نستورد sendAdminHelp مباشرة — نستخدم handleAdminMenuButton
+import {
+  handlePendingList,
+  handleApprove,
+  handleRejectStart,
+  handleRejectText,
+  handleDeleteAnnouncement,
+  handleHistory,
+  handleStats,
+  handleListAdmins,
+  handleAddAdminStart,
+  handleAddAdminChatId,
+  handleAddAdminRole,
+  handleRemoveAdmin,
+  handleAdminMenuButton,
+  quickAddAdmin,
+} from '@/lib/telegram/handlers/admin';
+
+// ═══ Inquiry handlers ═══
+import {
+  handleInquiryStart,
+  handleInquiryText,
+  handleInquiriesList,
+  handleInquiryReplyStart,
+  handleInquiryReplyText,
+  handleInquiryClose,
+  handleInquiryCancel,
+} from '@/lib/telegram/handlers/inquiries';
+
+// ═══ Types ═══
+import type {
+  TelegramUpdate,
+  TelegramMessage,
+  TelegramCallbackQuery,
+} from '@/lib/telegram/types';
+import {
+  STUDENT_MENU_TEXTS,
+  ADMIN_MENU_TEXTS,
+} from '@/lib/telegram/types';
+
+// ==================== Constants ====================
+const ADMIN_ROLES: readonly AdminRole[] = [
+  'super_admin',
+  'admin',
+  'publisher',
+];
+
+function isAdminRole(v: string): v is AdminRole {
+  return (ADMIN_ROLES as readonly string[]).includes(v);
+}
+
+// ==================== POST ====================
+export async function POST(request: Request) {
+  // 1. التحقق من السكرت
+  const secret = getWebhookSecret();
+  if (secret) {
+    const incoming = request.headers.get('x-telegram-bot-api-secret-token');
+    if (incoming !== secret) {
+      return NextResponse.json({ ok: false }, { status: 401 });
+    }
+  }
+
+  // 2. تحليل الـupdate
+  let update: TelegramUpdate;
+  try {
+    update = (await request.json()) as TelegramUpdate;
+  } catch {
+    return NextResponse.json({ ok: true });
+  }
+
+  // 3. تحديد baseUrl
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ??
+    'https://lawazem.vercel.app';
+
+  // 4. التوجيه
+  try {
+    if (update.message) {
+      await handleMessage(update.message, baseUrl);
+    } else if (update.callback_query) {
+      await handleCallback(update.callback_query, baseUrl);
+    }
+  } catch (err) {
+    console.error('[tg webhook] error:', err);
+  }
+
+  return NextResponse.json({ ok: true });
+}
+
+// ==================== Message Handler ====================
+async function handleMessage(
+  msg: TelegramMessage,
+  baseUrl: string,
+): Promise<void> {
+  if (!msg.text || !msg.from) return;
+
+  const chatId = msg.chat.id;
+  const text = msg.text.trim();
+  const lower = text.toLowerCase();
+  const admin = await getAdmin(chatId);
+
+  // ═══════════════════════════════════════════════════
+  // 1. الأوامر الأساسية
+  // ═══════════════════════════════════════════════════
+  if (lower === '/start' || lower.startsWith('/start ')) {
+    await handleStart(msg, baseUrl);
+    return;
+  }
+
+  // ═══════════════════════════════════════════════════
+  // 2. جلسة مفتوحة (text input waiting)
+  // ═══════════════════════════════════════════════════
+  const session = await getSession(chatId);
+  if (session && session.flow_type !== 'idle') {
+    const handled = await routeSessionText(
+      chatId,
+      text,
+      session.flow_type,
+      session.flow_step,
+      admin,
+    );
+    if (handled) return;
+    await clearSession(chatId);
+  }
+
+  // ═══════════════════════════════════════════════════
+  // 3. أوامر مشتركة
+  // ═══════════════════════════════════════════════════
+  if (lower === '/help') {
+    await sendHelp(chatId, baseUrl);
+    return;
+  }
+  if (lower === '/streak') {
+    await sendStreak(chatId);
+    return;
+  }
+  if (lower === '/settings') {
+    await sendSettings(chatId);
+    return;
+  }
+  if (lower === '/ask' || lower === '/inquiry') {
+    await handleInquiryStart(chatId);
+    return;
+  }
+  if (lower === '/stop') {
+    await handleStop(chatId);
+    return;
+  }
+
+  // ═══════════════════════════════════════════════════
+  // 4. أوامر المشرف
+  // ═══════════════════════════════════════════════════
+  if (admin) {
+    // دليل المشرف — نستخدم handleAdminMenuButton بدل sendAdminHelp مباشرة
+    if (
+      lower === '/admin_help' ||
+      lower === '/guide' ||
+      lower === '/help_admin'
+    ) {
+      await handleAdminMenuButton(chatId, ADMIN_MENU_TEXTS.help, admin);
+      return;
+    }
+
+    // تبليغ جديد
+    if (lower === '/announce') {
+      await handleAnnounceStart(chatId);
+      return;
+    }
+
+    // المراجعة
+    if (lower === '/pending') {
+      await handlePendingList(chatId);
+      return;
+    }
+
+    // أوامر السوبر أدمن
+    if (admin.role === 'super_admin') {
+      if (lower === '/history') {
+        await handleHistory(chatId);
+        return;
+      }
+      if (lower === '/stats') {
+        await handleStats(chatId);
+        return;
+      }
+      if (lower === '/inquiries') {
+        await handleInquiriesList(chatId);
+        return;
+      }
+      if (lower === '/admins') {
+        await handleListAdmins(chatId);
+        return;
+      }
+
+      // /add_admin (سريع)
+      if (lower.startsWith('/add_admin ')) {
+        const parts = text.split(/\s+/).slice(1);
+        if (parts.length < 2) {
+          await sendMessage(
+            chatId,
+            '❌ الصيغة: <code>/add_admin CHAT_ID ROLE</code>\n\n' +
+              'أو اكتب <code>/add_admin</code> فقط للطريقة التفاعلية.',
+          );
+          return;
+        }
+        const targetId = Number(parts[0]);
+        const roleStr = parts[1];
+        if (!Number.isFinite(targetId) || !isAdminRole(roleStr)) {
+          await sendMessage(
+            chatId,
+            '❌ الصيغة غير صحيحة. الأدوار المتاحة: super_admin | admin | publisher',
+          );
+          return;
+        }
+        await quickAddAdmin(chatId, targetId, roleStr);
+        return;
+      }
+
+      // /add_admin (تفاعلي)
+      if (lower === '/add_admin') {
+        await handleAddAdminStart(chatId);
+        return;
+      }
+
+      // /remove_admin
+      if (lower.startsWith('/remove_admin')) {
+        await handleRemoveAdmin(chatId, text);
+        return;
+      }
+    }
+
+    // إلغاء
+    if (lower === '/cancel') {
+      await clearSession(chatId);
+      await sendMessage(chatId, '✅ تم الإلغاء.');
+      return;
+    }
+
+    // أزرار قائمة المشرف
+    if (Object.values(ADMIN_MENU_TEXTS).includes(text as never)) {
+      const handled = await handleAdminMenuButton(chatId, text, admin);
+      if (handled) return;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════
+  // 5. زر "📮 استفسار"
+  // ═══════════════════════════════════════════════════
+  if (text === STUDENT_MENU_TEXTS.inquiry) {
+    await handleInquiryStart(chatId);
+    return;
+  }
+
+  // ═══════════════════════════════════════════════════
+  // 6. باقي أزرار قائمة الطالب
+  // ═══════════════════════════════════════════════════
+  const studentHandled = await handleStudentMenuButton(chatId, text, baseUrl);
+  if (studentHandled) return;
+
+  // ═══════════════════════════════════════════════════
+  // 7. Fallback
+  // ═══════════════════════════════════════════════════
+  await sendMessage(
+    chatId,
+    `🤔 لم أفهم هذا الأمر.\n\nاكتب /help للقائمة، أو /start للتسجيل.`,
+  );
+}
+
+// ==================== Session Text Router ====================
+async function routeSessionText(
+  chatId: number,
+  text: string,
+  flowType: string,
+  flowStep: string | null,
+  admin: Awaited<ReturnType<typeof getAdmin>>,
+): Promise<boolean> {
+  // ─── announce wizard ───
+  if (flowType === 'announce') {
+    if (
+      flowStep === 'edit_title' ||
+      flowStep === 'edit_body' ||
+      flowStep === 'edit_link_url'
+    ) {
+      await handleAnnounceTextInput(chatId, text, flowStep);
+      return true;
+    }
+    return false;
+  }
+
+  // ─── reject wizard ───
+  if (flowType === 'reject') {
+    if (!admin) return false;
+    await handleRejectText(chatId, text, admin);
+    return true;
+  }
+
+  // ─── add admin wizard ───
+  if (flowType === 'add_admin') {
+    if (!admin || admin.role !== 'super_admin') return false;
+    if (flowStep === 'awaiting_chat_id') {
+      await handleAddAdminChatId(chatId, text);
+      return true;
+    }
+    return false;
+  }
+
+  // ─── inquiry wizard ───
+  if (flowType === 'inquiry') {
+    if (flowStep === 'awaiting_question') {
+      await handleInquiryText(chatId, text);
+      return true;
+    }
+    if (flowStep === 'awaiting_reply') {
+      if (!admin) return false;
+      await handleInquiryReplyText(chatId, text, chatId);
+      return true;
+    }
+    return false;
+  }
+
+  return false;
+}
+
+// ==================== Callback Handler ====================
+async function handleCallback(
+  cb: TelegramCallbackQuery,
+  baseUrl: string,
+): Promise<void> {
+  if (!cb.data || !cb.message) return;
+
+  const chatId = cb.message.chat.id;
+  const data = cb.data;
+  const admin = await getAdmin(chatId);
+
+  // ═══════════════════════════════════════════════════
+  // Cancel
+  // ═══════════════════════════════════════════════════
+  if (
+    data === 'ann_cancel' ||
+    data === 'admin_cancel' ||
+    data === 'inq_cancel'
+  ) {
+    await clearSession(chatId);
+    if (data === 'inq_cancel') {
+      await handleInquiryCancel(chatId);
+    } else {
+      await handleAnnounceCancel(chatId);
+    }
+    await answerCallbackQuery(cb.id);
+    return;
+  }
+
+  // ═══════════════════════════════════════════════════
+  // Student onboarding
+  // ═══════════════════════════════════════════════════
+  if (data.startsWith('stage:')) {
+    await handleStageSelection(cb, data.slice(6));
+    return;
+  }
+  if (data.startsWith('group:')) {
+    await handleGroupSelection(cb, data.slice(6), baseUrl);
+    return;
+  }
+  if (data.startsWith('subj:')) {
+    await handleSubjectToggle(cb, data.slice(5));
+    return;
+  }
+  if (data === 'subj_done') {
+    await handleSubjectsDone(cb, baseUrl);
+    return;
+  }
+
+  // ═══════════════════════════════════════════════════
+  // Notification toggles
+  // ═══════════════════════════════════════════════════
+  if (data.startsWith('tog:')) {
+    await handleToggleNotification(cb, data.slice(4));
+    return;
+  }
+
+  // ═══════════════════════════════════════════════════
+  // Settings navigation
+  // ═══════════════════════════════════════════════════
+  if (data.startsWith('settings:')) {
+    await handleSettingsNavigation(cb, data.slice(9));
+    return;
+  }
+  if (data === 'onboarding:restart') {
+    await handleSettingsNavigation(cb, 'restart');
+    return;
+  }
+
+  // ═══════════════════════════════════════════════════
+  // Announce wizard
+  // ═══════════════════════════════════════════════════
+  if (data.startsWith('tpl_pick:')) {
+    await handleTemplatePick(cb, data.slice(9));
+    return;
+  }
+  if (data === 'ann_edit_title') {
+    await handleEditTitleStart(cb);
+    return;
+  }
+  if (data === 'ann_edit_body') {
+    await handleEditBodyStart(cb);
+    return;
+  }
+  if (data === 'ann_add_link') {
+    await handleAddLinkStart(cb);
+    return;
+  }
+  if (data === 'ann_choose_stage') {
+    await handleChooseStageStart(cb);
+    return;
+  }
+  if (data === 'ann_back_to_draft') {
+    await handleBackToDraft(cb);
+    return;
+  }
+  if (data.startsWith('ann_stage:')) {
+    await handleStagePick(cb, data.slice(10));
+    return;
+  }
+  if (data === 'ann_submit') {
+    if (!admin) {
+      await answerCallbackQuery(cb.id, '❌ غير مصرح');
+      return;
+    }
+    await handleAnnounceSubmit(cb, admin);
+    return;
+  }
+
+  // ═══════════════════════════════════════════════════
+  // Approve / Reject / Delete
+  // ═══════════════════════════════════════════════════
+  if (data.startsWith('ann_approve:')) {
+    if (!admin) {
+      await answerCallbackQuery(cb.id, '❌ غير مصرح');
+      return;
+    }
+    await handleApprove(cb, data.slice(12), admin);
+    return;
+  }
+  if (data.startsWith('ann_reject:')) {
+    if (!admin) {
+      await answerCallbackQuery(cb.id, '❌ غير مصرح');
+      return;
+    }
+    await handleRejectStart(cb, data.slice(11), admin);
+    return;
+  }
+  if (data.startsWith('ann_delete:')) {
+    if (!admin) {
+      await answerCallbackQuery(cb.id, '❌ غير مصرح');
+      return;
+    }
+    await handleDeleteAnnouncement(cb, data.slice(11), admin);
+    return;
+  }
+
+  // ═══════════════════════════════════════════════════
+  // Add admin: role picker
+  // ═══════════════════════════════════════════════════
+  if (data.startsWith('addadmin_role:')) {
+    if (!admin || admin.role !== 'super_admin') {
+      await answerCallbackQuery(cb.id, '❌ غير مصرح');
+      return;
+    }
+    const roleStr = data.slice(14);
+    if (!isAdminRole(roleStr)) {
+      await answerCallbackQuery(cb.id, 'دور غير معروف');
+      return;
+    }
+    await handleAddAdminRole(cb, roleStr);
+    return;
+  }
+
+  // ═══════════════════════════════════════════════════
+  // Inquiries
+  // ═══════════════════════════════════════════════════
+  if (data.startsWith('inq_reply:')) {
+    if (!admin) {
+      await answerCallbackQuery(cb.id, '❌ غير مصرح');
+      return;
+    }
+    await handleInquiryReplyStart(cb, data.slice(10));
+    return;
+  }
+  if (data.startsWith('inq_close:')) {
+    if (!admin) {
+      await answerCallbackQuery(cb.id, '❌ غير مصرح');
+      return;
+    }
+    await handleInquiryClose(cb, data.slice(10));
+    return;
+  }
+
+  // ═══════════════════════════════════════════════════
+  // Fallback
+  // ═══════════════════════════════════════════════════
+  await answerCallbackQuery(cb.id);
+}
+===app/api/views/route.ts===
+// app/api/views/route.ts
+import { NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { jsonError, safeString } from '@/lib/api-server';
+
+// ==================== Types ====================
+interface TopNote {
+  id: string;
+  title: string;
+  professor_name: string | null;
+  subject_name: string;
+  file_path: string;
+  week_views: number;
+  views: number;
+}
+
+// ==================== Route ====================
+export async function POST(request: Request) {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('الطلب غير صالح', 400);
+  }
+
+  const action = typeof body.action === 'string' ? body.action : '';
+  const supabaseAdmin = getSupabaseAdmin();
+
+  // ==================== increment ====================
+  if (action === 'increment') {
+    const note_id = safeString(body.note_id, 100);
+    if (!note_id) return jsonError('id مطلوب');
+
+    const { error } = await supabaseAdmin.rpc('increment_note_views', {
+      p_note_id: note_id,
+    });
+
+    if (error) {
+      console.error('increment_note_views error:', error.message);
+      return jsonError('فشل تحديث العدّاد', 500);
+    }
+
+    return NextResponse.json({ success: true });
+  }
+
+  // ==================== top ====================
+  if (action === 'top') {
+    const stage = safeString(body.stage, 100);
+    if (!stage) return jsonError('المرحلة مطلوبة');
+
+    // نجلب top 5 لهذه المرحلة فقط
+    const { data, error } = await supabaseAdmin
+      .from('lecture_notes')
+      .select(
+        'id, title, professor_name, file_path, week_views, views, subjects!inner(name, stage)'
+      )
+      .eq('subjects.stage', stage)
+      .gt('week_views', 0)
+      .order('week_views', { ascending: false })
+      .limit(5);
+
+    if (error) {
+      console.error('top notes error:', error.message);
+      return jsonError('فشل تحميل الأكثر إقبالاً', 500);
+    }
+
+    // نحوّل العلاقة إلى اسم مادة
+    function pickName(rel: unknown): string {
+      if (!rel) return '';
+      if (Array.isArray(rel)) {
+        const first = rel[0] as { name?: unknown } | undefined;
+        return typeof first?.name === 'string' ? first.name : '';
+      }
+      if (typeof rel === 'object') {
+        const name = (rel as { name?: unknown }).name;
+        return typeof name === 'string' ? name : '';
+      }
+      return '';
+    }
+
+    const items: TopNote[] = (data ?? []).map((n) => {
+      const row = n as {
+        id: string;
+        title: string;
+        professor_name: string | null;
+        file_path: string;
+        week_views: number;
+        views: number;
+        subjects: unknown;
+      };
+      return {
+        id: row.id,
+        title: row.title,
+        professor_name: row.professor_name,
+        subject_name: pickName(row.subjects),
+        file_path: row.file_path,
+        week_views: row.week_views,
+        views: row.views,
+      };
+    });
+
+    return NextResponse.json({ items });
+  }
+
+  return jsonError('إجراء غير معروف');
+}
+===app/channel-portal/_components/ContentSection.tsx===
+// app/channel-portal/_components/ContentSection.tsx
+'use client';
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { Checkbox, Input, Select, Textarea } from '@/components/ui/Field';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { buildStoragePath, postJson } from '@/lib/api-client';
+import { CONTENT_TYPES, CONTENT_TYPE_LABELS, STORAGE_BUCKETS } from '@/lib/constants';
+import type { ChannelContent, ContentType, FileEntry } from '@/lib/types';
+
+// ==================== Constants ====================
+const ACCEPTED_FILE_TYPES = '.pdf,.doc,.docx,.ppt,.pptx,image/*,audio/*,video/*';
+const MAX_FILE_SIZE_MB = 20;
+
+// ==================== Types ====================
+interface Props {
+  channelId: string;
+  password: string;
+}
+
+interface ContentForm {
+  content_type: ContentType;
+  title: string;
+  folder: string;
+  description: string;
+  due_date: string;
+  pinned: boolean;
+  files: FileEntry[];
+}
+
+function emptyFileEntry(): FileEntry {
+  return { label: null, url: '' };
+}
+
+function emptyForm(): ContentForm {
+  return {
+    content_type: 'assignment',
+    title: '',
+    folder: '',
+    description: '',
+    due_date: '',
+    pinned: false,
+    files: [emptyFileEntry()],
+  };
+}
+
+function formFromItem(item: ChannelContent): ContentForm {
+  const files =
+    item.file_urls && item.file_urls.length > 0
+      ? item.file_urls.map((f) => ({ label: f.label, url: f.url }))
+      : [emptyFileEntry()];
+  return {
+    content_type: item.content_type,
+    title: item.title,
+    folder: item.folder ?? '',
+    description: item.description ?? '',
+    due_date: item.due_date ?? '',
+    pinned: !!item.pinned,
+    files,
+  };
+}
+
+function isFormValid(f: ContentForm): boolean {
+  return f.title.trim() !== '';
+}
+
+function cleanFileEntries(files: FileEntry[]): FileEntry[] {
+  return files
+    .map((f) => ({ url: f.url.trim(), label: f.label?.trim() || null }))
+    .filter((f) => f.url !== '');
+}
+
+// ==================== Due Date Helpers ====================
+type DueKind = 'expired' | 'today' | 'tomorrow' | 'soon' | 'normal';
+
+interface DueInfo {
+  kind: DueKind;
+  label: string;
+  diff: number;
+}
+
+function getDueInfo(dateStr: string | null): DueInfo | null {
+  if (!dateStr) return null;
+  const due = new Date(dateStr);
+  if (Number.isNaN(due.getTime())) return null;
+
+  due.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const diff = Math.round((due.getTime() - today.getTime()) / 86400000);
+
+  if (diff < 0) return { kind: 'expired', label: 'انتهى الموعد', diff };
+  if (diff === 0) return { kind: 'today', label: 'التسليم اليوم', diff };
+  if (diff === 1) return { kind: 'tomorrow', label: 'التسليم غداً', diff };
+  if (diff <= 3) return { kind: 'soon', label: `بعد ${diff} أيام`, diff };
+  return { kind: 'normal', label: dateStr, diff };
+}
+
+function getDueBadgeClass(kind: DueKind): string {
+  switch (kind) {
+    case 'expired':
+      return 'bg-ink/5 text-ink/40 line-through';
+    case 'today':
+      return 'bg-red-500 text-white';
+    case 'tomorrow':
+      return 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300';
+    case 'soon':
+      return 'bg-amber/20 text-amber-800 dark:bg-amber/25 dark:text-amber-300';
+    case 'normal':
+    default:
+      return 'bg-ink/5 text-ink/60';
+  }
+}
+
+function isUpcoming(dateStr: string | null): boolean {
+  const info = getDueInfo(dateStr);
+  if (!info) return false;
+  return info.kind === 'today' || info.kind === 'tomorrow' || info.kind === 'soon';
+}
+
+// ==================== File Type Detection ====================
+function detectFileLabel(url: string): string | null {
+  const lower = url.toLowerCase();
+  if (lower.includes('t.me')) return 'تلغرام';
+  if (lower.includes('drive.google.com')) return 'Google Drive';
+  if (lower.includes('dropbox.com')) return 'Dropbox';
+  if (lower.includes('youtube.com') || lower.includes('youtu.be')) return 'يوتيوب';
+  if (lower.includes('onedrive') || lower.includes('1drv.ms')) return 'OneDrive';
+  if (lower.endsWith('.pdf')) return 'PDF';
+  if (lower.match(/\.(doc|docx)$/)) return 'Word';
+  if (lower.match(/\.(ppt|pptx)$/)) return 'PowerPoint';
+  if (lower.match(/\.(png|jpg|jpeg|webp|gif)$/)) return 'صورة';
+  if (lower.match(/\.(mp3|wav|m4a)$/)) return 'صوت';
+  if (lower.match(/\.(mp4|mov|avi|webm)$/)) return 'فيديو';
+  return null;
+}
+
+// ==================== Icons ====================
+function IconPin({ filled, className = '' }: { filled: boolean; className?: string }) {
+  return (
+    <svg className={`h-4 w-4 flex-shrink-0 ${className}`} fill={filled ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 4.5v6.75L6 15v1.5h12V15l-3-3.75V4.5M12 16.5V21" />
+    </svg>
+  );
+}
+function IconFolder() {
+  return (
+    <svg className="h-3.5 w-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+    </svg>
+  );
+}
+function IconSearch() {
+  return (
+    <svg className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
+    </svg>
+  );
+}
+function IconUpload() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+    </svg>
+  );
+}
+function IconEdit() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+  );
+}
+function IconTrash() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  );
+}
+function IconLink() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+    </svg>
+  );
+}
+function IconEmpty() {
+  return (
+    <svg className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h10M4 18h10" />
+    </svg>
+  );
+}
+function IconCopy() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+    </svg>
+  );
+}
+function IconCheckSquare() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+    </svg>
+  );
+}
+function IconStats() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+    </svg>
+  );
+}
+function IconWarning() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    </svg>
+  );
+}
+function IconFolderStack() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+    </svg>
+  );
+}
+function IconClose() {
+  return (
+    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  );
+}
+
+// ==================== Stats Bar ====================
+function StatCard({
+  icon,
+  label,
+  value,
+  accent,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  accent: 'teal' | 'amber' | 'red' | 'ink';
+}) {
+  const styles = {
+    teal: 'bg-teal/8 text-teal',
+    amber: 'bg-amber/15 text-amber-700 dark:text-amber-300',
+    red: 'bg-red-100 text-red-600 dark:bg-red-950/40 dark:text-red-300',
+    ink: 'bg-ink/5 text-ink/60',
+  }[accent];
+
+  return (
+    <div className="flex items-center gap-2.5 rounded-2xl border border-line bg-white/70 px-3 py-2.5 dark:bg-paper/70">
+      <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${styles}`}>
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <p className="text-lg font-black leading-none text-ink">{value}</p>
+        <p className="mt-0.5 truncate text-[11px] font-bold text-ink/50">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function StatsBar({ items }: { items: ChannelContent[] }) {
+  const stats = useMemo(() => {
+    let pinned = 0;
+    let upcoming = 0;
+    const folders = new Set<string>();
+
+    for (const item of items) {
+      if (item.pinned) pinned++;
+      if (item.due_date && isUpcoming(item.due_date)) upcoming++;
+      if (item.folder) folders.add(item.folder);
+    }
+
+    return {
+      total: items.length,
+      pinned,
+      upcoming,
+      folders: folders.size,
+    };
+  }, [items]);
+
+  if (items.length === 0) return null;
+
+  return (
+    <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <StatCard icon={<IconStats />} label="منشور" value={stats.total} accent="teal" />
+      <StatCard icon={<IconPin filled />} label="مثبّت" value={stats.pinned} accent="amber" />
+      <StatCard icon={<IconWarning />} label="موعد قريب" value={stats.upcoming} accent="red" />
+      <StatCard icon={<IconFolderStack />} label="مجلد" value={stats.folders} accent="ink" />
+    </div>
+  );
+}
+
+// ==================== File Entries Editor ====================
+interface FileEntriesEditorProps {
+  files: FileEntry[];
+  onChange: (files: FileEntry[]) => void;
+  channelId: string;
+  disabled?: boolean;
+}
+
+function FileEntriesEditor({ files, onChange, channelId, disabled }: FileEntriesEditorProps) {
+  const toast = useToast();
+  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
+
+  function updateSlot(index: number, patch: Partial<FileEntry>) {
+    onChange(files.map((f, i) => (i === index ? { ...f, ...patch } : f)));
+  }
+  function addSlot() {
+    onChange([...files, emptyFileEntry()]);
+  }
+  function removeSlot(index: number) {
+    onChange(files.filter((_, i) => i !== index));
+  }
+
+  async function handleUpload(index: number, file: File) {
+    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+      toast.show(`حجم الملف كبير جداً (بحد أقصى ${MAX_FILE_SIZE_MB} ميجا).`, 'error');
+      return;
+    }
+    setUploadingIndex(index);
+    try {
+      const filePath = buildStoragePath(channelId, file.name);
+      const { supabase } = await import('@/lib/supabaseClient');
+      const { error: uploadError } = await supabase.storage
+        .from(STORAGE_BUCKETS.channelFiles)
+        .upload(filePath, file);
+      if (uploadError) throw new Error(uploadError.message);
+      const { data } = supabase.storage
+        .from(STORAGE_BUCKETS.channelFiles)
+        .getPublicUrl(filePath);
+      updateSlot(index, { url: data.publicUrl, label: files[index]?.label || file.name });
+      toast.show('تم رفع الملف', 'success');
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل رفع الملف', 'error');
+    } finally {
+      setUploadingIndex(null);
+    }
+  }
+
+  return (
+    <div className="space-y-3 rounded-2xl border border-dashed border-line bg-paper/40 p-4 dark:bg-paper-deep/40">
+      <p className="flex items-center gap-1.5 text-sm font-bold text-ink/70">
+        <IconUpload />
+        الملفات والروابط
+      </p>
+
+      {files.map((f, i) => (
+        <div key={i} className="space-y-2 rounded-xl border border-line bg-white p-3 dark:bg-paper">
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              value={f.label ?? ''}
+              onChange={(e) => updateSlot(i, { label: e.target.value })}
+              placeholder={`اسم الملف ${i + 1} (اختياري)`}
+              maxLength={200}
+              disabled={disabled}
+              className="min-w-0 flex-1 text-sm"
+            />
+            {files.length > 1 && (
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                onClick={() => removeSlot(i)}
+                disabled={disabled}
+              >
+                حذف
+              </Button>
+            )}
+          </div>
+
+          <input
+            type="file"
+            accept={ACCEPTED_FILE_TYPES}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (file) handleUpload(i, file);
+            }}
+            disabled={disabled || uploadingIndex === i}
+            className="w-full text-xs file:mr-2 file:rounded-lg file:border-0 file:bg-teal file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white hover:file:bg-teal-light disabled:opacity-60"
+          />
+
+          {uploadingIndex === i && (
+            <div className="flex items-center gap-2 rounded-lg bg-teal/5 px-2.5 py-1.5 text-xs font-bold text-teal">
+              <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+                <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+              جاري الرفع...
+            </div>
+          )}
+
+          <div className="relative">
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink/30">
+              <IconLink />
+            </span>
+            <Input
+              type="url"
+              value={f.url}
+              onChange={(e) => {
+                const url = e.target.value;
+                const auto = detectFileLabel(url);
+                updateSlot(i, { url, label: files[i]?.label || auto || undefined });
+              }}
+              placeholder="أو الصق رابطاً (تلغرام، Drive، ...)"
+              maxLength={2000}
+              disabled={disabled}
+              className="w-full pr-9 text-sm"
+            />
+          </div>
+
+          {detectFileLabel(f.url) && (
+            <p className="text-[10px] font-bold text-ink/40">
+              النوع المكتشف: {detectFileLabel(f.url)}
+            </p>
+          )}
+        </div>
+      ))}
+
+      <button
+        type="button"
+        onClick={addSlot}
+        disabled={disabled}
+        className="text-sm font-bold text-teal transition-all hover:gap-2 hover:underline disabled:opacity-50"
+      >
+        + إضافة ملف / رابط
+      </button>
+    </div>
+  );
+}
+
+// ==================== Filters Bar ====================
+function FiltersBar({
+  search,
+  onSearchChange,
+  typeFilter,
+  onTypeFilterChange,
+  statusFilter,
+  onStatusFilterChange,
+}: {
+  search: string;
+  onSearchChange: (v: string) => void;
+  typeFilter: 'all' | ContentType;
+  onTypeFilterChange: (v: 'all' | ContentType) => void;
+  statusFilter: 'all' | 'pinned' | 'upcoming' | 'expired';
+  onStatusFilterChange: (v: 'all' | 'pinned' | 'upcoming' | 'expired') => void;
+}) {
+  return (
+    <div className="mb-4 flex flex-wrap gap-2">
+      <div className="relative min-w-[180px] flex-1">
+        <IconSearch />
+        <Input
+          type="text"
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder="ابحث بعنوان المحتوى..."
+          className="pr-11"
+        />
+      </div>
+      <Select
+        value={typeFilter}
+        onChange={(e) => onTypeFilterChange(e.target.value as 'all' | ContentType)}
+        className="w-full sm:w-40"
+        aria-label="فلترة حسب النوع"
+      >
+        <option value="all">كل الأنواع</option>
+        {CONTENT_TYPES.map((t) => (
+          <option key={t} value={t}>{CONTENT_TYPE_LABELS[t]}</option>
+        ))}
+      </Select>
+      <Select
+        value={statusFilter}
+        onChange={(e) =>
+          onStatusFilterChange(
+            e.target.value as 'all' | 'pinned' | 'upcoming' | 'expired'
+          )
+        }
+        className="w-full sm:w-40"
+        aria-label="فلترة حسب الحالة"
+      >
+        <option value="all">كل الحالات</option>
+        <option value="pinned">المثبتة فقط</option>
+        <option value="upcoming">مواعيد قريبة</option>
+        <option value="expired">مواعيد منتهية</option>
+      </Select>
+    </div>
+  );
+}
+
+// ==================== Bulk Actions Bar ====================
+function BulkActionsBar({
+  selectedCount,
+  operating,
+  onPin,
+  onUnpin,
+  onDelete,
+  onCancel,
+}: {
+  selectedCount: number;
+  operating: boolean;
+  onPin: () => void;
+  onUnpin: () => void;
+  onDelete: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="sticky bottom-4 z-30 mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-teal/30 bg-teal/95 px-4 py-3 text-white shadow-[0_12px_30px_rgba(14,74,74,0.25)] backdrop-blur-xl dark:bg-teal/80">
+      <div className="flex items-center gap-2">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-xs font-black">
+          {selectedCount}
+        </span>
+        <span className="text-sm font-bold">محدد</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={onPin}
+          disabled={operating}
+          className="rounded-lg bg-white/15 px-3 py-1.5 text-xs font-bold transition-all hover:bg-white/25 active:scale-95 disabled:opacity-50"
+        >
+          تثبيت
+        </button>
+        <button
+          type="button"
+          onClick={onUnpin}
+          disabled={operating}
+          className="rounded-lg bg-white/15 px-3 py-1.5 text-xs font-bold transition-all hover:bg-white/25 active:scale-95 disabled:opacity-50"
+        >
+          إلغاء التثبيت
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={operating}
+          className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-bold transition-all hover:bg-red-600 active:scale-95 disabled:opacity-50"
+        >
+          حذف
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={operating}
+          aria-label="إلغاء التحديد"
+          className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/15 transition-all hover:bg-white/25 active:scale-95 disabled:opacity-50"
+        >
+          <IconClose />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ==================== Item Card ====================
+interface ItemCardProps {
+  item: ChannelContent;
+  isEditing: boolean;
+  editForm: ContentForm;
+  onEditFormChange: (form: ContentForm) => void;
+  channelId: string;
+  saving: boolean;
+  folderSuggestions: string[];
+  selectionMode: boolean;
+  isSelected: boolean;
+  onToggleSelect: () => void;
+  onStartEdit: () => void;
+  onCancelEdit: () => void;
+  onSave: () => void;
+  onDuplicate: () => void;
+  onTogglePin: () => void;
+  onDelete: () => void;
+}
+
+function ItemCard({
+  item,
+  isEditing,
+  editForm,
+  onEditFormChange,
+  channelId,
+  saving,
+  folderSuggestions,
+  selectionMode,
+  isSelected,
+  onToggleSelect,
+  onStartEdit,
+  onCancelEdit,
+  onSave,
+  onDuplicate,
+  onTogglePin,
+  onDelete,
+}: ItemCardProps) {
+  const dueInfo = item.due_date ? getDueInfo(item.due_date) : null;
+  const folderListId = `folder-options-${item.id}`;
+
+  if (isEditing) {
+    return (
+      <div className="space-y-3 rounded-2xl border border-teal/30 bg-white p-4 shadow-[0_2px_8px_rgba(14,74,74,0.06)] dark:bg-paper">
+        <div className="flex flex-wrap gap-2">
+          <Select
+            value={editForm.content_type}
+            onChange={(e) =>
+              onEditFormChange({ ...editForm, content_type: e.target.value as ContentType })
+            }
+            className="w-full sm:w-36"
+            aria-label="نوع المحتوى"
+          >
+            {CONTENT_TYPES.map((t) => (
+              <option key={t} value={t}>{CONTENT_TYPE_LABELS[t]}</option>
+            ))}
+          </Select>
+          <Input
+            type="text"
+            value={editForm.title}
+            onChange={(e) => onEditFormChange({ ...editForm, title: e.target.value })}
+            maxLength={300}
+            className="min-w-[180px] flex-1"
+            autoFocus
+          />
+          <Input
+            type="date"
+            value={editForm.due_date}
+            onChange={(e) => onEditFormChange({ ...editForm, due_date: e.target.value })}
+            className="w-full sm:w-40"
+            aria-label="تاريخ التسليم"
+          />
+        </div>
+
+        <div>
+          <Input
+            type="text"
+            value={editForm.folder}
+            onChange={(e) => onEditFormChange({ ...editForm, folder: e.target.value })}
+            placeholder="اسم المجلد (اختياري)"
+            maxLength={200}
+            list={folderListId}
+          />
+          <datalist id={folderListId}>
+            {folderSuggestions.map((f) => (
+              <option key={f} value={f} />
+            ))}
+          </datalist>
+        </div>
+
+        <Textarea
+          value={editForm.description}
+          onChange={(e) => onEditFormChange({ ...editForm, description: e.target.value })}
+          placeholder="تفاصيل إضافية (اختياري)"
+          rows={2}
+          maxLength={2000}
+        />
+
+        <FileEntriesEditor
+          files={editForm.files}
+          onChange={(files) => onEditFormChange({ ...editForm, files })}
+          channelId={channelId}
+          disabled={saving}
+        />
+
+        <Checkbox
+          checked={editForm.pinned}
+          onChange={(v) => onEditFormChange({ ...editForm, pinned: v })}
+        >
+          تثبيت هذا المنشور في أعلى القناة
+        </Checkbox>
+
+        <div className="flex gap-2">
+          <Button size="sm" onClick={onSave} loading={saving} disabled={!isFormValid(editForm)}>
+            حفظ
+          </Button>
+          <Button size="sm" variant="secondary" onClick={onCancelEdit} disabled={saving}>
+            إلغاء
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`group relative rounded-2xl border bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 dark:bg-paper/80 ${
+        isSelected
+          ? 'border-teal bg-teal/5 dark:bg-teal/10'
+          : 'border-line hover:border-teal/20 hover:shadow-[0_4px_16px_rgba(14,74,74,0.06)]'
+      }`}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          {selectionMode && (
+            <button
+              type="button"
+              onClick={onToggleSelect}
+              aria-label={isSelected ? 'إلغاء التحديد' : 'تحديد'}
+              className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border-2 transition-all active:scale-90 ${
+                isSelected
+                  ? 'border-teal bg-teal text-white'
+                  : 'border-line bg-white hover:border-teal/40 dark:bg-paper'
+              }`}
+            >
+              {isSelected && (
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </button>
+          )}
+
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-teal/10 px-2.5 py-0.5 text-xs font-bold text-teal">
+                {CONTENT_TYPE_LABELS[item.content_type]}
+              </span>
+              {item.folder && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber/15 px-2.5 py-0.5 text-xs font-bold text-amber-800 dark:text-amber-300">
+                  <IconFolder />
+                  {item.folder}
+                </span>
+              )}
+              {item.pinned && (
+                <span className="rounded-full bg-teal px-2.5 py-0.5 text-xs font-bold text-white">
+                  مثبّت
+                </span>
+              )}
+              {dueInfo && (
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${getDueBadgeClass(
+                    dueInfo.kind
+                  )}`}
+                >
+                  {dueInfo.kind === 'today' && (
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+                  )}
+                  {dueInfo.kind === 'normal' ? `التسليم: ${dueInfo.label}` : dueInfo.label}
+                </span>
+              )}
+              <span className="font-bold text-ink">{item.title}</span>
+            </div>
+
+            {item.description && (
+              <p className="mt-1 text-sm leading-relaxed text-ink/60">{item.description}</p>
+            )}
+
+            {item.file_urls && item.file_urls.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {item.file_urls.map((f, i) => (
+                  <a
+                    key={i}
+                    href={f.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-teal/20 bg-teal/5 px-2.5 py-1 text-xs font-bold text-teal transition-all duration-200 hover:border-teal/40 hover:bg-teal/10"
+                  >
+                    <IconLink />
+                    {f.label || `ملف ${i + 1}`}
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {!selectionMode && (
+          <div className="flex flex-shrink-0 gap-1.5">
+            <button
+              type="button"
+              onClick={onDuplicate}
+              title="نسخ المنشور"

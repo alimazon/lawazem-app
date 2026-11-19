@@ -1,0 +1,1960 @@
+﻿    plane.normal.set(n[0] ?? 0, n[1] ?? 0, n[2] ?? 0).multiplyScalar(s);
+    plane.constant = ts.section.flip ? -ts.section.pos : ts.section.pos;
+  }
+
+  const tones = useMemo(() => new Map(props.selItems.map((s) => [s.id, s.tone] as const)), [props.selItems]);
+  const moving = Object.keys(props.pose).length > 0;
+  const look: Look = {
+    palette: props.palette,
+    tones,
+    highlight: props.highlight,
+    vis: ts.vis,
+    autoHide: props.autoHide,
+    peel: ts.peel,
+    boneOpacity: ts.boneOpacity,
+    muscleOpacity: ts.muscleOpacity,
+    focus: ts.focus && !props.hideNames,
+    anySelected: props.selItems.length > 0,
+    moving,
+    plane: ts.section.on ? plane : null,
+    kRef: props.kRef,
+    hover: props.hover,
+    pickedKey: props.pickedKey,
+    setHover: props.setHover,
+    onPickPart: props.onPickPart,
+  };
+
+  const fixed = parts.filter((p) => !p.head);
+  const head = parts.filter((p) => p.head && !p.jaw);
+  const jaw = parts.filter((p) => p.head && p.jaw);
+  const selIds = props.selItems.filter((s) => s.tone === 'sel').map((s) => s.id);
+
+  return (
+    <>
+      <ambientLight intensity={0.62} />
+      <hemisphereLight args={['#ffffff', '#b8a99a', 0.9]} />
+      <directionalLight position={[3, 4, 6]} intensity={2.0} />
+      <directionalLight position={[-4, 1, 3]} intensity={0.8} />
+      <directionalLight position={[0, 3, -5]} intensity={0.7} />
+
+      <OrbitControls
+        ref={controls}
+        makeDefault
+        enableDamping
+        dampingFactor={0.12}
+        rotateSpeed={0.7}
+        zoomSpeed={0.8}
+        autoRotate={ts.autoRotate}
+        autoRotateSpeed={1.4}
+        screenSpacePanning
+        minDistance={0.7}
+        maxDistance={22}
+        touches={{ ONE: TOUCH.ROTATE, TWO: TOUCH.DOLLY_PAN }}
+      />
+      <CameraRig zoom={props.zoom} view={props.view} focus={props.focusReq} parts={parts} controls={controls} freeTouch={ts.freeTouch} />
+
+      <group>{fixed.map((p) => <PartMesh key={p.key} part={p} look={look} />)}</group>
+      <HeadRig pose={props.pose} kRef={props.kRef}>
+        {head.map((p) => <PartMesh key={p.key} part={p} look={look} />)}
+        <JawRig pose={props.pose} kRef={props.kRef}>
+          {jaw.map((p) => <PartMesh key={p.key} part={p} look={look} />)}
+        </JawRig>
+      </HeadRig>
+
+      {ts.labels && !props.hideNames && selIds.length <= 3 && <PinnedLabels ids={selIds} parts={parts} />}
+    </>
+  );
+}
+
+// ==================== الواجهة ====================
+const INITIAL_TS = (): ToolState => {
+  let quality: 'full' | 'lite' = 'full';
+  let freeTouch = false;
+  try {
+    const stored = localStorage.getItem(QUALITY_KEY);
+    const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8;
+    const small = Math.min(window.screen.width, window.screen.height) < 700;
+    quality = stored === 'lite' || stored === 'full' ? stored : small || mem <= 2 ? 'lite' : 'full';
+    freeTouch = window.innerWidth >= 700;
+  } catch {
+    /* القيم الافتراضية */
+  }
+  return {
+    vis: DEFAULT_VISIBILITY,
+    peel: 1,
+    boneOpacity: 1,
+    muscleOpacity: 1,
+    section: { on: false, axis: 'x', pos: 0, flip: false } satisfies Section,
+    autoRotate: false,
+    labels: true,
+    focus: true,
+    freeTouch,
+    quality,
+  };
+};
+
+export default function Atlas3D(props: Atlas3DProps) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const alive = useRef(true);
+  const fromCanvas = useRef(false);
+  const partsRef = useRef<readonly Part[]>([]);
+  const captureRef = useRef<(() => string | null) | null>(null);
+  const [palette, setPalette] = useState<Palette>(LIGHT);
+  const [ts, setTs] = useState<ToolState>(INITIAL_TS);
+  const [hist, setHist] = useState<Visibility[]>([]);
+  const [hoverKey, setHoverKey] = useState<string | null>(null);
+  const [hoverLabel, setHoverLabel] = useState('');
+  const [view, setView] = useState<{ id: ViewId; n: number } | null>(null);
+  const [viewMenu, setViewMenu] = useState(false);
+  const [tools, setTools] = useState(false);
+  const [picked, setPicked] = useState<{ key: string; label: string; kind: 'bone' | 'muscle' } | null>(null);
+  const [focusReq, setFocusReq] = useState<FocusReq | null>(null);
+  const [missing, setMissing] = useState(false);
+  const { onFail, onPick } = props;
+  const { active: loading, progress } = useProgress();
+
+  const url = ts.quality === 'lite' ? URL_LITE : URL_FULL;
+
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let live = true;
+    fetch(url, { method: 'HEAD' })
+      .then((r) => { if (live && !r.ok) setMissing(true); })
+      .catch(() => { if (live) setMissing(true); });
+    return () => { live = false; };
+  }, [url]);
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const apply = (): void => setPalette(readPalette(el));
+    apply();
+    const mo = new MutationObserver(apply);
+    const opts = { attributes: true, attributeFilter: ['class', 'data-theme'] };
+    mo.observe(document.documentElement, opts);
+    mo.observe(document.body, opts);
+    return () => mo.disconnect();
+  }, []);
+
+  const patch = useCallback((p: Partial<ToolState>) => {
+    setTs((s) => ({ ...s, ...p }));
+    if (p.quality) {
+      try { localStorage.setItem(QUALITY_KEY, p.quality); } catch { /* تجاهل */ }
+    }
+  }, []);
+
+  const commitVis = useCallback((next: Visibility) => {
+    setHist((h) => [...h.slice(-29), ts.vis]);
+    setTs((s) => ({ ...s, vis: next }));
+  }, [ts.vis]);
+
+  const undo = useCallback(() => {
+    setHist((h) => {
+      const prev = h[h.length - 1];
+      if (prev) setTs((s) => ({ ...s, vis: prev }));
+      return h.slice(0, -1);
+    });
+  }, []);
+
+  const toggleGroup = useCallback((id: string) => {
+    const g = new Set(ts.vis.groups);
+    if (g.has(id)) g.delete(id);
+    else g.add(id);
+    commitVis({ ...ts.vis, groups: g });
+  }, [ts.vis, commitVis]);
+
+  const { onZoomRequest } = props;
+  const preset = useCallback(
+    (id: PresetId) => {
+      commitVis(presetVisibility(id));
+      const z: ZoomId = id === 'neck' ? 'neck' : id === 'anterior' ? 'throat' : id === 'posterior' ? 'posterior' : 'whole';
+      onZoomRequest?.(z);
+    },
+    [commitVis, onZoomRequest],
+  );
+
+  const selectedId = props.selItems.find((s) => s.tone === 'sel')?.id ?? null;
+  const multiSel = props.selItems.filter((s) => s.tone === 'sel').length > 1;
+  const selectedMissing = selectedId !== null && !multiSel && !MUSCLE_MESHES[selectedId]?.length;
+
+  // عند اختيار عضلة من خارج المجسّم ننتقل إليها
+  useEffect(() => {
+    if (picked && selectedId) setPicked(null);
+    if (!selectedId || multiSel) return;
+    if (fromCanvas.current) {
+      fromCanvas.current = false;
+      return;
+    }
+    setFocusReq((f) => ({ id: selectedId, n: (f?.n ?? 0) + 1 }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
+
+  const autoHide = useMemo(() => {
+    const s = new Set<string>();
+    const wanted = props.selItems.some((i) => i.id === 'platysma') || (props.highlight?.has('platysma') ?? false);
+    if (!wanted) s.add('platysma');
+    return s;
+  }, [props.selItems, props.highlight]);
+
+  const setHover = useCallback((key: string | null, label = '') => {
+    setHoverKey(key);
+    setHoverLabel(key ? label : '');
+  }, []);
+
+  const onPickPart = useCallback((p: Part) => {
+    if (p.muscleId) {
+      fromCanvas.current = true;
+      setPicked(null);
+      onPick(p.muscleId);
+    } else {
+      setPicked({ key: p.key, label: p.label, kind: p.kind });
+    }
+  }, [onPick]);
+
+  // ---- إجراءات المحدد ----
+  const target: { label: string; muscleId: string | null; key: string | null; kind: 'bone' | 'muscle' } | null =
+    picked
+      ? { label: picked.label, muscleId: null, key: picked.key, kind: picked.kind }
+      : selectedId && !multiSel && !selectedMissing
+        ? { label: MUSCLE_BY_ID[selectedId]?.en ?? selectedId, muscleId: selectedId, key: null, kind: 'muscle' }
+        : null;
+
+  const hideTarget = (): void => {
+    if (!target) return;
+    if (target.muscleId) commitVis({ ...ts.vis, muscles: new Set(ts.vis.muscles).add(target.muscleId) });
+    else if (target.key) commitVis({ ...ts.vis, parts: new Set(ts.vis.parts).add(target.key) });
+    setPicked(null);
+  };
+
+  const isolateTarget = (): void => {
+    if (!target) return;
+    if (target.muscleId) {
+      commitVis({
+        groups: new Set(ALL_CONTEXT_IDS),
+        muscles: new Set(ALL_MUSCLE_IDS.filter((id) => id !== target.muscleId)),
+        parts: new Set(),
+      });
+    } else if (target.key) {
+      commitVis({
+        groups: new Set(ALL_MUSCLE_GROUP_IDS.concat(ALL_CONTEXT_IDS)),
+        muscles: new Set(),
+        parts: new Set(partsRef.current.filter((p) => p.key !== target.key).map((p) => p.key)),
+      });
+    }
+  };
+
+  const resetAll = (): void => {
+    setHist([]);
+    setPicked(null);
+    setTs((s) => ({
+      ...s, vis: DEFAULT_VISIBILITY, peel: 1, boneOpacity: 1, muscleOpacity: 1, section: { ...s.section, on: false, pos: 0 }, autoRotate: false,
+    }));
+    setView({ id: 'front', n: (view?.n ?? 0) + 1 });
+  };
+
+  const shot = (): void => {
+    const data = captureRef.current?.();
+    if (!data) return;
+    const a = document.createElement('a');
+    a.href = data;
+    a.download = `anatomy-${selectedId ?? 'atlas'}.png`;
+    a.click();
+  };
+
+  if (missing) {
+    return (
+      <div className="fa3 fa3-empty" role="alert" dir="rtl">
+        <p>ملف النموذج غير موجود. ضعه في <span dir="ltr">public/atlas/</span> ثم أعد تحميل الصفحة.</p>
+      </div>
+    );
+  }
+
+  const quiz = props.hideNames;
+  const nameShown = hoverLabel && !quiz ? hoverLabel : '';
+  const hiddenCount = ts.vis.muscles.size + ts.vis.parts.size + ts.vis.groups.size - (ts.vis.groups.has('c:chest') ? 1 : 0);
+
+  return (
+    <div ref={wrapRef} className="fa3" role="group" aria-label="3D model of the skeleton, facial and neck muscles">
+      <Canvas
+        flat
+        frameloop="demand"
+        dpr={[1, 1.75]}
+        camera={{ fov: FOV, near: 0.1, far: 80, position: [0, 0, 12] }}
+        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+        onCreated={({ gl }) => {
+          const el = gl.domElement;
+          const onLost = (e: Event): void => {
+            e.preventDefault();
+            // يُطلق الحدث أيضاً عند إغلاق المجسّم عمداً؛ لا يُعدّ ذلك فشلاً
+            if (alive.current) onFail();
+          };
+          el.addEventListener('webglcontextlost', onLost);
+        }}
+      >
+        <Suspense fallback={null}>
+          <Scene
+            {...props}
+            url={url}
+            palette={palette}
+            ts={ts}
+            view={view}
+            focusReq={focusReq}
+            autoHide={autoHide}
+            hover={hoverKey}
+            pickedKey={picked?.key ?? null}
+            setHover={setHover}
+            onPickPart={onPickPart}
+            partsRef={partsRef}
+            captureRef={captureRef}
+            bg={palette.bg}
+          />
+        </Suspense>
+      </Canvas>
+
+      {loading && <div className="fa3-loading" role="status">جارٍ تحميل النموذج… {Math.round(progress)}%</div>}
+
+      <div className="fa3-top" dir="rtl">
+        <div className="fa3-menu">
+          <button type="button" className="fa-btn" aria-expanded={viewMenu} onClick={() => setViewMenu((v) => !v)}>الزاوية ▾</button>
+          {viewMenu && (
+            <div className="fa3-pop" role="menu">
+              {VIEW_LABEL.map(([id, label]) => (
+                <button key={id} type="button" role="menuitem" onClick={() => { setView((v) => ({ id, n: (v?.n ?? 0) + 1 })); setViewMenu(false); }}>{label}</button>
+              ))}
+            </div>
+          )}
+        </div>
+        <button type="button" className="fa-btn" aria-pressed={tools} onClick={() => setTools((t) => !t)}>
+          الطبقات والأدوات{hiddenCount > 0 ? ` · ${hiddenCount}` : ''}
+        </button>
+      </div>
+
+      <Atlas3DTools
+        ts={ts}
+        patch={patch}
+        setVis={commitVis}
+        toggleGroup={toggleGroup}
+        preset={preset}
+        canUndo={hist.length > 0}
+        undo={undo}
+        resetAll={resetAll}
+        shot={shot}
+        open={tools}
+        onClose={() => setTools(false)}
+      />
+
+      <div className="fa3-bottom" dir="rtl">
+        {(target || hist.length > 0) && (
+          <div className="fa3-actions">
+            {target && <span className="fa3-target" dir="ltr">{target.label}</span>}
+            {target && <button type="button" className="fa-btn" onClick={hideTarget}>إخفاء</button>}
+            {target && <button type="button" className="fa-btn" onClick={isolateTarget}>عزل</button>}
+            {hist.length > 0 && <button type="button" className="fa-btn" onClick={undo}>تراجع</button>}
+            {(hist.length > 0 || hiddenCount > 0) && (
+              <button type="button" className="fa-btn" onClick={() => commitVis({ groups: new Set(), muscles: new Set(), parts: new Set() })}>إظهار الكل</button>
+            )}
+          </div>
+        )}
+        <div className="fa3-peel">
+          <div className="fa3-peel-head">
+            <span>قشّر الطبقات</span>
+            <span className="fa3-peel-now">{ts.peel === 1 ? 'كل الطبقات' : `من الطبقة ${DEPTH_LABEL[ts.peel]}`}</span>
+          </div>
+          <input
+            type="range" min={1} max={4} step={1} value={ts.peel} dir="ltr" aria-label="Peel muscle layers"
+            onChange={(e) => patch({ peel: Number(e.target.value) as Depth })}
+          />
+          <div className="fa3-peel-scale" dir="ltr" aria-hidden="true">
+            {([1, 2, 3, 4] as const).map((d) => <span key={d}>{DEPTH_LABEL[d]}</span>)}
+          </div>
+        </div>
+      </div>
+
+      {selectedMissing && <div className="fa3-note" dir="rtl">هذه العضلة غير موجودة في النموذج ثلاثي الأبعاد، راجعها في وضع 2D.</div>}
+      <div className="fa3-hover" aria-hidden="true">{nameShown}</div>
+      <div className="fa3-credit" dir="ltr">BodyParts3D © DBCLS · Z-Anatomy</div>
+    </div>
+  );
+}
+
+export { SECTION_RANGE };
+
+===components/anatomy/Atlas3DLazy.tsx===
+'use client';
+
+// components/anatomy/Atlas3DLazy.tsx
+/**
+ * بوّابة تحميل كسول للمجسّم: three و react-three-fiber و drei لا تُحمَّل
+ * إلا عندما يختار المستخدم وضع 3D (dynamic import + ssr: false).
+ */
+import dynamic from 'next/dynamic';
+import { Component, type ReactNode } from 'react';
+import type { Atlas3DProps } from './Atlas3D';
+
+const Atlas3D = dynamic(() => import('./Atlas3D'), {
+  ssr: false,
+  loading: () => (
+    <div className="fa3 fa3-loading" role="status">
+      جارٍ تحميل النموذج ثلاثي الأبعاد…
+    </div>
+  ),
+});
+
+export function webglAvailable(): boolean {
+  try {
+    if (typeof window === 'undefined' || !window.WebGLRenderingContext) return false;
+    const c = document.createElement('canvas');
+    return Boolean(c.getContext('webgl2') ?? c.getContext('webgl'));
+  } catch {
+    return false;
+  }
+}
+
+interface BoundaryProps {
+  onFail: () => void;
+  children: ReactNode;
+}
+
+/** يلتقط أي خطأ في الـ 3D (فشل تحميل الحزمة أو WebGL) ويعيد المستخدم إلى الرسم 2D */
+class Boundary extends Component<BoundaryProps, { failed: boolean }> {
+  state = { failed: false };
+
+  static getDerivedStateFromError(): { failed: boolean } {
+    return { failed: true };
+  }
+
+  componentDidCatch(): void {
+    this.props.onFail();
+  }
+
+  render(): ReactNode {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
+export default function Atlas3DLazy(props: Atlas3DProps) {
+  return (
+    <Boundary onFail={props.onFail}>
+      <Atlas3D {...props} />
+    </Boundary>
+  );
+}
+
+===components/anatomy/atlas3d-model.ts===
+// components/anatomy/atlas3d-model.ts
+/** نموذج بيانات المجسّم: المجموعات، الإعدادات المسبقة، وحالة الرؤية (إخفاء/عزل/تراجع). */
+import { MUSCLE_GROUPS, NECK_GROUP_NAMES } from '@/lib/anatomy-data';
+import { MUSCLE_DEPTH, contextDepth, type Depth } from '@/lib/anatomy-layers';
+import { HEAD_BONES, MUSCLE_MESHES } from '@/lib/anatomy-meshes';
+
+export interface GroupDef {
+  id: string;
+  en: string;
+  ar: string;
+}
+
+export const BONE_GROUPS: readonly GroupDef[] = [
+  { id: 'b:cranium', en: 'Cranium', ar: 'الجمجمة' },
+  { id: 'b:mandible', en: 'Mandible', ar: 'الفك السفلي' },
+  { id: 'b:hyoid', en: 'Hyoid bone', ar: 'العظم اللامي' },
+  { id: 'b:cervical', en: 'Cervical spine', ar: 'الفقرات العنقية' },
+  { id: 'b:thoracic', en: 'Thoracic spine', ar: 'الفقرات الصدرية' },
+  { id: 'b:ribs', en: 'Ribs', ar: 'الأضلاع' },
+  { id: 'b:sternum', en: 'Sternum', ar: 'القص' },
+  { id: 'b:clavicle', en: 'Clavicle', ar: 'الترقوة' },
+  { id: 'b:scapula', en: 'Scapula', ar: 'لوح الكتف' },
+];
+
+export const MUSCLE_GROUP_DEFS: readonly GroupDef[] = MUSCLE_GROUPS.map((g) => ({
+  id: `m:${g.labelEn}`,
+  en: g.labelEn,
+  ar: g.label,
+}));
+
+export const CONTEXT_GROUPS: readonly GroupDef[] = [
+  { id: 'c:eye', en: 'Eye muscles', ar: 'عضلات العين' },
+  { id: 'c:pterygoid', en: 'Pterygoids', ar: 'العضلات الجناحية' },
+  { id: 'c:suboccipital', en: 'Deep posterior neck', ar: 'عضلات الرقبة الخلفية العميقة' },
+  { id: 'c:chest', en: 'Chest & shoulder', ar: 'الصدر والكتف' },
+];
+
+const NECK_SET = new Set(NECK_GROUP_NAMES);
+export const FACE_MUSCLE_GROUP_IDS: readonly string[] = MUSCLE_GROUPS.filter((g) => !NECK_SET.has(g.labelEn)).map((g) => `m:${g.labelEn}`);
+export const NECK_MUSCLE_GROUP_IDS: readonly string[] = MUSCLE_GROUPS.filter((g) => NECK_SET.has(g.labelEn)).map((g) => `m:${g.labelEn}`);
+export const ALL_MUSCLE_GROUP_IDS: readonly string[] = MUSCLE_GROUP_DEFS.map((g) => g.id);
+export const ALL_CONTEXT_IDS: readonly string[] = CONTEXT_GROUPS.map((g) => g.id);
+export const ALL_BONE_IDS: readonly string[] = BONE_GROUPS.map((g) => g.id);
+
+export const MUSCLE_GROUP_OF = new Map<string, string>();
+for (const g of MUSCLE_GROUPS) for (const id of g.ids) MUSCLE_GROUP_OF.set(id, `m:${g.labelEn}`);
+
+const OWNER = new Map<string, string>();
+for (const [id, names] of Object.entries(MUSCLE_MESHES)) for (const n of names) OWNER.set(n, id);
+const HEAD_BONE_SET = new Set(HEAD_BONES);
+
+function boneGroup(name: string): string {
+  if (/mandible/.test(name)) return 'b:mandible';
+  if (/hyoid/.test(name)) return 'b:hyoid';
+  if (/^(atlas|axis)$|cervical vertebra/.test(name)) return 'b:cervical';
+  if (/thoracic vertebra/.test(name)) return 'b:thoracic';
+  if (/rib$/.test(name)) return 'b:ribs';
+  if (/sternum|manubrium|xiphoid/.test(name)) return 'b:sternum';
+  if (/clavicle/.test(name)) return 'b:clavicle';
+  if (/scapula/.test(name)) return 'b:scapula';
+  return 'b:cranium';
+}
+
+function contextGroup(name: string): string {
+  if (/pectoralis|deltoid|subclavius|serratus|ascending part/.test(name)) return 'c:chest';
+  if (/pterygoid/.test(name)) return 'c:pterygoid';
+  if (/capitis posterior|longissimus|splenius cervicis/.test(name)) return 'c:suboccipital';
+  return 'c:eye';
+}
+
+export interface PartInfo {
+  key: string;
+  kind: 'bone' | 'muscle';
+  name: string;
+  muscleId: string | null;
+  group: string;
+  /** يتحرك مع الرأس */
+  head: boolean;
+  /** يتحرك مع الفك السفلي */
+  jaw: boolean;
+  depth: Depth;
+}
+
+const JAW_RE = /^(mandible|(left|right) (superficial part of masseter|deep part of masseter|medial pterygoid|inferior head of lateral pterygoid|mentalis|depressor labii inferioris|depressor anguli oris))$/;
+const HEAD_CONTEXT_RE = /((superior|inferior|medial|lateral) rectus|superior oblique|inferior oblique|levator palpebrae|pterygoid)/;
+
+const titleCase = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+
+export function describePart(raw: string): PartInfo {
+  const kind = raw.startsWith('b|') ? 'bone' : 'muscle';
+  const name = raw.slice(2);
+  const muscleId = kind === 'muscle' ? (OWNER.get(name) ?? null) : null;
+  const group =
+    kind === 'bone' ? boneGroup(name) : muscleId ? (MUSCLE_GROUP_OF.get(muscleId) ?? 'c:eye') : contextGroup(name);
+  const head =
+    kind === 'bone'
+      ? HEAD_BONE_SET.has(name)
+      : muscleId
+        ? !NECK_GROUP_MEMBER.has(muscleId)
+        : HEAD_CONTEXT_RE.test(name) && !/capitis/.test(name);
+  const depth: Depth = muscleId ? (MUSCLE_DEPTH[muscleId] ?? 2) : contextDepth(name);
+  return { key: raw, kind, name, muscleId, group, head, jaw: JAW_RE.test(name) || /pterygoid/.test(name), depth };
+}
+
+const NECK_GROUP_MEMBER = new Set<string>(
+  MUSCLE_GROUPS.filter((g) => NECK_SET.has(g.labelEn)).flatMap((g) => [...g.ids]),
+);
+
+export function labelOfPart(p: PartInfo, en: (id: string) => string | undefined): string {
+  const side = /^left /.test(p.name) ? 'Left' : /^right /.test(p.name) ? 'Right' : '';
+  const base = p.muscleId ? (en(p.muscleId) ?? p.name) : titleCase(p.name.replace(/^(left|right) /, '').replace(/ \(2\)$/, ''));
+  return side ? `${base} · ${side}` : base;
+}
+
+// ==================== الرؤية ====================
+export interface Visibility {
+  groups: ReadonlySet<string>;
+  muscles: ReadonlySet<string>;
+  parts: ReadonlySet<string>;
+}
+
+export const DEFAULT_VISIBILITY: Visibility = {
+  groups: new Set(['c:chest']),
+  muscles: new Set(),
+  parts: new Set(),
+};
+
+export function partVisible(p: PartInfo, v: Visibility, peel: Depth): boolean {
+  if (v.groups.has(p.group) || v.parts.has(p.key)) return false;
+  if (p.kind === 'muscle') {
+    if (p.muscleId && v.muscles.has(p.muscleId)) return false;
+    if (p.depth < peel) return false;
+  }
+  return true;
+}
+
+export type PresetId = 'all' | 'neck' | 'anterior' | 'posterior' | 'skeleton' | 'muscles';
+
+export const PRESETS: readonly { id: PresetId; en: string; ar: string }[] = [
+  { id: 'all', en: 'All', ar: 'الكل' },
+  { id: 'neck', en: 'Neck only', ar: 'الرقبة فقط' },
+  { id: 'anterior', en: 'Anterior triangle', ar: 'المثلث الأمامي' },
+  { id: 'posterior', en: 'Posterior triangle', ar: 'المثلث الخلفي' },
+  { id: 'skeleton', en: 'Skeleton', ar: 'الهيكل العظمي' },
+  { id: 'muscles', en: 'Muscles only', ar: 'العضلات فقط' },
+];
+
+const ANTERIOR_KEEP = ['scm', 'digastric', 'stylohyoid', 'mylohyoid', 'geniohyoid', 'omohyoid', 'sternohyoid', 'thyrohyoid', 'sternothyroid'];
+const POSTERIOR_KEEP = ['scm', 'trapezius', 'spleniusCapitis', 'levatorScapulae', 'scaleneAnt', 'scaleneMid', 'scalenePost', 'omohyoid'];
+export const ALL_MUSCLE_IDS = Object.keys(MUSCLE_MESHES);
+
+function only(keep: readonly string[], extraGroups: readonly string[]): Visibility {
+  const k = new Set(keep);
+  return {
+    groups: new Set([...ALL_CONTEXT_IDS, ...extraGroups]),
+    muscles: new Set(ALL_MUSCLE_IDS.filter((id) => !k.has(id))),
+    parts: new Set(),
+  };
+}
+
+export function presetVisibility(id: PresetId): Visibility {
+  switch (id) {
+    case 'neck':
+      return {
+        groups: new Set([...FACE_MUSCLE_GROUP_IDS, 'm:Mastication (V3)', 'c:eye', 'c:pterygoid', 'c:chest']),
+        muscles: new Set(),
+        parts: new Set(),
+      };
+    case 'anterior':
+      return only(ANTERIOR_KEEP, []);
+    case 'posterior':
+      return { ...only(POSTERIOR_KEEP, []), groups: new Set(['c:eye', 'c:pterygoid', 'c:chest']) };
+    case 'skeleton':
+      return { groups: new Set([...ALL_MUSCLE_GROUP_IDS, ...ALL_CONTEXT_IDS]), muscles: new Set(), parts: new Set() };
+    case 'muscles':
+      return { groups: new Set([...ALL_BONE_IDS, 'c:chest']), muscles: new Set(), parts: new Set() };
+    default:
+      return DEFAULT_VISIBILITY;
+  }
+}
+
+===components/anatomy/Atlas3DTools.tsx===
+'use client';
+
+// components/anatomy/Atlas3DTools.tsx
+/** أدوات المجسّم (واجهة DOM): الزوايا، الإعدادات المسبقة، الطبقات، الشفافية، المقطع، والحفظ. */
+import { useState, type ReactNode } from 'react';
+import { DEPTH_LABEL, type Depth } from '@/lib/anatomy-layers';
+import {
+  BONE_GROUPS, CONTEXT_GROUPS, FACE_MUSCLE_GROUP_IDS, MUSCLE_GROUP_DEFS, NECK_MUSCLE_GROUP_IDS, PRESETS,
+  type PresetId, type Visibility,
+} from './atlas3d-model';
+
+export type ViewId = 'front' | 'left' | 'right' | 'back' | 'top' | 'bottom';
+export const VIEW_LABEL: readonly (readonly [ViewId, string])[] = [
+  ['front', 'أمامي'], ['left', 'جانب أيسر'], ['right', 'جانب أيمن'], ['back', 'خلفي'], ['top', 'علوي'], ['bottom', 'سفلي'],
+];
+
+export type Axis = 'x' | 'y' | 'z';
+export interface Section { on: boolean; axis: Axis; pos: number; flip: boolean }
+
+export interface ToolState {
+  vis: Visibility;
+  peel: Depth;
+  boneOpacity: number;
+  muscleOpacity: number;
+  section: Section;
+  autoRotate: boolean;
+  labels: boolean;
+  focus: boolean;
+  freeTouch: boolean;
+  quality: 'full' | 'lite';
+}
+
+export const SECTION_RANGE: Record<Axis, [number, number]> = { x: [-1.6, 1.6], y: [-3.0, 1.7], z: [-1.1, 1.3] };
+const AXIS_LABEL: Record<Axis, string> = { x: 'طولي (يمين/يسار)', y: 'أفقي (علوي/سفلي)', z: 'أمامي/خلفي' };
+
+interface Props {
+  ts: ToolState;
+  patch: (p: Partial<ToolState>) => void;
+  setVis: (v: Visibility) => void;
+  toggleGroup: (id: string) => void;
+  preset: (id: PresetId) => void;
+  canUndo: boolean;
+  undo: () => void;
+  resetAll: () => void;
+  shot: () => void;
+  open: boolean;
+  onClose: () => void;
+}
+
+function Eye({ on }: { on: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {on ? (
+        <>
+          <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" />
+          <circle cx="12" cy="12" r="3" />
+        </>
+      ) : (
+        <>
+          <path d="M3 3l18 18" />
+          <path d="M10.6 6.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.1 3.9M6.5 6.7C3.7 8.4 2 12 2 12s3.6 7 10 7a9.9 9.9 0 0 0 4-.9" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="fa3-sec">
+      <h3>{title}</h3>
+      {children}
+    </section>
+  );
+}
+
+export default function Atlas3DTools({ ts, patch, setVis, toggleGroup, preset, canUndo, undo, resetAll, shot, open, onClose }: Props) {
+  const [tab, setTab] = useState<'layers' | 'view'>('layers');
+  if (!open) return null;
+
+  const hidden = (id: string): boolean => ts.vis.groups.has(id);
+  const row = (id: string, en: string, ar: string) => (
+    <button key={id} type="button" className="fa3-eye" aria-pressed={!hidden(id)} onClick={() => toggleGroup(id)}>
+      <Eye on={!hidden(id)} />
+      <span dir="ltr">{en}</span>
+      <small>{ar}</small>
+    </button>
+  );
+  const facial = MUSCLE_GROUP_DEFS.filter((g) => FACE_MUSCLE_GROUP_IDS.includes(g.id));
+  const neck = MUSCLE_GROUP_DEFS.filter((g) => NECK_MUSCLE_GROUP_IDS.includes(g.id));
+
+  return (
+    <div className="fa3-drawer" dir="rtl" role="dialog" aria-label="Tools">
+      <div className="fa3-drawer-head">
+        <div className="fa-seg" role="tablist">
+          <button type="button" role="tab" aria-pressed={tab === 'layers'} onClick={() => setTab('layers')}>الطبقات</button>
+          <button type="button" role="tab" aria-pressed={tab === 'view'} onClick={() => setTab('view')}>العرض</button>
+        </div>
+        <button type="button" className="fa-btn" onClick={onClose} aria-label="إغلاق">إغلاق</button>
+      </div>
+
+      <div className="fa3-drawer-body">
+        {tab === 'layers' && (
+          <>
+            <Section title="عرض سريع">
+              <div className="fa3-chips">
+                {PRESETS.map((p) => (
+                  <button key={p.id} type="button" className="fa-pill" onClick={() => preset(p.id)}>
+                    <span dir="ltr">{p.en}</span>
+                  </button>
+                ))}
+              </div>
+            </Section>
+
+            <Section title="الهيكل العظمي · Skeleton">
+              <div className="fa3-list">{BONE_GROUPS.map((g) => row(g.id, g.en, g.ar))}</div>
+            </Section>
+            <Section title="عضلات الوجه · Face">
+              <div className="fa3-list">{facial.map((g) => row(g.id, g.en, g.ar))}</div>
+            </Section>
+            <Section title="عضلات الرقبة · Neck">
+              <div className="fa3-list">{neck.map((g) => row(g.id, g.en, g.ar))}</div>
+            </Section>
+            <Section title="عضلات أخرى · Other">
+              <div className="fa3-list">{CONTEXT_GROUPS.map((g) => row(g.id, g.en, g.ar))}</div>
+            </Section>
+
+            {ts.vis.muscles.size + ts.vis.parts.size > 0 && (
+              <Section title="مخفية يدوياً">
+                <p className="fa3-small">{ts.vis.muscles.size + ts.vis.parts.size} عنصر. استخدم «إظهار الكل» أو «تراجع».</p>
+              </Section>
+            )}
+          </>
+        )}
+
+        {tab === 'view' && (
+          <>
+            <Section title="الشفافية">
+              <label className="fa3-slider"><span>العظام</span>
+                <input type="range" min={0.1} max={1} step={0.05} value={ts.boneOpacity} onChange={(e) => patch({ boneOpacity: Number(e.target.value) })} />
+              </label>
+              <label className="fa3-slider"><span>العضلات</span>
+                <input type="range" min={0.1} max={1} step={0.05} value={ts.muscleOpacity} onChange={(e) => patch({ muscleOpacity: Number(e.target.value) })} />
+              </label>
+            </Section>
+
+            <Section title="مقطع · Section">
+              <div className="fa3-chips">
+                <button type="button" className="fa-pill" aria-pressed={ts.section.on} onClick={() => patch({ section: { ...ts.section, on: !ts.section.on } })}>
+                  {ts.section.on ? 'إيقاف المقطع' : 'تفعيل المقطع'}
+                </button>
+                {(['x', 'z', 'y'] as const).map((a) => (
+                  <button key={a} type="button" className="fa-pill" aria-pressed={ts.section.axis === a}
+                    onClick={() => patch({ section: { ...ts.section, axis: a, pos: 0, on: true } })}>
+                    {AXIS_LABEL[a]}
+                  </button>
+                ))}
+                <button type="button" className="fa-pill" aria-pressed={ts.section.flip} onClick={() => patch({ section: { ...ts.section, flip: !ts.section.flip } })}>
+                  عكس الاتجاه
+                </button>
+              </div>
+              <label className="fa3-slider"><span>الموضع</span>
+                <input type="range" min={SECTION_RANGE[ts.section.axis][0]} max={SECTION_RANGE[ts.section.axis][1]} step={0.02}
+                  value={ts.section.pos} onChange={(e) => patch({ section: { ...ts.section, on: true, pos: Number(e.target.value) } })} />
+              </label>
+            </Section>
+
+            <Section title="خيارات">
+              <div className="fa3-chips">
+                <button type="button" className="fa-pill" aria-pressed={ts.labels} onClick={() => patch({ labels: !ts.labels })}>أسماء العضلات</button>
+                <button type="button" className="fa-pill" aria-pressed={ts.focus} onClick={() => patch({ focus: !ts.focus })}>إبراز المحددة</button>
+                <button type="button" className="fa-pill" aria-pressed={ts.autoRotate} onClick={() => patch({ autoRotate: !ts.autoRotate })}>دوران تلقائي</button>
+                <button type="button" className="fa-pill" aria-pressed={ts.freeTouch} onClick={() => patch({ freeTouch: !ts.freeTouch })}>تدوير حر باللمس</button>
+                <button type="button" className="fa-pill" aria-pressed={ts.quality === 'lite'} onClick={() => patch({ quality: ts.quality === 'lite' ? 'full' : 'lite' })}>
+                  {ts.quality === 'lite' ? 'جودة خفيفة' : 'جودة عالية'}
+                </button>
+              </div>
+            </Section>
+
+            <Section title="أدوات">
+              <div className="fa3-chips">
+                <button type="button" className="fa-pill" onClick={shot}>حفظ صورة</button>
+                <button type="button" className="fa-pill" disabled={!canUndo} onClick={undo}>تراجع</button>
+                <button type="button" className="fa-pill" onClick={() => setVis({ groups: new Set(), muscles: new Set(), parts: new Set() })}>إظهار الكل</button>
+                <button type="button" className="fa-pill" onClick={resetAll}>إعادة ضبط</button>
+              </div>
+            </Section>
+            <p className="fa3-small">الطبقات: {(['1', '2', '3', '4'] as const).map((d) => DEPTH_LABEL[Number(d) as Depth]).join(' › ')}</p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+===components/anatomy/AtlasDialog.tsx===
+'use client';
+
+// components/anatomy/AtlasDialog.tsx
+/** نافذة حوارية بسيطة: Esc للإغلاق، حبس التركيز، وإعادته للعنصر السابق، وقفل تمرير الصفحة. */
+import { useEffect, useRef, type ReactNode } from 'react';
+
+const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
+
+export default function AtlasDialog({
+  open, onClose, title, wide, children,
+}: { open: boolean; onClose: () => void; title: string; wide?: boolean; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.activeElement as HTMLElement | null;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    ref.current?.focus();
+
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab' || !ref.current) return;
+      const els = [...ref.current.querySelectorAll<HTMLElement>(FOCUSABLE)];
+      const first = els[0];
+      const last = els[els.length - 1];
+      if (!first || !last) return;
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => {
+      document.removeEventListener('keydown', onKey, true);
+      document.body.style.overflow = overflow;
+      prev?.focus?.();
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+  return (
+    <div className="fa-modal-overlay" onClick={onClose}>
+      <div
+        ref={ref}
+        className={`fa-modal${wide ? ' is-wide' : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        tabIndex={-1}
+        dir="rtl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="fa-modal-head">
+          <h2>{title}</h2>
+          <button type="button" className="fa-btn" onClick={onClose}>إغلاق</button>
+        </div>
+        <div className="fa-modal-body">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+===components/anatomy/AtlasExtras.tsx===
+'use client';
+
+// components/anatomy/AtlasExtras.tsx
+import { MUSCLE_BY_ID } from '@/lib/anatomy-data';
+import {
+  BRANCH_MNEMONIC,
+  EXTRA_MUSCLES,
+  FACIAL_BRANCHES,
+  FACIAL_PALSY_COMPARISON,
+  MUSCLES_BY_BRANCH,
+} from '@/lib/anatomy-extras';
+import { chipSmall } from './ui-classes';
+
+const summaryCls =
+  'cursor-pointer list-none rounded-card px-4 py-3 font-display text-base font-bold text-ink marker:hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal [&::-webkit-details-marker]:hidden';
+const boxCls = 'rounded-card border border-line bg-paper-soft';
+
+export default function AtlasExtras({ onSelect }: { onSelect: (id: string) => void }) {
+  return (
+    <div className="mt-8 grid gap-3">
+      <details className={boxCls}>
+        <summary className={summaryCls}>فروع العصب الوجهي الخمسة</summary>
+        <div className="px-4 pb-4">
+          <p className="text-sm text-ink-soft">
+            للحفظ:{' '}
+            <bdi dir="ltr" className="rounded-chip bg-gold-tint px-2 py-0.5 font-mono text-xs text-ink">
+              {BRANCH_MNEMONIC}
+            </bdi>{' '}
+            = Temporal · Zygomatic · Buccal · Marginal mandibular · Cervical
+          </p>
+          <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+            {FACIAL_BRANCHES.map((b) => (
+              <li key={b.id} className="rounded-field border border-line bg-paper p-3">
+                <p className="text-sm font-bold text-ink">
+                  <bdi dir="ltr">{b.en}</bdi> <span className="font-normal text-ink-muted">· {b.ar}</span>
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {MUSCLES_BY_BRANCH[b.id].map((id) => (
+                    <button key={id} type="button" dir="ltr" className={chipSmall} aria-pressed={false} onClick={() => onSelect(id)}>
+                      {MUSCLE_BY_ID[id]?.short ?? MUSCLE_BY_ID[id]?.en ?? id}
+                    </button>
+                  ))}
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs text-ink-muted">
+            بعض العضلات تظهر تحت أكثر من فرع لأنها تتلقى ألياف من فرعين (مثل orbicularis oculi).
+          </p>
+        </div>
+      </details>
+
+      <details className={boxCls}>
+        <summary className={summaryCls}>شلل الوجه: UMN مقابل LMN</summary>
+        <div className="overflow-x-auto px-4 pb-4">
+          <table className="w-full min-w-[640px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-line text-start text-xs text-ink-muted">
+                <th className="py-2 pe-3 text-start font-bold">الصفة</th>
+                <th className="py-2 pe-3 text-start font-bold">UMN</th>
+                <th className="py-2 text-start font-bold">LMN</th>
+              </tr>
+            </thead>
+            <tbody>
+              {FACIAL_PALSY_COMPARISON.map((r) => (
+                <tr key={r.feature} className="border-b border-line/60 align-top">
+                  <th scope="row" dir="ltr" className="py-2 pe-3 text-left text-[13px] font-bold text-ink">{r.feature}</th>
+                  <td dir="ltr" className="py-2 pe-3 text-left text-[13px] text-ink-soft">{r.umn}</td>
+                  <td dir="ltr" className="py-2 text-left text-[13px] text-ink-soft">{r.lmn}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+
+      <details className={boxCls}>
+        <summary className={summaryCls}>عضلات مهمة لا تظهر في الرسم</summary>
+        <ul className="grid gap-3 px-4 pb-4 sm:grid-cols-2">
+          {EXTRA_MUSCLES.map((x) => (
+            <li key={x.id} dir="ltr" className="rounded-field border border-line bg-paper p-3 text-left">
+              <p className="text-sm font-bold text-ink">{x.en}</p>
+              <dl className="mt-1 text-[13px] leading-snug text-ink-soft">
+                <dt className="mt-1 text-[11px] font-bold uppercase tracking-wide text-ink-muted">Nerve</dt>
+                <dd>{x.nerve}</dd>
+                <dt className="mt-1 text-[11px] font-bold uppercase tracking-wide text-ink-muted">Origin</dt>
+                <dd>{x.origin}</dd>
+                <dt className="mt-1 text-[11px] font-bold uppercase tracking-wide text-ink-muted">Insertion</dt>
+                <dd>{x.insertion}</dd>
+                <dt className="mt-1 text-[11px] font-bold uppercase tracking-wide text-ink-muted">Action</dt>
+                <dd>{x.actEn}</dd>
+                <dt className="mt-1 text-[11px] font-bold uppercase tracking-wide text-ink-muted">Clinical</dt>
+                <dd>{x.clin}</dd>
+              </dl>
+            </li>
+          ))}
+        </ul>
+      </details>
+    </div>
+  );
+}
+===components/anatomy/CommandPalette.tsx===
+'use client';
+
+// components/anatomy/CommandPalette.tsx
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { MUSCLES, ZOOMS, type ZoomId } from '@/lib/anatomy-data';
+import { EXPRESSIONS } from '@/lib/anatomy-ar';
+import { TRIANGLES } from '@/lib/anatomy-neck-notes';
+
+export type PaletteAction = 'quiz' | 'flashcards' | 'progress' | 'shortcuts' | 'export' | 'import' | 'share';
+
+export interface CommandHandlers {
+  onMuscle: (id: string) => void;
+  onExpression: (id: string) => void;
+  onZoom: (id: ZoomId) => void;
+  onTriangle: (id: string) => void;
+  onAction: (id: PaletteAction) => void;
+}
+
+interface Item { id: string; group: string; title: string; subtitle?: string; action: () => void }
+
+export default function CommandPalette({ open, onClose, handlers }: { open: boolean; onClose: () => void; handlers: CommandHandlers }) {
+  const [q, setQ] = useState('');
+  const [active, setActive] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setQ('');
+    setActive(0);
+    const t = window.setTimeout(() => inputRef.current?.focus(), 30);
+    return () => window.clearTimeout(t);
+  }, [open]);
+
+  const items = useMemo<Item[]>(() => {
+    const query = q.trim().toLowerCase();
+    const has = (text: string): boolean => !query || text.toLowerCase().includes(query);
+    const out: Item[] = [];
+
+    const cmds: [PaletteAction, string, string][] = [
+      ['quiz', 'Start quiz', 'اختبر نفسك'],
+      ['flashcards', 'Flashcards (spaced review)', 'بطاقات المراجعة'],
+      ['progress', 'My progress', 'تقدّمي'],
+      ['shortcuts', 'Keyboard shortcuts', 'الاختصارات'],
+      ['share', 'Share link', 'مشاركة الرابط'],
+      ['export', 'Export my data', 'تصدير التقدّم'],
+      ['import', 'Import my data', 'استيراد التقدّم'],
+    ];
+    for (const [id, title, sub] of cmds) {
+      if (has(title) || has(sub)) out.push({ id: `cmd-${id}`, group: 'Actions', title, subtitle: sub, action: () => handlers.onAction(id) });
+    }
+    for (const [id, z] of Object.entries(ZOOMS)) {
+      if (has(z.labelEn) || has(z.labelAr) || has(id)) {
+        out.push({ id: `zoom-${id}`, group: 'Regions', title: z.labelEn, subtitle: z.labelAr, action: () => handlers.onZoom(id as ZoomId) });
+      }
+    }
+    for (const x of EXPRESSIONS) {
+      if (has(x.en) || has(x.ar) || has(x.id)) {
+        out.push({ id: `mov-${x.id}`, group: 'Movements', title: x.en, subtitle: x.ar, action: () => handlers.onExpression(x.id) });
+      }
+    }
+    for (const t of TRIANGLES) {
+      if (has(t.en) || has(t.ar) || has(t.id)) {
+        out.push({ id: `tri-${t.id}`, group: 'Triangles', title: t.en, subtitle: t.ar, action: () => handlers.onTriangle(t.id) });
+      }
+    }
+    const muscles = MUSCLES.map((m) => {
+      const name = `${m.en} ${m.short ?? ''}`.toLowerCase();
+      const hay = `${name} ${m.region ?? ''} ${m.id}`.toLowerCase();
+      if (query && !hay.includes(query)) return null;
+      const score = !query ? 1 : m.id.toLowerCase() === query ? 4 : name.startsWith(query) ? 3 : name.includes(query) ? 2 : 1;
+      return { m, score };
+    })
+      .filter((x): x is { m: (typeof MUSCLES)[number]; score: number } => x !== null)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, query ? 14 : 8);
+    for (const { m } of muscles) {
+      out.push({ id: `m-${m.id}`, group: 'Muscles', title: m.en, subtitle: m.region, action: () => handlers.onMuscle(m.id) });
+    }
+    return out;
+  }, [q, handlers]);
+
+  useEffect(() => setActive(0), [q]);
+  useEffect(() => {
+    listRef.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
+  }, [active]);
+
+  const choose = useCallback((item: Item) => {
+    onClose();
+    item.action();
+  }, [onClose]);
+
+  const onKeyDown = (e: React.KeyboardEvent): void => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActive((a) => Math.min(items.length - 1, a + 1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((a) => Math.max(0, a - 1)); }
+    else if (e.key === 'Enter') { e.preventDefault(); const it = items[active]; if (it) choose(it); }
+    else if (e.key === 'Escape') { e.preventDefault(); onClose(); }
+  };
+
+  if (!open) return null;
+  let lastGroup = '';
+
+  return (
+    <div className="fa-cmd-overlay" role="dialog" aria-modal="true" aria-label="Search and commands" onClick={onClose}>
+      <div className="fa-cmd" onClick={(e) => e.stopPropagation()} onKeyDown={onKeyDown} dir="rtl">
+        <input
+          ref={inputRef}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="ابحث عن عضلة أو حركة أو منطقة أو أمر…"
+          className="fa-cmd-input"
+          aria-label="Search"
+          dir="ltr"
+          role="combobox"
+          aria-expanded="true"
+          aria-controls="fa-cmd-list"
+        />
+        <div ref={listRef} id="fa-cmd-list" className="fa-cmd-list" role="listbox">
+          {items.length === 0 && <div className="fa-cmd-empty">لا توجد نتائج.</div>}
+          {items.map((it, i) => {
+            const showGroup = it.group !== lastGroup;
+            lastGroup = it.group;
+            return (
+              <div key={it.id}>
+                {showGroup && <div className="fa-cmd-group" dir="ltr">{it.group}</div>}
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={i === active}
+                  tabIndex={-1}
+                  onMouseEnter={() => setActive(i)}
+                  onClick={() => choose(it)}
+                  className={`fa-cmd-item${i === active ? ' is-active' : ''}`}
+                >
+                  <span className="fa-cmd-title" dir="ltr">{it.title}</span>
+                  {it.subtitle && <span className="fa-cmd-sub">{it.subtitle}</span>}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+        <div className="fa-cmd-foot"><kbd>↑</kbd><kbd>↓</kbd> تنقّل · <kbd>Enter</kbd> تنفيذ · <kbd>Esc</kbd> إغلاق</div>
+      </div>
+    </div>
+  );
+}
+
+===components/anatomy/ExpressionPreview.tsx===
+'use client';
+
+// components/anatomy/ExpressionPreview.tsx
+import { memo, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { computeFace, scalePose, type Pose } from '@/lib/anatomy-pose';
+
+const CYCLE = 3400;
+const ease = (x: number): number => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
+
+function kAt(t: number): number {
+  const c = t % CYCLE;
+  if (c < 800) return ease(c / 800);
+  if (c < 1900) return 1;
+  if (c < 2600) return 1 - ease((c - 1900) / 700);
+  return 0;
+}
+
+function phaseForK(k: number): number {
+  const x = k < 0.5 ? Math.sqrt(k / 2) : 1 - Math.sqrt((1 - k) / 2);
+  return x * 800;
+}
+
+interface Props {
+  pose: Pose;
+  poseKey: string;
+  onK?: (k: number) => void;
+}
+
+function ExpressionPreview({ pose, poseKey, onK }: Props) {
+  const uid = useId().replace(/:/g, '');
+  const clipL = `${uid}-cl`;
+  const clipR = `${uid}-cr`;
+
+  const [playing, setPlaying] = useState(true);
+  const [k, setK] = useState(0);
+  const kRef = useRef(0);
+  const lastKey = useRef(poseKey);
+
+  useEffect(() => {
+    try {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        setPlaying(false);
+        kRef.current = 1;
+        setK(1);
+      }
+    } catch {
+      /* تجاهل */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!playing) return;
+    const resume = lastKey.current === poseKey;
+    lastKey.current = poseKey;
+    const start = performance.now() - (resume ? phaseForK(kRef.current) : 0);
+    let raf = 0;
+    const frame = (now: number) => {
+      const next = kAt(now - start);
+      if (Math.abs(next - kRef.current) > 0.002) {
+        kRef.current = next;
+        setK(next);
+      }
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, [playing, poseKey]);
+
+  useEffect(() => {
+    onK?.(k);
+  }, [k, onK]);
+
+  const f = useMemo(() => computeFace(scalePose(pose, k)), [pose, k]);
+  const contracted = k > 0.5;
+
+  return (
+    <div className="fa-plate fa-preview">
+      <svg viewBox="0 0 220 270" aria-hidden="true" style={{ direction: 'ltr' }}>
+        <defs>
+          <clipPath id={clipL}><path d={f.eyeL} /></clipPath>
+          <clipPath id={clipR}><path d={f.eyeR} /></clipPath>
+        </defs>
+
+        <path d="M84,206 L82,270" className="fa-pl" />
+        <path d="M136,206 L138,270" className="fa-pl" />
+        <g style={{ opacity: f.op.neck }}>
+          <path className="fa-pw" d="M92,214 L86,262" />
+          <path className="fa-pw" d="M100,218 L96,262" />
+          <path className="fa-pw" d="M128,214 L134,262" />
+          <path className="fa-pw" d="M120,218 L124,262" />
+        </g>
+        <g transform={`translate(0 ${-8 * f.shr})`}>
+          <path className="fa-pl" d="M86,262 Q50,256 0,268" />
+          <path className="fa-pl" d="M134,262 Q170,256 220,268" />
+        </g>
+        <g transform={`translate(0 ${-9 * f.hy})`}>
+          <path className="fa-pw" style={{ strokeWidth: 1.8 }} d="M96,236 Q110,242 124,236" />
+          <path className="fa-pw" d="M103,250 L110,256 L117,250" />
+        </g>
+
+        <g transform={f.headT}>
+        <ellipse cx="36" cy="112" rx="5" ry="14" className="fa-pl" style={{ fill: 'var(--fa-skin)' }} />
+        <ellipse cx="184" cy="112" rx="5" ry="14" className="fa-pl" style={{ fill: 'var(--fa-skin)' }} />
+        <path d={f.head} className="fa-pl" style={{ fill: 'var(--fa-skin)' }} />
+
+        <g style={{ opacity: f.op.forehead }}>
+          <path className="fa-pw" d="M70,44 Q110,40 150,44" />
+          <path className="fa-pw" d="M66,54 Q110,50 154,54" />
+          <path className="fa-pw" d="M66,64 Q110,60 154,64" />
+        </g>
+        <g style={{ opacity: f.op.glabella }}>
+          <path className="fa-pw" d="M104,78 L104.5,92" />
+          <path className="fa-pw" d="M116,78 L115.5,92" />
+        </g>
+        <g style={{ opacity: f.op.nose }}>
+          <path className="fa-pw" d="M101,95 L119,95" />
+          <path className="fa-pw" d="M102,101 L118,101" />
+        </g>
+        <g style={{ opacity: f.op.squint }}>
+          <path className="fa-pw" d="M158,92 L170,86" />
+          <path className="fa-pw" d="M160,98 L173,98" />
+          <path className="fa-pw" d="M158,104 L170,110" />
+          <path className="fa-pw" d="M62,92 L50,86" />
+          <path className="fa-pw" d="M60,98 L47,98" />
+          <path className="fa-pw" d="M62,104 L50,110" />
+        </g>
+        <g style={{ opacity: f.op.temple }}>
+          <path className="fa-pw" d="M52,66 Q47,84 52,104" />
+          <path className="fa-pw" d="M168,66 Q173,84 168,104" />
+        </g>
+        <g style={{ opacity: f.op.clench }}>
+          <path className="fa-pw" style={{ strokeWidth: 2 }} d="M62,156 Q56,174 66,192" />
+          <path className="fa-pw" style={{ strokeWidth: 2 }} d="M158,156 Q164,174 154,192" />
+        </g>
+        <g style={{ opacity: f.op.cheek }}>
+          <path className="fa-pw" d="M150,148 Q158,166 148,186" />
+          <path className="fa-pw" d="M70,148 Q62,166 72,186" />
+        </g>
+        <g style={{ opacity: f.op.chin }}>
+          <path className="fa-pw" d="M96,198 Q110,193 124,198" />
+          <circle cx="102" cy="206" r="1" style={{ fill: 'var(--fa-ink)' }} />
+          <circle cx="110" cy="209" r="1" style={{ fill: 'var(--fa-ink)' }} />
+          <circle cx="118" cy="206" r="1" style={{ fill: 'var(--fa-ink)' }} />
+          <circle cx="106" cy="213" r="1" style={{ fill: 'var(--fa-ink)' }} />
+          <circle cx="114" cy="213" r="1" style={{ fill: 'var(--fa-ink)' }} />
+        </g>
+
+        <path d={f.nlfR} className="fa-pw" style={{ opacity: f.nlfOpacity }} />
+        <path d={f.nlfL} className="fa-pw" style={{ opacity: f.nlfOpacity }} />
+        <path d={f.marR} className="fa-pw" style={{ opacity: f.marOpacity }} />
+        <path d={f.marL} className="fa-pw" style={{ opacity: f.marOpacity }} />
+        <g style={{ opacity: f.op.purse }}>
+          {f.purse.map((d, i) => (
+            <path key={i} d={d} className="fa-pw" />
+          ))}
+        </g>
+
+        <path className="fa-pl" style={{ strokeOpacity: 0.35 }} d="M104,100 Q101,128 98,146" />
+        <path className="fa-pl" style={{ strokeOpacity: 0.35 }} d="M116,100 Q119,128 122,146" />
+        <path d={f.noseWingL} className="fa-pl" />
+        <path d={f.noseWingR} className="fa-pl" />
+        <path d={f.noseBase} className="fa-pl" />
+        <ellipse cx={f.nostril.lx} cy={f.nostril.y} rx={f.nostril.rad} ry="1.8" fill="var(--fa-ink)" opacity=".55" />
+        <ellipse cx={f.nostril.rx} cy={f.nostril.y} rx={f.nostril.rad} ry="1.8" fill="var(--fa-ink)" opacity=".55" />
+
+        <path d={f.eyeL} className="fa-pl" style={{ fill: 'var(--fa-eye)' }} />
+        <path d={f.eyeR} className="fa-pl" style={{ fill: 'var(--fa-eye)' }} />
+        <circle cx="80" cy="98" r="5.6" style={{ fill: 'var(--fa-iris)', opacity: f.irisOpacity }} clipPath={`url(#${clipL})`} />
+        <circle cx="140" cy="98" r="5.6" style={{ fill: 'var(--fa-iris)', opacity: f.irisOpacity }} clipPath={`url(#${clipR})`} />
+        <circle cx="80" cy="98" r="2.4" style={{ fill: 'var(--fa-ink)', opacity: f.irisOpacity }} clipPath={`url(#${clipL})`} />
+        <circle cx="140" cy="98" r="2.4" style={{ fill: 'var(--fa-ink)', opacity: f.irisOpacity }} clipPath={`url(#${clipR})`} />
+
+        <path d={f.browL} className="fa-pl" style={{ strokeWidth: 3.2 }} />
+        <path d={f.browR} className="fa-pl" style={{ strokeWidth: 3.2 }} />
+        <path d={f.mouth} className="fa-pl" style={{ fill: 'var(--fa-lip)' }} />
+        </g>
+      </svg>
+
+      <button
+        type="button"
+        className="fa-play"
+        aria-label={playing ? 'إيقاف الحركة' : 'تشغيل الحركة'}
+        onClick={() => setPlaying((p) => !p)}
+      >
+        {playing ? (
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <rect x="2" y="1.5" width="2.8" height="9" fill="currentColor" />
+            <rect x="7.2" y="1.5" width="2.8" height="9" fill="currentColor" />
+          </svg>
+        ) : (
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <path d="M3 1.5 L10 6 L3 10.5 Z" fill="currentColor" />
+          </svg>
+        )}
+      </button>
+
+      <div className="fa-pstate">{contracted ? 'منقبضة' : 'مسترخية'}</div>
+
+      <input
+        type="range"
+        min={0}
+        max={100}
+        value={Math.round(k * 100)}
+        aria-label="درجة الانقباض"
+        className="fa-range"
+        onChange={(e) => {
+          const v = Number(e.target.value) / 100;
+          setPlaying(false);
+          kRef.current = v;
+          setK(v);
+        }}
+      />
+    </div>
+  );
+}
+
+export default memo(ExpressionPreview);
+
+===components/anatomy/face-atlas.css===
+/* components/anatomy/face-atlas.css */
+
+.fa-plate {
+  --fa-bg: #ECEFF0; --fa-surface: #F7F9F9; --fa-ink: #14232B; --fa-muted: #55666E; --fa-line: #CAD3D7;
+  --fa-fascia: #EADFD5; --fa-skin: #E9C4B0; --fa-lip: #D98A84; --fa-brow: #4A3228;
+  --fa-eye: #F6F5F2; --fa-iris: #4F6A74; --fa-mouth: #6E2A2D;
+  --fa-muscle: #C4574F; --fa-muscle-hover: #D8746B; --fa-muscle-edge: #8B2E2A;
+  --fa-fibre: #7E2824; --fa-fibre-hi: #EBA096;
+  --fa-sel: #F5B83D; --fa-sel-edge: #14232B; --fa-sel-fibre: #9C6410;
+  --fa-ok: #4FB47F; --fa-bad: #E0634A;
+  color: var(--fa-ink);
+}
+
+/* ---------- التخطيط ---------- */
+.fa-layout {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "card" "stage";
+}
+
+@media (min-width: 880px) {
+  .fa-layout {
+    grid-template-columns: minmax(0, 1fr) 380px;
+    grid-template-areas: "stage card";
+    align-items: start;
+  }
+}
+
+.fa-card { grid-area: card; min-width: 0; z-index: 10; }
+.fa-stage { grid-area: stage; min-width: 0; }
+
+@media (min-width: 880px) {
+  .fa-card.is-sticky { position: sticky; top: calc(var(--nav-h, 0px) + 8px); }
+  .fa-card.is-quiz { position: sticky; top: calc(var(--nav-h, 0px) + 12px); }
+}
+
+.fa-card-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 112px;
+  gap: 12px;
+  align-items: start;
+}
+@media (min-width: 880px) { .fa-card-main { grid-template-columns: minmax(0, 1fr) 128px; } }
+
+.fa-scroll { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.fa-scroll > * { flex: none; }
+
+/* ---------- لوحة الرسم ---------- */
+.fa-figure {
+  --R: .7407;
+  position: relative;
+  background: var(--fa-surface);
+  border: 1px solid var(--fa-line);
+  border-radius: 14px;
+  padding: 8px;
+  display: flex;
+  justify-content: center;
+}
+.fa-figure svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: var(--R);
+  max-width: calc(68vh * var(--R));
+  touch-action: manipulation;
+  direction: ltr;
+}
+
+/* ---------- العناصر الرسومية ---------- */
+.fa-base-fascia { fill: var(--fa-fascia); stroke: var(--fa-line); stroke-width: 1.2; }
+.fa-base-skin { fill: var(--fa-skin); stroke: var(--fa-muscle-edge); stroke-opacity: .5; stroke-width: .8; }
+
+.fa-m { cursor: pointer; transition: opacity .2s; }
+.fa-mo { fill: var(--fa-muscle); stroke: var(--fa-muscle-edge); stroke-width: .9; stroke-linejoin: round; }
+.fa-fa { fill: none; stroke: var(--fa-fibre); stroke-opacity: .5; stroke-width: .7; stroke-linecap: round; }
+.fa-fb { fill: none; stroke: var(--fa-fibre-hi); stroke-opacity: .55; stroke-width: .7; stroke-linecap: round; }
+.fa-m:hover .fa-mo { fill: var(--fa-muscle-hover); }
+.fa-m:focus-visible { outline: none; }
+.fa-m:focus-visible .fa-mo { stroke: var(--fa-ink); stroke-width: 2; }
+.fa-m.is-dim { opacity: .16; }
+.fa-m.is-dim:hover { opacity: .55; }
+.fa-m.is-hi .fa-mo { stroke: var(--fa-ink); stroke-width: 1.3; }
+
+.fa-sel { pointer-events: none; cursor: default; }
+.fa-sel .fa-mo { fill: var(--fa-sel); fill-opacity: calc(.78 + .22 * var(--k, 1)); stroke: var(--fa-sel-edge); stroke-width: 1.5; }
+.fa-sel .fa-fa { stroke: var(--fa-sel-fibre); stroke-opacity: .7; }
+.fa-sel .fa-fb { stroke: #fff; stroke-opacity: .55; }
+.fa-sel-ok .fa-mo { fill: var(--fa-ok); fill-opacity: .92; }
+.fa-sel-bad .fa-mo { fill: var(--fa-bad); fill-opacity: .92; }
+.fa-sel-ok .fa-fa, .fa-sel-bad .fa-fa { stroke: #0d2b1c; stroke-opacity: .55; }
+
+.fa-decor { pointer-events: none; }
+.fa-thin { fill: none; stroke: var(--fa-ink); stroke-opacity: .4; stroke-width: 1.1; }
+
+.fa-halo { fill: none; stroke: var(--fa-surface); stroke-width: 4.6; stroke-linecap: round; stroke-linejoin: round; }
+.fa-arrow { fill: none; stroke: var(--fa-ink); stroke-width: 2.2; stroke-linecap: round; stroke-dasharray: 5 4; animation: fa-flow .9s linear infinite; }
+.fa-ahead { fill: var(--fa-ink); stroke: var(--fa-surface); stroke-width: 1.2; stroke-linejoin: round; }
+@keyframes fa-flow { to { stroke-dashoffset: -9; } }
+
+.fa-lab { font-family: inherit; fill: var(--fa-ink); paint-order: stroke; stroke: var(--fa-surface); stroke-linejoin: round; cursor: pointer; }
+.fa-lab.is-sel { font-weight: 700; }
+.fa-leader { stroke: var(--fa-ink); stroke-opacity: .55; pointer-events: none; fill: none; }
+.fa-ldot { fill: var(--fa-ink); pointer-events: none; }
+
+.fa-tip {
+  position: absolute; pointer-events: none; z-index: 3;
+  background: #14232B; color: #F7F9F9; font-size: 12px; padding: 3px 8px; border-radius: 6px;
+  white-space: nowrap; transform: translate(-50%, -140%); direction: ltr;
+}
+.fa-tip[hidden] { display: none; }
+
+/* ---------- معاينة التعبير ---------- */
+.fa-preview { position: relative; border-radius: 10px; }
+.fa-preview > svg { display: block; width: 100%; height: auto; background: var(--fa-bg); border-radius: 8px; }
+.fa-pl { fill: none; stroke: var(--fa-ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.fa-pw { fill: none; stroke: var(--fa-ink); stroke-width: 1.2; stroke-linecap: round; }
+.fa-pstate { font-size: 11px; color: var(--fa-muted); text-align: center; margin-top: 2px; }
+.fa-play {
+  position: absolute; inset-inline-start: 4px; top: 4px; width: 26px; height: 26px; border-radius: 50%;
+  border: 1px solid var(--fa-line); background: var(--fa-surface); color: var(--fa-ink);
+  display: grid; place-items: center; cursor: pointer; padding: 0;
+}
+.fa-play:focus-visible, .fa-range:focus-visible { outline: 2px solid var(--fa-sel); outline-offset: 2px; }
+.fa-range { width: 100%; margin: 4px 0 0; accent-color: var(--fa-muscle); cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fa-arrow { animation: none; }
+  .fa-m { transition: none; }
+}
+
+/* ---------- طبقة الرقبة ---------- */
+.fa-m[data-id='platysma'] > .fa-mo { fill-opacity: .55; }
+.fa-neckmark { fill: none; stroke: var(--fa-ink); stroke-opacity: .5; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ================= الاستوديو ================= */
+.fa-studio { --r: 10px; }
+.fa-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.fa-bar-end { display: flex; align-items: center; gap: 8px; }
+
+.fa-seg { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: var(--r); background: var(--paper-soft); }
+.fa-seg > button {
+  min-height: 34px; padding: 8px 14px; border: 0; border-radius: 7px; background: transparent;
+  color: var(--ink-soft); font: 600 13px/1 inherit; cursor: pointer;
+}
+.fa-seg > button:hover:not(:disabled) { color: var(--ink); }
+.fa-seg > button[aria-pressed='true'] { background: var(--ink); color: var(--paper); }
+.fa-seg > button:disabled { opacity: .45; cursor: not-allowed; }
+
+.fa-btn, .fa-pill {
+  min-height: 32px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--paper-soft); color: var(--ink); font: 600 12.5px/1 inherit; cursor: pointer; white-space: nowrap;
+}
+.fa-btn:hover:not(:disabled), .fa-pill:hover { border-color: var(--ink-muted); }
+.fa-btn[aria-pressed='true'], .fa-pill[aria-pressed='true'] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.fa-btn:disabled { opacity: .4; cursor: default; }
+.fa-seg > button:focus-visible, .fa-btn:focus-visible, .fa-pill:focus-visible, .fa-row:focus-visible,
+.fa-tabs button:focus-visible, .fa-tag.is-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+.fa-grid { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1000px) { .fa-grid { grid-template-columns: minmax(0, 1fr) 400px; align-items: start; } }
+
+.fa-viewer { border: 1px solid var(--line); border-radius: 14px; background: var(--paper-soft); overflow: hidden; min-width: 0; }
+.fa-vbar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.fa-vbar .fa-scroll { flex: 1; min-width: 0; padding-bottom: 0; }
+.fa-viewer .fa-figure { border: 0; border-radius: 0; padding: 8px; background: var(--fa-surface); }
+.fa-viewer[data-view='3d'] .fa-figure { display: block; padding: 0; background: var(--paper-soft); }
+.fa-hint { margin: 0; padding: 9px 14px; border-top: 1px solid var(--line); font-size: 12px; line-height: 1.55; color: var(--ink-muted); }
+.fa-hide-sm { display: none; }
+@media (min-width: 768px) { .fa-hide-sm { display: inline-flex; align-items: center; } }
+
+@media (max-width: 999px) {
+  .fa-viewer[data-view='3d'] { position: sticky; top: calc(var(--nav-h, 0px) + 4px); z-index: 20; }
+  .fa-viewer[data-view='3d'] .fa-hint { display: none; }
+}
+
+.fa-panel { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--line); border-radius: 14px; background: var(--paper-soft); overflow: hidden; }
+@media (min-width: 1000px) {
+  .fa-panel { position: sticky; top: calc(var(--nav-h, 0px) + 8px); max-height: calc(100vh - var(--nav-h, 0px) - 24px); }
+}
+.fa-panel-pad { padding: 14px; overflow: auto; }
+.fa-search input {
+  width: 100%; padding: 11px 14px; border: 0; border-bottom: 1px solid var(--line); background: transparent;
+  color: var(--ink); font-size: 13.5px; outline-offset: -2px;
+}
+.fa-search input::placeholder { color: var(--ink-muted); }
+.fa-sum { display: grid; grid-template-columns: minmax(0, 1fr) 104px; gap: 12px; align-items: start; padding: 14px; border-bottom: 1px solid var(--line); }
+.fa-eyebrow { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--ink-muted); }
+.fa-title { margin: 4px 0 0; font-family: var(--font-display); font-size: 22px; line-height: 1.15; font-weight: 700; color: var(--ink); text-align: start; }
+.fa-title.is-long { font-size: 18px; }
+.fa-sub { margin: 2px 0 0; font-size: 14px; font-weight: 600; color: var(--ink-muted); }
+.fa-text { margin: 6px 0 0; font-size: 13.5px; line-height: 1.55; color: var(--ink); text-align: left; }
+.fa-text-ar { margin: 6px 0 0; font-size: 13px; line-height: 1.65; color: var(--ink-muted); }
+.fa-muted-line { display: block; margin-top: 2px; font-size: 12px; color: var(--ink-muted); }
+.fa-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.fa-tag { padding: 4px 7px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink-soft); font: 500 11px/1.2 var(--font-mono, monospace); }
+.fa-tag.is-btn { cursor: pointer; }
+.fa-tag.is-btn:hover { border-color: var(--ink-muted); color: var(--ink); }
+
+.fa-tabs { display: flex; border-bottom: 1px solid var(--line); }
+.fa-tabs button { flex: 1; padding: 11px 0; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--ink-muted); font: 600 13px/1 inherit; cursor: pointer; }
+.fa-tabs button[aria-selected='true'] { border-bottom-color: var(--teal); color: var(--ink); }
+.fa-body { flex: 1; min-height: 0; overflow: auto; padding: 12px 14px 18px; }
+
+.fa-sec { padding-bottom: 10px; margin-bottom: 8px; border-bottom: 1px solid var(--line-soft, var(--line)); }
+.fa-sec:last-child { border-bottom: 0; }
+.fa-sec-title { margin: 14px 0 3px; font-size: 11px; font-weight: 700; letter-spacing: .05em; color: var(--ink-muted); }
+.fa-sec > .fa-sec-title:first-child { margin-top: 2px; }
+.fa-pearl { margin: 8px 0 0; padding: 8px 10px; border: 1px solid var(--line); border-inline-start: 3px solid var(--gold); border-radius: 6px; background: var(--gold-tint, transparent); font-size: 13px; line-height: 1.6; color: var(--ink); }
+
+.fa-list { display: grid; gap: 2px; }
+.fa-row { display: flex; justify-content: space-between; gap: 10px; width: 100%; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font-size: 13.5px; text-align: start; cursor: pointer; }
+.fa-row:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.fa-row[aria-pressed='true'] { background: var(--ink); color: var(--paper); }
+.fa-row-ar { color: var(--ink-muted); font-size: 12.5px; }
+.fa-row[aria-pressed='true'] .fa-row-ar { color: inherit; opacity: .8; }
+.fa-row-open { padding: 2px 10px 12px; }
+.fa-filter { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 12.5px; color: var(--ink-muted); }
+.fa-filter select { flex: 1; min-width: 0; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); font-size: 13px; }
+
+/* ================= المجسّم 3D ================= */
+.fa3 { position: relative; width: 100%; height: clamp(460px, 74vh, 800px); overflow: hidden; }
+@media (max-width: 999px) { .fa3 { height: 46vh; min-height: 320px; } }
+.fa3 canvas { display: block; }
+.fa3-empty { display: grid; place-items: center; padding: 24px; text-align: center; color: var(--ink-muted); font-size: 13px; }
+.fa3-top { position: absolute; inset-inline: 10px; inset-block-start: 10px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; pointer-events: none; }
+.fa3-top > * { pointer-events: auto; }
+.fa3 .fa-seg > button { min-height: 28px; padding: 6px 10px; font-size: 12px; }
+.fa3 .fa-btn { min-height: 30px; }
+.fa3-panel {
+  position: absolute; inset-inline-end: 10px; inset-block-start: 52px; z-index: 5; display: grid; gap: 10px;
+  width: min(290px, calc(100% - 20px)); padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-soft);
+}
+.fa3-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; }
+.fa3-row > span { min-width: 96px; color: var(--ink-muted); }
+.fa3-row input[type='range'], .fa3-peel input[type='range'] { flex: 1; min-width: 80px; accent-color: var(--teal); cursor: pointer; }
+.fa3-peel {
+  position: absolute; inset-inline-start: 50%; inset-block-end: 26px; width: min(430px, calc(100% - 20px)); transform: translateX(-50%);
+  padding: 8px 12px 6px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-soft);
+}
+[dir='rtl'] .fa3-peel { transform: translateX(50%); }
+.fa3-peel-head { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 12px; font-weight: 700; color: var(--ink); }
+.fa3-peel-now { font-weight: 500; color: var(--ink-muted); }
+.fa3-peel input { width: 100%; }
+.fa3-peel-scale { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--ink-muted); }
+.fa3-hover {
+  position: absolute; inset-inline-start: 12px; inset-block-start: 54px; max-width: 70%; padding: 4px 9px; border-radius: 6px;
+  background: var(--ink); color: var(--paper); font-size: 12px; direction: ltr; pointer-events: none;
+}
+.fa3-hover:empty { display: none; }
+.fa3-note { position: absolute; inset-inline: 10px; inset-block-end: 104px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper-soft); font-size: 12px; color: var(--ink); }
+.fa3-credit { position: absolute; inset-inline-end: 10px; inset-block-end: 6px; font-size: 10px; color: var(--ink-muted); pointer-events: none; }
+
+/* ================= الإصدار 3: الأدوات ================= */
+.fa-btn.is-primary { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.fa-tabs button { display: grid; gap: 2px; justify-items: center; padding: 9px 0 8px; }
+.fa-tabs button small { font-size: 10.5px; font-weight: 500; opacity: .75; }
+.fa-sec-title { display: flex; align-items: baseline; gap: 8px; }
+.fa-sec-title small { font-size: 11px; font-weight: 500; letter-spacing: 0; opacity: .8; }
+.fa-bul { margin: 6px 0 0; padding-inline-start: 18px; font-size: 13px; line-height: 1.6; color: var(--ink); list-style: disc; text-align: left; }
+.fa-acc details { border-top: 1px solid var(--line); }
+.fa-acc details:last-child { border-bottom: 1px solid var(--line); }
+.fa-acc summary { display: flex; justify-content: space-between; gap: 10px; padding: 11px 4px; font-size: 13.5px; font-weight: 600; color: var(--ink); cursor: pointer; list-style: none; }
+.fa-acc summary::-webkit-details-marker { display: none; }
+.fa-acc summary small { font-weight: 500; color: var(--ink-muted); }
+.fa-acc details[open] summary { color: var(--teal); }
+.fa-acc details > :not(summary) { padding-inline: 4px; }
+.fa-acc details > :last-child { padding-bottom: 12px; }
+.fa-tag.is-bad { border-color: var(--coral); }
+
+/* ---------- الاختبار ---------- */
+.fq-eyebrow { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--ink-muted); }
+.fq-eyebrow b { color: var(--ink); font-family: var(--font-mono, monospace); }
+.fq-title { margin: 2px 0 12px; font-family: var(--font-display); font-size: 26px; font-weight: 700; color: var(--ink); }
+.fq-label { margin: 14px 0 6px; font-size: 11px; font-weight: 700; letter-spacing: .05em; color: var(--ink-muted); }
+.fq-opts { display: grid; gap: 6px; }
+.fq-opt, .fq-choice {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--ink); font-size: 13.5px; text-align: start; cursor: pointer;
+}
+.fq-opt small, .fq-choice span { font-size: 12px; color: var(--ink-muted); }
+.fq-opt:hover, .fq-choice:hover:not(:disabled) { border-color: var(--ink-muted); }
+.fq-opt[aria-pressed='true'] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.fq-seg { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+.fq-seg button { min-width: 52px; min-height: 36px; border: 0; border-radius: 7px; background: transparent; color: var(--ink-soft); font-weight: 700; cursor: pointer; }
+.fq-seg button[aria-pressed='true'] { background: var(--ink); color: var(--paper); }
+.fq-note { margin: 12px 0 0; font-size: 12.5px; line-height: 1.7; color: var(--ink-muted); }
+.fq-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.fq-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.fq-bar { height: 4px; margin-top: 8px; overflow: hidden; border-radius: 99px; background: var(--line); }
+.fq-bar > div { height: 100%; background: var(--teal); transition: width .3s; }
+.fq-q { margin: 14px 0 0; font-size: 14.5px; font-weight: 700; color: var(--ink); }
+.fq-name { margin: 6px 0 0; font-family: var(--font-display); font-size: 21px; font-weight: 700; color: var(--ink); text-align: left; }
+.fq-box { margin: 8px 0 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); font-size: 13px; line-height: 1.55; color: var(--ink-soft); text-align: left; }
+.fq-box .fq-name { margin: 0; font-size: 17px; }
+.fq-box dt, .fq-sm-list dt { margin-top: 6px; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-muted); }
+.fq-box dt:first-child { margin-top: 0; }
+.fq-sm, .fq-sm-list dd { margin: 2px 0 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-soft); }
+.fq-list { display: grid; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+.fq-choice.is-ok { border-color: var(--teal); background: var(--teal-soft, transparent); box-shadow: inset 0 0 0 1px var(--teal); }
+.fq-choice.is-bad { border-color: var(--coral); background: var(--coral-soft, transparent); }
+.fq-choice.is-dim { opacity: .5; }
+.fq-choice:disabled { cursor: default; }
+.fq-feedback { margin-top: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+.fq-verdict { margin: 0; font-size: 14px; font-weight: 700; color: var(--coral-ink, var(--ink)); }
+.fq-verdict.is-ok { color: var(--teal); }
+.fq-sm-list { margin: 6px 0 0; }
+.fq-ar { margin: 8px 0 0; font-size: 12.5px; line-height: 1.7; color: var(--ink-muted); }
+.fq-link { padding: 4px 2px; border: 0; background: transparent; color: var(--ink-muted); font-size: 12.5px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.fq-link:hover { color: var(--teal); }
+.fq-next { width: 100%; margin-top: 12px; min-height: 44px; }
+.fq-score { margin: 4px 0 0; font-family: var(--font-display); font-size: 40px; font-weight: 700; color: var(--ink); }
+.fq-score span { font-size: 20px; color: var(--ink-muted); }
+
+/* ---------- مجسّم 3D: القوائم والأدوات ---------- */
+.fa3-loading { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; background: color-mix(in srgb, var(--paper-soft) 60%, transparent); font-size: 13px; color: var(--ink-muted); pointer-events: none; }
+.fa3-menu { position: relative; }
+.fa3-pop { position: absolute; inset-block-start: calc(100% + 6px); inset-inline-start: 0; z-index: 8; display: grid; min-width: 150px; padding: 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper-soft); }
+.fa3-pop button { min-height: 38px; padding: 8px 12px; border: 0; border-radius: 7px; background: transparent; color: var(--ink); font-size: 13px; text-align: start; cursor: pointer; }
+.fa3-pop button:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.fa3-drawer {
+  position: absolute; inset-block: 56px 150px; inset-inline-end: 10px; z-index: 6; display: flex; flex-direction: column;
+  width: min(340px, calc(100% - 20px)); border: 1px solid var(--line); border-radius: 12px; background: var(--paper-soft); overflow: hidden;
+}
+.fa3-drawer-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px; border-bottom: 1px solid var(--line); }
+.fa3-drawer-body { flex: 1; min-height: 0; overflow: auto; padding: 4px 12px 14px; }
+.fa3-sec h3 { margin: 14px 0 6px; font-size: 11px; font-weight: 700; letter-spacing: .05em; color: var(--ink-muted); }
+.fa3-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.fa3-list { display: grid; gap: 1px; }
+.fa3-eye { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; min-height: 40px; padding: 6px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font-size: 13px; text-align: start; cursor: pointer; }
+.fa3-eye small { font-size: 11px; color: var(--ink-muted); }
+.fa3-eye[aria-pressed='false'] { opacity: .42; }
+.fa3-eye:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.fa3-slider { display: flex; align-items: center; gap: 10px; margin-top: 6px; font-size: 12.5px; }
+.fa3-slider > span { min-width: 56px; color: var(--ink-muted); }
+.fa3-slider input { flex: 1; accent-color: var(--teal); }
+.fa3-small { margin: 6px 0 0; font-size: 12px; color: var(--ink-muted); }
+.fa3-bottom { position: absolute; inset-inline: 10px; inset-block-end: 22px; z-index: 4; display: grid; justify-items: center; gap: 8px; pointer-events: none; }
+.fa3-bottom > * { pointer-events: auto; }
+.fa3-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; max-width: 100%; padding: 6px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-soft); }
+.fa3-target { max-width: 220px; padding: 0 8px; overflow: hidden; font-size: 12.5px; font-weight: 700; color: var(--ink); text-overflow: ellipsis; white-space: nowrap; }
+.fa3-peel { position: relative; inset: auto; width: min(430px, 100%); transform: none; }
+[dir='rtl'] .fa3-peel { transform: none; }
+.fa3-pin { display: inline-block; padding: 2px 7px; border-radius: 6px; background: var(--ink); color: var(--paper); font: 600 11px/1.35 var(--font-body, sans-serif); white-space: nowrap; transform: translateY(-16px); }
+.fa3-note { inset-block-end: 150px; }
+.fa3-hover { z-index: 7; }
+
+/* ---------- الأجهزة اللوحية واللمس ---------- */
+@media (pointer: coarse) {
+  .fa-btn, .fa-pill, .fa-seg > button { min-height: 44px; }
+  .fa3 .fa-seg > button, .fa3 .fa-btn { min-height: 44px; }
+  .fa-row { min-height: 48px; }
+  .fa3-eye { min-height: 48px; }
+  .fa3-pop button { min-height: 46px; }
+  .fa3-peel input[type='range'], .fa3-slider input { height: 28px; }
+}
+@media (min-width: 700px) and (max-width: 999px) {
+  .fa3 { height: min(66vh, 720px); }
+  .fa-viewer[data-view='3d'] { position: static; }
+  .fa-body { max-height: none; }
+  .fa-panel { max-height: none; }
+}
+@media (min-width: 1000px) and (max-width: 1200px) {
+  .fa-grid { grid-template-columns: minmax(0, 1fr) 340px; }
+}
+@media (max-width: 699px) {
+  .fa3-drawer { inset-inline: 10px; width: auto; inset-block: 56px 150px; }
+}
+.fa-tabs button { white-space: nowrap; font-size: 12.5px; }
+@media (max-width: 520px) {
+  .fa-bar { gap: 6px; }
+  .fa-bar-end { gap: 6px; }
+  .fa-seg > button { padding: 8px 10px; font-size: 12.5px; }
+  .fa-bar .fa-btn { padding-inline: 10px; }
+}
+@media (max-width: 699px) {
+  .fa3-peel-scale { display: none; }
+  .fa3-peel { padding: 6px 10px; }
+  .fa3-bottom { inset-block-end: 16px; }
+}
+
+/* ================= الإصدار 4: التعلّم والأوامر ================= */
+.fa-kbd { margin-inline-start: 6px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 5px; font: 500 10.5px/1.4 var(--font-mono, monospace); color: var(--ink-muted); }
+.fa-more { inset-inline-start: auto; inset-inline-end: 0; min-width: 190px; }
+.fa-note-view { white-space: pre-wrap; color: var(--ink); }
+.fa-note { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--ink); font-size: 14px; line-height: 1.7; resize: vertical; }
+.fa-note-label { display: block; margin-top: 10px; }
+
+/* التنبيهات */
+.fa-toasts { position: fixed; inset-block-end: 20px; left: 50%; transform: translateX(-50%); z-index: 1100; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+.fa-toast { padding: 10px 16px; border-radius: 10px; background: var(--ink); color: var(--paper); font-size: 13px; font-weight: 600; }
+.fa-toast-success { background: var(--teal); }
+.fa-toast-error { background: var(--coral-strong, var(--coral)); }
+
+/* نافذة حوارية */
+.fa-modal-overlay { position: fixed; inset: 0; z-index: 1001; display: grid; place-items: center; padding: 16px; background: color-mix(in srgb, var(--ink) 45%, transparent); }
+.fa-modal { display: flex; flex-direction: column; width: min(520px, 100%); max-height: min(86vh, 760px); border: 1px solid var(--line); border-radius: 14px; background: var(--paper-soft); outline: none; }
+.fa-modal.is-wide { width: min(640px, 100%); }
+.fa-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.fa-modal-head h2 { margin: 0; font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--ink); }
+.fa-modal-body { overflow: auto; padding: 14px 16px 18px; }
+
+/* لوحة الأوامر */
+.fa-cmd-overlay { position: fixed; inset: 0; z-index: 1002; display: grid; place-items: start center; padding: 12vh 16px 0; background: color-mix(in srgb, var(--ink) 45%, transparent); }
+.fa-cmd { width: min(560px, 100%); overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--paper-soft); }
+.fa-cmd-input { width: 100%; padding: 16px 18px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 15px; outline: none; }
+.fa-cmd-list { max-height: 52vh; overflow: auto; padding: 4px; }
+.fa-cmd-group { padding: 10px 12px 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-muted); }
+.fa-cmd-item { display: flex; flex-direction: column; gap: 2px; width: 100%; min-height: 44px; padding: 8px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); text-align: start; cursor: pointer; }
+.fa-cmd-item.is-active { background: var(--ink); color: var(--paper); }
+.fa-cmd-title { font-size: 13.5px; font-weight: 600; }
+.fa-cmd-sub { font-size: 12px; opacity: .7; }
+.fa-cmd-empty { padding: 28px; text-align: center; font-size: 13px; color: var(--ink-muted); }
+.fa-cmd-foot { padding: 8px 14px; border-top: 1px solid var(--line); font-size: 11px; color: var(--ink-muted); }
+.fa-cmd-foot kbd, .fa-shortcuts-row kbd, .fa-grade kbd { padding: 1px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); font: 500 11px/1.5 var(--font-mono, monospace); color: var(--ink); }
+
+/* التقدّم */
+.fa-progress-sub { margin: 0 0 14px; font-size: 12.5px; line-height: 1.7; color: var(--ink-muted); }
+.fa-progress-rows { display: grid; gap: 10px; }
+.fa-stat-line { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; font-size: 13px; color: var(--ink); }
+.fa-stat-line b { font-family: var(--font-mono, monospace); font-size: 12px; font-weight: 600; }
+.fa-bar-track { height: 5px; overflow: hidden; border-radius: 99px; background: var(--line); }
+.fa-bar-track > div { height: 100%; background: var(--teal); transition: width .3s; }
+.fa-progress-foot { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--line); }
+
+/* البطاقات */
+.fa-flash-card { display: grid; align-content: center; gap: 6px; min-height: 250px; margin-top: 14px; padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); cursor: pointer; }
+.fa-flash-card:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.fa-flash-grades { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+.fa-grade { display: grid; justify-items: center; gap: 4px; min-height: 52px; padding: 10px 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper-soft); color: var(--ink); font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.fa-grade:hover { border-color: var(--ink-muted); }
+.fa-flash-done { text-align: center; padding: 24px 0; }
+
+/* الاختصارات */
+.fa-shortcuts-list { margin: 0; }
+.fa-shortcuts-row { display: grid; grid-template-columns: minmax(120px, 190px) 1fr; gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.fa-shortcuts-row dt, .fa-shortcuts-row dd { margin: 0; font-size: 13px; color: var(--ink); }
+.fa-shortcuts-row dd { color: var(--ink-soft); }
+
+/* ================= الإصدار 5: أدوات العرض + الحركات السريعة + ملء الشاشة ================= */
+
+/* أدوات العرض (تكبير/إعادة ضبط/ملء الشاشة) */
+.fa-vctrl {
+  position: absolute;
+  inset-block-start: 8px;
+  inset-inline-end: 8px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: color-mix(in srgb, var(--paper-soft) 92%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  backdrop-filter: blur(6px);
+}
+.fa-vctrl-btn {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.fa-vctrl-btn:hover { background: var(--paper); border-color: var(--line); }
+.fa-vctrl-btn:active { transform: scale(0.96); }
+.fa-vctrl-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.fa-vctrl-btn[aria-pressed='true'] { background: var(--ink); color: var(--paper); }
+.fa-vctrl-pct {
+  min-width: 42px;
+  padding: 0 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  text-align: center;
+}
+@media (pointer: coarse) {
+  .fa-vctrl-btn { width: 40px; height: 40px; }
+}
+
+/* شريط الحركات السريعة */
+.fa-quick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper-soft) 70%, var(--paper));
+}
+.fa-quick-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-muted);
+  margin-inline-end: 4px;
+}
+.fa-quick .fa-pill { min-height: 28px; padding: 4px 10px; font-size: 12px; }
+
+/* وضع ملء الشاشة (Fullscreen API) */
+.fa-viewer:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  max-height: 100vh;
+  border: 0;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper-soft);
+}
+.fa-viewer:fullscreen .fa-vbar,
+.fa-viewer:fullscreen .fa-quick {
+  border-radius: 0;
+}
+.fa-viewer:fullscreen .fa-figure {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0;
+  padding: 12px;
+  background: var(--fa-surface);
+}
+.fa-viewer:fullscreen .fa-figure svg {
+  max-width: min(100%, calc((100vh - 140px) * var(--R)));
+  max-height: calc(100vh - 140px);
+  width: auto;
+  height: auto;
+}
+.fa-viewer:fullscreen .fa3 {
+  height: 100%;
+  max-height: calc(100vh - 100px);
+}
+.fa-viewer:fullscreen .fa-hint { display: block; }
+.fa-viewer:fullscreen .fa-vctrl { inset-block-start: 12px; inset-inline-end: 12px; }
+
+/* fallback للأجهزة التي لا تدعم Fullscreen API */
+.fa-viewer.is-expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  border: 0;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper-soft);
+}
+.fa-viewer.is-expanded .fa-figure {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--fa-surface);
+}
+.fa-viewer.is-expanded .fa-figure svg {
+  max-width: min(100%, calc((100vh - 140px) * var(--R)));
+  max-height: calc(100vh - 140px);
+  width: auto;
+  height: auto;
+}
+body:has(.fa-viewer.is-expanded) { overflow: hidden; }
+
+/* ================= تقليل الحركة والتباين ================= */
+@media (prefers-reduced-motion: reduce) {
+  .fa-studio *, .fa-modal-overlay *, .fa-cmd-overlay *, .fa-toasts *,
+  .fa-vctrl-btn { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+  .fa-arrow { animation: none; }
+}
+@media (prefers-contrast: more) {
+  .fa-btn, .fa-pill, .fa-row, .fa-seg, .fa-tag, .fa-vctrl-btn { border-width: 2px; }
+  .fa-vctrl { border-width: 2px; }
+}
+.fa-sum .fa-btn { min-height: 30px; padding: 5px 10px; font-size: 12px; }
+@media (pointer: coarse) { .fa-sum .fa-btn { min-height: 40px; } }
+/* ================= تحسينات أزرار التحكم (Top Right) ================= */
+.fa-vctrl {
+  /* تأكد من أنه في الأعلى يمين الشاشة في RTL */
+  inset-inline-start: 8px !important;
+  inset-inline-end: auto !important;
+  background: var(--paper-soft);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 6px;
+  gap: 4px;
+}
+.fa-vctrl-btn {

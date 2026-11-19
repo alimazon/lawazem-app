@@ -1,0 +1,2770 @@
+﻿      <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
+// ==================== Channel Info Form ====================
+function ChannelInfoForm({
+  channelId, password, channelInfo, onChannelInfoChanged,
+}: {
+  channelId: string;
+  password: string;
+  channelInfo: Channel;
+  onChannelInfoChanged: (patch: Partial<Channel>) => void;
+}) {
+  const toast = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [description, setDescription] = useState(channelInfo.description ?? '');
+  const [imageUrl, setImageUrl] = useState(channelInfo.image_url ?? '');
+  const [imageError, setImageError] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const initialDescription = channelInfo.description ?? '';
+  const initialImageUrl = channelInfo.image_url ?? '';
+  const dirty = description !== initialDescription || imageUrl !== initialImageUrl;
+
+  useEffect(() => {
+    setDescription(channelInfo.description ?? '');
+    setImageUrl(channelInfo.image_url ?? '');
+    setImageError(false);
+  }, [channelInfo.id, channelInfo.description, channelInfo.image_url]);
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      toast.show('نوع الصورة غير مدعوم (PNG/JPG/WebP/GIF).', 'error');
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
+      toast.show(`حجم الصورة كبير جداً (بحد أقصى ${MAX_IMAGE_SIZE_MB} ميجا).`, 'error');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const ext = getFileExtension(file.name);
+      const filePath = `${channelId}-${Date.now()}.${ext}`;
+      const publicUrl = await uploadToStorage(STORAGE_BUCKETS.channelImages, filePath, file, { upsert: true });
+      setImageUrl(publicUrl);
+      setImageError(false);
+      toast.show('تم رفع الصورة — لا تنسَ الحفظ', 'success');
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل رفع الصورة', 'error');
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!dirty) return;
+    setSaving(true);
+    try {
+      await postJson('/api/channel/content', {
+        action: 'update_channel',
+        channel_id: channelId,
+        password,
+        description: description.trim() || null,
+        image_url: imageUrl.trim() || null,
+      });
+      onChannelInfoChanged({
+        description: description.trim() || null,
+        image_url: imageUrl.trim() || null,
+      });
+      toast.show('تم حفظ بيانات القناة', 'success');
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الحفظ', 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function openFilePicker() { fileInputRef.current?.click(); }
+
+  return (
+    <section>
+      <div className="mb-4 flex items-start gap-3 rounded-2xl border border-teal/20 bg-teal/[0.04] p-4 text-sm dark:border-teal/30 dark:bg-teal/10">
+        <span className="text-teal"><IconInfo /></span>
+        <p className="font-medium text-ink/70">
+          الاسم والمرحلة ورابط تلغرام يديرها المشرف. يمكنك تعديل الصورة والوصف فقط.
+        </p>
+      </div>
+
+      <form
+        onSubmit={handleSave}
+        className="space-y-5 rounded-3xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm dark:bg-paper/80"
+      >
+        {/* الصورة */}
+        <div>
+          <label className="mb-3 flex items-center gap-1.5 text-sm font-bold text-ink/70">
+            <IconImage />
+            صورة القناة
+          </label>
+
+          {imageUrl && !imageError ? (
+            <div className="mb-3 flex items-center gap-4">
+              <img
+                src={imageUrl}
+                alt="صورة القناة"
+                onError={() => setImageError(true)}
+                className="h-20 w-20 rounded-2xl border border-line object-cover shadow-[0_2px_8px_rgba(26,33,31,0.06)]"
+              />
+              <Button type="button" variant="secondary" size="sm" onClick={openFilePicker} disabled={uploadingImage}>
+                تغيير
+              </Button>
+            </div>
+          ) : imageError ? (
+            <div className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
+              تعذّر تحميل الصورة الحالية.
+              <button type="button" onClick={openFilePicker} className="mr-2 font-bold underline">
+                رفع صورة جديدة
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={openFilePicker}
+              disabled={uploadingImage}
+              className="group mb-3 flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line bg-paper/50 py-6 transition-all duration-200 hover:border-teal/40 hover:bg-teal/[0.03] disabled:opacity-60 dark:bg-white/[0.03] dark:hover:bg-teal/10"
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal/8 text-teal transition-all group-hover:bg-teal/15">
+                <IconImage />
+              </span>
+              <span className="text-sm font-bold text-ink/70">رفع صورة للقناة</span>
+            </button>
+          )}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ACCEPTED_IMAGE_TYPES.join(',')}
+            onChange={handleImageUpload}
+            disabled={uploadingImage}
+            className="hidden"
+          />
+
+          {uploadingImage && (
+            <div className="mb-2 flex items-center gap-2 rounded-xl bg-teal/5 px-3 py-2 text-sm font-bold text-teal dark:bg-teal/15">
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+                <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+              جاري الرفع...
+            </div>
+          )}
+
+          <p className="text-xs text-ink/40">
+            PNG / JPG / WebP / GIF — بحد أقصى {MAX_IMAGE_SIZE_MB} ميجا
+          </p>
+        </div>
+
+        {/* الوصف */}
+        <div>
+          <label htmlFor="channel-description" className="mb-2 block text-sm font-bold text-ink/70">
+            وصف القناة
+          </label>
+          <Textarea
+            id="channel-description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="وصف مختصر للقناة..."
+            rows={3}
+            maxLength={2000}
+          />
+        </div>
+
+        {/* زر الحفظ */}
+        <div className="flex items-center gap-3">
+          <Button type="submit" loading={saving} disabled={!dirty || uploadingImage}>
+            حفظ
+          </Button>
+          {dirty && !saving && (
+            <span className="flex items-center gap-1 text-xs font-bold text-amber-700 dark:text-amber-400">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-amber" />
+              توجد تغييرات غير محفوظة
+            </span>
+          )}
+        </div>
+      </form>
+    </section>
+  );
+}
+
+// ==================== Change Password Form ====================
+function ChangePasswordForm({
+  channelId, password, onPasswordChanged,
+}: {
+  channelId: string;
+  password: string;
+  onPasswordChanged: (newPw: string) => void;
+}) {
+  const toast = useToast();
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [changing, setChanging] = useState(false);
+
+  const canSubmit = newPassword.length >= 4 && newPassword === confirmNewPassword && !changing;
+  const mismatch = confirmNewPassword !== '' && newPassword !== confirmNewPassword;
+
+  async function handleChange(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canSubmit) return;
+    setChanging(true);
+    try {
+      await postJson('/api/channel/content', {
+        action: 'change_password',
+        channel_id: channelId,
+        password,
+        new_password: newPassword,
+      });
+      onPasswordChanged(newPassword);
+      setNewPassword('');
+      setConfirmNewPassword('');
+      toast.show('تم تغيير كلمة المرور', 'success');
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل التغيير', 'error');
+    } finally {
+      setChanging(false);
+    }
+  }
+
+  return (
+    <section>
+      <div className="mb-4 flex items-start gap-3 rounded-2xl border border-amber/30 bg-amber/8 p-4 text-sm dark:bg-amber/10">
+        <span className="text-amber"><IconLock /></span>
+        <p className="font-medium text-ink/70">
+          بعد التغيير، لن تعمل كلمة المرور القديمة. تأكد من حفظ الجديدة في مكان آمن.
+        </p>
+      </div>
+
+      <form
+        onSubmit={handleChange}
+        className="space-y-4 rounded-3xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm dark:bg-paper/80"
+      >
+        <div>
+          <label htmlFor="new-password" className="mb-2 block text-sm font-bold text-ink/70">
+            كلمة المرور الجديدة
+          </label>
+          <Input
+            id="new-password"
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="4 أحرف على الأقل"
+            autoComplete="new-password"
+            minLength={4}
+            maxLength={200}
+            required
+          />
+        </div>
+
+        <div>
+          <label htmlFor="confirm-password" className="mb-2 block text-sm font-bold text-ink/70">
+            تأكيد كلمة المرور
+          </label>
+          <Input
+            id="confirm-password"
+            type="password"
+            value={confirmNewPassword}
+            onChange={(e) => setConfirmNewPassword(e.target.value)}
+            placeholder="أعد كتابتها"
+            autoComplete="new-password"
+            required
+            aria-invalid={mismatch || undefined}
+          />
+          {mismatch && (
+            <p className="mt-1.5 text-xs font-bold text-red-600 dark:text-red-400" role="alert">
+              كلمتا المرور غير متطابقتين.
+            </p>
+          )}
+        </div>
+
+        <Button type="submit" loading={changing} disabled={!canSubmit} icon={<IconLock />}>
+          تغيير كلمة المرور
+        </Button>
+      </form>
+    </section>
+  );
+}
+
+// ==================== Main Section ====================
+export function SettingsSection({
+  channelId, password, channelInfo, onPasswordChanged, onChannelInfoChanged,
+}: Props) {
+  return (
+    <div className="space-y-8">
+      <ChannelInfoForm
+        channelId={channelId}
+        password={password}
+        channelInfo={channelInfo}
+        onChannelInfoChanged={onChannelInfoChanged}
+      />
+      <ChangePasswordForm
+        channelId={channelId}
+        password={password}
+        onPasswordChanged={onPasswordChanged}
+      />
+    </div>
+  );
+}
+```
+
+## app\channel-portal\_components\useChannelAuth.ts
+
+```ts
+// app/channel-portal/_components/useChannelAuth.ts
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import { postJson, ApiError } from '@/lib/api-client';
+import { supabase } from '@/lib/supabaseClient';
+import { STORAGE_KEYS } from '@/lib/constants';
+import type { Channel, ChannelListItem } from '@/lib/types';
+
+export interface ChannelSessionResponse {
+  channel: Channel;
+}
+
+interface UseChannelAuthResult {
+  channelsList: ChannelListItem[];
+  selectedChannelId: string;
+  password: string;
+  authenticated: boolean;
+  loading: boolean;
+  error: string;
+  channelInfo: Channel | null;
+  setSelectedChannelId: (id: string) => void;
+  setPassword: (pw: string) => void;
+  login: (channelId: string, pw: string) => Promise<boolean>;
+  logout: () => void;
+  updatePassword: (newPw: string) => void;
+  updateChannelInfo: (patch: Partial<Channel>) => void;
+}
+
+export function useChannelAuth(): UseChannelAuthResult {
+  const [channelsList, setChannelsList] = useState<ChannelListItem[]>([]);
+  const [selectedChannelId, setSelectedChannelId] = useState('');
+  const [password, setPassword] = useState('');
+  const [authenticated, setAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [channelInfo, setChannelInfo] = useState<Channel | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadChannels() {
+      const { data, error: fetchError } = await supabase
+        .from('channels')
+        .select('id, name')
+        .order('name');
+      if (cancelled) return;
+      if (!fetchError && data) setChannelsList(data as ChannelListItem[]);
+    }
+    loadChannels();
+    return () => { cancelled = true; };
+  }, []);
+
+  const login = useCallback(async (channelId: string, pw: string): Promise<boolean> => {
+    if (!channelId || !pw) {
+      setError('اختر القناة وأدخل كلمة المرور');
+      return false;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      const data = await postJson<ChannelSessionResponse>('/api/channel/content', {
+        action: 'login',
+        channel_id: channelId,
+        password: pw,
+      });
+      sessionStorage.setItem(STORAGE_KEYS.channelId, channelId);
+      sessionStorage.setItem(STORAGE_KEYS.channelPassword, pw);
+      setSelectedChannelId(channelId);
+      setPassword(pw);
+      setChannelInfo(data.channel);
+      setAuthenticated(true);
+      return true;
+    } catch (err) {
+      const message =
+        err instanceof ApiError && err.status === 401
+          ? 'كلمة المرور غير صحيحة'
+          : 'صار خطأ، حاول مرة ثانية.';
+      setError(message);
+      sessionStorage.removeItem(STORAGE_KEYS.channelId);
+      sessionStorage.removeItem(STORAGE_KEYS.channelPassword);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const savedId = sessionStorage.getItem(STORAGE_KEYS.channelId);
+    const savedPw = sessionStorage.getItem(STORAGE_KEYS.channelPassword);
+    if (savedId && savedPw) {
+      setSelectedChannelId(savedId);
+      setPassword(savedPw);
+      login(savedId, savedPw);
+    }
+  }, [login]);
+
+  const logout = useCallback(() => {
+    sessionStorage.removeItem(STORAGE_KEYS.channelId);
+    sessionStorage.removeItem(STORAGE_KEYS.channelPassword);
+    setAuthenticated(false);
+    setPassword('');
+    setSelectedChannelId('');
+    setChannelInfo(null);
+    setError('');
+  }, []);
+
+  const updatePassword = useCallback((newPw: string) => {
+    sessionStorage.setItem(STORAGE_KEYS.channelPassword, newPw);
+    setPassword(newPw);
+  }, []);
+
+  const updateChannelInfo = useCallback((patch: Partial<Channel>) => {
+    setChannelInfo((prev) => (prev ? { ...prev, ...patch } : prev));
+  }, []);
+
+  return {
+    channelsList,
+    selectedChannelId,
+    password,
+    authenticated,
+    loading,
+    error,
+    channelInfo,
+    setSelectedChannelId,
+    setPassword,
+    login,
+    logout,
+    updatePassword,
+    updateChannelInfo,
+  };
+}
+```
+
+## app\channels\page.tsx
+
+```tsx
+// app/channels/page.tsx
+'use client';
+
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { supabase } from '@/lib/supabaseClient';
+import { useStudentStage } from '@/hooks/useStudentStage';
+import { PullToRefresh } from '@/components/PullToRefresh';
+import { Reveal } from '@/components/Reveal';
+import {
+  IconArrowLeft,
+  IconChannels,
+  IconSearch,
+  IconClose,
+  IconWarning,
+} from '@/components/ui/Icons';
+import type { Channel } from '@/lib/types';
+
+// ==================== Types ====================
+type ChannelListItem = Pick<
+  Channel,
+  'id' | 'name' | 'description' | 'image_url'
+>;
+
+type LoadError = {
+  message: string;
+  detail: string;
+};
+
+type IndexedChannel = {
+  channel: ChannelListItem;
+  haystack: string;
+};
+
+const MAIN_CLASS =
+  'mx-auto max-w-5xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10';
+
+// ==================== Helpers ====================
+function toSafeUrl(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:'
+      ? trimmed
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function buildError(detail: string): LoadError {
+  const offline = typeof navigator !== 'undefined' && !navigator.onLine;
+  return {
+    message: offline
+      ? 'يبدو أن الإنترنت مقطوع عندك. سنعيد المحاولة تلقائياً عند رجوعه.'
+      : 'تعذّر جلب القنوات الآن. جرّب مرة ثانية بعد قليل.',
+    detail,
+  };
+}
+
+function normalizeArabic(input: string): string {
+  return input
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, '')
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[أإآٱ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ئ/g, 'ي')
+    .replace(/ؤ/g, 'و')
+    .replace(/ة/g, 'ه')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getInitials(name: string): string {
+  const words = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w.replace(/^ال/, '') || w);
+
+  if (words.length === 0) return '؟';
+
+  const first = Array.from(words[0]);
+  const chars =
+    words.length >= 2
+      ? [first[0] ?? '', Array.from(words[1])[0] ?? '']
+      : first.slice(0, 2);
+
+  return chars.join('\u200C').toUpperCase();
+}
+
+function ChannelsCount({ count }: { count: number }) {
+  if (count === 1) return <>قناة واحدة متاحة لمرحلتك</>;
+  if (count === 2) return <>قناتان متاحتان لمرحلتك</>;
+  return (
+    <>
+      <span className="num-inline font-mono">{count}</span>{' '}
+      {count >= 3 && count <= 10 ? 'قنوات' : 'قناة'} متاحة لمرحلتك
+    </>
+  );
+}
+
+// ==================== Back Link ====================
+function BackLink() {
+  return (
+    <Link
+      href="/"
+      className="group inline-flex items-center gap-1.5 rounded-field text-sm font-semibold text-teal transition-colors hover:text-teal-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+    >
+      <span className="transition-transform duration-200 group-hover:-translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0">
+        <IconArrowLeft aria-hidden="true" className="h-4 w-4" />
+      </span>
+      رجوع إلى لوحة الأقسام
+    </Link>
+  );
+}
+
+// ==================== Avatar ====================
+function ChannelAvatar({
+  name,
+  imageUrl,
+}: {
+  name: string;
+  imageUrl: string | null;
+}) {
+  const [failed, setFailed] = useState(false);
+  const safeUrl = toSafeUrl(imageUrl);
+
+  if (safeUrl && !failed) {
+    return (
+      <Image
+        src={safeUrl}
+        alt=""
+        width={48}
+        height={48}
+        onError={() => setFailed(true)}
+        className="h-12 w-12 shrink-0 rounded-field border border-line object-cover"
+      />
+    );
+  }
+
+  return (
+    <div
+      aria-hidden="true"
+      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-field bg-teal-soft text-base font-bold text-teal"
+    >
+      {getInitials(name)}
+    </div>
+  );
+}
+
+// ==================== Skeleton ====================
+function Skeleton() {
+  return (
+    <div role="status" aria-label="جارٍ تحميل القنوات" className="mt-6">
+      <div aria-hidden="true" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {[0, 1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="rounded-card border border-line bg-paper-soft p-4 animate-slide-up motion-reduce:animate-none sm:p-5"
+            style={{ animationDelay: `${i * 60}ms` }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 shrink-0 skeleton-shimmer rounded-field motion-reduce:animate-none" />
+              <div className="h-4 flex-1 skeleton-shimmer rounded motion-reduce:animate-none" />
+            </div>
+            <div className="mt-4 h-3 w-3/4 skeleton-shimmer rounded motion-reduce:animate-none" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ==================== Empty State ====================
+function EmptyState() {
+  return (
+    <div
+      role="status"
+      className="mt-6 card-editorial p-10 text-center animate-slide-up motion-reduce:animate-none"
+    >
+      <div
+        aria-hidden="true"
+        className="mx-auto flex h-16 w-16 items-center justify-center rounded-card bg-teal-soft text-teal"
+      >
+        <IconChannels className="h-8 w-8" />
+      </div>
+      <p className="mt-4 font-bold text-ink-soft">
+        لا توجد قنوات مضافة لمرحلتك حالياً.
+      </p>
+      <p className="mt-1 text-sm text-ink-muted">يرجى العودة لاحقاً</p>
+    </div>
+  );
+}
+
+// ==================== No Stage State ====================
+function NoStageState() {
+  return (
+    <div
+      role="status"
+      className="mt-6 card-editorial p-10 text-center animate-slide-up motion-reduce:animate-none"
+    >
+      <div
+        aria-hidden="true"
+        className="mx-auto flex h-16 w-16 items-center justify-center rounded-card bg-gold-tint text-gold-ink"
+      >
+        <IconWarning className="h-8 w-8" />
+      </div>
+      <p className="mt-4 font-bold text-ink-soft">
+        لم نعرف مرحلتك الدراسية بعد.
+      </p>
+      <p className="mt-1 text-sm text-ink-muted">
+        اختر مرحلتك من لوحة الأقسام ثم ارجع لهذه الصفحة.
+      </p>
+    </div>
+  );
+}
+
+// ==================== No Search Results ====================
+function NoResults({
+  query,
+  onClear,
+}: {
+  query: string;
+  onClear: () => void;
+}) {
+  return (
+    <div
+      role="status"
+      className="mt-6 card-editorial p-10 text-center animate-slide-up motion-reduce:animate-none"
+    >
+      <div
+        aria-hidden="true"
+        className="mx-auto flex h-14 w-14 items-center justify-center rounded-field bg-ink/5 text-ink-muted"
+      >
+        <IconSearch className="h-6 w-6" />
+      </div>
+      <p className="mt-4 font-bold text-ink-soft">لا توجد نتائج مطابقة</p>
+      <p dir="auto" className="mt-1 break-anywhere text-sm text-ink-muted">
+        «{query}»
+      </p>
+      <button
+        type="button"
+        onClick={onClear}
+        className="mt-4 inline-flex h-10 items-center rounded-field border border-line bg-paper-soft px-4 text-sm font-semibold text-ink-soft transition-colors hover:border-teal/40 hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+      >
+        مسح البحث
+      </button>
+    </div>
+  );
+}
+
+// ==================== Error State ====================
+function ErrorState({
+  error,
+  onRetry,
+}: {
+  error: LoadError;
+  onRetry: () => void;
+}) {
+  return (
+    <div
+      role="alert"
+      className="mt-6 flex items-start gap-3 rounded-card border border-coral/30 bg-coral/5 p-4 animate-slide-up motion-reduce:animate-none"
+    >
+      <span
+        aria-hidden="true"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-field bg-coral text-on-coral"
+      >
+        <IconWarning className="h-4 w-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-bold text-coral-ink">تعذّر تحميل القنوات</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-ink-soft">
+          {error.message}
+        </p>
+        {error.detail && (
+          <p
+            dir="ltr"
+            className="mt-1 break-anywhere text-end font-mono text-[11px] text-ink-muted"
+          >
+            {error.detail}
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-3 inline-flex h-10 items-center rounded-field border border-line bg-paper-soft px-4 text-xs font-semibold text-ink-soft transition-colors hover:border-teal/40 hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+        >
+          إعادة المحاولة
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ==================== Channel Card ====================
+function ChannelCard({ channel }: { channel: ChannelListItem }) {
+  const titleId = `channel-title-${channel.id}`;
+  const descId = `channel-desc-${channel.id}`;
+  const description = channel.description?.trim() ?? '';
+
+  return (
+    <Link
+      href={`/channels/${encodeURIComponent(channel.id)}`}
+      aria-labelledby={titleId}
+      aria-describedby={description ? descId : undefined}
+      className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-card border border-line bg-paper-soft p-4 transition-[border-color,background-color,transform] duration-300 hover:-translate-y-0.5 hover:border-teal/40 hover:bg-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:p-5"
+    >
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 block h-[3px] origin-center scale-x-0 bg-teal transition-transform duration-500 group-hover:scale-x-100 group-focus-visible:scale-x-100 motion-reduce:transition-none"
+      />
+
+      <div className="flex items-center gap-3">
+        <ChannelAvatar name={channel.name} imageUrl={channel.image_url} />
+
+        <h2
+          id={titleId}
+          className="min-w-0 flex-1 break-anywhere line-clamp-2 font-display text-base font-bold leading-snug text-ink transition-colors group-hover:text-teal motion-reduce:transition-none sm:text-lg"
+        >
+          {channel.name}
+        </h2>
+      </div>
+
+      {description && (
+        <p
+          id={descId}
+          className="mt-3 line-clamp-2 text-sm leading-relaxed text-ink-soft"
+        >
+          {description}
+        </p>
+      )}
+
+      <div className="mt-auto flex items-center gap-1.5 pt-4 text-sm font-semibold text-teal">
+        <span>فتح صفحة القناة</span>
+        <span className="transition-transform duration-200 group-hover:-translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0">
+          <IconArrowLeft aria-hidden="true" className="h-4 w-4" />
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+// ==================== Search Bar ====================
+function SearchBar({
+  value,
+  onChange,
+  onClear,
+  resultCount,
+  totalCount,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onClear: () => void;
+  resultCount: number;
+  totalCount: number;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const showCount = value.trim() !== '';
+
+  function clearAndFocus() {
+    onClear();
+    inputRef.current?.focus();
+  }
+
+  return (
+    <div className="mt-6 animate-slide-up motion-reduce:animate-none">
+      <label htmlFor="channels-search" className="sr-only">
+        ابحث باسم القناة أو وصفها
+      </label>
+
+      <div className="relative">
+        <IconSearch
+          aria-hidden="true"
+          className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
+        />
+        <input
+          ref={inputRef}
+          id="channels-search"
+          type="search"
+          inputMode="search"
+          enterKeyHint="search"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' && value) {
+              e.preventDefault();
+              onClear();
+            }
+          }}
+          placeholder="ابحث باسم القناة أو وصفها..."
+          maxLength={100}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          aria-describedby="channels-search-status"
+          className="field-editorial w-full ps-10 pe-11 text-base [&::-webkit-search-cancel-button]:hidden"
+        />
+        {value && (
+          <button
+            type="button"
+            onClick={clearAndFocus}
+            aria-label="مسح البحث"
+            className="absolute end-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-field text-ink-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+          >
+            <IconClose aria-hidden="true" className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
+      <p
+        id="channels-search-status"
+        aria-live="polite"
+        className="mt-1.5 min-h-4 text-xs text-ink-muted"
+      >
+        {showCount && (
+          <>
+            النتائج: <span className="num-inline font-mono">{resultCount}</span>
+            {' من '}
+            <span className="num-inline font-mono">{totalCount}</span>
+          </>
+        )}
+      </p>
+    </div>
+  );
+}
+
+// ==================== Page ====================
+export default function ChannelsPage() {
+  const { stage, ready } = useStudentStage();
+  const [channels, setChannels] = useState<ChannelListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<LoadError | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Pull-to-refresh state
+  const [reloadKey, setReloadKey] = useState(0);
+  const [silentReload, setSilentReload] = useState(false);
+  const refreshResolverRef = useRef<(() => void) | null>(null);
+
+  const deferredSearch = useDeferredValue(searchTerm);
+  const isStale = searchTerm !== deferredSearch;
+
+  // ==================== Load data ====================
+  useEffect(() => {
+    if (!stage) return;
+    const currentStage = stage;
+    const isSilent = silentReload;
+    let cancelled = false;
+
+    async function loadData() {
+      if (!isSilent) setLoading(true);
+      setError(null);
+
+      try {
+        const { data, error: fetchError } = await supabase
+          .from('channels')
+          .select('id, name, description, image_url')
+          .eq('stage', currentStage);
+
+        if (cancelled) return;
+
+        if (fetchError) {
+          setError(buildError(fetchError.message));
+          setChannels([]);
+        } else {
+          const list = (data ?? []) as ChannelListItem[];
+          setChannels(
+            [...list].sort((a, b) => a.name.localeCompare(b.name, 'ar')),
+          );
+        }
+      } catch (e: unknown) {
+        if (cancelled) return;
+        setError(buildError(e instanceof Error ? e.message : ''));
+        setChannels([]);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+          setSilentReload(false);
+          if (refreshResolverRef.current) {
+            const resolve = refreshResolverRef.current;
+            refreshResolverRef.current = null;
+            resolve();
+          }
+        }
+      }
+    }
+
+    void loadData();
+
+    return () => {
+      cancelled = true;
+      if (refreshResolverRef.current) {
+        const resolve = refreshResolverRef.current;
+        refreshResolverRef.current = null;
+        resolve();
+      }
+    };
+  }, [stage, reloadKey, silentReload]);
+
+  // ==================== Pull-to-refresh ====================
+  const handleRefresh = useCallback((): Promise<void> => {
+    return new Promise<void>((resolve) => {
+      refreshResolverRef.current = resolve;
+      setSilentReload(true);
+      setReloadKey((k) => k + 1);
+    });
+  }, []);
+
+  // إعادة محاولة تلقائية عند رجوع الإنترنت
+  useEffect(() => {
+    if (!error) return;
+    function onOnline() {
+      setReloadKey((k) => k + 1);
+    }
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, [error]);
+
+  const handleRetry = useCallback(() => {
+    setReloadKey((k) => k + 1);
+  }, []);
+
+  const handleClearSearch = useCallback(() => {
+    setSearchTerm('');
+  }, []);
+
+  // ==================== Filter ====================
+  const indexed = useMemo<IndexedChannel[]>(
+    () =>
+      channels.map((channel) => ({
+        channel,
+        haystack: normalizeArabic(
+          `${channel.name} ${channel.description ?? ''}`,
+        ),
+      })),
+    [channels],
+  );
+
+  const term = useMemo(() => normalizeArabic(deferredSearch), [deferredSearch]);
+
+  const visibleChannels = useMemo(() => {
+    if (!term) return channels;
+    return indexed
+      .filter((item) => item.haystack.includes(term))
+      .map((item) => item.channel);
+  }, [channels, indexed, term]);
+
+  // ==================== Loading (stage not ready) ====================
+  if (!ready) {
+    return (
+      <main className={MAIN_CLASS} aria-busy="true">
+        <Skeleton />
+      </main>
+    );
+  }
+
+  // ==================== No stage ====================
+  if (!stage) {
+    return (
+      <main className={MAIN_CLASS}>
+        <BackLink />
+        <NoStageState />
+      </main>
+    );
+  }
+
+  const hasChannels = channels.length > 0;
+  const hasResults = visibleChannels.length > 0;
+
+  return (
+    <main className={MAIN_CLASS} aria-labelledby="channels-title">
+      <PullToRefresh onRefresh={handleRefresh}>
+        <BackLink />
+
+        <header className="mt-6 animate-slide-up motion-reduce:animate-none">
+          <span className="stage-badge">{stage}</span>
+
+          <h1
+            id="channels-title"
+            className="mt-3 flex items-center gap-2.5 font-display text-3xl font-bold leading-tight text-ink sm:text-4xl"
+          >
+            <span
+              aria-hidden="true"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-field bg-teal-soft text-teal"
+            >
+              <IconChannels className="h-5 w-5" />
+            </span>
+            قنوات الدراسة
+          </h1>
+
+          {!loading && !error && hasChannels && (
+            <p className="mt-3 text-sm leading-relaxed text-ink-soft">
+              <ChannelsCount count={channels.length} />
+            </p>
+          )}
+        </header>
+
+        {!loading && !error && hasChannels && (
+          <SearchBar
+            value={searchTerm}
+            onChange={setSearchTerm}
+            onClear={handleClearSearch}
+            resultCount={visibleChannels.length}
+            totalCount={channels.length}
+          />
+        )}
+
+        <div aria-busy={loading}>
+          {loading && <Skeleton />}
+
+          {!loading && error && (
+            <ErrorState error={error} onRetry={handleRetry} />
+          )}
+
+          {!loading && !error && !hasChannels && <EmptyState />}
+
+          {!loading && !error && hasChannels && !hasResults && (
+            <NoResults
+              query={deferredSearch.trim()}
+              onClear={handleClearSearch}
+            />
+          )}
+
+          {!loading && !error && hasResults && (
+            <ul
+              role="list"
+              className={`mt-6 grid gap-3 transition-opacity duration-150 motion-reduce:transition-none sm:grid-cols-2 lg:grid-cols-3 ${
+                isStale ? 'opacity-60' : 'opacity-100'
+              }`}
+            >
+              {visibleChannels.map((c, idx) => (
+                <Reveal
+                  key={c.id}
+                  as="li"
+                  delay={Math.min(idx * 40, 300)}
+                  className="min-w-0 defer-item"
+                >
+                  <ChannelCard channel={c} />
+                </Reveal>
+              ))}
+            </ul>
+          )}
+        </div>
+      </PullToRefresh>
+    </main>
+  );
+}
+```
+
+## app\channels\[id]\page.tsx
+
+```tsx
+```
+
+## app\dictionary\page.tsx
+
+```tsx
+// app/dictionary/page.tsx
+'use client';
+
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+  type RefObject,
+} from 'react';
+import Link from 'next/link';
+import { useToast } from '@/components/ui/Toast';
+import { postJson } from '@/lib/api-client';
+import {
+  MEDICAL_CATEGORIES,
+  MEDICAL_CATEGORY_LABELS,
+  MEDICAL_CATEGORY_EMOJIS,
+} from '@/lib/constants';
+import type {
+  DictionaryDeepExplanation,
+  MedicalCategory,
+} from '@/lib/types';
+import {
+  IconSearch,
+  IconArrowLeft,
+  IconDoctor,
+  IconBook,
+  IconSparkles,
+  IconTrending,
+  IconClock,
+  IconCopy,
+  IconCheck,
+  IconClose,
+  IconWarning,
+} from '@/components/ui/Icons';
+
+// ==================== Types ====================
+interface DictionaryResult {
+  id?: string;
+  term: string;
+  arabic_translation: string;
+  meaning: string;
+  root_breakdown: string | null;
+  clinical_note: string | null;
+  similar_terms: string[];
+  category: MedicalCategory;
+  hit_count: number;
+}
+
+interface PopularTerm {
+  term: string;
+  arabic_translation: string;
+  hit_count: number;
+  category: MedicalCategory;
+}
+
+interface CategoryStat {
+  category: MedicalCategory;
+  count: number;
+}
+
+const RECENT_KEY = 'dictionary_recent_terms';
+const MAX_RECENT = 8;
+const MIN_TERM_LENGTH = 2;
+
+// ==================== Normalizers ====================
+function str(v: unknown): string {
+  return typeof v === 'string' ? v.trim() : '';
+}
+
+function normalizeTerm(raw: string): string {
+  return raw.replace(/\s+/g, ' ').trim();
+}
+
+function parseCategory(v: unknown): MedicalCategory {
+  const s = str(v);
+  return (MEDICAL_CATEGORIES as readonly string[]).includes(s)
+    ? (s as MedicalCategory)
+    : 'general';
+}
+
+function normalizeResult(raw: unknown): DictionaryResult | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const r = raw as Record<string, unknown>;
+
+  const term = str(r.term);
+  const meaning = str(r.meaning);
+  if (!term || !meaning) return null;
+
+  const similar = Array.isArray(r.similar_terms)
+    ? r.similar_terms
+        .filter((t): t is string => typeof t === 'string')
+        .map((t) => t.trim())
+        .filter(Boolean)
+    : [];
+
+  const hits =
+    typeof r.hit_count === 'number' && Number.isFinite(r.hit_count)
+      ? Math.max(0, Math.floor(r.hit_count))
+      : 0;
+
+  return {
+    id: typeof r.id === 'string' ? r.id : undefined,
+    term,
+    arabic_translation: str(r.arabic_translation),
+    meaning,
+    root_breakdown: str(r.root_breakdown) || null,
+    clinical_note: str(r.clinical_note) || null,
+    similar_terms: Array.from(new Set(similar)),
+    category: parseCategory(r.category),
+    hit_count: hits,
+  };
+}
+
+function normalizePopular(raw: unknown): PopularTerm[] {
+  if (!Array.isArray(raw)) return [];
+  const out: PopularTerm[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const r = item as Record<string, unknown>;
+    const term = str(r.term);
+    if (!term) continue;
+    out.push({
+      term,
+      arabic_translation: str(r.arabic_translation),
+      hit_count:
+        typeof r.hit_count === 'number' && Number.isFinite(r.hit_count)
+          ? r.hit_count
+          : 0,
+      category: parseCategory(r.category),
+    });
+  }
+  return out;
+}
+
+function normalizeDeep(raw: unknown): DictionaryDeepExplanation | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const r = raw as Record<string, unknown>;
+  const overview = str(r.overview);
+  const mechanism = str(r.mechanism);
+  const clinical = str(r.clinical);
+  if (!overview || !mechanism || !clinical) return null;
+
+  return {
+    overview,
+    mechanism,
+    clinical,
+    confusions: Array.isArray(r.confusions)
+      ? r.confusions
+          .filter((c): c is string => typeof c === 'string')
+          .map((c) => c.trim())
+          .filter(Boolean)
+          .slice(0, 3)
+      : [],
+    mnemonic: str(r.mnemonic) || null,
+  };
+}
+
+// ==================== Storage ====================
+function loadRecent(): string[] {
+  try {
+    const saved = localStorage.getItem(RECENT_KEY);
+    if (!saved) return [];
+    const parsed: unknown = JSON.parse(saved);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .filter((t): t is string => typeof t === 'string' && t.trim() !== '')
+        .slice(0, MAX_RECENT);
+    }
+  } catch {
+    /* ignore */
+  }
+  return [];
+}
+
+function saveRecent(term: string): string[] {
+  const current = loadRecent().filter(
+    (t) => t.toLowerCase() !== term.toLowerCase()
+  );
+  const next = [term, ...current].slice(0, MAX_RECENT);
+  try {
+    localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+  } catch {
+    /* ignore */
+  }
+  return next;
+}
+
+function clearRecentStorage(): void {
+  try {
+    localStorage.removeItem(RECENT_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+// ==================== Clipboard ====================
+async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    /* fallback */
+  }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '0';
+    ta.style.left = '-9999px';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+function buildCopyText(result: DictionaryResult): string {
+  const catLabel = MEDICAL_CATEGORY_LABELS[result.category];
+  return [
+    `المصطلح: ${result.term}`,
+    `التصنيف: ${catLabel}`,
+    result.arabic_translation ? `الترجمة: ${result.arabic_translation}` : '',
+    `المعنى: ${result.meaning}`,
+    result.root_breakdown ? `تفكيك الكلمة: ${result.root_breakdown}` : '',
+    result.clinical_note ? `ملاحظة سريرية: ${result.clinical_note}` : '',
+    result.similar_terms.length > 0
+      ? `مصطلحات مشابهة: ${result.similar_terms.join(' · ')}`
+      : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+// ==================== Speech ====================
+function useSpeech() {
+  const [speaking, setSpeaking] = useState(false);
+  const [supported, setSupported] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setSupported('speechSynthesis' in window);
+    return () => {
+      // أوقف أي نطق عند الخروج
+      try {
+        window.speechSynthesis?.cancel();
+      } catch {
+        /* ignore */
+      }
+    };
+  }, []);
+
+  const speak = useCallback((text: string) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      return false;
+    }
+
+    try {
+      window.speechSynthesis.cancel();
+    } catch {
+      /* ignore */
+    }
+
+    // اختر صوتاً إنجليزياً إن توفّر
+    const voices = window.speechSynthesis.getVoices();
+    const preferred =
+      voices.find((v) => v.lang === 'en-US' && v.localService) ||
+      voices.find((v) => v.lang === 'en-US') ||
+      voices.find((v) => v.lang.startsWith('en')) ||
+      null;
+
+    const utter = new SpeechSynthesisUtterance(text);
+    if (preferred) utter.voice = preferred;
+    utter.lang = preferred?.lang ?? 'en-US';
+    utter.rate = 0.9;
+    utter.pitch = 1;
+
+    utter.onstart = () => setSpeaking(true);
+    utter.onend = () => setSpeaking(false);
+    utter.onerror = () => setSpeaking(false);
+
+    window.speechSynthesis.speak(utter);
+    return true;
+  }, []);
+
+  const stop = useCallback(() => {
+    try {
+      window.speechSynthesis?.cancel();
+    } catch {
+      /* ignore */
+    }
+    setSpeaking(false);
+  }, []);
+
+  return { speak, stop, speaking, supported };
+}
+
+// ==================== Small components ====================
+function BackLink() {
+  return (
+    <Link
+      href="/"
+      className="group inline-flex items-center gap-1.5 rounded-field text-sm font-semibold text-teal transition-colors hover:text-teal-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+    >
+      <span className="transition-transform duration-200 group-hover:-translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0">
+        <IconArrowLeft aria-hidden="true" className="h-4 w-4" />
+      </span>
+      رجوع إلى لوحة الأقسام
+    </Link>
+  );
+}
+
+function HitCount({ count }: { count: number }) {
+  if (count <= 0) return null;
+  let content: React.ReactNode;
+  if (count === 1) content = 'بُحث عنه مرة واحدة';
+  else if (count === 2) content = 'بُحث عنه مرتين';
+  else {
+    content = (
+      <>
+        بُحث عنه <span className="num-inline font-mono">{count}</span>{' '}
+        {count <= 10 ? 'مرات' : 'مرة'}
+      </>
+    );
+  }
+  return (
+    <footer className="flex items-center gap-2 border-t border-line-soft pt-3 text-xs text-ink-muted">
+      <IconTrending aria-hidden="true" className="h-3.5 w-3.5" />
+      <span>{content}</span>
+    </footer>
+  );
+}
+
+function CategoryBadge({ category }: { category: MedicalCategory }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-chip bg-navy-soft px-2.5 py-0.5 text-[11px] font-bold text-navy-ink">
+      <span aria-hidden="true">{MEDICAL_CATEGORY_EMOJIS[category]}</span>
+      {MEDICAL_CATEGORY_LABELS[category]}
+    </span>
+  );
+}
+
+// ==================== Pronunciation Button ====================
+function SpeakButton({
+  text,
+  speaking,
+  supported,
+  onSpeak,
+  onStop,
+}: {
+  text: string;
+  speaking: boolean;
+  supported: boolean;
+  onSpeak: (t: string) => void;
+  onStop: () => void;
+}) {
+  if (!supported) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={() => (speaking ? onStop() : onSpeak(text))}
+      aria-label={speaking ? 'إيقاف النطق' : `نطق ${text}`}
+      title={speaking ? 'إيقاف النطق' : 'نطق المصطلح'}
+      className={[
+        'flex h-9 shrink-0 items-center gap-1.5 rounded-field border px-3',
+        'text-xs font-semibold',
+        'transition-colors duration-200 motion-reduce:transition-none',
+        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal',
+        speaking
+          ? 'border-teal/50 bg-teal-tint text-teal'
+          : 'border-line bg-paper-soft text-ink-soft hover:border-teal/40 hover:text-teal',
+      ].join(' ')}
+    >
+      {speaking ? (
+        <svg
+          aria-hidden="true"
+          className="h-3.5 w-3.5"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <rect x="6" y="6" width="12" height="12" rx="2" />
+        </svg>
+      ) : (
+        <svg
+          aria-hidden="true"
+          className="h-3.5 w-3.5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M11 5L6 9H2v6h4l5 4V5z" />
+          <path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" />
+        </svg>
+      )}
+      <span>{speaking ? 'إيقاف' : 'نطق'}</span>
+    </button>
+  );
+}
+
+// ==================== Deep Dive Card ====================
+function DeepDiveCard({
+  term,
+  onClose,
+}: {
+  term: string;
+  onClose: () => void;
+}) {
+  const toast = useToast();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [deep, setDeep] = useState<DictionaryDeepExplanation | null>(null);
+  const cardRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setError('');
+      try {
+        const data = await postJson<{ deep?: unknown }>('/api/dictionary', {
+          action: 'deep',
+          term,
+        });
+        if (cancelled) return;
+        const normalized = normalizeDeep(data.deep);
+        if (!normalized) {
+          setError('وصل رد غير مفهوم. جرّب مرة ثانية.');
+          return;
+        }
+        setDeep(normalized);
+      } catch (err) {
+        if (cancelled) return;
+        setError(
+          err instanceof Error && err.message
+            ? err.message
+            : 'فشل توليد الشرح'
+        );
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [term]);
+
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    const reduceMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)'
+    ).matches;
+    el.scrollIntoView({
+      behavior: reduceMotion ? 'auto' : 'smooth',
+      block: 'start',
+    });
+  }, []);
+
+  return (
+    <section
+      ref={cardRef}
+      aria-labelledby="deep-heading"
+      className="mt-4 scroll-mt-6 overflow-hidden rounded-card border border-gold/40 bg-gold-tint/40 animate-slide-up motion-reduce:animate-none"
+    >
+      <header className="flex items-center justify-between gap-2 border-b border-gold/30 bg-gold-tint px-4 py-2.5">
+        <h3
+          id="deep-heading"
+          className="flex items-center gap-2 font-display text-sm font-bold text-gold-ink"
+        >
+          <IconSparkles aria-hidden="true" className="h-4 w-4" />
+          شرح عميق — {term}
+        </h3>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="إغلاق الشرح"
+          className="flex h-7 w-7 items-center justify-center rounded-field text-gold-ink transition-colors hover:bg-gold/20 motion-reduce:transition-none"
+        >
+          <IconClose aria-hidden="true" className="h-3.5 w-3.5" />
+        </button>
+      </header>
+
+      <div className="p-4 sm:p-5">
+        {loading && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex items-center gap-3 text-sm text-ink-soft"
+          >
+            <svg
+              className="h-4 w-4 animate-spin text-gold-ink"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="3"
+                opacity="0.25"
+              />
+              <path
+                d="M22 12a10 10 0 0 1-10 10"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
+            </svg>
+            <span>جاري توليد شرح عميق…</span>
+          </div>
+        )}
+
+        {error && !loading && (
+          <div
+            role="alert"
+            className="rounded-field border border-coral/30 bg-coral/5 p-3 text-sm text-coral-ink"
+          >
+            <p className="font-bold">تعذّر توليد الشرح</p>
+            <p className="mt-0.5 text-xs opacity-80">{error}</p>
+          </div>
+        )}
+
+        {deep && !loading && (
+          <div className="space-y-4 text-sm leading-relaxed">
+            <section>
+              <h4 className="mb-1 flex items-center gap-1.5 text-xs font-bold text-gold-ink">
+                <span aria-hidden="true">🌐</span>
+                نظرة عامة
+              </h4>
+              <p className="break-anywhere text-ink-soft">{deep.overview}</p>
+            </section>
+
+            <section>
+              <h4 className="mb-1 flex items-center gap-1.5 text-xs font-bold text-gold-ink">
+                <span aria-hidden="true">⚙️</span>
+                الآلية والوظيفة
+              </h4>
+              <p className="break-anywhere text-ink-soft">{deep.mechanism}</p>
+            </section>
+
+            <section>
+              <h4 className="mb-1 flex items-center gap-1.5 text-xs font-bold text-gold-ink">
+                <span aria-hidden="true">🩺</span>
+                الأهمية السريرية
+              </h4>
+              <p className="break-anywhere text-ink-soft">{deep.clinical}</p>
+            </section>
+
+            {deep.confusions.length > 0 && (
+              <section>
+                <h4 className="mb-2 flex items-center gap-1.5 text-xs font-bold text-gold-ink">
+                  <span aria-hidden="true">⚠️</span>
+                  يختلط مع
+                </h4>
+                <ul className="space-y-2">
+                  {deep.confusions.map((c, i) => (
+                    <li
+                      key={i}
+                      className="break-anywhere rounded-field border border-gold/20 bg-paper-soft/70 px-3 py-2 text-xs leading-relaxed text-ink-soft"
+                    >
+                      {c}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {deep.mnemonic && (
+              <section className="rounded-field border border-teal/30 bg-teal-tint p-3">
+                <h4 className="mb-1 flex items-center gap-1.5 text-xs font-bold text-teal">
+                  <span aria-hidden="true">🧠</span>
+                  طريقة للحفظ
+                </h4>
+                <p className="break-anywhere text-xs leading-relaxed text-ink-soft">
+                  {deep.mnemonic}
+                </p>
+              </section>
+            )}
+
+            <p className="text-[11px] leading-relaxed text-ink-muted">
+              ⚠️ الشرح العميق مولّد بالذكاء الاصطناعي — للتذكير الدراسي فقط،
+              راجع المصادر الرسمية.
+            </p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ==================== Result Card ====================
+function ResultCard({
+  result,
+  headingRef,
+  onSelectTerm,
+}: {
+  result: DictionaryResult;
+  headingRef: RefObject<HTMLHeadingElement | null>;
+  onSelectTerm: (term: string) => void;
+}) {
+  const toast = useToast();
+  const [copied, setCopied] = useState(false);
+  const [showDeep, setShowDeep] = useState(false);
+  const timerRef = useRef<number | null>(null);
+  const speech = useSpeech();
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  // أوقف النطق عند تغيير المصطلح
+  useEffect(() => {
+    speech.stop();
+    setShowDeep(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result.term]);
+
+  const handleCopy = useCallback(async () => {
+    const ok = await copyText(buildCopyText(result));
+    if (!ok) {
+      toast.show('فشل النسخ', 'error');
+      return;
+    }
+    setCopied(true);
+    toast.show('تم نسخ المصطلح', 'success');
+    if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    timerRef.current = window.setTimeout(() => setCopied(false), 1500);
+  }, [result, toast]);
+
+  return (
+    <article
+      aria-labelledby="result-heading"
+      className="card-editorial animate-slide-up motion-reduce:animate-none"
+    >
+      {/* Header */}
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-5 py-4 sm:px-6">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              aria-hidden="true"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-field bg-teal-soft text-teal"
+            >
+              <IconDoctor className="h-4 w-4" />
+            </span>
+            <h2
+              id="result-heading"
+              ref={headingRef}
+              tabIndex={-1}
+              className="break-anywhere rounded-field font-display text-xl font-bold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal sm:text-2xl"
+            >
+              <bdi>{result.term}</bdi>
+            </h2>
+            <CategoryBadge category={result.category} />
+          </div>
+          {result.arabic_translation && (
+            <p className="mt-2 break-anywhere text-base font-semibold text-teal">
+              <bdi>{result.arabic_translation}</bdi>
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+          <SpeakButton
+            text={result.term}
+            speaking={speech.speaking}
+            supported={speech.supported}
+            onSpeak={speech.speak}
+            onStop={speech.stop}
+          />
+          <button
+            type="button"
+            onClick={handleCopy}
+            aria-label={copied ? 'تم النسخ' : 'نسخ المصطلح'}
+            className="flex h-9 shrink-0 items-center gap-1.5 rounded-field border border-line bg-paper-soft px-3 text-xs font-semibold text-ink-soft transition-colors hover:border-teal/40 hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+          >
+            {copied ? (
+              <IconCheck aria-hidden="true" className="h-3.5 w-3.5" />
+            ) : (
+              <IconCopy aria-hidden="true" className="h-3.5 w-3.5" />
+            )}
+            <span>{copied ? 'تم' : 'نسخ'}</span>
+          </button>
+        </div>
+      </header>
+
+      {/* Body */}
+      <div className="space-y-5 p-5 sm:p-6">
+        <section>
+          <h3 className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-ink-muted">
+            <IconBook aria-hidden="true" className="h-3.5 w-3.5" />
+            المعنى
+          </h3>
+          <p className="break-anywhere text-sm leading-relaxed text-ink-soft">
+            {result.meaning}
+          </p>
+        </section>
+
+        {result.root_breakdown && (
+          <section>
+            <h3 className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-ink-muted">
+              <IconSparkles aria-hidden="true" className="h-3.5 w-3.5" />
+              تفكيك الكلمة
+            </h3>
+            <p className="break-anywhere text-sm leading-relaxed text-ink-soft">
+              {result.root_breakdown}
+            </p>
+          </section>
+        )}
+
+        {result.clinical_note && (
+          <section className="rounded-field border border-gold/30 bg-gold-tint p-4">
+            <h3 className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-gold-ink">
+              <IconDoctor aria-hidden="true" className="h-3.5 w-3.5" />
+              ملاحظة سريرية
+            </h3>
+            <p className="break-anywhere text-sm leading-relaxed text-ink-soft">
+              {result.clinical_note}
+            </p>
+          </section>
+        )}
+
+        {result.similar_terms.length > 0 && (
+          <section>
+            <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-ink-muted">
+              <IconSparkles aria-hidden="true" className="h-3.5 w-3.5" />
+              مصطلحات مشابهة
+            </h3>
+            <ul className="flex flex-wrap gap-1.5">
+              {result.similar_terms.map((t) => (
+                <li key={t}>
+                  <button
+                    type="button"
+                    onClick={() => onSelectTerm(t)}
+                    aria-label={`ابحث عن ${t}`}
+                    className="badge badge-neutral cursor-pointer transition-colors hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+                  >
+                    <bdi>{t}</bdi>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* Deep dive button */}
+        {!showDeep && (
+          <button
+            type="button"
+            onClick={() => setShowDeep(true)}
+            className="group inline-flex items-center gap-2 rounded-field border-2 border-gold/40 bg-gold-tint px-4 py-2.5 text-sm font-bold text-gold-ink transition-all duration-200 hover:border-gold/70 hover:bg-gold-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold motion-reduce:transition-none"
+          >
+            <IconSparkles
+              aria-hidden="true"
+              className="h-4 w-4 transition-transform duration-300 group-hover:rotate-12 motion-reduce:transition-none"
+            />
+            اشرح لي أكثر
+            <span className="rounded-chip bg-gold/20 px-1.5 py-0.5 text-[10px] font-mono">
+              AI
+            </span>
+          </button>
+        )}
+
+        {showDeep && (
+          <DeepDiveCard term={result.term} onClose={() => setShowDeep(false)} />
+        )}
+
+        <HitCount count={result.hit_count} />
+      </div>
+    </article>
+  );
+}
+
+// ==================== Skeleton ====================
+function ResultSkeleton() {
+  return (
+    <div
+      role="status"
+      aria-label="جارٍ البحث"
+      className="space-y-3 rounded-card border border-line bg-paper-soft p-6"
+    >
+      <div className="h-7 w-40 skeleton-shimmer rounded" />
+      <div className="h-5 w-32 skeleton-shimmer rounded" />
+      <div className="mt-4 h-4 w-full skeleton-shimmer rounded" />
+      <div className="h-4 w-3/4 skeleton-shimmer rounded" />
+    </div>
+  );
+}
+
+// ==================== Category Filter ====================
+function CategoryFilter({
+  selected,
+  stats,
+  onSelect,
+}: {
+  selected: MedicalCategory | null;
+  stats: CategoryStat[];
+  onSelect: (c: MedicalCategory | null) => void;
+}) {
+  const total = useMemo(
+    () => stats.reduce((sum, s) => sum + s.count, 0),
+    [stats]
+  );
+
+  const sortedStats = useMemo(
+    () => [...stats].sort((a, b) => b.count - a.count),
+    [stats]
+  );
+
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-1.5">
+      <button
+        type="button"
+        onClick={() => onSelect(null)}
+        className={`rounded-chip px-2.5 py-1 text-xs font-bold transition-all duration-150 active:scale-95 ${
+          selected === null
+            ? 'bg-teal text-on-teal shadow-sm'
+            : 'bg-ink/5 text-ink-soft hover:bg-ink/10 dark:bg-white/5 dark:hover:bg-white/10'
+        }`}
+      >
+        الكل
+        <span className="mr-1 font-mono text-[10px] opacity-70">{total}</span>
+      </button>
+      {sortedStats.map((s) => {
+        const active = selected === s.category;
+        return (
+          <button
+            key={s.category}
+            type="button"
+            onClick={() => onSelect(active ? null : s.category)}
+            className={`inline-flex items-center gap-1 rounded-chip px-2.5 py-1 text-xs font-bold transition-all duration-150 active:scale-95 ${
+              active
+                ? 'bg-teal text-on-teal shadow-sm'
+                : 'bg-ink/5 text-ink-soft hover:bg-ink/10 dark:bg-white/5 dark:hover:bg-white/10'
+            }`}
+          >
+            <span aria-hidden="true">{MEDICAL_CATEGORY_EMOJIS[s.category]}</span>
+            {MEDICAL_CATEGORY_LABELS[s.category]}
+            <span className="font-mono text-[10px] opacity-70">{s.count}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ==================== Page ====================
+export default function DictionaryPage() {
+  const toast = useToast();
+  const [term, setTerm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<DictionaryResult | null>(null);
+  const [error, setError] = useState('');
+  const [popular, setPopular] = useState<PopularTerm[]>([]);
+  const [popularCategory, setPopularCategory] = useState<MedicalCategory | null>(
+    null
+  );
+  const [categoryStats, setCategoryStats] = useState<CategoryStat[]>([]);
+  const [recent, setRecent] = useState<string[]>([]);
+
+  const inputRef = useRef<HTMLInputElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const requestIdRef = useRef(0);
+
+  // ===== تحميل أولي =====
+  useEffect(() => {
+    setRecent(loadRecent());
+
+    let cancelled = false;
+
+    async function loadCategories() {
+      try {
+        const data = await postJson<{ counts?: unknown }>(
+          '/api/dictionary',
+          { action: 'categories_stats' }
+        );
+        if (cancelled) return;
+        const counts = (data.counts ?? {}) as Record<string, number>;
+        const arr: CategoryStat[] = [];
+        for (const [k, v] of Object.entries(counts)) {
+          const cat = parseCategory(k);
+          if (Number.isFinite(v) && v > 0) arr.push({ category: cat, count: v });
+        }
+        setCategoryStats(arr);
+      } catch {
+        /* silent */
+      }
+    }
+
+    void loadCategories();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // ===== تحميل الأكثر بحثاً (يُعاد عند تغيير التصنيف) =====
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPopular() {
+      try {
+        const data = await postJson<{ terms?: unknown }>(
+          '/api/dictionary',
+          {
+            action: 'popular',
+            category: popularCategory,
+          }
+        );
+        if (!cancelled) setPopular(normalizePopular(data.terms));
+      } catch {
+        /* silent */
+      }
+    }
+
+    void loadPopular();
+    return () => {
+      cancelled = true;
+    };
+  }, [popularCategory]);
+
+  // إلغاء أي طلب معلّق عند مغادرة الصفحة
+  useEffect(() => {
+    return () => {
+      requestIdRef.current += 1;
+    };
+  }, []);
+
+  // نقل التركيز إلى عنوان النتيجة
+  useEffect(() => {
+    if (result && !loading) headingRef.current?.focus();
+  }, [result, loading]);
+
+  // ===== البحث =====
+  const handleLookup = useCallback(
+    async (searchTerm: string) => {
+      const trimmed = normalizeTerm(searchTerm);
+      if (trimmed.length < MIN_TERM_LENGTH) {
+        toast.show('أدخل مصطلحاً طبياً (حرفان على الأقل)', 'error');
+        return;
+      }
+
+      const requestId = ++requestIdRef.current;
+      setLoading(true);
+      setResult(null);
+      setError('');
+
+      try {
+        const data = await postJson<{ result?: unknown }>('/api/dictionary', {
+          action: 'lookup',
+          term: trimmed,
+        });
+        if (requestId !== requestIdRef.current) return;
+
+        const normalized = normalizeResult(data.result);
+        if (!normalized) {
+          setError('وصلت استجابة غير مفهومة من الخادم. جرّب مرة أخرى.');
+          return;
+        }
+        setResult(normalized);
+        setRecent(saveRecent(trimmed));
+
+        // حدّث إحصاءات التصنيفات (اختياري، fire-and-forget)
+        void postJson<{ counts?: unknown }>('/api/dictionary', {
+          action: 'categories_stats',
+        })
+          .then((d) => {
+            if (requestId !== requestIdRef.current) return;
+            const counts = (d.counts ?? {}) as Record<string, number>;
+            const arr: CategoryStat[] = [];
+            for (const [k, v] of Object.entries(counts)) {
+              const cat = parseCategory(k);
+              if (Number.isFinite(v) && v > 0) arr.push({ category: cat, count: v });
+            }
+            setCategoryStats(arr);
+          })
+          .catch(() => {});
+      } catch (err) {
+        if (requestId !== requestIdRef.current) return;
+        setError(
+          err instanceof Error && err.message ? err.message : 'فشل البحث'
+        );
+      } finally {
+        if (requestId === requestIdRef.current) setLoading(false);
+      }
+    },
+    [toast]
+  );
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    void handleLookup(term);
+  };
+
+  const quickSearch = useCallback(
+    (t: string) => {
+      setTerm(t);
+      void handleLookup(t);
+      inputRef.current?.blur();
+    },
+    [handleLookup]
+  );
+
+  const clearInput = () => {
+    setTerm('');
+    inputRef.current?.focus();
+  };
+
+  const handleInputKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape' && term) {
+      e.preventDefault();
+      setTerm('');
+    }
+  };
+
+  const clearRecent = () => {
+    clearRecentStorage();
+    setRecent([]);
+  };
+
+  const normalizedLength = normalizeTerm(term).length;
+  const showHints = !result && !loading && !error;
+  const canSubmit = !loading && normalizedLength >= MIN_TERM_LENGTH;
+  const showLengthHint =
+    normalizedLength > 0 && normalizedLength < MIN_TERM_LENGTH;
+
+  return (
+    <main className="mx-auto max-w-3xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10">
+      <BackLink />
+
+      {/* Header */}
+      <header className="mt-6 animate-slide-up motion-reduce:animate-none">
+        <span className="inline-flex items-center gap-1.5 rounded-chip border border-teal/20 bg-teal-tint px-3 py-1 font-mono text-xs text-teal">
+          <span
+            aria-hidden="true"
+            className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal motion-reduce:animate-none"
+          />
+          أداة طبية
+        </span>
+
+        <h1 className="mt-3 flex items-center gap-2.5 font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">
+          <span
+            aria-hidden="true"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-field bg-teal-soft text-teal"
+          >
+            <IconDoctor className="h-5 w-5" />
+          </span>
+          قاموس المصطلحات الطبية
+        </h1>
+
+        <p className="mt-3 text-sm leading-relaxed text-ink-soft">
+          اكتب أي مصطلح طبي، وسنشرحه لك بمستوى طالب الطب: المعنى، تفكيك
+          الكلمة، ملاحظة سريرية، ومصطلحات مشابهة. يمكنك أيضاً الاستماع للنطق
+          وطلب شرح أعمق.
+        </p>
+      </header>
+
+      {/* Search form */}
+      <form
+        role="search"
+        onSubmit={handleSubmit}
+        className="mt-6 animate-slide-up motion-reduce:animate-none"
+        style={{ animationDelay: '80ms' }}
+      >
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="relative flex-1">
+            <IconSearch
+              aria-hidden="true"
+              className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
+            />
+            <input
+              ref={inputRef}
+              type="text"
+              inputMode="search"
+              enterKeyHint="search"
+              value={term}
+              onChange={(e) => setTerm(e.target.value)}
+              onKeyDown={handleInputKeyDown}
+              placeholder="مثال: Dyspnea, Myocardial, ضيق النفس..."
+              maxLength={100}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              dir="auto"
+              aria-label="أدخل المصطلح الطبي"
+              aria-describedby={showLengthHint ? 'term-hint' : undefined}
+              className="field-editorial w-full ps-10 pe-10 text-base"
+            />
+            {term && (
+              <button
+                type="button"
+                onClick={clearInput}
+                aria-label="مسح النص"
+                className="absolute end-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-field text-ink-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+              >
+                <IconClose aria-hidden="true" className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-field bg-teal px-6 text-sm font-semibold text-on-teal transition-colors hover:bg-teal-hover active:bg-teal-active focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal disabled:pointer-events-none disabled:bg-disabled disabled:text-disabled-ink motion-reduce:transition-none"
+          >
+            {loading ? (
+              <>
+                <svg
+                  className="h-4 w-4 animate-spin"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    opacity="0.25"
+                  />
+                  <path
+                    d="M22 12a10 10 0 0 1-10 10"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <span>جاري البحث</span>
+              </>
+            ) : (
+              <>
+                <IconSearch aria-hidden="true" className="h-4 w-4" />
+                <span>ابحث</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {showLengthHint && (
+          <p id="term-hint" className="mt-1.5 text-xs text-ink-muted">
+            اكتب حرفين على الأقل للبحث.
+          </p>
+        )}
+      </form>
+
+      {/* Results area */}
+      <div aria-busy={loading}>
+        {loading && (
+          <div className="mt-6">
+            <ResultSkeleton />
+          </div>
+        )}
+
+        {error && !loading && (
+          <div
+            role="alert"
+            className="mt-6 flex items-start gap-3 rounded-card border border-coral/30 bg-coral/5 p-4 animate-slide-up motion-reduce:animate-none"
+          >
+            <span
+              aria-hidden="true"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-field bg-coral text-on-coral"
+            >
+              <IconWarning className="h-4 w-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-coral-ink">
+                تعذّر إتمام البحث
+              </p>
+              <p className="mt-0.5 break-anywhere text-xs text-ink-soft">
+                {error}
+              </p>
+              <button
+                type="button"
+                onClick={() => void handleLookup(term)}
+                disabled={normalizedLength < MIN_TERM_LENGTH}
+                className="mt-2 rounded-field border border-line bg-paper-soft px-3 py-1.5 text-xs font-semibold text-ink-soft transition-colors hover:border-teal/40 hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none"
+              >
+                إعادة المحاولة
+              </button>
+            </div>
+          </div>
+        )}
+
+        {result && !loading && (
+          <div className="mt-6">
+            <ResultCard
+              result={result}
+              headingRef={headingRef}
+              onSelectTerm={quickSearch}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Recent */}
+      {showHints && recent.length > 0 && (
+        <section
+          aria-labelledby="recent-heading"
+          className="mt-6 animate-slide-up motion-reduce:animate-none"
+          style={{ animationDelay: '120ms' }}
+        >
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h2
+              id="recent-heading"
+              className="flex items-center gap-1.5 text-xs font-semibold text-ink-muted"
+            >
+              <IconClock aria-hidden="true" className="h-3.5 w-3.5" />
+              آخر ما بحثت عنه
+            </h2>
+            <button
+              type="button"
+              onClick={clearRecent}
+              className="rounded-field px-2 py-1 text-xs font-semibold text-ink-muted transition-colors hover:text-coral-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+            >
+              مسح السجل
+            </button>
+          </div>
+          <ul className="flex flex-wrap gap-1.5">
+            {recent.map((t) => (
+              <li key={t}>
+                <button
+                  type="button"
+                  onClick={() => quickSearch(t)}
+                  className="break-anywhere rounded-chip border border-line bg-paper-soft px-3 py-1.5 text-sm font-semibold text-ink-soft transition-colors hover:border-teal/40 hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+                >
+                  <bdi>{t}</bdi>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Popular */}
+      {showHints && popular.length > 0 && (
+        <section
+          aria-labelledby="popular-heading"
+          className="mt-8 animate-slide-up motion-reduce:animate-none"
+          style={{ animationDelay: '160ms' }}
+        >
+          <h2
+            id="popular-heading"
+            className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-ink"
+          >
+            <IconTrending aria-hidden="true" className="h-4 w-4" />
+            الأكثر بحثاً على المنصة
+          </h2>
+
+          {categoryStats.length > 0 && (
+            <CategoryFilter
+              selected={popularCategory}
+              stats={categoryStats}
+              onSelect={setPopularCategory}
+            />
+          )}
+
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {popular.map((t) => (
+              <li key={t.term}>
+                <button
+                  type="button"
+                  onClick={() => quickSearch(t.term)}
+                  className="group flex w-full items-center justify-between gap-3 rounded-card border border-line bg-paper-soft px-4 py-3 text-start transition-all duration-200 hover:-translate-y-0.5 hover:border-teal/40 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="flex items-center gap-1.5 truncate text-sm font-bold text-ink transition-colors group-hover:text-teal">
+                      <span aria-hidden="true">
+                        {MEDICAL_CATEGORY_EMOJIS[t.category]}
+                      </span>
+                      <bdi>{t.term}</bdi>
+                    </p>
+                    {t.arabic_translation && (
+                      <p className="mt-0.5 truncate text-xs text-ink-muted">
+                        <bdi>{t.arabic_translation}</bdi>
+                      </p>
+                    )}
+                  </div>
+                  {t.hit_count > 0 && (
+                    <span
+                      className="shrink-0 rounded-chip bg-paper-deep px-2 py-0.5 font-mono text-[10px] font-bold text-ink-muted"
+                      aria-label={`${t.hit_count} عملية بحث`}
+                    >
+                      <span className="num-inline">{t.hit_count}</span>
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Disclaimer */}
+      <aside className="mt-10 flex items-start gap-2 rounded-field border border-gold/30 bg-gold-tint p-4 text-xs text-ink-soft">
+        <span aria-hidden="true" className="shrink-0 text-gold-ink">
+          <IconWarning className="h-4 w-4" />
+        </span>
+        <p className="leading-relaxed">
+          <strong className="font-semibold text-ink">ملاحظة:</strong> هذا
+          القاموس مساعد دراسي وليس مرجعاً طبياً. الملاحظات السريرية والشرح
+          العميق مولّدة بالذكاء الاصطناعي — راجع دائماً المصادر الرسمية.
+        </p>
+      </aside>
+    </main>
+  );
+}
+```
+
+## app\gpa\page.tsx
+
+```tsx
+// app/gpa/page.tsx
+'use client';
+
+import {
+  Suspense,
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+} from 'react';
+import Link from 'next/link';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
+import { useStudentStage } from '@/hooks/useStudentStage';
+import { Button } from '@/components/ui/Button';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { Input } from '@/components/ui/Field';
+import {
+  IconArrowRight,
+  IconChart,
+  IconCheck,
+  IconChevronDown,
+  IconTarget,
+  IconTrending,
+  IconWarning,
+} from '@/components/ui/Icons';
+import type { Subject } from '@/lib/types';
+import { GradesTab } from './_components/GradesTab';
+
+// ==================== Constants ====================
+interface ComponentDef {
+  key: string;
+  label: string;
+  defaultMax: number;
+}
+
+const COMPONENTS: readonly ComponentDef[] = [
+  { key: 'first', label: 'الفصل الأول', defaultMax: 10 },
+  { key: 'mid', label: 'المد', defaultMax: 20 },
+  { key: 'second', label: 'الفصل الثاني', defaultMax: 10 },
+  { key: 'finalTheory', label: 'الفاينل (نظري)', defaultMax: 40 },
+  { key: 'finalPractical', label: 'الفاينل (عملي)', defaultMax: 20 },
+] as const;
+
+interface TargetDef {
+  value: number;
+  label: string;
+  short: string;
+}
+
+const TARGETS: readonly TargetDef[] = [
+  { value: 50, label: 'مقبول', short: 'مقبول' },
+  { value: 60, label: 'متوسط', short: 'متوسط' },
+  { value: 70, label: 'جيد', short: 'جيد' },
+  { value: 80, label: 'جيد جداً', short: 'جيد جداً' },
+  { value: 90, label: 'امتياز', short: 'امتياز' },
+] as const;
+
+const TARGET_KEY_PREFIX = 'gpa_target_';
+const SCORES_KEY_PREFIX = 'gpa_scores_';
+
+const EPS = 1e-9;
+
+type Tab = 'gpa' | 'grades';
+
+// ==================== Types ====================
+interface ComponentData {
+  max: string;
+  score: string;
+}
+type SubjectScores = Record<string, ComponentData>;
+type AllScores = Record<string, SubjectScores>;
+
+interface TargetAnalysis {
+  currentScore: number;
+  totalMax: number;
+  remainingMax: number;
+  targetScore: number;
+  needFromRemaining: number;
+  achieved: boolean;
+  impossible: boolean;
+  noData: boolean;
+  allEntered: boolean;
+}
+
+interface ComponentIssues {
+  max: string | null;
+  score: string | null;
+}
+
+// ==================== Storage ====================
+function readStorage(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeStorage(key: string, value: string): boolean {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ==================== Helpers ====================
+function defaultSubjectScores(): SubjectScores {
+  const obj: SubjectScores = {};
+  for (const c of COMPONENTS) obj[c.key] = { max: String(c.defaultMax), score: '' };
+  return obj;
+}
+
+function toStringValue(v: unknown, fallback: string): string {
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' && Number.isFinite(v)) return String(v);
+  return fallback;
+}
+
+function sanitizeSubjectScores(raw: unknown): SubjectScores {
+  const defaults = defaultSubjectScores();
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return defaults;
+  const source = raw as Record<string, unknown>;
+  const result: SubjectScores = {};
+  for (const c of COMPONENTS) {
+    const fallback = defaults[c.key];
+    const item = source[c.key];
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      result[c.key] = fallback;
+      continue;
+    }
+    const rec = item as Record<string, unknown>;
+    result[c.key] = {
+      max: toStringValue(rec.max, fallback.max),
+      score: toStringValue(rec.score, fallback.score),
+    };
+  }
+  return result;
+}
+
+function safeParseScores(raw: string | null): Record<string, unknown> {
+  if (!raw) return {};
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
+      return parsed as Record<string, unknown>;
+  } catch {
+    /* ignore */
+  }
+  return {};
+}
+
+function normalizeNumericInput(raw: string): string {
+  let s = raw
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/[\u066B\u066C,\u060C]/g, '.')
+    .replace(/[^\d.]/g, '');
+  const firstDot = s.indexOf('.');
+  if (firstDot !== -1) {
+    s = s.slice(0, firstDot + 1) + s.slice(firstDot + 1).replace(/\./g, '');
+  }
+  return s.slice(0, 6);
+}
+
+function fmtNum(n: number): string {
+  const r = Math.round(n * 10) / 10;
+  return Number.isInteger(r) ? String(r) : r.toFixed(1);
+}
+
+function fmtNeed(n: number): string {
+  return fmtNum(Math.ceil(n * 10 - EPS) / 10);
+}
+
+function getComponentIssues(comp: ComponentData): ComponentIssues {
+  const maxNum = Number(comp.max);
+  const maxInvalid = comp.max.trim() === '' || Number.isNaN(maxNum) || maxNum <= 0;
+  const max = maxInvalid ? 'الدرجة العظمى يجب أن تكون أكبر من صفر' : null;
+
+  let score: string | null = null;
+  if (comp.score !== '') {
+    const scoreNum = Number(comp.score);
+    if (Number.isNaN(scoreNum)) {
+      score = 'أدخل رقماً صحيحاً';
+    } else if (!maxInvalid && scoreNum > maxNum + EPS) {
+      score = `الدرجة أكبر من الحد الأقصى (${fmtNum(maxNum)})`;
+    }
+  }
+  return { max, score };
+}
+
+function calculatePercentage(subjectScores: SubjectScores | undefined): number | null {
+  if (!subjectScores) return null;
+  let totalMax = 0;
+  let totalScore = 0;
+  let anyEntered = false;
+
+  for (const c of COMPONENTS) {
+    const comp = subjectScores[c.key];
+    if (!comp || comp.score === '') continue;
+    const scoreNum = Number(comp.score);
+    const maxNum = Number(comp.max);
+    if (Number.isNaN(scoreNum) || Number.isNaN(maxNum) || maxNum <= 0) continue;
+    if (scoreNum < 0 || scoreNum > maxNum) continue;
+    anyEntered = true;
+    totalMax += maxNum;
+    totalScore += scoreNum;
+  }
+  if (!anyEntered || totalMax === 0) return null;
+  return (totalScore / totalMax) * 100;
+}
+
+function analyzeForTarget(
+  subjectScores: SubjectScores | undefined,
+  targetPercent: number,
+): TargetAnalysis {
+  const base: TargetAnalysis = {
+    currentScore: 0,
+    totalMax: 0,
+    remainingMax: 0,
+    targetScore: 0,
+    needFromRemaining: 0,
+    achieved: false,
+    impossible: false,
+    noData: true,
+    allEntered: false,
+  };
+
+  if (!subjectScores) return base;
+
+  let currentScore = 0;
+  let totalMax = 0;
+  let remainingMax = 0;
+  let enteredCount = 0;
+
+  for (const c of COMPONENTS) {
+    const comp = subjectScores[c.key];
+    if (!comp) continue;
+    const maxNum = Number(comp.max);
+    if (Number.isNaN(maxNum) || maxNum <= 0) continue;
+
+    totalMax += maxNum;
+
+    if (comp.score === '') {
+      remainingMax += maxNum;
+    } else {
+      const scoreNum = Number(comp.score);
+      if (Number.isNaN(scoreNum) || scoreNum < 0 || scoreNum > maxNum) {
+        remainingMax += maxNum;
+        continue;
+      }
+      currentScore += scoreNum;
+      enteredCount++;
+    }
+  }
+
+  if (totalMax === 0) return base;
+
+  const targetScore = (targetPercent / 100) * totalMax;
+  const needFromRemaining = targetScore - currentScore;
+  const achieved = needFromRemaining <= EPS;
+  const impossible = !achieved && needFromRemaining > remainingMax + EPS;
+  const noData = enteredCount === 0;
+  const allEntered = remainingMax === 0;
+
+  return {
+    currentScore,
+    totalMax,
+    remainingMax,
+    targetScore,
+    needFromRemaining,
+    achieved,
+    impossible,
+    noData,
+    allEntered,
+  };
+}
+
+function getScoreColor(pct: number): string {
+  if (pct >= 85) return 'bg-teal/10 text-teal dark:bg-teal/20';
+  if (pct >= 70) return 'bg-teal/8 text-teal';
+  if (pct >= 50) return 'bg-gold/15 text-gold-ink dark:bg-gold/25';
+  return 'bg-coral/15 text-coral-ink dark:bg-coral/25';
+}
+
+function getGradeLabel(pct: number): string {
+  if (pct >= 90) return 'امتياز';
+  if (pct >= 80) return 'جيد جداً';
+  if (pct >= 70) return 'جيد';
+  if (pct >= 60) return 'متوسط';
+  if (pct >= 50) return 'مقبول';
+  return 'دون النجاح';
+}
+
+function hasAnyScore(scores: SubjectScores | undefined): boolean {
+  if (!scores) return false;
+  return COMPONENTS.some((c) => (scores[c.key]?.score ?? '') !== '');
+}
+
+// ==================== Skeleton ====================
+function Skeleton() {
+  return (
+    <div className="mt-6 space-y-2" role="status" aria-busy="true">
+      <span className="sr-only">جارٍ التحميل…</span>
+      {[0, 1, 2, 3].map((i) => (
+        <div
+          key={i}

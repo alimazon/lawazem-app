@@ -1,0 +1,2706 @@
+﻿              aria-label="نسخ المنشور"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-line text-ink/50 transition-all duration-200 hover:border-teal/30 hover:bg-teal/5 hover:text-teal active:scale-95"
+            >
+              <IconCopy />
+            </button>
+            <button
+              type="button"
+              onClick={onTogglePin}
+              title={item.pinned ? 'إلغاء التثبيت' : 'تثبيت'}
+              aria-label={item.pinned ? 'إلغاء التثبيت' : 'تثبيت'}
+              className={`flex h-9 w-9 items-center justify-center rounded-lg border transition-all duration-200 active:scale-95 ${
+                item.pinned
+                  ? 'border-teal bg-teal/10 text-teal'
+                  : 'border-line text-ink/50 hover:border-ink/20 hover:bg-ink/5 hover:text-ink'
+              }`}
+            >
+              <IconPin filled={item.pinned} />
+            </button>
+            <Button size="sm" variant="secondary" onClick={onStartEdit} icon={<IconEdit />}>
+              تعديل
+            </Button>
+            <Button size="sm" variant="danger" onClick={onDelete} icon={<IconTrash />}>
+              حذف
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ==================== Main Section ====================
+export function ContentSection({ channelId, password }: Props) {
+  const toast = useToast();
+  const confirm = useConfirm();
+
+  const [items, setItems] = useState<ChannelContent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [newForm, setNewForm] = useState<ContentForm>(emptyForm());
+  const [adding, setAdding] = useState(false);
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<ContentForm>(emptyForm());
+  const [saving, setSaving] = useState(false);
+
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState<'all' | ContentType>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pinned' | 'upcoming' | 'expired'>('all');
+
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkOperating, setBulkOperating] = useState(false);
+
+  // ===== تحميل =====
+  const loadItems = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await postJson<{ items: ChannelContent[] }>('/api/channel/content', {
+        action: 'list',
+        channel_id: channelId,
+        password,
+      });
+      setItems(data.items ?? []);
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل تحميل المحتوى', 'error');
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [channelId, password, toast]);
+
+  useEffect(() => {
+    loadItems();
+  }, [loadItems]);
+
+  // ===== قائمة المجلدات الفريدة (للاقتراحات) =====
+  const folderSuggestions = useMemo(() => {
+    const set = new Set<string>();
+    for (const item of items) {
+      if (item.folder && item.folder.trim()) set.add(item.folder.trim());
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'ar'));
+  }, [items]);
+
+  // ===== إضافة =====
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isFormValid(newForm)) return;
+    setAdding(true);
+    try {
+      await postJson('/api/channel/content', {
+        action: 'add',
+        channel_id: channelId,
+        password,
+        content_type: newForm.content_type,
+        title: newForm.title.trim(),
+        folder: newForm.folder.trim() || null,
+        description: newForm.description.trim() || null,
+        due_date: newForm.due_date || null,
+        pinned: newForm.pinned,
+        file_urls: cleanFileEntries(newForm.files),
+      });
+      setNewForm(emptyForm());
+      toast.show('تمت إضافة المحتوى', 'success');
+      loadItems();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الإضافة', 'error');
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  // ===== تعديل =====
+  function startEdit(item: ChannelContent) {
+    setEditingId(item.id);
+    setEditForm(formFromItem(item));
+  }
+  function cancelEdit() {
+    setEditingId(null);
+    setEditForm(emptyForm());
+  }
+
+  async function saveEdit(id: string) {
+    if (!isFormValid(editForm)) return;
+    setSaving(true);
+    try {
+      await postJson('/api/channel/content', {
+        action: 'edit',
+        channel_id: channelId,
+        password,
+        id,
+        content_type: editForm.content_type,
+        title: editForm.title.trim(),
+        folder: editForm.folder.trim() || null,
+        description: editForm.description.trim() || null,
+        due_date: editForm.due_date || null,
+        pinned: editForm.pinned,
+        file_urls: cleanFileEntries(editForm.files),
+      });
+      cancelEdit();
+      toast.show('تم الحفظ', 'success');
+      loadItems();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الحفظ', 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // ===== نسخ =====
+  async function handleDuplicate(item: ChannelContent) {
+    try {
+      await postJson('/api/channel/content', {
+        action: 'duplicate',
+        channel_id: channelId,
+        password,
+        id: item.id,
+      });
+      toast.show('تم نسخ المنشور', 'success');
+      loadItems();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل النسخ', 'error');
+    }
+  }
+
+  // ===== تثبيت =====
+  async function togglePin(item: ChannelContent) {
+    const nextPinned = !item.pinned;
+    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, pinned: nextPinned } : i)));
+    try {
+      await postJson('/api/channel/content', {
+        action: 'toggle_pin',
+        channel_id: channelId,
+        password,
+        id: item.id,
+      });
+    } catch (err) {
+      setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, pinned: item.pinned } : i)));
+      toast.show(err instanceof Error ? err.message : 'فشل التثبيت', 'error');
+    }
+  }
+
+  // ===== حذف =====
+  async function handleDelete(item: ChannelContent) {
+    const ok = await confirm(`حذف «${item.title}» نهائياً. هل أنت متأكد؟`, {
+      variant: 'danger',
+      confirmLabel: 'حذف',
+    });
+    if (!ok) return;
+    try {
+      await postJson('/api/channel/content', {
+        action: 'delete',
+        channel_id: channelId,
+        password,
+        id: item.id,
+      });
+      toast.show('تم الحذف', 'success');
+      loadItems();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الحذف', 'error');
+    }
+  }
+
+  // ===== التحديد المتعدد =====
+  function toggleSelectionMode() {
+    setSelectionMode((prev) => {
+      if (prev) setSelectedIds(new Set());
+      return !prev;
+    });
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  // ===== العمليات الجماعية =====
+  async function bulkDelete() {
+    if (selectedIds.size === 0) return;
+    const ok = await confirm(
+      `حذف ${selectedIds.size} ${selectedIds.size === 1 ? 'منشور' : 'منشورات'} نهائياً. هل أنت متأكد؟`,
+      { variant: 'danger', confirmLabel: 'حذف' }
+    );
+    if (!ok) return;
+
+    setBulkOperating(true);
+    try {
+      await postJson('/api/channel/content', {
+        action: 'bulk_delete',
+        channel_id: channelId,
+        password,
+        ids: Array.from(selectedIds),
+      });
+      toast.show(`تم حذف ${selectedIds.size} منشور`, 'success');
+      setSelectedIds(new Set());
+      setSelectionMode(false);
+      loadItems();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الحذف', 'error');
+    } finally {
+      setBulkOperating(false);
+    }
+  }
+
+  async function bulkPin(pinned: boolean) {
+    if (selectedIds.size === 0) return;
+    setBulkOperating(true);
+    try {
+      await postJson('/api/channel/content', {
+        action: 'bulk_pin',
+        channel_id: channelId,
+        password,
+        ids: Array.from(selectedIds),
+        pinned,
+      });
+      toast.show(
+        pinned ? `تم تثبيت ${selectedIds.size} منشور` : `تم إلغاء تثبيت ${selectedIds.size} منشور`,
+        'success'
+      );
+      setSelectedIds(new Set());
+      setSelectionMode(false);
+      loadItems();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل التحديث', 'error');
+    } finally {
+      setBulkOperating(false);
+    }
+  }
+
+  // ===== الفلترة =====
+  const filteredItems = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return items
+      .filter((i) => typeFilter === 'all' || i.content_type === typeFilter)
+      .filter((i) => {
+        if (statusFilter === 'pinned') return i.pinned;
+        if (statusFilter === 'upcoming') return i.due_date ? isUpcoming(i.due_date) : false;
+        if (statusFilter === 'expired') {
+          const info = i.due_date ? getDueInfo(i.due_date) : null;
+          return info?.kind === 'expired';
+        }
+        return true;
+      })
+      .filter((i) => (term ? i.title.toLowerCase().includes(term) : true))
+      .sort((a, b) => Number(b.pinned) - Number(a.pinned));
+  }, [items, search, typeFilter, statusFilter]);
+
+  return (
+    <section>
+      {/* شريط الإحصائيات */}
+      <StatsBar items={items} />
+
+      {/* نموذج الإضافة */}
+      <form
+        onSubmit={handleAdd}
+        className="mb-6 space-y-3 rounded-3xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm dark:bg-paper/80"
+      >
+        <div className="flex flex-wrap gap-2">
+          <Select
+            value={newForm.content_type}
+            onChange={(e) => setNewForm({ ...newForm, content_type: e.target.value as ContentType })}
+            className="w-full sm:w-36"
+            aria-label="نوع المحتوى"
+          >
+            {CONTENT_TYPES.map((t) => (
+              <option key={t} value={t}>{CONTENT_TYPE_LABELS[t]}</option>
+            ))}
+          </Select>
+          <Input
+            type="text"
+            value={newForm.title}
+            onChange={(e) => setNewForm({ ...newForm, title: e.target.value })}
+            placeholder="العنوان"
+            required
+            maxLength={300}
+            className="min-w-[180px] flex-1"
+          />
+          <Input
+            type="date"
+            value={newForm.due_date}
+            onChange={(e) => setNewForm({ ...newForm, due_date: e.target.value })}
+            className="w-full sm:w-40"
+            aria-label="تاريخ التسليم"
+          />
+        </div>
+
+        <div>
+          <Input
+            type="text"
+            value={newForm.folder}
+            onChange={(e) => setNewForm({ ...newForm, folder: e.target.value })}
+            placeholder="اسم المجلد (اختياري) — أو اختر من الموجود"
+            maxLength={200}
+            list="folder-suggestions-new"
+          />
+          <datalist id="folder-suggestions-new">
+            {folderSuggestions.map((f) => (
+              <option key={f} value={f} />
+            ))}
+          </datalist>
+        </div>
+
+        <Textarea
+          value={newForm.description}
+          onChange={(e) => setNewForm({ ...newForm, description: e.target.value })}
+          placeholder="تفاصيل إضافية (اختياري)"
+          rows={2}
+          maxLength={2000}
+        />
+
+        <FileEntriesEditor
+          files={newForm.files}
+          onChange={(files) => setNewForm({ ...newForm, files })}
+          channelId={channelId}
+          disabled={adding}
+        />
+
+        <Checkbox
+          checked={newForm.pinned}
+          onChange={(v) => setNewForm({ ...newForm, pinned: v })}
+        >
+          تثبيت هذا المنشور في أعلى القناة
+        </Checkbox>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="submit" loading={adding} disabled={!isFormValid(newForm)}>
+            إضافة
+          </Button>
+        </div>
+      </form>
+
+      {/* أدوات القائمة */}
+      {items.length > 0 && (
+        <>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="text-xs font-bold text-ink/50">
+              {filteredItems.length} من {items.length} منشور
+            </div>
+            <button
+              type="button"
+              onClick={toggleSelectionMode}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-all active:scale-95 ${
+                selectionMode
+                  ? 'border-teal bg-teal text-white'
+                  : 'border-line bg-white text-ink/70 hover:border-teal/30 hover:text-teal dark:bg-paper'
+              }`}
+            >
+              <IconCheckSquare />
+              {selectionMode ? 'إلغاء التحديد' : 'تحديد متعدد'}
+            </button>
+          </div>
+
+          <FiltersBar
+            search={search}
+            onSearchChange={setSearch}
+            typeFilter={typeFilter}
+            onTypeFilterChange={setTypeFilter}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+          />
+        </>
+      )}
+
+      {/* القائمة */}
+      {loading ? (
+        <div className="space-y-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-24 skeleton-shimmer rounded-2xl" />
+          ))}
+        </div>
+      ) : items.length === 0 ? (
+        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center backdrop-blur-sm dark:bg-paper/80">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-teal/8 text-teal">
+            <IconEmpty />
+          </div>
+          <p className="mt-4 font-bold text-ink/70">لا يوجد محتوى مضاف حالياً.</p>
+          <p className="mt-1 text-sm text-ink/50">أضف أول منشور من الأعلى</p>
+        </div>
+      ) : filteredItems.length === 0 ? (
+        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center backdrop-blur-sm dark:bg-paper/80">
+          <IconSearch />
+          <p className="mt-4 font-bold text-ink/70">لا توجد نتائج مطابقة</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filteredItems.map((item) => (
+            <ItemCard
+              key={item.id}
+              item={item}
+              isEditing={editingId === item.id}
+              editForm={editForm}
+              onEditFormChange={setEditForm}
+              channelId={channelId}
+              saving={saving}
+              folderSuggestions={folderSuggestions}
+              selectionMode={selectionMode}
+              isSelected={selectedIds.has(item.id)}
+              onToggleSelect={() => toggleSelect(item.id)}
+              onStartEdit={() => startEdit(item)}
+              onCancelEdit={cancelEdit}
+              onSave={() => saveEdit(item.id)}
+              onDuplicate={() => handleDuplicate(item)}
+              onTogglePin={() => togglePin(item)}
+              onDelete={() => handleDelete(item)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* شريط العمليات الجماعية */}
+      {selectionMode && selectedIds.size > 0 && (
+        <BulkActionsBar
+          selectedCount={selectedIds.size}
+          operating={bulkOperating}
+          onPin={() => bulkPin(true)}
+          onUnpin={() => bulkPin(false)}
+          onDelete={bulkDelete}
+          onCancel={() => {
+            setSelectedIds(new Set());
+            setSelectionMode(false);
+          }}
+        />
+      )}
+    </section>
+  );
+}
+===app/channel-portal/_components/SettingsSection.tsx===
+// app/channel-portal/_components/SettingsSection.tsx
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { Input, Textarea } from '@/components/ui/Field';
+import { useToast } from '@/components/ui/Toast';
+import { postJson, uploadToStorage } from '@/lib/api-client';
+import { STORAGE_BUCKETS } from '@/lib/constants';
+import type { Channel } from '@/lib/types';
+
+const MAX_IMAGE_SIZE_MB = 5;
+const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+
+function getFileExtension(fileName: string): string {
+  const parts = fileName.split('.');
+  if (parts.length < 2) return 'png';
+  return parts[parts.length - 1].toLowerCase();
+}
+
+interface Props {
+  channelId: string;
+  password: string;
+  channelInfo: Channel;
+  onPasswordChanged: (newPw: string) => void;
+  onChannelInfoChanged: (patch: Partial<Channel>) => void;
+}
+
+// ==================== Icons ====================
+function IconImage() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  );
+}
+function IconLock() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+    </svg>
+  );
+}
+function IconInfo() {
+  return (
+    <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
+// ==================== Channel Info Form ====================
+function ChannelInfoForm({
+  channelId, password, channelInfo, onChannelInfoChanged,
+}: {
+  channelId: string;
+  password: string;
+  channelInfo: Channel;
+  onChannelInfoChanged: (patch: Partial<Channel>) => void;
+}) {
+  const toast = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [description, setDescription] = useState(channelInfo.description ?? '');
+  const [imageUrl, setImageUrl] = useState(channelInfo.image_url ?? '');
+  const [imageError, setImageError] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const initialDescription = channelInfo.description ?? '';
+  const initialImageUrl = channelInfo.image_url ?? '';
+  const dirty = description !== initialDescription || imageUrl !== initialImageUrl;
+
+  useEffect(() => {
+    setDescription(channelInfo.description ?? '');
+    setImageUrl(channelInfo.image_url ?? '');
+    setImageError(false);
+  }, [channelInfo.id, channelInfo.description, channelInfo.image_url]);
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      toast.show('نوع الصورة غير مدعوم (PNG/JPG/WebP/GIF).', 'error');
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
+      toast.show(`حجم الصورة كبير جداً (بحد أقصى ${MAX_IMAGE_SIZE_MB} ميجا).`, 'error');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const ext = getFileExtension(file.name);
+      const filePath = `${channelId}-${Date.now()}.${ext}`;
+      const publicUrl = await uploadToStorage(STORAGE_BUCKETS.channelImages, filePath, file, { upsert: true });
+      setImageUrl(publicUrl);
+      setImageError(false);
+      toast.show('تم رفع الصورة — لا تنسَ الحفظ', 'success');
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل رفع الصورة', 'error');
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!dirty) return;
+    setSaving(true);
+    try {
+      await postJson('/api/channel/content', {
+        action: 'update_channel',
+        channel_id: channelId,
+        password,
+        description: description.trim() || null,
+        image_url: imageUrl.trim() || null,
+      });
+      onChannelInfoChanged({
+        description: description.trim() || null,
+        image_url: imageUrl.trim() || null,
+      });
+      toast.show('تم حفظ بيانات القناة', 'success');
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الحفظ', 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function openFilePicker() { fileInputRef.current?.click(); }
+
+  return (
+    <section>
+      <div className="mb-4 flex items-start gap-3 rounded-2xl border border-teal/20 bg-teal/[0.04] p-4 text-sm dark:border-teal/30 dark:bg-teal/10">
+        <span className="text-teal"><IconInfo /></span>
+        <p className="font-medium text-ink/70">
+          الاسم والمرحلة ورابط تلغرام يديرها المشرف. يمكنك تعديل الصورة والوصف فقط.
+        </p>
+      </div>
+
+      <form
+        onSubmit={handleSave}
+        className="space-y-5 rounded-3xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm dark:bg-paper/80"
+      >
+        {/* الصورة */}
+        <div>
+          <label className="mb-3 flex items-center gap-1.5 text-sm font-bold text-ink/70">
+            <IconImage />
+            صورة القناة
+          </label>
+
+          {imageUrl && !imageError ? (
+            <div className="mb-3 flex items-center gap-4">
+              <img
+                src={imageUrl}
+                alt="صورة القناة"
+                onError={() => setImageError(true)}
+                className="h-20 w-20 rounded-2xl border border-line object-cover shadow-[0_2px_8px_rgba(26,33,31,0.06)]"
+              />
+              <Button type="button" variant="secondary" size="sm" onClick={openFilePicker} disabled={uploadingImage}>
+                تغيير
+              </Button>
+            </div>
+          ) : imageError ? (
+            <div className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
+              تعذّر تحميل الصورة الحالية.
+              <button type="button" onClick={openFilePicker} className="mr-2 font-bold underline">
+                رفع صورة جديدة
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={openFilePicker}
+              disabled={uploadingImage}
+              className="group mb-3 flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line bg-paper/50 py-6 transition-all duration-200 hover:border-teal/40 hover:bg-teal/[0.03] disabled:opacity-60 dark:bg-white/[0.03] dark:hover:bg-teal/10"
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal/8 text-teal transition-all group-hover:bg-teal/15">
+                <IconImage />
+              </span>
+              <span className="text-sm font-bold text-ink/70">رفع صورة للقناة</span>
+            </button>
+          )}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ACCEPTED_IMAGE_TYPES.join(',')}
+            onChange={handleImageUpload}
+            disabled={uploadingImage}
+            className="hidden"
+          />
+
+          {uploadingImage && (
+            <div className="mb-2 flex items-center gap-2 rounded-xl bg-teal/5 px-3 py-2 text-sm font-bold text-teal dark:bg-teal/15">
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+                <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+              جاري الرفع...
+            </div>
+          )}
+
+          <p className="text-xs text-ink/40">
+            PNG / JPG / WebP / GIF — بحد أقصى {MAX_IMAGE_SIZE_MB} ميجا
+          </p>
+        </div>
+
+        {/* الوصف */}
+        <div>
+          <label htmlFor="channel-description" className="mb-2 block text-sm font-bold text-ink/70">
+            وصف القناة
+          </label>
+          <Textarea
+            id="channel-description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="وصف مختصر للقناة..."
+            rows={3}
+            maxLength={2000}
+          />
+        </div>
+
+        {/* زر الحفظ */}
+        <div className="flex items-center gap-3">
+          <Button type="submit" loading={saving} disabled={!dirty || uploadingImage}>
+            حفظ
+          </Button>
+          {dirty && !saving && (
+            <span className="flex items-center gap-1 text-xs font-bold text-amber-700 dark:text-amber-400">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-amber" />
+              توجد تغييرات غير محفوظة
+            </span>
+          )}
+        </div>
+      </form>
+    </section>
+  );
+}
+
+// ==================== Change Password Form ====================
+function ChangePasswordForm({
+  channelId, password, onPasswordChanged,
+}: {
+  channelId: string;
+  password: string;
+  onPasswordChanged: (newPw: string) => void;
+}) {
+  const toast = useToast();
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [changing, setChanging] = useState(false);
+
+  const canSubmit = newPassword.length >= 4 && newPassword === confirmNewPassword && !changing;
+  const mismatch = confirmNewPassword !== '' && newPassword !== confirmNewPassword;
+
+  async function handleChange(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canSubmit) return;
+    setChanging(true);
+    try {
+      await postJson('/api/channel/content', {
+        action: 'change_password',
+        channel_id: channelId,
+        password,
+        new_password: newPassword,
+      });
+      onPasswordChanged(newPassword);
+      setNewPassword('');
+      setConfirmNewPassword('');
+      toast.show('تم تغيير كلمة المرور', 'success');
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل التغيير', 'error');
+    } finally {
+      setChanging(false);
+    }
+  }
+
+  return (
+    <section>
+      <div className="mb-4 flex items-start gap-3 rounded-2xl border border-amber/30 bg-amber/8 p-4 text-sm dark:bg-amber/10">
+        <span className="text-amber"><IconLock /></span>
+        <p className="font-medium text-ink/70">
+          بعد التغيير، لن تعمل كلمة المرور القديمة. تأكد من حفظ الجديدة في مكان آمن.
+        </p>
+      </div>
+
+      <form
+        onSubmit={handleChange}
+        className="space-y-4 rounded-3xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm dark:bg-paper/80"
+      >
+        <div>
+          <label htmlFor="new-password" className="mb-2 block text-sm font-bold text-ink/70">
+            كلمة المرور الجديدة
+          </label>
+          <Input
+            id="new-password"
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="4 أحرف على الأقل"
+            autoComplete="new-password"
+            minLength={4}
+            maxLength={200}
+            required
+          />
+        </div>
+
+        <div>
+          <label htmlFor="confirm-password" className="mb-2 block text-sm font-bold text-ink/70">
+            تأكيد كلمة المرور
+          </label>
+          <Input
+            id="confirm-password"
+            type="password"
+            value={confirmNewPassword}
+            onChange={(e) => setConfirmNewPassword(e.target.value)}
+            placeholder="أعد كتابتها"
+            autoComplete="new-password"
+            required
+            aria-invalid={mismatch || undefined}
+          />
+          {mismatch && (
+            <p className="mt-1.5 text-xs font-bold text-red-600 dark:text-red-400" role="alert">
+              كلمتا المرور غير متطابقتين.
+            </p>
+          )}
+        </div>
+
+        <Button type="submit" loading={changing} disabled={!canSubmit} icon={<IconLock />}>
+          تغيير كلمة المرور
+        </Button>
+      </form>
+    </section>
+  );
+}
+
+// ==================== Main Section ====================
+export function SettingsSection({
+  channelId, password, channelInfo, onPasswordChanged, onChannelInfoChanged,
+}: Props) {
+  return (
+    <div className="space-y-8">
+      <ChannelInfoForm
+        channelId={channelId}
+        password={password}
+        channelInfo={channelInfo}
+        onChannelInfoChanged={onChannelInfoChanged}
+      />
+      <ChangePasswordForm
+        channelId={channelId}
+        password={password}
+        onPasswordChanged={onPasswordChanged}
+      />
+    </div>
+  );
+}
+===app/channel-portal/_components/useChannelAuth.ts===
+// app/channel-portal/_components/useChannelAuth.ts
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import { postJson, ApiError } from '@/lib/api-client';
+import { supabase } from '@/lib/supabaseClient';
+import { STORAGE_KEYS } from '@/lib/constants';
+import type { Channel, ChannelListItem } from '@/lib/types';
+
+export interface ChannelSessionResponse {
+  channel: Channel;
+}
+
+interface UseChannelAuthResult {
+  channelsList: ChannelListItem[];
+  selectedChannelId: string;
+  password: string;
+  authenticated: boolean;
+  loading: boolean;
+  error: string;
+  channelInfo: Channel | null;
+  setSelectedChannelId: (id: string) => void;
+  setPassword: (pw: string) => void;
+  login: (channelId: string, pw: string) => Promise<boolean>;
+  logout: () => void;
+  updatePassword: (newPw: string) => void;
+  updateChannelInfo: (patch: Partial<Channel>) => void;
+}
+
+export function useChannelAuth(): UseChannelAuthResult {
+  const [channelsList, setChannelsList] = useState<ChannelListItem[]>([]);
+  const [selectedChannelId, setSelectedChannelId] = useState('');
+  const [password, setPassword] = useState('');
+  const [authenticated, setAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [channelInfo, setChannelInfo] = useState<Channel | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadChannels() {
+      const { data, error: fetchError } = await supabase
+        .from('channels')
+        .select('id, name')
+        .order('name');
+      if (cancelled) return;
+      if (!fetchError && data) setChannelsList(data as ChannelListItem[]);
+    }
+    loadChannels();
+    return () => { cancelled = true; };
+  }, []);
+
+  const login = useCallback(async (channelId: string, pw: string): Promise<boolean> => {
+    if (!channelId || !pw) {
+      setError('اختر القناة وأدخل كلمة المرور');
+      return false;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      const data = await postJson<ChannelSessionResponse>('/api/channel/content', {
+        action: 'login',
+        channel_id: channelId,
+        password: pw,
+      });
+      sessionStorage.setItem(STORAGE_KEYS.channelId, channelId);
+      sessionStorage.setItem(STORAGE_KEYS.channelPassword, pw);
+      setSelectedChannelId(channelId);
+      setPassword(pw);
+      setChannelInfo(data.channel);
+      setAuthenticated(true);
+      return true;
+    } catch (err) {
+      const message =
+        err instanceof ApiError && err.status === 401
+          ? 'كلمة المرور غير صحيحة'
+          : 'صار خطأ، حاول مرة ثانية.';
+      setError(message);
+      sessionStorage.removeItem(STORAGE_KEYS.channelId);
+      sessionStorage.removeItem(STORAGE_KEYS.channelPassword);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const savedId = sessionStorage.getItem(STORAGE_KEYS.channelId);
+    const savedPw = sessionStorage.getItem(STORAGE_KEYS.channelPassword);
+    if (savedId && savedPw) {
+      setSelectedChannelId(savedId);
+      setPassword(savedPw);
+      login(savedId, savedPw);
+    }
+  }, [login]);
+
+  const logout = useCallback(() => {
+    sessionStorage.removeItem(STORAGE_KEYS.channelId);
+    sessionStorage.removeItem(STORAGE_KEYS.channelPassword);
+    setAuthenticated(false);
+    setPassword('');
+    setSelectedChannelId('');
+    setChannelInfo(null);
+    setError('');
+  }, []);
+
+  const updatePassword = useCallback((newPw: string) => {
+    sessionStorage.setItem(STORAGE_KEYS.channelPassword, newPw);
+    setPassword(newPw);
+  }, []);
+
+  const updateChannelInfo = useCallback((patch: Partial<Channel>) => {
+    setChannelInfo((prev) => (prev ? { ...prev, ...patch } : prev));
+  }, []);
+
+  return {
+    channelsList,
+    selectedChannelId,
+    password,
+    authenticated,
+    loading,
+    error,
+    channelInfo,
+    setSelectedChannelId,
+    setPassword,
+    login,
+    logout,
+    updatePassword,
+    updateChannelInfo,
+  };
+}
+===app/channel-portal/page.tsx===
+// app/channel-portal/page.tsx
+'use client';
+
+import { useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { Input, Select } from '@/components/ui/Field';
+import { useChannelAuth } from './_components/useChannelAuth';
+import { ContentSection } from './_components/ContentSection';
+import { SettingsSection } from './_components/SettingsSection';
+
+type Tab = 'content' | 'settings';
+
+// ==================== Icons ====================
+function IconContent() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h10M4 18h10" />
+    </svg>
+  );
+}
+function IconSettings() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  );
+}
+function IconEye() {
+  return (
+    <svg className="h-3.5 w-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  );
+}
+function IconLock() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+    </svg>
+  );
+}
+function IconLogout() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+    </svg>
+  );
+}
+
+const TABS: ReadonlyArray<{ id: Tab; label: string; icon: React.ReactNode }> = [
+  { id: 'content', label: 'المحتوى', icon: <IconContent /> },
+  { id: 'settings', label: 'الإعدادات', icon: <IconSettings /> },
+];
+
+// ==================== Login Screen ====================
+function LoginScreen({
+  channelsList,
+  loading,
+  error,
+  onLogin,
+}: {
+  channelsList: { id: string; name: string }[];
+  loading: boolean;
+  error: string;
+  onLogin: (channelId: string, pw: string) => void;
+}) {
+  const [channelId, setChannelId] = useState('');
+  const [pw, setPw] = useState('');
+
+  return (
+    <main className="relative mx-auto flex min-h-[calc(100dvh-var(--nav-h))] max-w-sm flex-col items-center justify-center px-4 py-16 sm:px-6">
+      <div className="w-full rounded-3xl border border-line bg-white/80 p-6 shadow-[0_8px_30px_rgba(14,74,74,0.08)] backdrop-blur-sm animate-slide-up dark:bg-paper/80 dark:shadow-[0_8px_30px_rgba(0,0,0,0.40)] sm:p-8">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-teal/10 text-teal">
+          <IconLock />
+        </div>
+        <h1 className="mt-5 text-center text-2xl font-black text-ink">دخول صاحب القناة</h1>
+        <p className="mt-2 text-center text-sm text-ink/55">
+          اختر قناتك وأدخل كلمة المرور التي أعطاك إياها المشرف
+        </p>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onLogin(channelId, pw);
+          }}
+          className="mt-6 space-y-4"
+        >
+          <Select
+            value={channelId}
+            onChange={(e) => setChannelId(e.target.value)}
+            required
+            className="w-full"
+            aria-label="القناة"
+          >
+            <option value="">اختر قناتك</option>
+            {channelsList.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </Select>
+
+          <Input
+            type="password"
+            value={pw}
+            onChange={(e) => setPw(e.target.value)}
+            placeholder="كلمة مرور القناة"
+            autoComplete="current-password"
+            required
+            className="text-center"
+          />
+
+          {error && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-center text-sm font-bold text-red-600 dark:bg-red-950/40 dark:text-red-300" role="alert">
+              {error}
+            </p>
+          )}
+
+          <Button type="submit" size="lg" loading={loading} className="w-full">
+            {loading ? 'جاري التحقق...' : 'دخول'}
+          </Button>
+        </form>
+      </div>
+    </main>
+  );
+}
+
+// ==================== Page ====================
+export default function ChannelPortalPage() {
+  const {
+    channelsList,
+    password,
+    authenticated,
+    loading,
+    error,
+    channelInfo,
+    login,
+    logout,
+    updatePassword,
+    updateChannelInfo,
+  } = useChannelAuth();
+
+  const [tab, setTab] = useState<Tab>('content');
+
+  if (!authenticated) {
+    return (
+      <LoginScreen
+        channelsList={channelsList}
+        loading={loading}
+        error={error}
+        onLogin={login}
+      />
+    );
+  }
+
+  if (!channelInfo) return null;
+
+  return (
+    <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
+      <div className="flex flex-wrap items-center justify-between gap-3 animate-slide-up">
+        <div className="min-w-0">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
+            {channelInfo.stage}
+          </span>
+          <h1 className="mt-3 truncate text-xl font-black text-ink sm:text-2xl md:text-3xl">
+            قناة: {channelInfo.name}
+          </h1>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-ink/5 px-2.5 py-1 text-xs font-bold text-ink/60 dark:bg-white/10 dark:text-ink/70">
+              <IconEye />
+              {channelInfo.views ?? 0} زيارة
+            </span>
+          </div>
+        </div>
+        <Button variant="secondary" size="sm" onClick={logout} icon={<IconLogout />}>
+          تسجيل الخروج
+        </Button>
+      </div>
+
+      <div
+        role="tablist"
+        aria-label="أقسام بوابة القناة"
+        className="scrollbar-none mt-6 -mx-4 flex gap-1.5 overflow-x-auto rounded-2xl border border-line bg-white/60 p-1.5 backdrop-blur-sm sm:mx-0 dark:bg-white/[0.04] animate-slide-up"
+        style={{ animationDelay: '80ms' }}
+      >
+        {TABS.map((t) => {
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={active}
+              aria-controls={`panel-${t.id}`}
+              onClick={() => setTab(t.id)}
+              className={`flex flex-shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition-all duration-200 sm:px-4 ${
+                active
+                  ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.30)]'
+                  : 'text-ink/60 hover:bg-ink/5 hover:text-ink'
+              }`}
+            >
+              {t.icon}
+              <span className="whitespace-nowrap">{t.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        role="tabpanel"
+        id={`panel-${tab}`}
+        className="mt-6 animate-slide-up"
+        style={{ animationDelay: '120ms' }}
+        aria-label={TABS.find((t) => t.id === tab)?.label}
+      >
+        {tab === 'content' && (
+          <ContentSection channelId={channelInfo.id} password={password} />
+        )}
+        {tab === 'settings' && (
+          <SettingsSection
+            channelId={channelInfo.id}
+            password={password}
+            channelInfo={channelInfo}
+            onPasswordChanged={updatePassword}
+            onChannelInfoChanged={updateChannelInfo}
+          />
+        )}
+      </div>
+    </main>
+  );
+}
+
+===app/channels/[id]/page.tsx===
+// app/channels/[id]/page.tsx
+'use client';
+
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useParams } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
+import { CONTENT_TYPES, CONTENT_TYPE_LABELS } from '@/lib/constants';
+import {
+  IconArrowLeft,
+  IconClose,
+  IconExternal,
+  IconFolder,
+  IconInbox,
+  IconSearch,
+  IconTelegram,
+  IconWarning,
+} from '@/components/ui/Icons';
+import type { Channel, ChannelContent, FileEntry } from '@/lib/types';
+
+// ==================== Types ====================
+type ChannelInfo = Pick<
+  Channel,
+  'id' | 'name' | 'description' | 'telegram_link' | 'image_url' | 'stage'
+>;
+
+// نجلب الأعمدة المستخدمة فقط بدل select('*')
+type ContentRow = Pick<
+  ChannelContent,
+  | 'id'
+  | 'title'
+  | 'description'
+  | 'file_urls'
+  | 'due_date'
+  | 'pinned'
+  | 'content_type'
+  | 'folder'
+>;
+
+type LoadError = {
+  message: string; // رسالة عربية مفهومة للطالب
+  detail: string; // تفاصيل تقنية (قد تكون فارغة)
+};
+
+type NotFound = { reason: 'missing' } | { reason: 'invalid-id' };
+
+interface ContentGroup {
+  key: string;
+  label: string;
+  folders: Array<{ folder: string; items: ContentRow[] }>;
+  noFolderItems: ContentRow[];
+  total: number;
+}
+
+interface IndexedItem {
+  item: ContentRow;
+  haystack: string;
+}
+
+const MAIN_CLASS =
+  'mx-auto max-w-3xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10';
+
+// رمز خطأ Postgres: "صيغة المعرّف غير صحيحة" (مثل كتابة abc مكان رقم القناة)
+const INVALID_TEXT_CODE = '22P02';
+
+// ==================== Helpers ====================
+function toSafeUrl(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:'
+      ? trimmed
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function buildError(detail: string, what: 'channel' | 'content'): LoadError {
+  const offline = typeof navigator !== 'undefined' && !navigator.onLine;
+  const noun = what === 'channel' ? 'القناة' : 'محتوى القناة';
+  return {
+    message: offline
+      ? 'يبدو أن الإنترنت مقطوع عندك. سنعيد المحاولة تلقائياً عند رجوعه.'
+      : `تعذّر جلب ${noun} الآن. جرّب مرة ثانية بعد قليل.`,
+    detail,
+  };
+}
+
+// توحيد الحروف العربية لبحث ذكي: "الأنسجة" = "الانسجه" ، "٣" = "3"
+function normalizeArabic(input: string): string {
+  return input
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, '')
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[أإآٱ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ئ/g, 'ي')
+    .replace(/ؤ/g, 'و')
+    .replace(/ة/g, 'ه')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// نفس دالة صفحة القنوات حرفياً، حتى يظهر نفس الحرفين للقناة في الصفحتين
+function getInitials(name: string): string {
+  const words = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w.replace(/^ال/, '') || w);
+
+  if (words.length === 0) return '؟';
+
+  const first = Array.from(words[0]);
+  const chars =
+    words.length >= 2
+      ? [first[0] ?? '', Array.from(words[1])[0] ?? '']
+      : first.slice(0, 2);
+
+  return chars.join('\u200C').toUpperCase();
+}
+
+// اسم النوع بأمان (لو أضفت نوعاً جديداً في القاعدة ولم تضفه في constants)
+function getTypeLabel(type: string): string {
+  return (CONTENT_TYPE_LABELS as Record<string, string>)[type] ?? 'أخرى';
+}
+
+// عدّاد الزيارات: مرة لكل جلسة، وخارج الـ effect الرئيسي ليبقى نظيفاً
+function trackChannelView(channelId: string): void {
+  try {
+    const viewKey = `viewed_channel_${channelId}`;
+    if (sessionStorage.getItem(viewKey)) return;
+    sessionStorage.setItem(viewKey, '1');
+    void fetch('/api/channel/view', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel_id: channelId }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch {
+    /* تجاهل: sessionStorage غير متاح */
+  }
+}
+
+// ==================== Due Date ====================
+type DueKind = 'expired' | 'today' | 'tomorrow' | 'soon' | 'normal';
+
+interface DueInfo {
+  kind: DueKind;
+  text: string;
+}
+
+// أرقام لاتينية + شهور عراقية: "15 تشرين الأول"
+const dueFormatterShort = new Intl.DateTimeFormat(
+  'ar-IQ-u-nu-latn-ca-gregory',
+  { day: 'numeric', month: 'long' },
+);
+const dueFormatterLong = new Intl.DateTimeFormat(
+  'ar-IQ-u-nu-latn-ca-gregory',
+  { day: 'numeric', month: 'long', year: 'numeric' },
+);
+
+// التاريخ "2026-10-15" لا يتحول لتوقيت UTC فيتأخر يوم في بعض الأجهزة
+function parseDueDate(raw: string): Date | null {
+  const trimmed = raw.trim();
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+  const date = dateOnly
+    ? new Date(
+        Number(dateOnly[1]),
+        Number(dateOnly[2]) - 1,
+        Number(dateOnly[3]),
+      )
+    : new Date(trimmed);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function getDueInfo(dueDateStr: string | null): DueInfo | null {
+  if (!dueDateStr) return null;
+  const due = parseDueDate(dueDateStr);
+  if (!due) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((due.getTime() - today.getTime()) / 86400000);
+
+  if (diffDays < 0) return { kind: 'expired', text: 'انتهى الموعد' };
+  if (diffDays === 0) return { kind: 'today', text: 'التسليم اليوم!' };
+  if (diffDays === 1) return { kind: 'tomorrow', text: 'التسليم غداً' };
+
+  if (diffDays === 2) return { kind: 'soon', text: 'التسليم بعد يومين' };
+  if (diffDays <= 3) {
+    return { kind: 'soon', text: `التسليم بعد ${diffDays} أيام` };
+  }
+
+  const sameYear = due.getFullYear() === today.getFullYear();
+  const formatted = (sameYear ? dueFormatterShort : dueFormatterLong).format(
+    due,
+  );
+  return { kind: 'normal', text: `التسليم: ${formatted}` };
+}
+
+function dueBadgeClass(kind: DueKind): string {
+  switch (kind) {
+    case 'expired':
+      return 'bg-ink/5 text-ink-muted';
+    case 'today':
+      return 'bg-coral text-on-coral';
+    case 'tomorrow':
+      return 'bg-coral/10 text-coral-ink';
+    case 'soon':
+      return 'bg-gold/15 text-gold-ink';
+    case 'normal':
+    default:
+      return 'bg-ink/5 text-ink-soft';
+  }
+}
+
+// ==================== Back Link ====================
+function BackLink() {
+  return (
+    <Link
+      href="/channels"
+      className="group inline-flex items-center gap-1.5 rounded-field text-sm font-semibold text-teal transition-colors hover:text-teal-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+    >
+      <span className="transition-transform duration-200 group-hover:-translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0">
+        <IconArrowLeft aria-hidden="true" className="h-4 w-4" />
+      </span>
+      رجوع إلى القنوات
+    </Link>
+  );
+}
+
+// ==================== Skeleton ====================
+function Skeleton() {
+  return (
+    <div role="status" aria-label="جارٍ تحميل القناة" className="mt-6">
+      <div aria-hidden="true" className="space-y-6">
+        {/* Header skeleton */}
+        <div className="flex items-center gap-4">
+          <div className="h-20 w-20 shrink-0 skeleton-shimmer rounded-card motion-reduce:animate-none" />
+          <div className="flex-1 space-y-2">
+            <div className="h-6 w-48 max-w-full skeleton-shimmer rounded motion-reduce:animate-none" />
+            <div className="h-3 w-24 skeleton-shimmer rounded motion-reduce:animate-none" />
+          </div>
+        </div>
+        {/* Items skeleton */}
+        <div className="space-y-3">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="rounded-card border border-line bg-paper-soft p-4"
+            >
+              <div className="h-4 w-2/3 skeleton-shimmer rounded motion-reduce:animate-none" />
+              <div className="mt-2 h-3 w-full skeleton-shimmer rounded motion-reduce:animate-none" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==================== States ====================
+function ErrorState({
+  title = 'تعذّر تحميل الصفحة',
+  error,
+  onRetry,
+}: {
+  title?: string;
+  error: LoadError;
+  onRetry: () => void;
+}) {
+  return (
+    <div
+      role="alert"
+      className="mt-6 flex items-start gap-3 rounded-card border border-coral/30 bg-coral/5 p-4 animate-slide-up motion-reduce:animate-none"
+    >
+      <span
+        aria-hidden="true"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-field bg-coral text-on-coral"
+      >
+        <IconWarning className="h-4 w-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-bold text-coral-ink">{title}</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-ink-soft">
+          {error.message}
+        </p>
+        {error.detail && (
+          <p
+            dir="ltr"
+            className="mt-1 break-anywhere text-end font-mono text-[11px] text-ink-muted"
+          >
+            {error.detail}
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-3 inline-flex h-10 items-center rounded-field border border-line bg-paper-soft px-4 text-xs font-semibold text-ink-soft transition-colors hover:border-teal/40 hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+        >
+          إعادة المحاولة
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function NotFoundState({ reason }: { reason: NotFound['reason'] }) {
+  const isInvalid = reason === 'invalid-id';
+  return (
+    <div
+      role="status"
+      className="mt-6 card-editorial p-10 text-center animate-slide-up motion-reduce:animate-none"
+    >
+      <div
+        aria-hidden="true"
+        className="mx-auto flex h-16 w-16 items-center justify-center rounded-card bg-gold-tint text-gold-ink"
+      >
+        <IconWarning className="h-8 w-8" />
+      </div>
+      <p className="mt-4 font-bold text-ink-soft">
+        {isInvalid ? 'رابط القناة غير صالح.' : 'لم نجد هذه القناة.'}
+      </p>
+      <p className="mt-1 text-sm text-ink-muted">
+        {isInvalid
+          ? 'تأكد من الرابط، أو ارجع إلى قائمة القنوات.'
+          : 'قد تكون حُذفت أو الرابط خاطئ.'}
+      </p>
+      <Link
+        href="/channels"
+        className="mt-5 inline-flex h-10 items-center rounded-field bg-teal px-4 text-sm font-semibold text-on-teal transition-colors hover:bg-teal-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+      >
+        العودة إلى القنوات
+      </Link>
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div
+      role="status"
+      className="mt-6 card-editorial p-10 text-center animate-slide-up motion-reduce:animate-none"
+    >
+      <div
+        aria-hidden="true"
+        className="mx-auto flex h-16 w-16 items-center justify-center rounded-card bg-teal-soft text-teal"
+      >
+        <IconInbox className="h-8 w-8" />
+      </div>
+      <p className="mt-4 font-bold text-ink-soft">
+        لا يوجد محتوى مضاف لهذه القناة حالياً.
+      </p>
+      <p className="mt-1 text-sm text-ink-muted">يرجى العودة لاحقاً</p>
+    </div>
+  );
+}
+
+function NoResults({
+  query,
+  onClear,
+}: {
+  query: string;
+  onClear: () => void;
+}) {
+  return (
+    <div
+      role="status"
+      className="mt-6 card-editorial p-10 text-center animate-slide-up motion-reduce:animate-none"
+    >
+      <div
+        aria-hidden="true"
+        className="mx-auto flex h-14 w-14 items-center justify-center rounded-field bg-ink/5 text-ink-muted"
+      >
+        <IconSearch className="h-6 w-6" />
+      </div>
+      <p className="mt-4 font-bold text-ink-soft">لا توجد نتائج مطابقة</p>
+      <p dir="auto" className="mt-1 break-anywhere text-sm text-ink-muted">
+        «{query}»
+      </p>
+      <button
+        type="button"
+        onClick={onClear}
+        className="mt-4 inline-flex h-10 items-center rounded-field border border-line bg-paper-soft px-4 text-sm font-semibold text-ink-soft transition-colors hover:border-teal/40 hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+      >
+        مسح البحث
+      </button>
+    </div>
+  );
+}
+
+// ==================== File Links ====================
+function FileLinks({ files }: { files: FileEntry[] }) {
+  const valid = useMemo(
+    () =>
+      files
+        .map((f, i) => ({
+          url: toSafeUrl(f.url),
+          label: f.label?.trim() || '',
+          idx: i,
+        }))
+        .filter(
+          (f): f is { url: string; label: string; idx: number } => !!f.url,
+        ),
+    [files],
+  );
+
+  if (valid.length === 0) return null;
+
+  const showNumbers = valid.length > 1;
+
+  return (
+    <ul role="list" className="mt-3 flex flex-wrap gap-2">
+      {valid.map((f) => (
+        <li key={f.url + f.idx} className="min-w-0 max-w-full">
+          <a
+            href={f.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex max-w-full items-center gap-1.5 rounded-field border border-teal/20 bg-teal-tint px-3 py-2 text-xs font-semibold text-teal transition-colors hover:border-teal/40 hover:bg-teal-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+          >
+            <IconExternal
+              aria-hidden="true"
+              className="h-3.5 w-3.5 shrink-0"
+            />
+            <span className="min-w-0 break-anywhere">
+              {f.label || (showNumbers ? `ملف ${f.idx + 1}` : 'فتح الملف')}
+            </span>
+            <span className="sr-only"> (يفتح في تبويب جديد)</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// ==================== Content Item ====================
+function ContentItem({
+  item,
+  showType = false,
+}: {
+  item: ContentRow;
+  showType?: boolean;
+}) {
+  const dueInfo = getDueInfo(item.due_date);
+  const description = item.description?.trim() ?? '';
+  // file_urls قد تأتي null من القاعدة فكانت الصفحة تنهار
+  const files: FileEntry[] = Array.isArray(item.file_urls)
+    ? item.file_urls
+    : [];
+
+  return (
+    <li className="min-w-0 defer-item rounded-card border border-line bg-paper-soft p-4 transition-colors duration-300 hover:border-teal/30 motion-reduce:transition-none">
+      {/* العنصر المثبّت يفقد مجموعته، فنكتب نوعه فوقه */}
+      {showType && (
+        <span className="mb-2 inline-flex rounded-chip bg-teal-tint px-2 py-0.5 text-[11px] font-semibold text-teal">
+          {getTypeLabel(item.content_type)}
+        </span>
+      )}
+
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <p className="min-w-0 flex-1 break-anywhere font-bold text-ink">
+          {item.title}
+        </p>
+        {dueInfo && (
+          <span
+            className={`shrink-0 rounded-chip px-2.5 py-0.5 text-xs font-semibold ${dueBadgeClass(
+              dueInfo.kind,
+            )}`}
+          >
+            {dueInfo.text}
+          </span>
+        )}
+      </div>
+
+      {description && (
+        <p className="mt-1.5 break-anywhere whitespace-pre-line text-sm leading-relaxed text-ink-soft">
+          {description}
+        </p>
+      )}
+
+      <FileLinks files={files} />
+    </li>
+  );
+}
+
+function ItemList({
+  items,
+  showType = false,
+}: {
+  items: ContentRow[];
+  showType?: boolean;
+}) {
+  return (
+    <ul role="list" className="space-y-2">
+      {items.map((item) => (
+        <ContentItem key={item.id} item={item} showType={showType} />
+      ))}
+    </ul>
+  );
+}
+
+// ==================== Header ====================
+function ChannelHeader({ channel }: { channel: ChannelInfo }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const safeImage = toSafeUrl(channel.image_url);
+  const safeTelegram = toSafeUrl(channel.telegram_link);
+  const description = channel.description?.trim() ?? '';
+
+  return (
+    <header className="mt-6 animate-slide-up motion-reduce:animate-none">
+      <div className="flex items-center gap-4">
+        {safeImage && !imageFailed ? (
+          <Image
+            src={safeImage}
+            alt=""
+            width={80}
+            height={80}
+            priority
+            onError={() => setImageFailed(true)}
+            className="h-20 w-20 shrink-0 rounded-card border border-line object-cover"
+          />
+        ) : (
+          <div
+            aria-hidden="true"
+            className="flex h-20 w-20 shrink-0 items-center justify-center rounded-card bg-teal text-2xl font-bold text-on-teal"
+          >
+            {getInitials(channel.name)}
+          </div>
+        )}
+
+        <div className="min-w-0 flex-1">
+          <h1
+            id="channel-title"
+            className="break-anywhere font-display text-2xl font-bold leading-tight text-ink sm:text-3xl"
+          >
+            {channel.name}
+          </h1>
+          {channel.stage && (
+            <span className="stage-badge mt-2 inline-flex">
+              {channel.stage}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {description && (
+        <p className="mt-4 break-anywhere whitespace-pre-line text-sm leading-relaxed text-ink-soft sm:text-base">
+          {description}
+        </p>
+      )}
+
+      {safeTelegram && (
+        <a
+          href={safeTelegram}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-5 inline-flex h-11 items-center gap-2 rounded-field bg-teal px-5 text-sm font-semibold text-on-teal transition-colors hover:bg-teal-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+        >
+          <IconTelegram aria-hidden="true" className="h-4 w-4" />
+          فتح القناة على تلغرام
+          <span className="sr-only"> (يفتح في تبويب جديد)</span>
+        </a>
+      )}
+    </header>
+  );
+}
+
+// ==================== Search Bar ====================
+function SearchBar({
+  value,
+  onChange,
+  onClear,
+  resultCount,
+  totalCount,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onClear: () => void;
+  resultCount: number;
+  totalCount: number;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const showCount = value.trim() !== '';
+
+  // بعد المسح نرجع المؤشر لحقل البحث
+  function clearAndFocus() {
+    onClear();
+    inputRef.current?.focus();
+  }
+
+  return (
+    <div className="mt-6 animate-slide-up motion-reduce:animate-none">
+      <label htmlFor="channel-content-search" className="sr-only">
+        ابحث في محتوى القناة
+      </label>
+
+      <div className="relative">
+        <IconSearch
+          aria-hidden="true"
+          className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
+        />
+        <input
+          ref={inputRef}
+          id="channel-content-search"
+          type="search"
+          inputMode="search"
+          enterKeyHint="search"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' && value) {
+              e.preventDefault();
+              onClear();
+            }
+          }}
+          placeholder="ابحث بالعنوان أو الوصف أو اسم المجلد..."
+          maxLength={100}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          aria-describedby="channel-content-search-status"
+          className="field-editorial w-full ps-10 pe-11 text-base [&::-webkit-search-cancel-button]:hidden"
+        />
+        {value && (
+          <button
+            type="button"
+            onClick={clearAndFocus}
+            aria-label="مسح البحث"
+            className="absolute end-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-field text-ink-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+          >
+            <IconClose aria-hidden="true" className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
+      <p
+        id="channel-content-search-status"
+        aria-live="polite"
+        className="mt-1.5 min-h-4 text-xs text-ink-muted"
+      >
+        {showCount && (
+          <>
+            النتائج: <span className="num-inline font-mono">{resultCount}</span>
+            {' من '}
+            <span className="num-inline font-mono">{totalCount}</span>
+          </>
+        )}
+      </p>
+    </div>
+  );
+}
+
+// ==================== Pinned Section ====================
+function PinnedSection({ items }: { items: ContentRow[] }) {
+  if (items.length === 0) return null;
+
+  return (
+    <section
+      aria-labelledby="pinned-heading"
+      className="mt-8 animate-slide-up motion-reduce:animate-none"
+    >
+      <h2
+        id="pinned-heading"
+        className="mb-3 flex items-center gap-2 border-b-2 border-teal/20 pb-2 font-display text-lg font-bold text-teal"
+      >
+        <span
+          aria-hidden="true"
+          className="h-2 w-2 shrink-0 rounded-full bg-teal"
+        />
+        مثبّت
+      </h2>
+      <ItemList items={items} showType />
+    </section>
+  );
+}
+
+// ==================== Content Group Section ====================
+function ContentGroupSection({ group }: { group: ContentGroup }) {
+  if (group.total === 0) return null;
+
+  const headingId = `group-${group.key}-heading`;
+
+  return (
+    <section
+      aria-labelledby={headingId}
+      className="mt-8 animate-slide-up motion-reduce:animate-none"
+    >
+      <h2
+        id={headingId}
+        className="mb-3 flex items-baseline gap-2 border-b border-line pb-2 font-display text-lg font-bold text-ink"
+      >
+        {group.label}
+        <span className="num-inline font-mono text-xs font-normal text-ink-muted">
+          {group.total}
+        </span>
+      </h2>
+
+      {group.noFolderItems.length > 0 && (
+        <ItemList items={group.noFolderItems} />
+      )}
+
+      {group.folders.map((f) => (
+        <div key={f.folder} className="mt-4">
+          <h3 className="mb-2 flex items-center gap-1.5 break-anywhere text-sm font-bold text-ink-soft">
+            <IconFolder
+              aria-hidden="true"
+              className="h-4 w-4 shrink-0 text-gold"
+            />
+            {f.folder}
+          </h3>
+          <ItemList items={f.items} />
+        </div>
+      ))}
+    </section>
+  );
+}
+
+// ==================== Page ====================
+export default function ChannelPage() {
+  const params = useParams();
+
+  const channelId = useMemo<string>(() => {
+    const raw = params?.id;
+    if (typeof raw === 'string') return raw;
+    if (Array.isArray(raw) && raw.length > 0 && typeof raw[0] === 'string') {
+      return raw[0];
+    }
+    return '';
+  }, [params]);
+
+  const [channel, setChannel] = useState<ChannelInfo | null>(null);
+  const [items, setItems] = useState<ContentRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<LoadError | null>(null);
+  const [contentError, setContentError] = useState<LoadError | null>(null);
+  const [notFound, setNotFound] = useState<NotFound | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const deferredSearch = useDeferredValue(searchTerm);
+  const isStale = searchTerm !== deferredSearch;
+
+  // ==================== Load data ====================
+  useEffect(() => {
+    if (!channelId) {
+      setLoading(false);
+      setNotFound({ reason: 'invalid-id' });
+      setChannel(null);
+      setItems([]);
+      setError(null);
+      setContentError(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadData() {
+      setLoading(true);
+      setError(null);
+      setContentError(null);
+      setNotFound(null);
+
+      try {
+        const [channelRes, itemsRes] = await Promise.all([
+          supabase
+            .from('channels')
+            .select('id, name, description, telegram_link, image_url, stage')
+            .eq('id', channelId)
+            .maybeSingle(),
+          supabase
+            .from('channel_content')
+            .select(
+              'id, title, description, file_urls, due_date, pinned, content_type, folder',
+            )
+            .eq('channel_id', channelId)
+            .order('created_at', { ascending: false }),
+        ]);
+
+        if (cancelled) return;
+
+        if (channelRes.error) {
+          // معرّف بصيغة خاطئة (مثل /channels/abc) = رابط غير صالح، وليس "خطأ اتصال"
+          if (channelRes.error.code === INVALID_TEXT_CODE) {
+            setNotFound({ reason: 'invalid-id' });
+          } else {
+            setError(buildError(channelRes.error.message, 'channel'));
+          }
+          setChannel(null);
+          setItems([]);
+          return;
+        }
+
+        if (!channelRes.data) {
+          setNotFound({ reason: 'missing' });
+          setChannel(null);
+          setItems([]);
+          return;
+        }
+
+        setChannel(channelRes.data as ChannelInfo);
+
+        if (itemsRes.error) {
+          setContentError(buildError(itemsRes.error.message, 'content'));
+          setItems([]);
+        } else {
+          setItems((itemsRes.data ?? []) as ContentRow[]);
+        }
+
+        trackChannelView(channelId);
+      } catch (e: unknown) {
+        if (cancelled) return;
+        setError(buildError(e instanceof Error ? e.message : '', 'channel'));
+        setChannel(null);
+        setItems([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void loadData();
+    return () => {
+      cancelled = true;
+    };
+  }, [channelId, reloadKey]);
+
+  // إعادة محاولة تلقائية عند رجوع الإنترنت
+  useEffect(() => {
+    if (!error && !contentError) return;
+    function onOnline() {
+      setReloadKey((k) => k + 1);
+    }
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, [error, contentError]);
+
+  // عنوان التبويب باسم القناة
+  const channelName = channel?.name;
+  useEffect(() => {
+    if (channelName) document.title = `${channelName} — لوازم`;
+  }, [channelName]);
+
+  const handleRetry = useCallback(() => {
+    setReloadKey((k) => k + 1);
+  }, []);
+
+  const handleClearSearch = useCallback(() => {
+    setSearchTerm('');
+  }, []);
+
+  // ==================== Filter ====================
+  // البحث يشمل اسم المجلد أيضاً
+  const indexed = useMemo<IndexedItem[]>(
+    () =>
+      items.map((item) => ({
+        item,
+        haystack: normalizeArabic(
+          `${item.title} ${item.description ?? ''} ${item.folder ?? ''}`,
+        ),
+      })),
+    [items],
+  );
+
+  const term = useMemo(() => normalizeArabic(deferredSearch), [deferredSearch]);
+
+  const filteredItems = useMemo(() => {
+    if (!term) return items;
+    return indexed
+      .filter((x) => x.haystack.includes(term))
+      .map((x) => x.item);
+  }, [items, indexed, term]);
+
+  const pinnedItems = useMemo(
+    () => filteredItems.filter((i) => i.pinned),
+    [filteredItems],
+  );
+
+  const groups = useMemo<ContentGroup[]>(() => {
+    const unpinned = filteredItems.filter((i) => !i.pinned);
+    const knownTypes = new Set<string>(CONTENT_TYPES);
+
+    const buildGroup = (
+      key: string,
+      label: string,
+      list: ContentRow[],
+    ): ContentGroup => {
+      const folderNames = Array.from(
+        new Set(
+          list
+            .map((i) => i.folder?.trim())
+            .filter((f): f is string => !!f),
+        ),
+      );
+      return {
+        key,
+        label,
+        folders: folderNames.map((folder) => ({
+          folder,
+          items: list.filter((i) => i.folder?.trim() === folder),
+        })),
+        noFolderItems: list.filter((i) => !i.folder?.trim()),
+        total: list.length,
+      };
+    };
+
+    const result = CONTENT_TYPES.map((type) =>
+      buildGroup(
+        type,
+        CONTENT_TYPE_LABELS[type],
+        unpinned.filter((i) => i.content_type === type),
+      ),
+    );
+
+    // عنصر نوعه غير معروف كان يختفي بصمت. الآن يظهر تحت "أخرى"
+    const others = unpinned.filter((i) => !knownTypes.has(i.content_type));
+    if (others.length > 0) {
+      result.push(buildGroup('other', 'أخرى', others));
+    }
+
+    return result;
+  }, [filteredItems]);
+
+  // ==================== Invalid ID / Not Found / Loading ====================
+  if (notFound) {
+    return (
+      <main className={MAIN_CLASS} aria-labelledby="channel-error-heading">
+        <BackLink />
+        <h1 id="channel-error-heading" className="sr-only">
+          خطأ في القناة
+        </h1>
+        <NotFoundState reason={notFound.reason} />
+      </main>
+    );
+  }
+
+  if (loading) {
+    return (
+      <main className={MAIN_CLASS} aria-busy="true">
+        <BackLink />
+        <Skeleton />
+      </main>
+    );
+  }
+
+  if (error || !channel) {
+    return (
+      <main className={MAIN_CLASS} aria-labelledby="channel-error-heading">
+        <BackLink />
+        <h1 id="channel-error-heading" className="sr-only">
+          خطأ في القناة
+        </h1>
+        <ErrorState
+          error={error ?? buildError('', 'channel')}
+          onRetry={handleRetry}
+        />
+      </main>
+    );
+  }
+
+  const hasItems = items.length > 0;
+  const hasResults = filteredItems.length > 0;
+  const visibleGroups = groups.filter((g) => g.total > 0);
+
+  return (
+    <main className={MAIN_CLASS} aria-labelledby="channel-title">
+      <BackLink />
+
+      <ChannelHeader key={channel.id} channel={channel} />
+
+      {contentError && (
+        <ErrorState
+          title="تعذّر تحميل محتوى القناة"
+          error={contentError}
+          onRetry={handleRetry}
+        />
+      )}
+
+      {!contentError && hasItems && (
+        <SearchBar
+          value={searchTerm}
+          onChange={setSearchTerm}
+          onClear={handleClearSearch}
+          resultCount={filteredItems.length}
+          totalCount={items.length}
+        />
+      )}
+
+      <div aria-busy={isStale} className="mt-2">
+        {hasItems && !hasResults && (
+          <NoResults
+            query={deferredSearch.trim()}
+            onClear={handleClearSearch}
+          />
+        )}
+
+        {hasItems && hasResults && (
+          <div
+            className={`transition-opacity duration-150 motion-reduce:transition-none ${
+              isStale ? 'opacity-60' : 'opacity-100'
+            }`}
+          >
+            <PinnedSection items={pinnedItems} />
+            {visibleGroups.map((group) => (
+              <ContentGroupSection key={group.key} group={group} />
+            ))}
+          </div>
+        )}
+
+        {!contentError && !hasItems && <EmptyState />}
+      </div>
+    </main>
+  );
+}
+===app/channels/page.tsx===
+// app/channels/page.tsx
+'use client';
+
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { supabase } from '@/lib/supabaseClient';
+import { useStudentStage } from '@/hooks/useStudentStage';
+import { PullToRefresh } from '@/components/PullToRefresh';
+import { Reveal } from '@/components/Reveal';
+import {
+  IconArrowLeft,
+  IconChannels,
+  IconSearch,
+  IconClose,
+  IconWarning,
+} from '@/components/ui/Icons';
+import type { Channel } from '@/lib/types';
+
+// ==================== Types ====================
+type ChannelListItem = Pick<
+  Channel,
+  'id' | 'name' | 'description' | 'image_url'
+>;
+
+type LoadError = {
+  message: string;
+  detail: string;
+};
+
+type IndexedChannel = {
+  channel: ChannelListItem;
+  haystack: string;
+};
+
+const MAIN_CLASS =
+  'mx-auto max-w-5xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10';
+
+// ==================== Helpers ====================
+function toSafeUrl(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:'
+      ? trimmed
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function buildError(detail: string): LoadError {
+  const offline = typeof navigator !== 'undefined' && !navigator.onLine;
+  return {
+    message: offline
+      ? 'يبدو أن الإنترنت مقطوع عندك. سنعيد المحاولة تلقائياً عند رجوعه.'
+      : 'تعذّر جلب القنوات الآن. جرّب مرة ثانية بعد قليل.',
+    detail,
+  };
+}
+
+function normalizeArabic(input: string): string {
+  return input
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, '')
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[أإآٱ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ئ/g, 'ي')
+    .replace(/ؤ/g, 'و')
+    .replace(/ة/g, 'ه')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getInitials(name: string): string {
+  const words = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w.replace(/^ال/, '') || w);
+
+  if (words.length === 0) return '؟';
+
+  const first = Array.from(words[0]);
+  const chars =
+    words.length >= 2
+      ? [first[0] ?? '', Array.from(words[1])[0] ?? '']
+      : first.slice(0, 2);
+
+  return chars.join('\u200C').toUpperCase();
+}
+
+function ChannelsCount({ count }: { count: number }) {
+  if (count === 1) return <>قناة واحدة متاحة لمرحلتك</>;
+  if (count === 2) return <>قناتان متاحتان لمرحلتك</>;
+  return (
+    <>
+      <span className="num-inline font-mono">{count}</span>{' '}
+      {count >= 3 && count <= 10 ? 'قنوات' : 'قناة'} متاحة لمرحلتك
+    </>
+  );
+}
+
+// ==================== Back Link ====================
+function BackLink() {
+  return (
+    <Link
+      href="/"
+      className="group inline-flex items-center gap-1.5 rounded-field text-sm font-semibold text-teal transition-colors hover:text-teal-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+    >
+      <span className="transition-transform duration-200 group-hover:-translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0">
+        <IconArrowLeft aria-hidden="true" className="h-4 w-4" />
+      </span>
+      رجوع إلى لوحة الأقسام
+    </Link>
+  );
+}
+
+// ==================== Avatar ====================
+function ChannelAvatar({
+  name,
+  imageUrl,
+}: {
+  name: string;
+  imageUrl: string | null;
+}) {
+  const [failed, setFailed] = useState(false);
+  const safeUrl = toSafeUrl(imageUrl);
+
+  if (safeUrl && !failed) {
+    return (
+      <Image
+        src={safeUrl}
+        alt=""
+        width={48}
+        height={48}
+        onError={() => setFailed(true)}
+        className="h-12 w-12 shrink-0 rounded-field border border-line object-cover"
+      />
+    );
+  }
+
+  return (
+    <div
+      aria-hidden="true"
+      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-field bg-teal-soft text-base font-bold text-teal"
+    >
+      {getInitials(name)}
+    </div>
+  );
+}
+
+// ==================== Skeleton ====================
+function Skeleton() {
+  return (
+    <div role="status" aria-label="جارٍ تحميل القنوات" className="mt-6">
+      <div aria-hidden="true" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {[0, 1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="rounded-card border border-line bg-paper-soft p-4 animate-slide-up motion-reduce:animate-none sm:p-5"
+            style={{ animationDelay: `${i * 60}ms` }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 shrink-0 skeleton-shimmer rounded-field motion-reduce:animate-none" />
+              <div className="h-4 flex-1 skeleton-shimmer rounded motion-reduce:animate-none" />
+            </div>
+            <div className="mt-4 h-3 w-3/4 skeleton-shimmer rounded motion-reduce:animate-none" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ==================== Empty State ====================
+function EmptyState() {
+  return (
+    <div
+      role="status"
+      className="mt-6 card-editorial p-10 text-center animate-slide-up motion-reduce:animate-none"
+    >
+      <div
+        aria-hidden="true"
+        className="mx-auto flex h-16 w-16 items-center justify-center rounded-card bg-teal-soft text-teal"
+      >
+        <IconChannels className="h-8 w-8" />
+      </div>
+      <p className="mt-4 font-bold text-ink-soft">
+        لا توجد قنوات مضافة لمرحلتك حالياً.
+      </p>
+      <p className="mt-1 text-sm text-ink-muted">يرجى العودة لاحقاً</p>
+    </div>
+  );
+}
+
+// ==================== No Stage State ====================
+function NoStageState() {
+  return (
+    <div
+      role="status"
+      className="mt-6 card-editorial p-10 text-center animate-slide-up motion-reduce:animate-none"
+    >
+      <div
+        aria-hidden="true"
+        className="mx-auto flex h-16 w-16 items-center justify-center rounded-card bg-gold-tint text-gold-ink"
+      >
+        <IconWarning className="h-8 w-8" />
+      </div>
+      <p className="mt-4 font-bold text-ink-soft">
+        لم نعرف مرحلتك الدراسية بعد.
+      </p>
+      <p className="mt-1 text-sm text-ink-muted">
+        اختر مرحلتك من لوحة الأقسام ثم ارجع لهذه الصفحة.
+      </p>
+    </div>
+  );
+}
+
+// ==================== No Search Results ====================
+function NoResults({
+  query,
+  onClear,
+}: {
+  query: string;
+  onClear: () => void;
+}) {
+  return (
+    <div
+      role="status"
+      className="mt-6 card-editorial p-10 text-center animate-slide-up motion-reduce:animate-none"
+    >
+      <div
+        aria-hidden="true"
+        className="mx-auto flex h-14 w-14 items-center justify-center rounded-field bg-ink/5 text-ink-muted"
+      >
+        <IconSearch className="h-6 w-6" />
+      </div>
+      <p className="mt-4 font-bold text-ink-soft">لا توجد نتائج مطابقة</p>
+      <p dir="auto" className="mt-1 break-anywhere text-sm text-ink-muted">
+        «{query}»
+      </p>
+      <button
+        type="button"
+        onClick={onClear}
+        className="mt-4 inline-flex h-10 items-center rounded-field border border-line bg-paper-soft px-4 text-sm font-semibold text-ink-soft transition-colors hover:border-teal/40 hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+      >
+        مسح البحث
+      </button>
+    </div>
+  );
+}
+
+// ==================== Error State ====================
+function ErrorState({
+  error,
+  onRetry,
+}: {
+  error: LoadError;
+  onRetry: () => void;
+}) {
+  return (
+    <div
+      role="alert"
+      className="mt-6 flex items-start gap-3 rounded-card border border-coral/30 bg-coral/5 p-4 animate-slide-up motion-reduce:animate-none"
+    >
+      <span
+        aria-hidden="true"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-field bg-coral text-on-coral"
+      >
+        <IconWarning className="h-4 w-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-bold text-coral-ink">تعذّر تحميل القنوات</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-ink-soft">
+          {error.message}
+        </p>
+        {error.detail && (
+          <p
+            dir="ltr"
+            className="mt-1 break-anywhere text-end font-mono text-[11px] text-ink-muted"
+          >
+            {error.detail}
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-3 inline-flex h-10 items-center rounded-field border border-line bg-paper-soft px-4 text-xs font-semibold text-ink-soft transition-colors hover:border-teal/40 hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+        >
+          إعادة المحاولة
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ==================== Channel Card ====================
+function ChannelCard({ channel }: { channel: ChannelListItem }) {
+  const titleId = `channel-title-${channel.id}`;
+  const descId = `channel-desc-${channel.id}`;
+  const description = channel.description?.trim() ?? '';
+
+  return (
+    <Link
+      href={`/channels/${encodeURIComponent(channel.id)}`}
+      aria-labelledby={titleId}
+      aria-describedby={description ? descId : undefined}
+      className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-card border border-line bg-paper-soft p-4 transition-[border-color,background-color,transform] duration-300 hover:-translate-y-0.5 hover:border-teal/40 hover:bg-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:p-5"
+    >
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 block h-[3px] origin-center scale-x-0 bg-teal transition-transform duration-500 group-hover:scale-x-100 group-focus-visible:scale-x-100 motion-reduce:transition-none"
+      />
+
+      <div className="flex items-center gap-3">
+        <ChannelAvatar name={channel.name} imageUrl={channel.image_url} />
+
+        <h2
+          id={titleId}
+          className="min-w-0 flex-1 break-anywhere line-clamp-2 font-display text-base font-bold leading-snug text-ink transition-colors group-hover:text-teal motion-reduce:transition-none sm:text-lg"
+        >
+          {channel.name}
+        </h2>
+      </div>
+
+      {description && (
+        <p
+          id={descId}
+          className="mt-3 line-clamp-2 text-sm leading-relaxed text-ink-soft"
+        >
+          {description}
+        </p>
+      )}
+
+      <div className="mt-auto flex items-center gap-1.5 pt-4 text-sm font-semibold text-teal">
+        <span>فتح صفحة القناة</span>
+        <span className="transition-transform duration-200 group-hover:-translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0">
+          <IconArrowLeft aria-hidden="true" className="h-4 w-4" />
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+// ==================== Search Bar ====================
+function SearchBar({
+  value,
+  onChange,
+  onClear,
+  resultCount,
+  totalCount,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onClear: () => void;
+  resultCount: number;
+  totalCount: number;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const showCount = value.trim() !== '';
+
+  function clearAndFocus() {
+    onClear();
+    inputRef.current?.focus();
+  }
+
+  return (
+    <div className="mt-6 animate-slide-up motion-reduce:animate-none">
+      <label htmlFor="channels-search" className="sr-only">
+        ابحث باسم القناة أو وصفها
+      </label>
+
+      <div className="relative">
+        <IconSearch
+          aria-hidden="true"
+          className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
+        />
+        <input
+          ref={inputRef}
+          id="channels-search"
+          type="search"
+          inputMode="search"
+          enterKeyHint="search"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' && value) {
+              e.preventDefault();
+              onClear();
+            }
+          }}
+          placeholder="ابحث باسم القناة أو وصفها..."
+          maxLength={100}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          aria-describedby="channels-search-status"
+          className="field-editorial w-full ps-10 pe-11 text-base [&::-webkit-search-cancel-button]:hidden"
+        />
+        {value && (
+          <button
+            type="button"
+            onClick={clearAndFocus}
+            aria-label="مسح البحث"
+            className="absolute end-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-field text-ink-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+          >
+            <IconClose aria-hidden="true" className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
+      <p
+        id="channels-search-status"
+        aria-live="polite"
+        className="mt-1.5 min-h-4 text-xs text-ink-muted"
+      >
+        {showCount && (
+          <>
+            النتائج: <span className="num-inline font-mono">{resultCount}</span>
+            {' من '}
+            <span className="num-inline font-mono">{totalCount}</span>
+          </>
+        )}
+      </p>
+    </div>
+  );
+}
+
+// ==================== Page ====================
+export default function ChannelsPage() {
+  const { stage, ready } = useStudentStage();
+  const [channels, setChannels] = useState<ChannelListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<LoadError | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Pull-to-refresh state
+  const [reloadKey, setReloadKey] = useState(0);
+  const [silentReload, setSilentReload] = useState(false);
+  const refreshResolverRef = useRef<(() => void) | null>(null);
+
+  const deferredSearch = useDeferredValue(searchTerm);
+  const isStale = searchTerm !== deferredSearch;
+
+  // ==================== Load data ====================
+  useEffect(() => {
+    if (!stage) return;
+    const currentStage = stage;
+    const isSilent = silentReload;
+    let cancelled = false;
+
+    async function loadData() {
+      if (!isSilent) setLoading(true);
+      setError(null);
+
+      try {
+        const { data, error: fetchError } = await supabase
+          .from('channels')
+          .select('id, name, description, image_url')
+          .eq('stage', currentStage);
+
+        if (cancelled) return;
+
+        if (fetchError) {
+          setError(buildError(fetchError.message));
+          setChannels([]);
+        } else {

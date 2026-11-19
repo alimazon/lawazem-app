@@ -1,0 +1,2519 @@
+﻿    clin: 'The brachial plexus roots and trunks pass between the anterior and middle scalenes: the site of an interscalene block and of thoracic outlet compression.',
+    arrows: [[304, 602, 278, 492]],
+    pose: { tilt: 0.5, fx: 0.2 },
+  },
+  {
+    id: 'scaleneAnt',
+    paired: true,
+    zoom: 'posterior',
+    geometry: { type: 'fan', n: 7, bulge: 2,
+      A: [258, 484, 264, 520, 272, 566, 282, 606],
+      B: [270, 484, 278, 520, 286, 566, 296, 606] },
+    en: 'Anterior scalene',
+    short: 'Scalenus anterior',
+    label: { s: 'L', x: 277, y: 548 },
+    nerve: 'Anterior rami of C4 to C7',
+    origin: 'Anterior tubercles of the transverse processes of vertebrae C3 to C6',
+    insertion: 'Scalene tubercle and upper surface of rib I',
+    actEn: 'Elevates rib I.',
+    clin: 'The phrenic nerve runs down its anterior surface; the subclavian vein lies in front of it and the subclavian artery behind it.',
+    arrows: [[290, 600, 266, 490]],
+    pose: { tilt: 0.5, fx: 0.2 },
+  },
+  {
+    id: 'trapezius',
+    paired: true,
+    zoom: 'posterior',
+    geometry: { type: 'fan', n: 10, bulge: 3,
+      A: [286, 540, 306, 566, 340, 596, 384, 616],
+      B: [292, 560, 316, 596, 350, 622, 384, 640] },
+    en: 'Trapezius',
+    label: { s: 'R', x: 335, y: 604 },
+    nerve: 'Motor: accessory nerve (CN XI). Proprioception: cervical plexus, mainly C3, C4',
+    origin: 'Spine of C7, superior nuchal line, external occipital protuberance and the ligamentum nuchae',
+    insertion: 'Lateral third of the clavicle (also the acromion and the spine of the scapula)',
+    actEn: 'Stabilizes and moves the scapula.',
+    clin: 'The accessory nerve crosses the posterior triangle superficially; injury during lymph node biopsy gives a drooping shoulder and weak shrugging.',
+    arrows: [[380, 632, 302, 566]],
+    pose: { shr: 1, fx: -0.3, tilt: 0.3, turn: -0.3 },
+  },
+  {
+    id: 'scm',
+    paired: true,
+    zoom: 'neck',
+    geometry: { type: 'fan', n: 12, bulge: 3,
+      A: [260, 404, 250, 470, 232, 560, 212, 636],
+      B: [276, 408, 272, 470, 262, 560, 242, 634] },
+    en: 'Sternocleidomastoid',
+    short: 'Sternocleidomastoid',
+    label: { s: 'R', x: 258, y: 490 },
+    nerve: 'Motor: accessory nerve (CN XI). Proprioception: cervical plexus, mainly C2, C3',
+    origin: 'Manubrium of the sternum and the clavicle',
+    insertion: 'Mastoid process',
+    actEn: 'Oblique rotation of the head to the opposite side, flexion of the neck, and an accessory muscle of respiration.',
+    clin: 'Divides the neck into anterior and posterior triangles. Shortening on one side gives torticollis (wry neck).',
+    arrows: [[270, 418, 244, 560]],
+    pose: { turn: -0.9, tilt: 0.5, fx: 0.2 },
+  },
+  {
+    id: 'masseter',
+    paired: true,
+    zoom: 'side',
+    geometry: { type: 'fan', n: 12, bulge: 4,
+      A: [280, 296, 280, 320, 276, 350, 270, 372],
+      B: [304, 290, 308, 312, 306, 340, 292, 364] },
+    en: 'Masseter',
+    label: { s: 'R', x: 296, y: 332 },
+    nerve: 'Mandibular nerve (CN V3), masseteric nerve',
+    origin: 'Zygomatic arch',
+    insertion: 'Lateral surface of the ramus and angle of the mandible',
+    actEn: 'Elevates the mandible (closes the jaw). It is a main muscle of mastication.',
+    clin: 'A muscle of mastication, so it is supplied by the trigeminal nerve, not the facial nerve. Spasm causes trismus.',
+    arrows: [[292, 376, 292, 316]],
+    pose: { cl: 1 },
+  },
+  {
+    id: 'temporalis',
+    paired: true,
+    zoom: 'side',
+    geometry: { type: 'fan', n: 13, bulge: 4,
+      A: [296, 258, 290, 226, 288, 186, 294, 132],
+      B: [300, 260, 314, 228, 322, 196, 312, 140] },
+    en: 'Temporalis',
+    label: { s: 'R', x: 306, y: 196 },
+    nerve: 'Mandibular nerve (CN V3), deep temporal nerves',
+    origin: 'Temporal fossa and temporal fascia',
+    insertion: 'Coronoid process and anterior border of the ramus of the mandible',
+    actEn: 'Elevates the mandible; its posterior fibres retract it (chewing).',
+    clin: 'A muscle of mastication; it bulges at the temple when you clench your teeth.',
+    arrows: [[304, 252, 306, 192]],
+    pose: { tb: 1, cl: 0.5 },
+  },
+  {
+    id: 'frontalis',
+    paired: true,
+    zoom: 'eyes',
+    geometry: { type: 'fan', n: 16, bulge: 6,
+      A: [204, 152, 203, 120, 204, 96, 208, 66],
+      B: [292, 156, 298, 128, 296, 100, 282, 84] },
+    en: 'Frontalis',
+    label: { s: 'L', x: 250, y: 104 },
+    nerve: 'Facial nerve (CN VII), temporal branch',
+    origin: 'Epicranial aponeurosis (galea aponeurotica)',
+    insertion: 'Skin of the eyebrows and forehead',
+    actEn: 'Raises the eyebrows and wrinkles the forehead horizontally (surprise).',
+    clin: 'In an upper motor neuron facial palsy the forehead is spared (bilateral cortical input); in a lower motor neuron palsy such as Bell’s palsy it is paralysed.',
+    arrows: [[236, 146, 236, 108], [270, 150, 270, 116]],
+    pose: { br: 1, fh: 1 },
+  },
+  {
+    id: 'buccinator',
+    paired: true,
+    zoom: 'mouth',
+    geometry: { type: 'fan', n: 10, bulge: 3,
+      A: [254, 358, 268, 352, 282, 348, 294, 347],
+      B: [256, 362, 262, 372, 268, 380, 274, 383] },
+    en: 'Buccinator',
+    label: { s: 'R', x: 272, y: 368 },
+    nerve: 'Facial nerve (CN VII), buccal branch',
+    origin: 'Maxilla and mandible (alveolar processes opposite the molars), pterygomandibular raphe',
+    insertion: 'Orbicularis oris at the angle of the mouth (modiolus)',
+    actEn: 'Compresses the cheek against the teeth: keeps food between the teeth while chewing, and is used in blowing and sucking.',
+    clin: 'In facial palsy food collects between the cheek and the gums.',
+    arrows: [[262, 370, 292, 362]],
+    pose: { ck: 1, out: 0.3 },
+  },
+  {
+    id: 'orbOris',
+    paired: false,
+    zoom: 'mouth',
+    geometry: { type: 'ring', n: 13, cx: 200, cy: 347, rx: 54, ry: 25, irx: 34, iry: 7 },
+    en: 'Orbicularis oris',
+    label: { s: 'R', x: 216, y: 327 },
+    nerve: 'Facial nerve (CN VII), buccal and marginal mandibular branches',
+    origin: 'Modiolus, maxilla and mandible near the midline; fibres of the other perioral muscles',
+    insertion: 'Skin and mucous membrane of the lips (fibres encircle the mouth)',
+    actEn: 'Closes and purses the lips (kissing, whistling, speech).',
+    clin: 'Weakness causes drooling and difficulty whistling or blowing.',
+    arrows: [[146, 346, 166, 346], [254, 346, 234, 346], [200, 318, 200, 336], [200, 376, 200, 358]],
+    pose: { purse: 1 },
+  },
+  {
+    id: 'orbOculi',
+    paired: true,
+    zoom: 'eyes',
+    geometry: { type: 'ring', n: 15, cx: 248, cy: 202, rx: 46, ry: 35, irx: 21, iry: 8 },
+    en: 'Orbicularis oculi',
+    label: { s: 'R', x: 284, y: 226 },
+    nerve: 'Facial nerve (CN VII), temporal and zygomatic branches',
+    origin: 'Medial orbital margin, medial palpebral ligament, lacrimal bone',
+    insertion: 'Skin around the orbit, eyelids (tarsal plates), lateral palpebral raphe',
+    actEn: 'Closes the eyelids: the palpebral part blinks gently, the orbital part squeezes the eye shut forcefully.',
+    clin: 'In Bell’s palsy the eye cannot close (lagophthalmos), risking dry eye and corneal ulceration.',
+    arrows: [[300, 202, 278, 202], [248, 160, 248, 182], [248, 244, 248, 222]],
+    pose: { eye: 1, sq: 1, bd: 0.4 },
+  },
+  {
+    id: 'nasalis',
+    paired: true,
+    zoom: 'nose',
+    geometry: { type: 'fan', n: 8, bulge: 2,
+      A: [226, 300, 222, 282, 216, 262, 208, 244],
+      B: [214, 304, 212, 286, 208, 266, 204, 248] },
+    en: 'Nasalis',
+    label: { s: 'L', x: 214, y: 270 },
+    nerve: 'Facial nerve (CN VII), buccal branch',
+    origin: 'Maxilla (above the lateral incisor)',
+    insertion: 'Transverse part: aponeurosis over the bridge of the nose. Alar part: alar cartilage',
+    actEn: 'Transverse part compresses the nostrils; alar part flares them.',
+    clin: 'The nostrils flare in respiratory distress.',
+    arrows: [[228, 302, 246, 306]],
+    pose: { flare: 1 },
+  },
+  {
+    id: 'llsan',
+    paired: true,
+    zoom: 'nose',
+    geometry: { type: 'fan', n: 8, bulge: 2,
+      A: [224, 236, 222, 256, 222, 282, 224, 310],
+      B: [234, 238, 236, 258, 238, 284, 234, 314] },
+    en: 'Levator labii superioris alaeque nasi',
+    short: 'Lev. labii sup. alaeque nasi',
+    label: { s: 'R', x: 233, y: 280 },
+    nerve: 'Facial nerve (CN VII), zygomatic and buccal branches',
+    origin: 'Frontal process of the maxilla',
+    insertion: 'Alar cartilage and skin of the upper lip',
+    actEn: 'Elevates the upper lip and dilates the nostril.',
+    clin: 'Takes part in the expression of disgust (sneer).',
+    arrows: [[236, 318, 234, 262]],
+    pose: { lu: 1, flare: 1, nlf: 1 },
+  },
+  {
+    id: 'lls',
+    paired: true,
+    zoom: 'nose',
+    geometry: { type: 'fan', n: 10, bulge: 3,
+      A: [244, 240, 242, 262, 238, 290, 232, 318],
+      B: [262, 244, 260, 266, 252, 296, 246, 324] },
+    en: 'Levator labii superioris',
+    label: { s: 'L', x: 252, y: 272 },
+    nerve: 'Facial nerve (CN VII), zygomatic and buccal branches',
+    origin: 'Infraorbital margin of the maxilla (above the infraorbital foramen)',
+    insertion: 'Skin and muscle of the upper lip',
+    actEn: 'Elevates the upper lip and deepens the nasolabial fold.',
+    clin: 'Lies over the infraorbital foramen, the site of an infraorbital nerve block.',
+    arrows: [[250, 318, 254, 264]],
+    pose: { lu: 1, nlf: 1 },
+  },
+  {
+    id: 'zmin',
+    paired: true,
+    zoom: 'nose',
+    geometry: { type: 'fan', n: 7, bulge: 2,
+      A: [270, 252, 268, 272, 260, 300, 252, 322],
+      B: [282, 258, 280, 280, 270, 306, 260, 326] },
+    en: 'Zygomaticus minor',
+    label: { s: 'L', x: 276, y: 288 },
+    nerve: 'Facial nerve (CN VII), zygomatic and buccal branches',
+    origin: 'Lateral surface of the zygomatic bone',
+    insertion: 'Upper lip (blends with orbicularis oris)',
+    actEn: 'Elevates the upper lip and contributes to the nasolabial fold.',
+    clin: 'Lies medial to zygomaticus major.',
+    arrows: [[262, 322, 278, 264]],
+    pose: { lu: 0.6, nlf: 0.8, smile: 0.2 },
+  },
+  {
+    id: 'zmaj',
+    paired: true,
+    zoom: 'mouth',
+    geometry: { type: 'fan', n: 9, bulge: 2,
+      A: [292, 262, 284, 286, 270, 312, 252, 346],
+      B: [304, 272, 296, 300, 278, 326, 256, 356] },
+    en: 'Zygomaticus major',
+    label: { s: 'R', x: 278, y: 304 },
+    nerve: 'Facial nerve (CN VII), zygomatic and buccal branches',
+    origin: 'Zygomatic bone (anterior to the zygomaticotemporal suture)',
+    insertion: 'Angle of the mouth (modiolus)',
+    actEn: 'Draws the angle of the mouth upward and laterally (smiling).',
+    clin: 'The main smiling muscle. In Bell’s palsy the corner of the mouth droops on the affected side.',
+    arrows: [[254, 354, 294, 284]],
+    pose: { smile: 1, out: 0.6, nlf: 0.8 },
+  },
+  {
+    id: 'lao',
+    paired: true,
+    zoom: 'mouth',
+    geometry: { type: 'fan', n: 6, bulge: 2,
+      A: [243, 322, 242, 332, 243, 342, 245, 352],
+      B: [256, 322, 257, 332, 256, 342, 252, 352] },
+    en: 'Levator anguli oris',
+    label: { s: 'L', x: 250, y: 338 },
+    nerve: 'Facial nerve (CN VII), buccal branch',
+    origin: 'Canine fossa of the maxilla (below the infraorbital foramen)',
+    insertion: 'Angle of the mouth (modiolus)',
+    actEn: 'Elevates the angle of the mouth (assists in smiling).',
+    clin: 'A deep muscle lying beneath levator labii superioris.',
+    arrows: [[248, 346, 248, 304]],
+    pose: { smile: 0.6, lu: 0.2, nlf: 0.8 },
+  },
+  {
+    id: 'risorius',
+    paired: true,
+    zoom: 'mouth',
+    geometry: { type: 'fan', n: 6, bulge: 1,
+      A: [300, 330, 286, 336, 270, 342, 254, 347],
+      B: [302, 340, 288, 348, 272, 355, 255, 355] },
+    en: 'Risorius',
+    label: { s: 'L', x: 284, y: 344 },
+    nerve: 'Facial nerve (CN VII), buccal branch',
+    origin: 'Parotid fascia and fascia over the masseter',
+    insertion: 'Skin at the angle of the mouth (modiolus)',
+    actEn: 'Retracts the angle of the mouth laterally (grin / grimace).',
+    clin: 'A weak muscle that is absent in some people.',
+    arrows: [[258, 350, 298, 334]],
+    pose: { out: 1, smile: 0.15 },
+  },
+  {
+    id: 'dao',
+    paired: true,
+    zoom: 'mouth',
+    geometry: { type: 'fan', n: 9, bulge: 3,
+      A: [251, 358, 252, 372, 254, 386, 256, 398],
+      B: [250, 360, 246, 374, 242, 386, 238, 396] },
+    en: 'Depressor anguli oris',
+    label: { s: 'R', x: 250, y: 384 },
+    nerve: 'Facial nerve (CN VII), marginal mandibular branch',
+    origin: 'Oblique line of the mandible',
+    insertion: 'Angle of the mouth (modiolus)',
+    actEn: 'Depresses the angle of the mouth (frowning, sadness).',
+    clin: 'Gives the downturned mouth of sadness; weakness of the marginal mandibular branch makes the smile asymmetric.',
+    arrows: [[254, 362, 256, 400]],
+    pose: { smile: -1, mar: 1 },
+  },
+  {
+    id: 'dli',
+    paired: true,
+    zoom: 'mouth',
+    geometry: { type: 'fan', n: 8, bulge: 3,
+      A: [238, 400, 236, 392, 232, 382, 230, 372],
+      B: [222, 404, 221, 394, 218, 384, 216, 374] },
+    en: 'Depressor labii inferioris',
+    label: { s: 'L', x: 228, y: 388 },
+    nerve: 'Facial nerve (CN VII), marginal mandibular branch',
+    origin: 'Oblique line of the mandible (between the symphysis and the mental foramen)',
+    insertion: 'Skin of the lower lip and orbicularis oris',
+    actEn: 'Depresses the lower lip and draws it slightly laterally.',
+    clin: 'Exposes the lower teeth in speaking and smiling.',
+    arrows: [[228, 376, 232, 408]],
+    pose: { ld: 1, out: 0.2 },
+  },
+  {
+    id: 'mentalis',
+    paired: true,
+    zoom: 'mouth',
+    geometry: { type: 'fan', n: 7, bulge: 5,
+      A: [202, 386, 201, 398, 200, 410, 202, 424],
+      B: [204, 386, 214, 396, 216, 412, 204, 426] },
+    en: 'Mentalis',
+    label: { s: 'L', x: 207, y: 410 },
+    nerve: 'Facial nerve (CN VII), marginal mandibular branch',
+    origin: 'Incisive fossa of the mandible',
+    insertion: 'Skin of the chin',
+    actEn: 'Elevates and protrudes the lower lip and wrinkles the skin of the chin (pouting, doubt).',
+    clin: 'Overactivity gives a dimpled, "pebbled" chin.',
+    arrows: [[206, 424, 206, 390]],
+    pose: { lup: 1, ped: 1, purse: 0.25 },
+  },
+  {
+    id: 'corrugator',
+    paired: true,
+    zoom: 'eyes',
+    geometry: { type: 'fan', n: 7, bulge: 2,
+      A: [212, 170, 226, 160, 244, 152, 266, 150],
+      B: [214, 178, 228, 172, 246, 160, 268, 158] },
+    en: 'Corrugator supercilii',
+    label: { s: 'R', x: 246, y: 158 },
+    nerve: 'Facial nerve (CN VII), temporal and zygomatic branches',
+    origin: 'Medial end of the superciliary arch',
+    insertion: 'Skin of the medial half of the eyebrow',
+    actEn: 'Draws the eyebrows medially and downward, producing vertical frown lines.',
+    clin: 'Responsible for the vertical frown lines between the eyebrows.',
+    arrows: [[264, 156, 222, 174]],
+    pose: { bi: 1, bd: 0.35, gl: 1 },
+  },
+  {
+    id: 'procerus',
+    paired: false,
+    zoom: 'eyes',
+    geometry: { type: 'fan', n: 8, bulge: 3,
+      A: [197, 232, 196, 210, 193, 192, 190, 172],
+      B: [203, 232, 204, 210, 207, 192, 210, 172] },
+    en: 'Procerus',
+    label: { s: 'R', x: 204, y: 198 },
+    nerve: 'Facial nerve (CN VII), temporal and zygomatic branches',
+    origin: 'Nasal bone and upper lateral nasal cartilage',
+    insertion: 'Skin of the glabella (between the eyebrows)',
+    actEn: 'Pulls the medial end of the eyebrows downward, creating transverse wrinkles over the bridge of the nose.',
+    clin: 'Works with corrugator to give an angry or concentrating look.',
+    arrows: [[200, 176, 200, 224]],
+    pose: { bd: 0.8, bi: 0.3, nr: 1 },
+  },
+  {
+    id: 'depSepti',
+    paired: false,
+    zoom: 'nose',
+    geometry: { type: 'fan', n: 5, bulge: 2,
+      A: [197, 326, 197, 316, 197, 308, 198, 300],
+      B: [203, 326, 203, 316, 203, 308, 202, 300] },
+    en: 'Depressor septi nasi',
+    label: { s: 'L', x: 200, y: 314 },
+    nerve: 'Facial nerve (CN VII), buccal branch',
+    origin: 'Maxilla (above the central incisor)',
+    insertion: 'Nasal septum and alar part of nasalis',
+    actEn: 'Pulls the nasal septum and the tip of the nose downward and widens the nostrils.',
+    clin: 'Pulls the nose tip down when smiling in some people.',
+    arrows: [[200, 304, 200, 330]],
+    pose: { td: 1, flare: 0.5 },
+  },
+];
+
+// ==================== Groups (with Arabic translations) ====================
+export const MUSCLE_GROUPS: readonly {
+  label: string;
+  labelEn: string;
+  ids: readonly string[];
+}[] = [
+  { label: 'الجبين والحاجب', labelEn: 'Forehead & brow', ids: ['frontalis', 'corrugator', 'procerus'] },
+  { label: 'حول العين',      labelEn: 'Around the eye',    ids: ['orbOculi'] },
+  { label: 'الأنف',           labelEn: 'Nose',             ids: ['nasalis', 'depSepti', 'llsan'] },
+  { label: 'الشفة العليا والوجنة', labelEn: 'Upper lip & cheek', ids: ['lls', 'zmin', 'zmaj', 'lao', 'risorius', 'buccinator'] },
+  { label: 'الفم والذقن',    labelEn: 'Mouth & chin',     ids: ['orbOris', 'dao', 'dli', 'mentalis'] },
+  { label: 'الرقبة السطحية',       labelEn: 'Superficial neck',   ids: ['platysma', 'scm', 'trapezius'] },
+  { label: 'فوق العظم اللامي',     labelEn: 'Suprahyoid',         ids: ['digastric', 'stylohyoid', 'mylohyoid', 'geniohyoid'] },
+  { label: 'تحت العظم اللامي',     labelEn: 'Infrahyoid',         ids: ['omohyoid', 'sternohyoid', 'thyrohyoid', 'sternothyroid'] },
+  { label: 'المثلث الخلفي',        labelEn: 'Posterior triangle', ids: ['spleniusCapitis', 'levatorScapulae', 'scaleneAnt', 'scaleneMid', 'scalenePost'] },
+  { label: 'أمام الفقرات',         labelEn: 'Prevertebral',       ids: ['rcAnterior', 'rcLateralis', 'longusCapitis', 'longusColli'] },
+  { label: 'المضغ (عصب مثلث التوائم V3)', labelEn: 'Mastication (V3)', ids: ['masseter', 'temporalis'] },
+];
+
+/** مجموعات الرقبة (للفلتر في الواجهة وللتمييز بين رأس ثابت/متحرك في الـ 3D). */
+export const NECK_GROUP_NAMES: readonly string[] = [
+  'Superficial neck',
+  'Suprahyoid',
+  'Infrahyoid',
+  'Posterior triangle',
+  'Prevertebral',
+];
+export const NECK_GROUPS = MUSCLE_GROUPS.filter((g) => NECK_GROUP_NAMES.includes(g.labelEn));
+export const NECK_MUSCLE_IDS: ReadonlySet<string> = new Set(NECK_GROUPS.flatMap((g) => g.ids));
+
+// ==================== Zoom Presets ====================
+export interface ZoomPreset {
+  center: readonly [number, number];
+  size: number;
+  labelAr: string;
+  labelEn: string;
+}
+
+export const ZOOMS: Record<ZoomId, ZoomPreset> = {
+  whole: { center: [200, 270], size: 400, labelAr: 'الوجه كامل',      labelEn: 'Whole face' },
+  eyes:  { center: [200, 165], size: 230, labelAr: 'الجبين والعينان', labelEn: 'Forehead & eyes' },
+  nose:  { center: [210, 285], size: 170, labelAr: 'الأنف',            labelEn: 'Nose' },
+  mouth: { center: [215, 365], size: 210, labelAr: 'الفم والذقن',      labelEn: 'Mouth & chin' },
+  side:  { center: [255, 230], size: 200, labelAr: 'الوجنة والصدغ',    labelEn: 'Cheek & temple' },
+  neck:  { center: [225, 520], size: 300, labelAr: 'الرقبة',           labelEn: 'Neck' },
+  throat:    { center: [215, 522], size: 172, labelAr: 'المثلث الأمامي', labelEn: 'Anterior triangle' },
+  posterior: { center: [300, 525], size: 190, labelAr: 'المثلث الخلفي',  labelEn: 'Posterior triangle' },
+};
+
+// ==================== Lookup Helpers ====================
+export const MUSCLE_BY_ID: Record<string, Muscle> = (() => {
+  const map: Record<string, Muscle> = {};
+  for (const m of MUSCLES) map[m.id] = m;
+  return map;
+})();
+
+// Attach region names for display
+for (const g of MUSCLE_GROUPS) {
+  for (const id of g.ids) {
+    if (MUSCLE_BY_ID[id]) MUSCLE_BY_ID[id].region = g.label;
+  }
+}
+
+===lib/anatomy-extras.ts===
+// lib/anatomy-extras.ts
+import { MUSCLES, MUSCLE_GROUPS, type Muscle } from './anatomy-data';
+
+export type FacialBranch = 'temporal' | 'zygomatic' | 'buccal' | 'marginal' | 'cervical';
+
+export const FACIAL_BRANCHES: readonly {
+  id: FacialBranch;
+  en: string;
+  ar: string;
+  match: string;
+}[] = [
+  { id: 'temporal',  en: 'Temporal',            ar: 'الصدغي',        match: 'temporal' },
+  { id: 'zygomatic', en: 'Zygomatic',           ar: 'الوجني',        match: 'zygomatic' },
+  { id: 'buccal',    en: 'Buccal',              ar: 'الشدقي',        match: 'buccal' },
+  { id: 'marginal',  en: 'Marginal mandibular', ar: 'الفكي الهامشي', match: 'marginal mandibular' },
+  { id: 'cervical',  en: 'Cervical',            ar: 'العنقي',        match: 'cervical' },
+];
+
+export const BRANCH_MNEMONIC = 'To Zanzibar By Motor Car';
+
+export type Innervation = 'VII' | 'V3';
+
+export function innervationOf(m: Muscle): Innervation | null {
+  const vii = /\bCN VII\b/.test(m.nerve);
+  const v3 = /\bCN V3\b/.test(m.nerve);
+  if (vii && v3) return null; // عضلة مختلطة (مثل digastric)
+  if (vii) return 'VII';
+  if (v3) return 'V3';
+  return null;
+}
+
+const NERVE_TAGS: readonly (readonly [RegExp, string])[] = [
+  [/\bCN VII\b/, 'CN VII'],
+  [/\bCN V3\b/, 'CN V3'],
+  [/\bCN XI\b/, 'CN XI'],
+  [/\bCN XII\b/, 'CN XII'],
+  [/ansa cervicalis/i, 'Ansa cervicalis'],
+  [/dorsal scapular/i, 'Dorsal scapular n.'],
+  [/anterior rami/i, 'Anterior rami'],
+  [/posterior rami/i, 'Posterior rami'],
+];
+
+/** وسوم العصب التي تظهر كشارات على البطاقة. */
+export function nerveTagsOf(m: Muscle): string[] {
+  return NERVE_TAGS.filter(([re]) => re.test(m.nerve)).map(([, label]) => label);
+}
+
+export function branchesOf(m: Muscle): FacialBranch[] {
+  if (innervationOf(m) !== 'VII') return [];
+  const n = m.nerve.toLowerCase();
+  return FACIAL_BRANCHES.filter((b) => n.includes(b.match)).map((b) => b.id);
+}
+
+export function pharyngealArchOf(m: Muscle): 1 | 2 | null {
+  const inn = innervationOf(m);
+  return inn === 'VII' ? 2 : inn === 'V3' ? 1 : null;
+}
+
+export const MUSCLES_BY_BRANCH: Record<FacialBranch, string[]> = (() => {
+  const out: Record<FacialBranch, string[]> = {
+    temporal: [], zygomatic: [], buccal: [], marginal: [], cervical: [],
+  };
+  for (const m of MUSCLES) for (const b of branchesOf(m)) out[b].push(m.id);
+  return out;
+})();
+
+export interface ExtraMuscle {
+  id: string;
+  en: string;
+  nerve: string;
+  origin: string;
+  insertion: string;
+  actEn: string;
+  clin: string;
+}
+
+export const EXTRA_MUSCLES: readonly ExtraMuscle[] = [
+  {
+    id: 'lateralPterygoid',
+    en: 'Lateral pterygoid',
+    nerve: 'Mandibular nerve (CN V3), nerve to lateral pterygoid',
+    origin: 'Upper head: infratemporal surface and crest of the greater wing of the sphenoid. Lower head: lateral surface of the lateral pterygoid plate',
+    insertion: 'Pterygoid fovea on the neck of the mandible, articular disc and capsule of the TMJ',
+    actEn: 'Protrudes the mandible and opens the jaw; acting alone on one side it moves the jaw to the opposite side.',
+    clin: 'The only muscle of mastication that opens the jaw. With unilateral weakness the jaw deviates toward the weak side on opening.',
+  },
+  {
+    id: 'medialPterygoid',
+    en: 'Medial pterygoid',
+    nerve: 'Mandibular nerve (CN V3), nerve to medial pterygoid',
+    origin: 'Deep head: medial surface of the lateral pterygoid plate and pyramidal process of the palatine bone. Superficial head: tuberosity of the maxilla',
+    insertion: 'Medial surface of the ramus and angle of the mandible',
+    actEn: 'Elevates the mandible and assists protrusion and side-to-side movement.',
+    clin: 'Forms a muscular sling with the masseter around the angle of the mandible.',
+  },
+  {
+    id: 'occipitalis',
+    en: 'Occipitalis (occipital belly of occipitofrontalis)',
+    nerve: 'Facial nerve (CN VII), posterior auricular branch',
+    origin: 'Lateral part of the highest nuchal line of the occipital bone and the mastoid process',
+    insertion: 'Epicranial aponeurosis (galea aponeurotica)',
+    actEn: 'Retracts the scalp and fixes the galea so that frontalis can raise the eyebrows.',
+    clin: 'The posterior auricular nerve leaves just below the stylomastoid foramen, so it is lost in a nerve lesion at or above that point.',
+  },
+  {
+    id: 'auricular',
+    en: 'Auricular muscles (anterior, superior, posterior)',
+    nerve: 'Facial nerve (CN VII): temporal branch (anterior, superior), posterior auricular nerve (posterior)',
+    origin: 'Temporal fascia and galea (anterior, superior); mastoid process (posterior)',
+    insertion: 'Different parts of the auricle',
+    actEn: 'Draw the ear forward, up and back; rudimentary in most people.',
+    clin: 'Vestigial in humans, but still supplied by the facial nerve.',
+  },
+];
+
+export const EXAM_TIPS: Readonly<Record<string, { ar: string; en: string }>> = {
+  frontalis:   { ar: 'اطلب منه يرفع حاجبيه — هل تظهر تجاعيد الجبين؟',          en: 'Raise the eyebrows' },
+  corrugator:  { ar: 'اطلب منه يعبس',                                           en: 'Frown' },
+  orbOculi:    { ar: 'اطلب إغماض العينين بقوة وقارن دفن الرموش بين الجهتين',   en: 'Screw the eyes shut' },
+  zmaj:        { ar: 'اطلب ابتسامة مع إظهار الأسنان وقارن الجهتين',            en: 'Smile and show the teeth' },
+  buccinator:  { ar: 'اطلب نفخ الخدين، وراقب تسرّب الهواء',                    en: 'Puff out the cheeks' },
+  orbOris:     { ar: 'اطلب الصفير أو ضمّ الشفتين بقوة',                        en: 'Whistle / purse the lips' },
+  dli:         { ar: 'اطلب إظهار الأسنان السفلية',                             en: 'Show the lower teeth' },
+  mentalis:    { ar: 'اطلب منه يعبّس بالذقن (pout)',                            en: 'Pout' },
+  platysma:    { ar: 'اطلب فتح الفم مقابل مقاومة وراقب الشرائط العمودية',      en: 'Open the mouth against resistance' },
+  scm:         { ar: 'اطلب إدارة الرأس لجهة والمريض يقاوم بيدك، وتحسّس العضلة على الجهة المقابلة', en: 'Turn the head against resistance and palpate the opposite SCM' },
+  trapezius:   { ar: 'اطلب رفع الكتفين (shrug) مقابل مقاومة، وقارن الجهتين', en: 'Shrug the shoulders against resistance' },
+  digastric:   { ar: 'اطلب فتح الفم مقابل مقاومة تحت الذقن',                   en: 'Open the mouth against resistance under the chin' },
+  sternohyoid: { ar: 'اطلب بلع اللعاب وراقب حركة العظم اللامي والحنجرة',       en: 'Swallow and watch the hyoid and larynx move' },
+  scaleneAnt:  { ar: 'في الاختبار السريري تُلمس العضلة خلف الـ SCM أثناء الشهيق العميق', en: 'Palpate behind SCM during deep inspiration' },
+  masseter:    { ar: 'اطلب صرّ الأسنان وتحسّس العضلة على زاوية الفك',          en: 'Clench the teeth and palpate' },
+  temporalis:  { ar: 'اطلب صرّ الأسنان وتحسّس العضلة فوق الصدغ',               en: 'Clench the teeth and palpate' },
+};
+
+export const FACIAL_PALSY_COMPARISON: readonly {
+  feature: string;
+  umn: string;
+  lmn: string;
+}[] = [
+  { feature: 'Lesion site',
+    umn: 'Above the facial nucleus (contralateral motor cortex / corticobulbar tract)',
+    lmn: 'Facial nucleus or the nerve itself (pons, internal acoustic meatus, facial canal, parotid)' },
+  { feature: 'Forehead',
+    umn: 'Spared (bilateral cortical input to the upper face)',
+    lmn: 'Paralysed' },
+  { feature: 'Lower face',
+    umn: 'Paralysed on the side opposite the lesion',
+    lmn: 'Paralysed on the same side as the lesion' },
+  { feature: 'Eye closure',
+    umn: 'Mostly preserved',
+    lmn: 'Lost (lagophthalmos); Bell’s phenomenon on attempted closure' },
+  { feature: 'Typical cause',
+    umn: 'Stroke',
+    lmn: 'Bell’s palsy, parotid tumour or surgery, trauma, Ramsay Hunt syndrome' },
+  { feature: 'Other signs (depend on lesion level)',
+    umn: 'Usually accompanied by limb weakness',
+    lmn: 'Loss of taste in the anterior two-thirds of the tongue (chorda tympani), hyperacusis (nerve to stapedius), reduced lacrimation' },
+];
+
+export function validateAtlas(): string[] {
+  const problems: string[] = [];
+  const ids = new Set<string>();
+
+  for (const m of MUSCLES) {
+    if (ids.has(m.id)) problems.push(`duplicate id: ${m.id}`);
+    ids.add(m.id);
+
+    if (!m.nerve.trim()) problems.push(`${m.id}: missing nerve`);
+
+    const g = m.geometry;
+    const fans = g.type === 'fan' ? [g] : g.type === 'multi' ? g.parts : [];
+    for (const f of fans) {
+      if (f.A.length !== 8 || f.B.length !== 8) {
+        problems.push(`${m.id}: fan geometry needs 8 numbers in A and B`);
+      }
+    }
+    if (g.type === 'multi' && g.parts.length < 2) problems.push(`${m.id}: multi geometry needs 2 or more parts`);
+    if (g.type === 'ring' && (g.irx >= g.rx || g.iry >= g.ry)) {
+      problems.push(`${m.id}: ring inner radius must be smaller than outer radius`);
+    }
+  }
+
+  const seen = new Map<string, number>();
+  for (const g of MUSCLE_GROUPS) {
+    for (const id of g.ids) {
+      if (!ids.has(id)) problems.push(`group "${g.labelEn}" references unknown muscle: ${id}`);
+      seen.set(id, (seen.get(id) ?? 0) + 1);
+    }
+  }
+  for (const id of ids) {
+    const c = seen.get(id) ?? 0;
+    if (c === 0) problems.push(`${id}: not in any group`);
+    if (c > 1) problems.push(`${id}: appears in ${c} groups`);
+  }
+
+  return problems;
+}
+
+if (process.env.NODE_ENV !== 'production') {
+  const issues = validateAtlas();
+  if (issues.length) console.warn('[anatomy] data issues:\n' + issues.join('\n'));
+}
+
+===lib/anatomy-geometry.ts===
+// lib/anatomy-geometry.ts
+import { MUSCLES, type FanGeometry, type Muscle, type MultiGeometry, type RingGeometry } from './anatomy-data';
+
+export interface BuiltGeometry {
+  d: string;
+  dark: string;
+  light: string;
+  evenodd: boolean;
+}
+
+const f1 = (n: number): number => Math.round(n * 10) / 10;
+const at = (a: readonly number[], i: number): number => a[i] ?? 0;
+
+function fan(g: FanGeometry): BuiltGeometry {
+  const { A, B, n, bulge } = g;
+  let dark = '';
+  let light = '';
+
+  for (let i = 1; i < n; i++) {
+    const u = i / n;
+    const p: number[] = [];
+    for (let k = 0; k < 8; k++) p.push(f1(at(A, k) + (at(B, k) - at(A, k)) * u));
+    const seg = `M${p[0]},${p[1]}C${p[2]},${p[3]} ${p[4]},${p[5]} ${p[6]},${p[7]}`;
+    if (i % 2) dark += seg;
+    else light += seg;
+  }
+
+  const cap = (
+    px: number, py: number, qx: number, qy: number,
+    pcx: number, pcy: number, qcx: number, qcy: number,
+  ): string => {
+    const mx = (px + qx) / 2;
+    const my = (py + qy) / 2;
+    const cx = (pcx + qcx) / 2;
+    const cy = (pcy + qcy) / 2;
+    const dx = mx - cx;
+    const dy = my - cy;
+    const len = Math.hypot(dx, dy) || 1;
+    const w = Math.hypot(px - qx, py - qy);
+    const off = w < 2 ? 0 : 2 * bulge;
+    return `${f1(mx + (dx / len) * off)},${f1(my + (dy / len) * off)}`;
+  };
+
+  const end = cap(at(A, 6), at(A, 7), at(B, 6), at(B, 7), at(A, 4), at(A, 5), at(B, 4), at(B, 5));
+  const start = cap(at(B, 0), at(B, 1), at(A, 0), at(A, 1), at(B, 2), at(B, 3), at(A, 2), at(A, 3));
+
+  const d =
+    `M${A[0]},${A[1]}C${A[2]},${A[3]} ${A[4]},${A[5]} ${A[6]},${A[7]}` +
+    `Q${end} ${B[6]},${B[7]}` +
+    `C${B[4]},${B[5]} ${B[2]},${B[3]} ${B[0]},${B[1]}` +
+    `Q${start} ${A[0]},${A[1]}Z`;
+
+  return { d, dark, light, evenodd: false };
+}
+
+function ell(cx: number, cy: number, rx: number, ry: number): string {
+  return (
+    `M${f1(cx - rx)},${f1(cy)}` +
+    `a${f1(rx)},${f1(ry)} 0 1,0 ${f1(2 * rx)},0` +
+    `a${f1(rx)},${f1(ry)} 0 1,0 ${f1(-2 * rx)},0Z`
+  );
+}
+
+function ring(g: RingGeometry): BuiltGeometry {
+  let dark = '';
+  let light = '';
+  for (let i = 1; i < g.n; i++) {
+    const u = i / g.n;
+    const p = ell(g.cx, g.cy, g.irx + (g.rx - g.irx) * u, g.iry + (g.ry - g.iry) * u);
+    if (i % 2) dark += p;
+    else light += p;
+  }
+  return {
+    d: ell(g.cx, g.cy, g.rx, g.ry) + ell(g.cx, g.cy, g.irx, g.iry),
+    dark,
+    light,
+    evenodd: true,
+  };
+}
+
+function multi(g: MultiGeometry): BuiltGeometry {
+  const built = g.parts.map(fan);
+  return {
+    d: built.map((b) => b.d).join(''),
+    dark: built.map((b) => b.dark).join(''),
+    light: built.map((b) => b.light).join(''),
+    evenodd: false,
+  };
+}
+
+export function buildGeometry(m: Muscle): BuiltGeometry {
+  const g = m.geometry;
+  if (g.type === 'ring') return ring(g);
+  if (g.type === 'multi') return multi(g);
+  return fan(g);
+}
+
+export const GEOMETRY: Readonly<Record<string, BuiltGeometry>> = (() => {
+  const out: Record<string, BuiltGeometry> = {};
+  for (const m of MUSCLES) out[m.id] = buildGeometry(m);
+  return out;
+})();
+
+===lib/anatomy-layers.ts===
+// lib/anatomy-layers.ts
+/** عمق كل عضلة من السطح إلى العمق (للتقشير في وضع 3D): 1 سطحية … 4 الأعمق */
+export type Depth = 1 | 2 | 3 | 4;
+
+export const DEPTH_LABEL: Readonly<Record<Depth, string>> = {
+  1: 'سطحية',
+  2: 'متوسطة',
+  3: 'عميقة',
+  4: 'الأعمق',
+};
+
+export const MUSCLE_DEPTH: Readonly<Record<string, Depth>> = {
+  platysma: 1, frontalis: 1, orbOculi: 1, orbOris: 1, nasalis: 1, procerus: 1,
+  lls: 1, llsan: 1, lao: 2, zmin: 1, zmaj: 1, risorius: 1, dao: 1, dli: 1, mentalis: 1, depSepti: 2,
+  buccinator: 2, masseter: 1, temporalis: 2, corrugator: 2,
+  scm: 1, trapezius: 1,
+  digastric: 2, stylohyoid: 2, mylohyoid: 2, omohyoid: 2, sternohyoid: 2,
+  spleniusCapitis: 2, levatorScapulae: 2,
+  geniohyoid: 3, thyrohyoid: 3, sternothyroid: 3, scaleneAnt: 3, scaleneMid: 3, scalenePost: 3,
+  longusCapitis: 4, longusColli: 4, rcAnterior: 4, rcLateralis: 4,
+};
+
+/** عضلات السياق (غير المدرجة في الأطلس) */
+export function contextDepth(name: string): Depth {
+  if (/pterygoid|rectus|oblique|levator palpebrae/.test(name) && !/capitis/.test(name)) return 3;
+  if (/capitis posterior/.test(name)) return 4;
+  return 3;
+}
+
+===lib/anatomy-learn.ts===
+// lib/anatomy-learn.ts
+/** حالة التعلّم الموحّدة: التقدّم، المفضّلة، الملاحظات، وبطاقات المراجعة المتباعدة. تُحفَظ محلياً على الجهاز. */
+import { MUSCLES, MUSCLE_BY_ID } from './anatomy-data';
+import { grade as srsGrade, isDue, newCard, type Grade, type SrsState } from './anatomy-srs';
+
+export interface MuscleProgress {
+  seen: number;
+  correct: number;
+  wrong: number;
+  /** مستوى الإتقان 0..5 */
+  mastery: number;
+  last: number;
+}
+
+export interface LearnState {
+  progress: Record<string, MuscleProgress>;
+  favorites: string[];
+  notes: Record<string, string>;
+  srs: SrsState;
+}
+
+export const LEARN_KEY = 'anatomy-learn';
+export const LEARN_VERSION = 2;
+
+export const DEFAULT_LEARN: LearnState = { progress: {}, favorites: [], notes: {}, srs: { cards: {} } };
+
+const EMPTY: MuscleProgress = { seen: 0, correct: 0, wrong: 0, mastery: 0, last: 0 };
+
+export function markSeen(s: LearnState, id: string): LearnState {
+  if (!MUSCLE_BY_ID[id]) return s;
+  const p = s.progress[id] ?? EMPTY;
+  return { ...s, progress: { ...s.progress, [id]: { ...p, seen: p.seen + 1, last: Date.now() } } };
+}
+
+function masteryOf(correct: number, wrong: number): number {
+  const total = correct + wrong;
+  if (total === 0) return 0;
+  return Math.round((correct / total) * Math.min(1, total / 5) * 5);
+}
+
+/**
+ * يسجّل إجابة ويقيّم بطاقة المراجعة مرة واحدة فقط.
+ * `g` اختياري: من البطاقات يُمرَّر تقييم المستخدم، ومن الاختبار تُستخدم درجة افتراضية (4 صحيح، 1 خطأ).
+ */
+export function recordAnswer(s: LearnState, id: string, correct: boolean, g?: Grade): LearnState {
+  if (!MUSCLE_BY_ID[id]) return s;
+  const p = s.progress[id] ?? EMPTY;
+  const c = p.correct + (correct ? 1 : 0);
+  const w = p.wrong + (correct ? 0 : 1);
+  const progress: MuscleProgress = { ...p, correct: c, wrong: w, mastery: masteryOf(c, w), last: Date.now() };
+  const card = s.srs.cards[id] ?? newCard(id);
+  const updated = srsGrade(card, g ?? (correct ? 4 : 1));
+  return { ...s, progress: { ...s.progress, [id]: progress }, srs: { cards: { ...s.srs.cards, [id]: updated } } };
+}
+
+export function toggleFavorite(s: LearnState, id: string): LearnState {
+  const has = s.favorites.includes(id);
+  return { ...s, favorites: has ? s.favorites.filter((x) => x !== id) : [...s.favorites, id] };
+}
+
+export function setNote(s: LearnState, id: string, note: string): LearnState {
+  const notes = { ...s.notes };
+  const t = note.trim();
+  if (t) notes[id] = t;
+  else delete notes[id];
+  return { ...s, notes };
+}
+
+export interface Stats {
+  total: number;
+  seen: number;
+  mastered: number;
+  accuracy: number;
+  due: number;
+  favorites: number;
+  notes: number;
+  perRegion: Record<string, { total: number; mastered: number }>;
+}
+
+export function computeStats(s: LearnState): Stats {
+  let seen = 0;
+  let mastered = 0;
+  let correct = 0;
+  let wrong = 0;
+  const perRegion: Stats['perRegion'] = {};
+  for (const m of MUSCLES) {
+    const region = m.region ?? 'Other';
+    const r = (perRegion[region] ??= { total: 0, mastered: 0 });
+    r.total++;
+    const p = s.progress[m.id];
+    if (!p) continue;
+    if (p.seen > 0 || p.correct + p.wrong > 0) seen++;
+    if (p.mastery >= 4) {
+      mastered++;
+      r.mastered++;
+    }
+    correct += p.correct;
+    wrong += p.wrong;
+  }
+  return {
+    total: MUSCLES.length,
+    seen,
+    mastered,
+    accuracy: correct + wrong > 0 ? correct / (correct + wrong) : 0,
+    due: dueForReview(s).length,
+    favorites: s.favorites.length,
+    notes: Object.keys(s.notes).length,
+    perRegion,
+  };
+}
+
+/** بطاقات استحقّت مراجعتها (الأقدم أولاً) */
+export function dueForReview(s: LearnState): string[] {
+  return Object.values(s.srs.cards)
+    .filter((c) => MUSCLE_BY_ID[c.id] && isDue(c))
+    .sort((a, b) => a.due - b.due)
+    .map((c) => c.id);
+}
+
+/** عضلات لم تُراجَع بعد (لبدء الدراسة قبل أي اختبار) */
+export function newForStudy(s: LearnState, limit: number): string[] {
+  return MUSCLES.filter((m) => !s.srs.cards[m.id]).map((m) => m.id).slice(0, limit);
+}
+
+export function buildStudyQueue(s: LearnState, size = 20): string[] {
+  const due = dueForReview(s).slice(0, size);
+  return [...due, ...newForStudy(s, Math.max(0, Math.min(10, size - due.length)))];
+}
+
+export function exportLearn(s: LearnState): string {
+  return JSON.stringify({ version: LEARN_VERSION, exportedAt: Date.now(), data: s }, null, 2);
+}
+
+export function importLearn(json: string): LearnState | null {
+  try {
+    const parsed = JSON.parse(json) as { data?: Partial<LearnState> };
+    const d = parsed.data;
+    if (!d || typeof d !== 'object') return null;
+    return {
+      progress: d.progress ?? {},
+      favorites: Array.isArray(d.favorites) ? d.favorites.filter((id) => MUSCLE_BY_ID[id]) : [],
+      notes: d.notes ?? {},
+      srs: d.srs ?? { cards: {} },
+    };
+  } catch {
+    return null;
+  }
+}
+
+===lib/anatomy-meshes.ts===
+// lib/anatomy-meshes.ts
+/**
+ * ربط عضلات الأطلس (id) بقطع نموذج الـ 3D داخل public/atlas/head-neck.glb.
+ * مولَّد من النموذج نفسه — الأسماء بدون البادئة (m| للعضلات، b| للعظام).
+ */
+export const MUSCLE_MESHES: Readonly<Record<string, readonly string[]>> = {
+  "frontalis": [
+    "left frontalis",
+    "right frontalis"
+  ],
+  "corrugator": [
+    "left corrugator supercilii",
+    "right corrugator supercilii"
+  ],
+  "procerus": [
+    "left procerus",
+    "right procerus"
+  ],
+  "orbOculi": [
+    "left orbital part of orbicularis oculi",
+    "right orbital part of orbicularis oculi",
+    "left palpebral part of orbicularis oculi",
+    "right palpebral part of orbicularis oculi"
+  ],
+  "nasalis": [
+    "left nasalis",
+    "right nasalis"
+  ],
+  "lls": [
+    "left levator labii superioris",
+    "right levator labii superioris"
+  ],
+  "zmin": [
+    "left zygomaticus minor",
+    "right zygomaticus minor"
+  ],
+  "zmaj": [
+    "left zygomaticus major",
+    "right zygomaticus major"
+  ],
+  "risorius": [
+    "left risorius",
+    "right risorius"
+  ],
+  "dao": [
+    "left depressor anguli oris",
+    "right depressor anguli oris"
+  ],
+  "dli": [
+    "left depressor labii inferioris",
+    "right depressor labii inferioris"
+  ],
+  "mentalis": [
+    "left mentalis",
+    "right mentalis"
+  ],
+  "orbOris": [
+    "left orbicularis oris",
+    "right orbicularis oris"
+  ],
+  "masseter": [
+    "left superficial part of masseter",
+    "right superficial part of masseter",
+    "left deep part of masseter",
+    "right deep part of masseter"
+  ],
+  "temporalis": [
+    "left temporalis",
+    "right temporalis"
+  ],
+  "platysma": [
+    "left platysma",
+    "right platysma"
+  ],
+  "scm": [
+    "left sternocleidomastoid",
+    "right sternocleidomastoid"
+  ],
+  "trapezius": [
+    "ascending part of left trapezius",
+    "ascending part of right trapezius",
+    "descending part of left trapezius",
+    "descending part of right trapezius",
+    "transverse part of left trapezius",
+    "transverse part of right trapezius"
+  ],
+  "digastric": [
+    "left digastric",
+    "left digastric (2)",
+    "left digastric (3)",
+    "right digastric",
+    "right digastric (2)",
+    "right intermediate tendon"
+  ],
+  "stylohyoid": [
+    "left stylohyoid",
+    "right stylohyoid"
+  ],
+  "mylohyoid": [
+    "left mylohyoid",
+    "right mylohyoid"
+  ],
+  "geniohyoid": [
+    "left geniohyoid",
+    "right geniohyoid"
+  ],
+  "omohyoid": [
+    "left omohyoid",
+    "right omohyoid"
+  ],
+  "sternohyoid": [
+    "left sternohyoid",
+    "right sternohyoid"
+  ],
+  "thyrohyoid": [
+    "left thyrohyoid",
+    "right thyrohyoid"
+  ],
+  "sternothyroid": [
+    "left sternothyroid",
+    "right sternothyroid"
+  ],
+  "spleniusCapitis": [
+    "left splenius capitis",
+    "right splenius capitis"
+  ],
+  "levatorScapulae": [
+    "left levator scapulae",
+    "right levator scapulae"
+  ],
+  "scaleneAnt": [
+    "left scalenus anterior",
+    "right scalenus anterior"
+  ],
+  "scaleneMid": [
+    "left scalenus medius",
+    "right scalenus medius"
+  ],
+  "scalenePost": [
+    "left scalenus posterior",
+    "right scalenus posterior"
+  ],
+  "rcAnterior": [
+    "left rectus capitis anterior",
+    "right rectus capitis anterior"
+  ],
+  "rcLateralis": [
+    "left rectus capitis lateralis",
+    "right rectus capitis lateralis"
+  ],
+  "longusCapitis": [
+    "left longus capitis",
+    "right longus capitis"
+  ],
+  "longusColli": [
+    "inferior oblique part of left longus colli",
+    "superior oblique part of left longus colli",
+    "vertical intermediate part of left longus colli"
+  ]
+};
+
+/** عضلات موجودة في النموذج لكنها ليست في بيانات الأطلس (تظهر كسياق رمادي) */
+export const CONTEXT_MUSCLES: readonly string[] = [
+  "abdominal part of left pectoralis major",
+  "abdominal part of right pectoralis major",
+  "acromial part of left deltoid",
+  "acromial part of right deltoid",
+  "clavicular part of left deltoid",
+  "clavicular part of left pectoralis major",
+  "clavicular part of right deltoid",
+  "clavicular part of right pectoralis major",
+  "left inferior oblique",
+  "left inferior rectus",
+  "left lateral rectus",
+  "left levator palpebrae superioris",
+  "left longissimus capitis",
+  "left medial rectus",
+  "left pectoralis minor",
+  "left rectus capitis posterior major",
+  "left rectus capitis posterior minor",
+  "left serratus anterior",
+  "left splenius cervicis",
+  "left subclavius",
+  "left superior oblique",
+  "left superior rectus",
+  "right inferior oblique",
+  "right inferior rectus",
+  "right lateral rectus",
+  "right levator palpebrae superioris",
+  "right longissimus capitis",
+  "right medial rectus",
+  "right pectoralis minor",
+  "right rectus capitis posterior major",
+  "right rectus capitis posterior minor",
+  "right serratus anterior",
+  "right splenius cervicis",
+  "right subclavius",
+  "right superior oblique",
+  "right superior rectus",
+  "spinal part of left deltoid",
+  "spinal part of right deltoid",
+  "sternocostal part of left pectoralis major",
+  "sternocostal part of right pectoralis major",
+  "left medial pterygoid",
+  "right medial pterygoid",
+  "left inferior head of lateral pterygoid",
+  "right inferior head of lateral pterygoid",
+  "left superior head of lateral pterygoid",
+  "right superior head of lateral pterygoid"
+];
+
+/** عظام تتحرك مع الرأس (الجمجمة والفك الأسفل والفقرة الأولى) */
+export const HEAD_BONES: readonly string[] = [
+  "atlas",
+  "ethmoid",
+  "frontal bone",
+  "left lacrimal bone",
+  "left maxilla",
+  "left nasal bone",
+  "left palatine bone",
+  "left parietal bone",
+  "left temporal bone",
+  "left zygomatic bone",
+  "mandible",
+  "occipital bone",
+  "right lacrimal bone",
+  "right maxilla",
+  "right nasal bone",
+  "right palatine bone",
+  "right parietal bone",
+  "right temporal bone",
+  "right zygomatic bone",
+  "sphenoid bone",
+  "vomer"
+];
+
+===lib/anatomy-neck-notes.ts===
+// lib/anatomy-neck-notes.ts
+/**
+ * محتوى ملزمة «Anatomy of the Neck» (Dr. Munqith Mazin، كلية الطب، جامعة العميد).
+ * النص الإنجليزي مأخوذ من الملزمة؛ الملخّص العربي للتسهيل فقط.
+ */
+
+export interface NeckTopic {
+  id: string;
+  en: string;
+  ar: string;
+  /** نقاط إنجليزية من الملزمة */
+  points: readonly string[];
+  /** ملخص عربي قصير */
+  gist: string;
+}
+
+export const NECK_OBJECTIVES: readonly string[] = [
+  'Define the neck and list its boundaries.',
+  'Classify the fascial compartments of the neck.',
+  'Describe the cervical fascia.',
+  'Demonstrate the superficial cervical veins.',
+  'Illustrate the cervical triangles.',
+  'Describe the muscles of the neck.',
+];
+
+export const NECK_TOPICS: readonly NeckTopic[] = [
+  {
+    id: 'boundaries',
+    en: 'The neck and its boundaries',
+    ar: 'الرقبة وحدودها',
+    points: [
+      'The neck is a tube providing continuity from the head to the trunk.',
+      'It extends anteriorly from the lower border of the mandible to the upper surface of the manubrium of sternum.',
+      'Posteriorly it extends from the superior nuchal line on the occipital bone of the skull to the intervertebral disc between the C7 and T1 vertebrae.',
+    ],
+    gist: 'أنبوب يصل الرأس بالجذع: من الحافة السفلى للفك إلى أعلى مقبض القص أمامياً، ومن الخط القفوي العلوي إلى القرص بين C7 وT1 خلفياً.',
+  },
+  {
+    id: 'compartments',
+    en: 'Compartments of the neck',
+    ar: 'حجرات الرقبة',
+    points: [
+      'Visceral compartment: anterior; contains parts of the digestive and respiratory systems, and several endocrine glands.',
+      'Vertebral compartment: posterior; contains the cervical vertebrae, spinal cord, cervical nerves, and muscles associated with the vertebral column.',
+      'Two vascular compartments: lateral; contain the major blood vessels and the vagus nerve.',
+    ],
+    gist: 'أربع حجرات: حشوية أمامية، وفقرية خلفية، ووعائيتان جانبيتان.',
+  },
+  {
+    id: 'fascia',
+    en: 'Fascia of the neck',
+    ar: 'لفافة الرقبة',
+    points: [
+      'The superficial fascia in the neck contains a thin sheet of muscle (Platysma).',
+      'Investing layer: completely surrounds the neck. Attaches posteriorly to the ligamentum nuchae and the spinous process of C7; anteriorly surrounds the infrahyoid muscles; superiorly to the external occipital protuberance and superior nuchal line; laterally to the mastoid process and zygomatic arch; inferiorly to the spine of the scapula, the acromion, the clavicle, and the manubrium of sternum.',
+      'Prevertebral layer: a cylindrical layer surrounding the vertebral column and its muscles (prevertebral muscles, scalenes, deep muscles of the back). Attaches superiorly to the base of the skull and extends inferolaterally to surround the brachial plexus and subclavian artery as the axillary sheath.',
+      'Pretracheal layer: surrounds the trachea, esophagus, and thyroid gland. Begins superiorly at the hyoid bone and ends inferiorly in the upper thoracic cavity.',
+      'Carotid sheath: a column of fascia surrounding the common carotid artery, the internal carotid artery, the internal jugular vein, and the vagus nerve.',
+    ],
+    gist: 'السطحية فيها الـ platysma. العميقة أربع طبقات: investing وprevertebral وpretracheal وcarotid sheath.',
+  },
+  {
+    id: 'veins',
+    en: 'Superficial venous drainage',
+    ar: 'الأوردة السطحية',
+    points: [
+      'External jugular vein: formed posterior to the angle of the mandible as the posterior auricular vein and the retromandibular vein join.',
+      'Anterior jugular veins: paired venous channels draining the anterior aspect of the neck. They begin above the hyoid bone and extend downward on either side of the midline.',
+      'Both veins pierce the investing layer of cervical fascia to enter the subclavian vein inferiorly.',
+    ],
+    gist: 'الوريد الوداجي الخارجي ينشأ من التقاء الأذني الخلفي والخلف-فكي، والأمامي يبدأ فوق العظم اللامي. كلاهما يخترق الطبقة المغلِّفة ويصب في تحت الترقوة.',
+  },
+  {
+    id: 'muscles',
+    en: 'Muscles of the neck',
+    ar: 'عضلات الرقبة',
+    points: [
+      'The muscles of the neck are responsible for head movements, stabilizing the upper region of the body, assisting in swallowing, helping to elevate the rib cage during inhalation, and more.',
+    ],
+    gist: 'تحرّك الرأس، وتثبّت الجزء العلوي من الجسم، وتساعد في البلع، وترفع القفص الصدري أثناء الشهيق.',
+  },
+];
+
+export interface Triangle {
+  id: string;
+  en: string;
+  ar: string;
+  parent: 'anterior' | 'posterior';
+  boundaries: string;
+  contents: readonly string[];
+  /** العضلات التي تُظهَر في الأطلس عند اختيار المثلث */
+  muscles: readonly string[];
+}
+
+export const TRIANGLES: readonly Triangle[] = [
+  {
+    id: 'anterior',
+    en: 'Anterior triangle',
+    ar: 'المثلث الأمامي',
+    parent: 'anterior',
+    boundaries: 'Sternocleidomastoid, inferior border of mandible and midline of the neck.',
+    contents: ['Submental, submandibular, carotid and muscular triangles'],
+    muscles: ['scm', 'digastric', 'stylohyoid', 'mylohyoid', 'geniohyoid', 'omohyoid', 'sternohyoid', 'thyrohyoid', 'sternothyroid'],
+  },
+  {
+    id: 'submental',
+    en: 'Submental triangle',
+    ar: 'المثلث الذقني',
+    parent: 'anterior',
+    boundaries: 'Outlined by the hyoid bone inferiorly, the anterior belly of the digastric muscle laterally, and the midline.',
+    contents: ['Submental lymph nodes', 'Anterior jugular veins'],
+    muscles: ['digastric', 'mylohyoid', 'geniohyoid'],
+  },
+  {
+    id: 'submandibular',
+    en: 'Submandibular triangle',
+    ar: 'المثلث تحت الفك',
+    parent: 'anterior',
+    boundaries: 'Outlined by the inferior border of the mandible superiorly and the anterior and posterior bellies of the digastric muscle inferiorly.',
+    contents: ['Submandibular salivary gland', 'Facial blood vessels', 'Submandibular lymph nodes'],
+    muscles: ['digastric', 'mylohyoid', 'stylohyoid'],
+  },
+  {
+    id: 'carotid',
+    en: 'Carotid triangle',
+    ar: 'المثلث السباتي',
+    parent: 'anterior',
+    boundaries:
+      'Outlined by the superior belly of the omohyoid muscle anteroinferiorly, the stylohyoid muscle and posterior belly of the digastric superiorly, and the anterior border of the sternocleidomastoid muscle posteriorly.',
+    contents: [
+      'Carotid sheath (carotid artery, internal jugular vein and vagus nerve)',
+      'Glossopharyngeal nerve',
+      'Hypoglossal nerve',
+      'Deep cervical lymph nodes',
+    ],
+    muscles: ['omohyoid', 'stylohyoid', 'digastric', 'scm'],
+  },
+  {
+    id: 'muscular',
+    en: 'Muscular triangle',
+    ar: 'المثلث العضلي',
+    parent: 'anterior',
+    boundaries:
+      'Outlined by the hyoid bone superiorly, the superior belly of the omohyoid muscle and the anterior border of the sternocleidomastoid muscle laterally, and the midline.',
+    contents: ['Infrahyoid muscles', 'Pharynx', 'Larynx', 'Thyroid and parathyroid glands'],
+    muscles: ['omohyoid', 'sternohyoid', 'thyrohyoid', 'sternothyroid', 'scm'],
+  },
+  {
+    id: 'posterior',
+    en: 'Posterior triangle',
+    ar: 'المثلث الخلفي',
+    parent: 'posterior',
+    boundaries: 'Sternocleidomastoid, trapezius and middle third of clavicle.',
+    contents: ['Muscles of the floor: splenius capitis, levator scapulae, scalenus posterior, scalenus medius, scalenus anterior'],
+    muscles: ['scm', 'trapezius', 'spleniusCapitis', 'levatorScapulae', 'scalenePost', 'scaleneMid', 'scaleneAnt', 'omohyoid'],
+  },
+];
+
+===lib/anatomy-pose.ts===
+// lib/anatomy-pose.ts
+export type Pose = Readonly<Record<string, number>>;
+
+const r2 = (x: number): number => Math.round(x * 100) / 100;
+const clamp01 = (x: number): number => Math.max(0, Math.min(1, x));
+
+export function scalePose(pose: Pose, k: number): Pose {
+  const out: Record<string, number> = {};
+  for (const key of Object.keys(pose)) out[key] = (pose[key] ?? 0) * k;
+  return out;
+}
+
+export function combinePoses(
+  parts: readonly { pose: Pose; w?: number }[],
+  extra: Pose = {},
+): Pose {
+  const out: Record<string, number> = {};
+  for (const { pose, w = 1 } of parts) {
+    for (const key of Object.keys(pose)) {
+      const v = (pose[key] ?? 0) * w;
+      if (Math.abs(v) > Math.abs(out[key] ?? 0)) out[key] = v;
+    }
+  }
+  for (const key of Object.keys(extra)) out[key] = extra[key] ?? 0;
+  return out;
+}
+
+export interface FaceShape {
+  head: string;
+  eyeL: string;
+  eyeR: string;
+  irisOpacity: number;
+  browL: string;
+  browR: string;
+  noseWingL: string;
+  noseWingR: string;
+  noseBase: string;
+  nostril: { lx: number; rx: number; y: number; rad: number };
+  mouth: string;
+  nlfL: string;
+  nlfR: string;
+  nlfOpacity: number;
+  marL: string;
+  marR: string;
+  marOpacity: number;
+  purse: readonly [string, string, string, string];
+  /** حركة الرأس: يُطبَّق على كل رسم الوجه في المعاينة */
+  headT: string;
+  /** رفع الكتفين (0..1) */
+  shr: number;
+  /** رفع/خفض العظم اللامي (+ لأعلى) */
+  hy: number;
+  op: {
+    purse: number; forehead: number; glabella: number; nose: number; squint: number;
+    temple: number; clench: number; cheek: number; chin: number; neck: number;
+  };
+}
+
+export function computeFace(P: Pose): FaceShape {
+  const g = (k: string): number => P[k] ?? 0;
+
+  const hy = r2(222 + g('jaw') * 10);
+  const head =
+    `M110,14 C62,14 40,52 40,100 C40,142 50,176 68,198 C80,212 96,${hy} 110,${hy} ` +
+    `C124,${hy} 140,212 152,198 C170,176 180,142 180,100 C180,52 158,14 110,14 Z`;
+
+  const e = g('eye');
+  const eyePath = (cx: number): string =>
+    `M${cx - 14},98 Q${cx},${r2(82 + 22 * e)} ${cx + 14},98 Q${cx},${r2(112 - 8 * e)} ${cx - 14},98 Z`;
+
+  const br = g('br');
+  const bi = g('bi');
+  const bd = g('bd');
+  const A: [number, number] = [124 - 7 * bi, 80 + 6 * bi + 8 * bd - 5 * br];
+  const B: [number, number] = [140, 71 - 11 * br + 8 * bd + 3 * bi];
+  const C: [number, number] = [156, 79 - 10 * br + 7 * bd - bi];
+
+  const wf = g('flare') * 4;
+  const wy = -3 * g('lu') + 3 * g('td');
+
+  const sm = g('smile');
+  const pu = g('purse');
+  const cy = 170 - 7 * sm;
+  const hw = 20 + 6 * g('out') - 7 * pu + 3 * Math.max(sm, 0);
+  const Lx = 110 - hw;
+  const Rx = 110 + hw;
+  const ty = 166 - 4 * g('lu') - 3 * pu - Math.max(sm, 0);
+  const by = 174 + 10 * g('ld') + 12 * g('jaw') - 3 * g('lup') + 3 * pu;
+
+  const nlf = g('nlf');
+
+  // حركات الرأس (tilt: ميلان جانبي، turn: دوران، fx: انحناء للأمام/تمدد للخلف)
+  const tilt = g('tilt');
+  const turn = g('turn');
+  const fx = g('fx');
+  const headT =
+    `translate(${r2(110 + turn * 12)} ${r2(215 + fx * 7)}) rotate(${r2(tilt * 14)}) ` +
+    `scale(${r2(1 - 0.05 * Math.abs(turn))} ${r2(1 - 0.03 * Math.abs(fx))}) translate(-110 -215)`;
+
+  return {
+    headT,
+    shr: clamp01(g('shr')),
+    hy: Math.max(-1, Math.min(1, g('hy'))),
+    head,
+    eyeL: eyePath(80),
+    eyeR: eyePath(140),
+    irisOpacity: clamp01(1 - e < 0.15 ? 0 : 1 - e),
+    browR: `M${r2(A[0])},${r2(A[1])} Q${B[0]},${r2(B[1])} ${C[0]},${r2(C[1])}`,
+    browL: `M${r2(220 - A[0])},${r2(A[1])} Q${220 - B[0]},${r2(B[1])} ${r2(220 - C[0])},${r2(C[1])}`,
+    noseWingR: `M122,146 Q${r2(130 + wf)},${r2(152 + wy)} ${r2(126 + wf)},${r2(160 + wy)}`,
+    noseWingL: `M98,146 Q${r2(90 - wf)},${r2(152 + wy)} ${r2(94 - wf)},${r2(160 + wy)}`,
+    noseBase: `M${r2(94 - wf)},${r2(160 + wy)} Q110,${r2(168 + wy)} ${r2(126 + wf)},${r2(160 + wy)}`,
+    nostril: { lx: r2(102 - wf * 0.6), rx: r2(118 + wf * 0.6), y: r2(158.5 + wy), rad: r2(3 + g('flare') * 1.5) },
+    mouth: `M${r2(Lx)},${r2(cy)} Q110,${r2(ty)} ${r2(Rx)},${r2(cy)} Q110,${r2(by)} ${r2(Lx)},${r2(cy)} Z`,
+    nlfR: `M124,152 Q${r2(134 + 3 * nlf)},162 ${r2(Rx + 3)},${r2(cy - 3)}`,
+    nlfL: `M96,152 Q${r2(86 - 3 * nlf)},162 ${r2(Lx - 3)},${r2(cy - 3)}`,
+    nlfOpacity: clamp01(0.3 + 0.55 * nlf),
+    marR: `M${r2(Rx)},${r2(cy + 3)} Q${r2(Rx + 2)},${r2(cy + 12)} ${r2(Rx - 1)},${r2(cy + 22)}`,
+    marL: `M${r2(Lx)},${r2(cy + 3)} Q${r2(Lx - 2)},${r2(cy + 12)} ${r2(Lx + 1)},${r2(cy + 22)}`,
+    marOpacity: clamp01(g('mar')),
+    purse: [
+      `M${r2(Lx - 3)},${r2(cy - 2)} l-6,-3`,
+      `M${r2(Lx - 3)},${r2(cy + 2)} l-6,3`,
+      `M${r2(Rx + 3)},${r2(cy - 2)} l6,-3`,
+      `M${r2(Rx + 3)},${r2(cy + 2)} l6,3`,
+    ],
+    op: {
+      purse: clamp01(pu),
+      forehead: clamp01(g('fh')),
+      glabella: clamp01(g('gl')),
+      nose: clamp01(g('nr')),
+      squint: clamp01(g('sq')),
+      temple: clamp01(g('tb')),
+      clench: clamp01(g('cl')),
+      cheek: clamp01(g('ck')),
+      chin: clamp01(g('ped')),
+      neck: clamp01(g('nk')),
+    },
+  };
+}
+
+===lib/anatomy-quiz.ts===
+// lib/anatomy-quiz.ts
+import { MUSCLES, MUSCLE_BY_ID, NECK_MUSCLE_IDS } from './anatomy-data';
+import { FACIAL_BRANCHES, branchesOf } from './anatomy-extras';
+import { TRIANGLES } from './anatomy-neck-notes';
+
+export type QuestionKind = 'locate' | 'identify' | 'action' | 'attach' | 'branch' | 'nerve' | 'boundary' | 'contents';
+export type QuizScope = 'all' | 'face' | 'neck';
+
+export interface Question {
+  kind: QuestionKind;
+  /** العضلة المعنية (أو المثلث في أسئلة المثلثات: يُخزَّن في ref) */
+  id: string;
+  options: string[];
+  correct: string;
+  /** معرّف المثلث لأسئلة boundary/contents */
+  ref?: string;
+}
+
+export interface RoundOptions {
+  count: number;
+  scope: QuizScope;
+  /** عضلات تُفضَّل (للأخطاء السابقة) */
+  only?: readonly string[];
+}
+
+// ==================== العصب المغذّي ====================
+export interface NerveOption { id: string; en: string; ar: string }
+
+export const NERVE_OPTIONS: readonly NerveOption[] = [
+  { id: 'vii', en: 'Facial nerve (CN VII)', ar: 'العصب الوجهي' },
+  { id: 'v3', en: 'Mandibular nerve (CN V3)', ar: 'العصب الفكي السفلي' },
+  { id: 'xi', en: 'Accessory nerve (CN XI)', ar: 'العصب الإضافي' },
+  { id: 'ansa', en: 'Ansa cervicalis (C1 to C3)', ar: 'العروة العنقية' },
+  { id: 'c1xii', en: 'C1 fibres carried with the hypoglossal nerve', ar: 'ألياف C1 مع العصب تحت اللسان' },
+  { id: 'dorsal', en: 'C3, C4 and the dorsal scapular nerve', ar: 'C3 وC4 والعصب الكتفي الظهري' },
+  { id: 'post', en: 'Posterior rami of cervical nerves', ar: 'الفروع الخلفية للأعصاب العنقية' },
+  { id: 'ant', en: 'Anterior rami of cervical nerves', ar: 'الفروع الأمامية للأعصاب العنقية' },
+];
+
+/** مفتاح العصب الأساسي للعضلة، أو null إن كانت مختلطة/غير واضحة */
+export function nerveKeyOf(id: string): string | null {
+  const m = MUSCLE_BY_ID[id];
+  if (!m) return null;
+  const n = m.nerve;
+  const vii = /\bCN VII\b/.test(n);
+  const v3 = /\bCN V3\b/.test(n);
+  if (vii && v3) return null;
+  if (vii) return 'vii';
+  if (v3) return 'v3';
+  if (/\bCN XI\b/.test(n)) return 'xi';
+  if (/ansa cervicalis/i.test(n)) return 'ansa';
+  if (/hypoglossal/i.test(n)) return 'c1xii';
+  if (/C1/.test(n) && /anterior ramus of C1 \(/.test(n)) return 'c1xii';
+  if (/dorsal scapular/i.test(n)) return 'dorsal';
+  if (/posterior rami/i.test(n)) return 'post';
+  if (/anterior rami/i.test(n)) return 'ant';
+  return null;
+}
+
+// ==================== المثلثات ====================
+const TRIANGLE_BOUNDARY: Readonly<Record<string, readonly string[]>> = {
+  submental: ['digastric'],
+  submandibular: ['digastric'],
+  carotid: ['omohyoid', 'stylohyoid', 'digastric', 'scm'],
+  muscular: ['omohyoid', 'scm'],
+  posterior: ['scm', 'trapezius'],
+  anterior: ['scm'],
+};
+
+// ==================== الأدوات ====================
+const AMBIGUOUS_ACTION_GROUPS: readonly (readonly string[])[] = [
+  ['lls', 'zmin', 'llsan', 'lao', 'zmaj'],
+  ['masseter', 'temporalis'],
+  ['corrugator', 'procerus'],
+  ['scaleneAnt', 'scaleneMid', 'scalenePost'],
+  ['digastric', 'stylohyoid', 'mylohyoid', 'geniohyoid'],
+  ['omohyoid', 'sternohyoid', 'thyrohyoid', 'sternothyroid'],
+  ['rcAnterior', 'rcLateralis', 'longusCapitis', 'longusColli'],
+];
+
+function shuffle<T>(arr: readonly T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = a[i] as T;
+    a[i] = a[j] as T;
+    a[j] = t;
+  }
+  return a;
+}
+
+function sameAmbiguityGroup(a: string, b: string): boolean {
+  return AMBIGUOUS_ACTION_GROUPS.some((g) => g.includes(a) && g.includes(b));
+}
+
+function inScope(id: string, scope: QuizScope): boolean {
+  if (scope === 'all') return true;
+  return scope === 'neck' ? NECK_MUSCLE_IDS.has(id) : !NECK_MUSCLE_IDS.has(id);
+}
+
+function distractors(id: string, n: number, kind: QuestionKind, scope: QuizScope): string[] {
+  const target = MUSCLE_BY_ID[id];
+  const base = MUSCLES.filter((m) => m.id !== id && !(kind === 'action' && sameAmbiguityGroup(id, m.id)));
+  const scoped = base.filter((m) => inScope(m.id, scope));
+  const pool = scoped.length >= n ? scoped : base;
+  const same = shuffle(pool.filter((m) => m.region === target?.region));
+  const other = shuffle(pool.filter((m) => m.region !== target?.region));
+  return [...same, ...other].slice(0, n).map((m) => m.id);
+}
+
+function eligibleKinds(id: string): QuestionKind[] {
+  const m = MUSCLE_BY_ID[id];
+  const kinds: QuestionKind[] = ['locate', 'identify', 'action', 'attach'];
+  if (m && branchesOf(m).length === 1) kinds.push('branch');
+  if (nerveKeyOf(id)) kinds.push('nerve');
+  return kinds;
+}
+
+function build(id: string, kind: QuestionKind, scope: QuizScope): Question {
+  if (kind === 'locate') return { kind, id, options: [], correct: id };
+  if (kind === 'branch') {
+    const m = MUSCLE_BY_ID[id];
+    const only = m ? branchesOf(m)[0] : undefined;
+    return { kind, id, options: FACIAL_BRANCHES.map((b) => b.id), correct: only ?? 'buccal' };
+  }
+  if (kind === 'nerve') {
+    const key = nerveKeyOf(id) ?? 'vii';
+    const others = shuffle(NERVE_OPTIONS.filter((o) => o.id !== key)).slice(0, 3).map((o) => o.id);
+    return { kind, id, options: shuffle([key, ...others]), correct: key };
+  }
+  return { kind, id, options: shuffle([id, ...distractors(id, 3, kind, scope)]), correct: id };
+}
+
+function triangleQuestion(): Question | null {
+  const withBounds = TRIANGLES.filter((t) => (TRIANGLE_BOUNDARY[t.id]?.length ?? 0) > 0);
+  const t = shuffle(withBounds)[0];
+  if (!t) return null;
+  if (Math.random() < 0.5) {
+    const bounds = TRIANGLE_BOUNDARY[t.id] ?? [];
+    const correct = shuffle(bounds)[0];
+    if (!correct) return null;
+    const wrong = shuffle(MUSCLES.filter((m) => !bounds.includes(m.id) && NECK_MUSCLE_IDS.has(m.id)).map((m) => m.id)).slice(0, 3);
+    return { kind: 'boundary', id: correct, ref: t.id, options: shuffle([correct, ...wrong]), correct };
+  }
+  const correct = shuffle(t.contents)[0];
+  if (!correct) return null;
+  const foreign = TRIANGLES.filter((x) => x.id !== t.id).flatMap((x) => x.contents).filter((c) => !t.contents.includes(c));
+  const wrong = shuffle([...new Set(foreign)]).slice(0, 3);
+  if (wrong.length < 2) return null;
+  return { kind: 'contents', id: t.id, ref: t.id, options: shuffle([correct, ...wrong]), correct };
+}
+
+export function makeRound(opts: RoundOptions | number = 10): Question[] {
+  const o: RoundOptions = typeof opts === 'number' ? { count: opts, scope: 'all' } : opts;
+  const pool = o.only && o.only.length > 0 ? [...o.only] : MUSCLES.map((m) => m.id).filter((id) => inScope(id, o.scope));
+  const ids = shuffle(pool).slice(0, o.count);
+  const out: Question[] = [];
+  let prev: QuestionKind | null = null;
+  const allowTri = (o.scope === 'neck' || o.scope === 'all') && !(o.only && o.only.length > 0);
+
+  for (const id of ids) {
+    if (allowTri && out.length > 0 && Math.random() < (o.scope === 'neck' ? 0.22 : 0.1)) {
+      const tq = triangleQuestion();
+      if (tq) {
+        out.push(tq);
+        prev = tq.kind;
+        continue;
+      }
+    }
+    const options = shuffle(eligibleKinds(id));
+    const kind = options.find((k) => k !== prev) ?? options[0] ?? 'identify';
+    out.push(build(id, kind, o.scope));
+    prev = kind;
+  }
+  return out;
+}
+
+===lib/anatomy-relations.ts===
+// lib/anatomy-relations.ts
+/** علاقات العضلات التعليمية: المعادية، المساعدة، نفس العصب. الأزواج المعتمدة فقط. */
+import { MUSCLES, MUSCLE_BY_ID } from './anatomy-data';
+import { branchesOf, innervationOf } from './anatomy-extras';
+
+export interface Relation {
+  id: string;
+  kind: 'antagonist' | 'synergist' | 'same-nerve';
+}
+
+const ANTAGONISTS: Readonly<Record<string, readonly string[]>> = {
+  frontalis: ['procerus', 'corrugator'],
+  procerus: ['frontalis'],
+  corrugator: ['frontalis'],
+  zmaj: ['dao', 'dli'],
+  lls: ['dli', 'mentalis'],
+  dao: ['zmaj', 'lao'],
+  dli: ['zmaj', 'lls'],
+  masseter: ['digastric'],
+  temporalis: ['digastric'],
+  digastric: ['masseter', 'temporalis'],
+  sternohyoid: ['mylohyoid', 'geniohyoid', 'stylohyoid'],
+  sternothyroid: ['mylohyoid', 'geniohyoid', 'stylohyoid'],
+  omohyoid: ['mylohyoid', 'geniohyoid', 'stylohyoid'],
+  mylohyoid: ['sternohyoid', 'omohyoid'],
+  geniohyoid: ['sternohyoid', 'omohyoid'],
+  stylohyoid: ['sternohyoid', 'omohyoid'],
+  longusColli: ['spleniusCapitis'],
+  longusCapitis: ['spleniusCapitis'],
+  spleniusCapitis: ['longusColli', 'longusCapitis'],
+};
+
+function antagonistsOf(id: string): string[] {
+  return (ANTAGONISTS[id] ?? []).filter((x) => MUSCLE_BY_ID[x]);
+}
+
+function synergistsOf(id: string): string[] {
+  const m = MUSCLE_BY_ID[id];
+  if (!m) return [];
+  const b = branchesOf(m);
+  if (b.length !== 1) return [];
+  return MUSCLES.filter((x) => x.id !== id && branchesOf(x).includes(b[0] as never) && x.region === m.region).map((x) => x.id);
+}
+
+function sameNerveOf(id: string): string[] {
+  const m = MUSCLE_BY_ID[id];
+  const inn = m ? innervationOf(m) : null;
+  if (!m || !inn) return [];
+  return MUSCLES.filter((x) => x.id !== id && innervationOf(x) === inn && x.region !== m.region).map((x) => x.id);
+}
+
+export function relatedMuscles(id: string, limit = 6): Relation[] {
+  const out: Relation[] = [
+    ...antagonistsOf(id).slice(0, 3).map((x) => ({ id: x, kind: 'antagonist' as const })),
+    ...synergistsOf(id).slice(0, 2).map((x) => ({ id: x, kind: 'synergist' as const })),
+    ...sameNerveOf(id).slice(0, 2).map((x) => ({ id: x, kind: 'same-nerve' as const })),
+  ];
+  const seen = new Set<string>();
+  return out.filter((r) => !seen.has(r.id) && (seen.add(r.id), true)).slice(0, limit);
+}
+
+===lib/anatomy-srs.ts===
+// lib/anatomy-srs.ts
+/**
+ * مراجعة متباعدة مبسّطة (مستوحاة من SM-2).
+ * نسيت / صعب (<3): تُعاد بعد 10 دقائق. بعدها: يوم، 3 أيام، 7 أيام، ثم الفاصل × معامل السهولة.
+ */
+export type Grade = 0 | 1 | 2 | 3 | 4 | 5;
+
+export interface SrsCard {
+  id: string;
+  reps: number;
+  ease: number;
+  interval: number;
+  due: number;
+  last: number;
+  total: number;
+  lapses: number;
+}
+
+export interface SrsState {
+  cards: Record<string, SrsCard>;
+}
+
+const DAY = 86_400_000;
+const MIN = 60_000;
+
+export function newCard(id: string, now = Date.now()): SrsCard {
+  return { id, reps: 0, ease: 2.5, interval: 0, due: now, last: 0, total: 0, lapses: 0 };
+}
+
+export function grade(card: SrsCard, g: Grade, now = Date.now()): SrsCard {
+  const c: SrsCard = { ...card, total: card.total + 1, last: now };
+  if (g < 3) {
+    c.reps = 0;
+    c.interval = 0;
+    c.due = now + 10 * MIN;
+    c.ease = Math.max(1.3, card.ease - 0.2);
+    c.lapses = card.lapses + 1;
+    return c;
+  }
+  c.reps = card.reps + 1;
+  if (c.reps === 1) {
+    c.interval = 1;
+  } else if (c.reps === 2) {
+    c.interval = 3;
+  } else if (c.reps === 3) {
+    c.interval = 7;
+  } else {
+    const factor = g === 5 ? 1.3 : g === 4 ? 1.15 : 1;
+    c.interval = Math.max(1, Math.round(card.interval * card.ease * factor));
+  }
+  c.due = now + c.interval * DAY;
+  c.ease = Math.max(1.3, Math.min(3, card.ease + (0.1 - (5 - g) * 0.08)));
+  return c;
+}
+
+export function isDue(card: SrsCard, now = Date.now()): boolean {
+  return card.due <= now;
+}
+
+===lib/anatomy-surface.ts===
+// lib/anatomy-surface.ts
+/**
+ * سطح تقريبي للرأس والرقبة.
+ * مصدر واحد لشكل الرقبة في الرسم 2D ولمجسّم الـ 3D:
+ * يحوّل إحداثيات الرسم (x, y) إلى عمق z حتى تستند عضلات الـ 3D إلى نفس إحداثيات الـ SVG.
+ */
+
+export const CX = 200;
+/** وحدات الرسم لكل وحدة عالم في three.js */
+export const UNITS = 100;
+/** y في الرسم يقابل Y = 0 في العالم */
+export const Y0 = 330;
+
+/** [y, نصف العرض, العمق الأمامي, العمق الخلفي] */
+export type SurfaceRow = readonly [number, number, number, number];
+
+export const HEAD_TABLE: readonly SurfaceRow[] = [
+  [18, 0, 0, 0],
+  [19.6, 23, 14, 12],
+  [31, 61, 44, 40],
+  [54, 90, 72, 66],
+  [86, 109, 94, 82],
+  [127, 119, 106, 92],
+  [170, 120, 112, 96],
+  [247, 117, 106, 92],
+  [330, 106, 96, 82],
+  [367, 90, 84, 72],
+  [389, 72, 70, 62],
+  [408, 48, 48, 50],
+  [421, 26, 28, 34],
+  [427, 9, 12, 14],
+  [430, 0, 0, 0],
+];
+
+export const NECK_TABLE: readonly SurfaceRow[] = [
+  [370, 70, 20, 50],
+  [430, 84, 36, 54],
+  [490, 96, 46, 58],
+  [540, 106, 52, 62],
+  [570, 126, 56, 66],
+  [596, 166, 64, 74],
+  [616, 196, 72, 82],
+  [700, 198, 74, 84],
+  [780, 198, 74, 84],
+];
+
+export function sampleTable(table: readonly SurfaceRow[], y: number): SurfaceRow {
+  const first = table[0];
+  const last = table[table.length - 1];
+  if (!first || !last) return [y, 0, 0, 0];
+  if (y <= first[0]) return [y, first[1], first[2], first[3]];
+  if (y >= last[0]) return [y, last[1], last[2], last[3]];
+  for (let i = 1; i < table.length; i++) {
+    const b = table[i];
+    const a = table[i - 1];
+    if (!a || !b || y > b[0]) continue;
+    const t = (y - a[0]) / (b[0] - a[0] || 1);
+    return [y, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t, a[3] + (b[3] - a[3]) * t];
+  }
+  return [y, last[1], last[2], last[3]];
+}
+
+const smooth = (t: number): number => t * t * (3 - 2 * t);
+const clamp01 = (t: number): number => Math.max(0, Math.min(1, t));
+
+function ellipseZ(w: number, depth: number, x: number): number {
+  if (w <= 0.01 || depth <= 0.01) return 0;
+  const u = Math.max(-0.97, Math.min(0.97, (x - CX) / w));
+  return depth * Math.sqrt(1 - u * u);
+}
+
+/** منطقة المزج بين الرأس والرقبة (تحت الذقن) */
+const BLEND_FROM = 412;
+const BLEND_TO = 440;
+
+/** عمق السطح الأمامي عند النقطة (x, y) بوحدات الرسم */
+export function surfaceZ(x: number, y: number): number {
+  const h = sampleTable(HEAD_TABLE, y);
+  const n = sampleTable(NECK_TABLE, y);
+  const zh = ellipseZ(h[1], h[2], x);
+  const zn = ellipseZ(n[1], n[2], x);
+  if (y <= BLEND_FROM) return zh;
+  if (y >= BLEND_TO) return zn;
+  const t = smooth(clamp01((y - BLEND_FROM) / (BLEND_TO - BLEND_FROM)));
+  return zh * (1 - t) + zn * t;
+}
+
+/** إحداثيات العالم (three.js) لنقطة من الرسم رُفعت `lift` وحدة عن السطح */
+export function toWorld(x: number, y: number, z: number): [number, number, number] {
+  return [(x - CX) / UNITS, (Y0 - y) / UNITS, z / UNITS];
+}
+
+export function surfacePoint(x: number, y: number, lift: number): [number, number, number] {
+  return toWorld(x, y, surfaceZ(x, y) + lift);
+}
+
+// ==================== مخطط الرقبة للرسم 2D ====================
+function neckSide(sign: 1 | -1, ys: readonly number[]): [number, number][] {
+  return ys.map((y) => [CX + sign * sampleTable(NECK_TABLE, y)[1], y]);
+}
+
+function buildNeckOutline(): string {
+  const ys: number[] = [];
+  for (let y = 380; y <= 700; y += 16) ys.push(y);
+  const right = neckSide(1, ys);
+  const left = neckSide(-1, ys).reverse();
+  const pts = [...right, ...left];
+  return (
+    pts.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${Math.round(x * 10) / 10},${y}`).join('') + 'Z'
+  );
+}
+
+/** مسار الرقبة والكتفين (يُرسم خلف الرأس) */
+export const NECK_OUTLINE: string = buildNeckOutline();
+
+===lib/anatomy-view.ts===
+// lib/anatomy-view.ts
+import { MUSCLES, ZOOMS, type Muscle, type ZoomId } from './anatomy-data';
+
+export const W0 = 400;
+export const H0 = 540;
+export const LABEL_MARGIN = 170;
+
+export type ViewBox = readonly [number, number, number, number];
+
+/** يحسب نسبة العرض إلى الارتفاع للـ SVG بناءً على التقريب والتسميات */
+export const canvasRatio = (zoom: ZoomId, labelsOn: boolean): number => {
+  if (!labelsOn) return W0 / H0;
+  const z = ZOOMS[zoom];
+  const w = z.size + 2 * LABEL_MARGIN;
+  const h = (z.size * H0) / W0;
+  return w / h;
+};
+
+export function viewBoxFor(zoom: ZoomId, labelsOn: boolean): ViewBox {
+  const z = ZOOMS[zoom];
+  const h = (z.size * H0) / W0;
+  const w = labelsOn ? z.size + 2 * LABEL_MARGIN : z.size;
+  return [z.center[0] - w / 2, z.center[1] - h / 2, w, h];
+}
+
+export interface PlacedLabel {
+  id: string;
+  text: string;
+  ax: number;
+  ay: number;
+  tx: number;
+  ty: number;
+  anchor: 'start' | 'end';
+  sx: number;
+  sy: number;
+}
+
+export interface LabelLayout {
+  fs: number;
+  items: PlacedLabel[];
+}
+
+interface Raw {
+  m: Muscle;
+  ax: number;
+  ay: number;
+  ly: number;
+}
+
+export function layoutLabels(
+  vb: ViewBox,
+  widthPx: number,
+  emWidth: (text: string) => number,
+): LabelLayout {
+  if (!(widthPx > 0)) return { fs: 0, items: [] };
+
+  const s = widthPx / vb[2];
+  const fs = 11 / s;
+  const lineH = fs * 1.45;
+  const lists: [Raw[], Raw[]] = [[], []];
+
+  for (const m of MUSCLES) {
+    const ax = m.label.s === 'L' ? W0 - m.label.x : m.label.x;
+    const ay = m.label.y;
+    if (ax < vb[0] + fs || ax > vb[0] + vb[2] - fs || ay < vb[1] + fs || ay > vb[1] + vb[3] - fs) continue;
+    lists[m.label.s === 'L' ? 0 : 1].push({ m, ax, ay, ly: ay });
+  }
+
+  const items: PlacedLabel[] = [];
+
+  lists.forEach((list, si) => {
+    list.sort((a, b) => a.ay - b.ay);
+
+    for (let i = 1; i < list.length; i++) {
+      const cur = list[i];
+      const prev = list[i - 1];
+      if (cur && prev && cur.ly < prev.ly + lineH) cur.ly = prev.ly + lineH;
+    }
+
+    const maxY = vb[1] + vb[3] - fs;
+    for (let i = list.length - 1; i >= 0; i--) {
+      const cur = list[i];
+      if (!cur) continue;
+      const lim = maxY - (list.length - 1 - i) * lineH;
+      if (cur.ly > lim) cur.ly = lim;
+    }
+
+    for (const it of list) {
+      const text = it.m.short ?? it.m.en;
+      const x = si === 0 ? vb[0] + fs * 0.5 : vb[0] + vb[2] - fs * 0.5;
+      const len = emWidth(text) * fs;
+      items.push({
+        id: it.m.id,
+        text,
+        ax: it.ax,
+        ay: it.ay,
+        tx: x,
+        ty: it.ly + fs * 0.35,
+        anchor: si === 0 ? 'start' : 'end',
+        sx: si === 0 ? x + len + fs * 0.4 : x - len - fs * 0.4,
+        sy: it.ly,
+      });
+    }
+  });
+
+  return { fs, items };
+}
+===lib/api-client.ts===
+// lib/api-client.ts
+import { supabase } from './supabaseClient';
+
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+export async function postJson<TResponse = unknown, TBody = unknown>(
+  url: string,
+  body: TBody,
+  init?: RequestInit
+): Promise<TResponse> {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    ...init,
+  });
+
+  let data: unknown = null;
+  try {
+    data = await res.json();
+  } catch {
+    /* response wasn't JSON */
+  }
+
+  if (!res.ok) {
+    const message =
+      (data && typeof data === 'object' && 'error' in data && typeof (data as { error: unknown }).error === 'string'
+        ? (data as { error: string }).error
+        : null) || `فشل الطلب (${res.status})`;
+    throw new ApiError(message, res.status);
+  }
+
+  return data as TResponse;
+}
+
+export async function uploadToStorage(
+  bucket: string,
+  filePath: string,
+  file: File | Blob,
+  options?: { upsert?: boolean }
+): Promise<string> {
+  const { error } = await supabase.storage.from(bucket).upload(filePath, file, options);
+  if (error) throw new ApiError(`فشل رفع الملف: ${error.message}`, 500);
+  const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
+  return data.publicUrl;
+}
+
+export function buildStoragePath(prefix: string, fileName: string): string {
+  const safeName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+  return `${prefix}/${Date.now()}-${safeName}`;
+}
+===lib/api-server.ts===
+// lib/api-server.ts
+import { NextResponse } from 'next/server';
+import { getSupabaseAdmin } from './supabaseAdmin';
+
+export type AdminLevel = 'super' | 'admin';
+
+export function jsonError(message: string, status = 400) {
+  return NextResponse.json({ error: message }, { status });
+}
+
+export function jsonOk<T extends object>(data: T) {
+  return NextResponse.json(data);
+}
+
+export function resolveAdminLevel(password: unknown): AdminLevel | null {
+  if (typeof password !== 'string' || password === '') return null;
+
+  const superPw = process.env.SUPER_ADMIN_PASSWORD;
+  if (superPw && password === superPw) return 'super';
+
+  const adminPw = process.env.ADMIN_PASSWORD;
+  if (adminPw && password === adminPw) return 'admin';
+
+  return null;
+}
+
+export function requireAdminPassword(password: unknown): boolean {
+  return resolveAdminLevel(password) !== null;
+}
+
+type AdminGuardResult =
+  | { ok: true; supabaseAdmin: ReturnType<typeof getSupabaseAdmin>; level: AdminLevel }
+  | { ok: false; response: NextResponse };
+
+export function adminGuard(password: unknown): AdminGuardResult {
+  const level = resolveAdminLevel(password);
+  if (!level) {
+    return { ok: false, response: jsonError('كلمة المرور غير صحيحة', 401) };
+  }
+  return { ok: true, supabaseAdmin: getSupabaseAdmin(), level };
+}
+
+export function safeString(value: unknown, max = 5000): string {
+  if (typeof value !== 'string') return '';
+  return value.trim().slice(0, max);
+}
+
+export function safeOptionalString(value: unknown, max = 5000): string | null {
+  const s = safeString(value, max);
+  return s === '' ? null : s;
+}
+===lib/constants.ts===
+// lib/constants.ts
+import type { ContentType, Group, MedicalCategory, Stage } from './types';
+
+export const STAGES: readonly Stage[] = [
+  'المرحلة الأولى',
+  'المرحلة الثانية',
+  'المرحلة الثالثة',
+] as const;
+
+export const GROUPS: readonly Group[] = ['A', 'B'] as const;
+
+export const GROUP_LABELS: Record<Group, string> = {
+  A: 'كروب A',
+  B: 'كروب B',
+};
+
+export const CONTENT_TYPES: readonly ContentType[] = [
+  'assignment',
+  'lecture_note',
+  'summary',
+  'task',
+] as const;
+
+export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
+  assignment: 'واجب',
+  lecture_note: 'ملزمة',
+  summary: 'ملخص',
+  task: 'مهمة | سشن',
+};
+
+export const STORAGE_KEYS = {
+  studentStage: 'student_stage',
+  adminPassword: 'admin_password',
+  channelId: 'channel_id',
+  channelPassword: 'channel_password',
+  publisherPassword: 'publisher_password',
+  publisherName: 'publisher_name',
+} as const;
+
+export const STORAGE_BUCKETS = {
+  scheduleImages: 'schedule-images',
+  channelImages: 'channel-images',
+  channelFiles: 'channel-files',
+} as const;
+
+// ==================== Study Formats ====================
+export const STUDY_FORMATS = [
+  'ملخص باللهجة العراقية العامية (سريع ومختصر)',
+  'شرح مبسط وواضح لمحتوى السلايد خطوة بخطوة',
+  'أسئلة اختيار من متعدد (MCQ) للمراجعة مع الإجابات الصحيحة وتوضيح كل خيار',
+  'فلاش كاردز (سؤال وجواب) للحفظ السريع',
+  'ملخص نقطي سريع ومركز',
+  'أسئلة نقاش عميقة تساعد على الفهم لا الحفظ',
+  'مراجعة شاملة وتجميعية آخر المحاضرة بعد إرسال كل السلايدات',
+] as const;
+
+export type StudyFormat = (typeof STUDY_FORMATS)[number];
+
+export const STUDY_FORMAT_LABELS: Record<StudyFormat, string> = {
+  'ملخص باللهجة العراقية العامية (سريع ومختصر)': 'ملخص عامي',
+  'شرح مبسط وواضح لمحتوى السلايد خطوة بخطوة': 'شرح مبسط',
+  'أسئلة اختيار من متعدد (MCQ) للمراجعة مع الإجابات الصحيحة وتوضيح كل خيار': 'أسئلة اختيار من متعدد (MCQ)',
+  'فلاش كاردز (سؤال وجواب) للحفظ السريع': 'فلاش كاردز',
+  'ملخص نقطي سريع ومركز': 'ملخص نقطي',
+  'أسئلة نقاش عميقة تساعد على الفهم لا الحفظ': 'أسئلة نقاش عميقة',
+  'مراجعة شاملة وتجميعية آخر المحاضرة بعد إرسال كل السلايدات': 'مراجعة شاملة آخر المحاضرة',
+};
+
+export const MATERIAL_METHODS = [
+  {
+    value: 'الطالب راح يرسل صورة سلايد واحد بكل رسالة، سلايد بعد سلايد لين نهاية المحاضرة',
+    label: 'إرسال صور السلايدات (سلايد بكل رسالة)',
+  },
+  {
+    value: 'الطالب راح يرسل ملف الملزمة (PDF) كامل دفعة وحدة برسالة وحدة',
+    label: 'إرسال ملف الملزمة كامل دفعة وحدة',
+  },
+  {
+    value: 'الطالب راح ينسخ نص جزء من الملزمة ويلصقه بكل رسالة، جزء بعد جزء',
+    label: 'نسخ ولصق نص الملزمة على أجزاء',
+  },
+] as const;
+
+// ==================== Dictionary v2 ====================
+export const MEDICAL_CATEGORIES: readonly MedicalCategory[] = [
+  'general',
+  'anatomy',
+  'physiology',
+  'pathology',
+  'pharmacology',
+  'microbiology',
+  'biochemistry',
+  'histology',
+  'embryology',
+  'immunology',
+  'clinical',
+] as const;
+
+export const MEDICAL_CATEGORY_LABELS: Record<MedicalCategory, string> = {
+  general: 'عام',
+  anatomy: 'تشريح',
+  physiology: 'فسلجة',
+  pathology: 'أمراض',
+  pharmacology: 'أدوية',
+  microbiology: 'أحياء دقيقة',
+  biochemistry: 'كيمياء حيوية',
+  histology: 'أنسجة',
+  embryology: 'أجنة',
+  immunology: 'مناعة',
+  clinical: 'سريري',
+};
+
+export const MEDICAL_CATEGORY_EMOJIS: Record<MedicalCategory, string> = {
+  general: '📚',
+  anatomy: '🦴',
+  physiology: '⚙️',
+  pathology: '🦠',
+  pharmacology: '💊',
+  microbiology: '🧫',
+  biochemistry: '🧬',
+  histology: '🔬',
+  embryology: '👶',
+  immunology: '🛡️',
+  clinical: '🩺',
+};
+// ==================== Grade Types ====================
+export const GRADE_TYPES = [
+  'quiz',
+  'daily',
+  'midterm',
+  'final',
+  'other',
+] as const;
+
+export type GradeType = (typeof GRADE_TYPES)[number];
+
+export const GRADE_TYPE_LABELS: Record<GradeType, string> = {
+  quiz: 'كوز',
+  daily: 'امتحان يومي',
+  midterm: 'امتحان فصلي',
+  final: 'فاينل',
+  other: 'أخرى',
+};
+
+export const GRADE_TYPE_EMOJIS: Record<GradeType, string> = {
+  quiz: '📝',
+  daily: '📋',
+  midterm: '📊',
+  final: '🎯',
+  other: '📁',
+};
+
+export const GRADE_TYPE_COLORS: Record<GradeType, string> = {
+  quiz: 'bg-gold-soft text-gold-ink',
+  daily: 'bg-teal-soft text-teal',
+  midterm: 'bg-navy-soft text-navy-ink',
+  final: 'bg-coral-soft text-coral-ink',
+  other: 'bg-ink/5 text-ink-soft',
+};
+===lib/groups/access.ts===
+// lib/groups/access.ts
+// ⚠️ للاستخدام على السيرفر فقط
+
+import { supabaseAdmin } from './supabase-admin';
+import type { Settings } from '@/lib/types/groups';
+
+export interface AccessToken {
+  slug: string;
+  label: string | null;
+  is_active: boolean;
+  study_year: string;
+  expires_at: string | null;
+}
+
+/**
+ * يجيب رابط الوصول المؤقت (slug) إذا كان فعّالاً
+ */
+export async function getAccessToken(
+  slug: string
+): Promise<AccessToken | null> {
+  const { data } = await supabaseAdmin
+    .from('sg_access_tokens')
+    .select('*')
+    .eq('slug', slug)
+    .maybeSingle();
+
+  if (!data) return null;
+  if (!data.is_active) return null;
+  if (data.expires_at && new Date(data.expires_at).getTime() < Date.now())
+    return null;
+
+  return data as AccessToken;
+}
+
+/**
+ * يجيب إعدادات النظام (صف واحد فقط)
+ */
+export async function getSettings(): Promise<Settings> {
+  const { data } = await supabaseAdmin
+    .from('sg_settings')
+    .select('*')
+    .eq('id', 1)
+    .maybeSingle();
+
+  if (!data) {
+    return {
+      id: 1,
+      target_size: 10,
+      preferred_male: 5,
+      preferred_female: 5,
+      registration_open: true,
+      allow_create: true,
+      allow_join: true,
+      session_expires_at: null,
+      updated_at: new Date().toISOString(),
+    };
+  }
+  return data as Settings;
+}
+
+export function isRegistrationOpen(s: Settings): boolean {
+  return s.registration_open === true;
+}
+===lib/groups/api-response.ts===
+// lib/groups/api-response.ts
+
+import { NextResponse } from 'next/server';
+
+export function ok<T>(data: T) {
+  return NextResponse.json({ ok: true, data });
+}
+
+export function fail(message: string, status = 400) {
+  return NextResponse.json({ ok: false, error: message }, { status });
+}
+
+export function handleError(err: unknown) {
+  const e = err as { message?: string; status?: number };
+  const message = e?.message || 'حدث خطأ غير متوقع';
+  const status = e?.status || 500;
+  return fail(message, status);
+}
+===lib/groups/client.ts===
+// lib/groups/client.ts
+'use client';
+
+const TOKEN_KEY = 'sg_token';
+
+export function saveToken(token: string): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function getToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function clearToken(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+interface ApiBody {
+  ok?: boolean;
+  error?: string;
+  data?: unknown;
+}
+
+export async function groupsFetch<T = unknown>(
+  endpoint: string,
+  body: Record<string, unknown> = {}
+): Promise<T> {
+  const token = getToken();
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+
+  const json: ApiBody = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(json?.error || `فشل الاتصال (${res.status})`);
+  }
+  if (json?.ok === false) {
+    throw new Error(json?.error || 'حدث خطأ');
+  }
+  return (json?.data ?? json) as T;
+}
+===lib/groups/notify.ts===
+// lib/groups/notify.ts
+// ⚠️ للاستخدام على السيرفر فقط
+
+import { supabaseAdmin } from './supabase-admin';
+
+/**
+ * إرسال إشعار لطالب واحد (يظهر في مركز الإشعارات في الواجهة)
+ */
+export async function notify(
+  studentId: string,
+  type: string,
+  title: string,
+  body?: string,
+  href?: string
+): Promise<void> {
+  await supabaseAdmin.from('sg_notifications').insert({
+    student_id: studentId,
+    type,
+    title,
+    body: body || null,
+    href: href || null,
+  });
+}
+
+/**
+ * إرسال إشعار لعدة طلاب دفعة واحدة
+ */
+export async function notifyMany(
+  studentIds: string[],
+  type: string,
+  title: string,
+  body?: string,
+  href?: string
+): Promise<void> {
+  if (studentIds.length === 0) return;
+  const rows = studentIds.map((id) => ({
+    student_id: id,
+    type,
+    title,
+    body: body || null,
+    href: href || null,
+  }));
+  await supabaseAdmin.from('sg_notifications').insert(rows);
+}
+===lib/groups/session.ts===
+// lib/groups/session.ts
+// ⚠️ للاستخدام على السيرفر فقط (API routes)
+
+import { randomBytes } from 'node:crypto';
+import { supabaseAdmin } from './supabase-admin';
+import type { Student } from '@/lib/types/groups';
+
+// بغداد = UTC+3 (بدون توقيت صيفي)
+const BAGHDAD_OFFSET_MS = 3 * 60 * 60 * 1000;
+
+/**
+ * يرجع "الآن" بتوقيت بغداد (كـ Date نتعامل معه عبر getUTC*)
+ */
+function getBaghdadNow(): Date {
+  return new Date(Date.now() + BAGHDAD_OFFSET_MS);
+}
+
+/**
+ * يحسب موعد "الأحد القادم 23:59:59 بتوقيت بغداد"
+ * - إذا اليوم أحد وقبل 23:59 → نفس اليوم
+ * - إذا اليوم أحد وبعد 23:59 → الأحد القادم
+ * - أي يوم آخر → الأحد القادم
+ */
+export function getNextSundayDeadline(): Date {
+  const baghdadNow = getBaghdadNow();
+  const day = baghdadNow.getUTCDay(); // 0 = الأحد
+  const daysUntilSunday = (7 - day) % 7;
+
+  const target = new Date(baghdadNow);
+  target.setUTCDate(target.getUTCDate() + daysUntilSunday);
+  target.setUTCHours(23, 59, 59, 999);
+
+  if (target.getTime() <= baghdadNow.getTime()) {
+    target.setUTCDate(target.getUTCDate() + 7);
+  }
+
+  // نرجع للـ UTC الحقيقي
+  return new Date(target.getTime() - BAGHDAD_OFFSET_MS);
+}
+
+/**
+ * تاريخ انتهاء الجلسة:
+ * - إذا الأدمن حدد موعداً في sg_settings → نستخدمه
+ * - وإلا → الأحد القادم 23:59
+ */
+export async function getSessionExpiresAt(): Promise<Date> {
+  const { data: settings } = await supabaseAdmin
+    .from('sg_settings')
+    .select('session_expires_at')
+    .eq('id', 1)
+    .maybeSingle();
+
+  if (settings?.session_expires_at) {
+    const d = new Date(settings.session_expires_at);
+    if (!isNaN(d.getTime())) return d;
+  }
+  return getNextSundayDeadline();
+}
+
+export function generateToken(): string {
+  return randomBytes(24).toString('hex');
+}
+
+/**
+ * ينشئ جلسة جديدة ويحفظها في DB، ويرجع التوكن
+ */
+export async function createSession(studentId: string): Promise<string> {
+  const token = generateToken();
+  const expiresAt = await getSessionExpiresAt();
+
+  const { error } = await supabaseAdmin.from('sg_sessions').insert({
+    token,
+    student_id: studentId,
+    expires_at: expiresAt.toISOString(),
+  });
+

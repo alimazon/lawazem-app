@@ -1,0 +1,2726 @@
+﻿  );
+}
+
+// ==================== 7. Palette ====================
+function PalettePreview() {
+  const colors = [
+    { name: 'Background', light: '#F4F2EC' },
+    { name: 'Surface', light: '#FFFFFF' },
+    { name: 'Background Alt', light: '#E7E9E3' },
+    { name: 'Text', light: '#252B30' },
+    { name: 'Text Soft', light: '#4B555B' },
+    { name: 'Border', light: '#D0D2CC' },
+    { name: 'Primary (Navy Ink)', light: '#244E63' },
+    { name: 'Accent (Rust)', light: '#8B3E28' },
+  ];
+
+  return (
+    <Section title="Color Palette — Campus Ink">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {colors.map((c) => (
+          <div
+            key={c.name}
+            className="overflow-hidden rounded-md border border-[#D0D2CC] dark:border-[#3B484E]"
+          >
+            <div className="h-20" style={{ backgroundColor: c.light }} />
+            <div className="border-t border-[#D0D2CC] bg-white p-3 dark:border-[#3B484E] dark:bg-[#1D262B]">
+              <p className="text-xs font-semibold">{c.name}</p>
+              <p className="mt-1 text-[10px] text-[#4B555B] dark:text-[#BAC4C8]">
+                {c.light}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+// ==================== 8. Homepage Mockup ====================
+function HomepagePreview() {
+  const cards = [
+    { icon: '📚', title: 'الملازم', desc: 'مرتبة حسب المادة والدكتور' },
+    { icon: '📻', title: 'القنوات', desc: 'دليل قنوات التليكرام' },
+    { icon: '📅', title: 'الجدول', desc: 'محاضرات الأسبوع' },
+    { icon: '📖', title: 'القاموس', desc: 'مصطلحات طبية ذكية' },
+  ];
+
+  return (
+    <Section title="Homepage Mockup">
+      <div className="overflow-hidden rounded-md border border-[#D0D2CC] dark:border-[#3B484E]">
+        <div className="bg-white dark:bg-[#1D262B]">
+          {/* Mini header */}
+          <div className="flex items-center justify-between border-b border-[#D0D2CC] px-6 py-3 dark:border-[#3B484E]">
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#244E63] text-xs font-bold text-white dark:bg-[#9CD2E5] dark:text-[#10232B]">
+                ل
+              </span>
+              <span className="font-bold">لوازم</span>
+            </div>
+            <div className="flex gap-3 text-xs text-[#4B555B] dark:text-[#BAC4C8]">
+              <span>الملازم</span>
+              <span>القنوات</span>
+              <span>الجدول</span>
+            </div>
+          </div>
+
+          {/* Hero */}
+          <div className="p-8">
+            <span className="mb-3 inline-block rounded bg-[#8B3E28]/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#8B3E28] dark:bg-[#F2A18C]/15 dark:text-[#F2A18C]">
+              مساحة طالب الطب
+            </span>
+            <h1
+              className="mt-3 text-4xl font-bold leading-tight"
+              style={{ fontFamily: '"Readex Pro", sans-serif' }}
+            >
+              دراستك، مرتبة بطريقتك.
+            </h1>
+            <p className="mt-3 text-sm text-[#4B555B] dark:text-[#BAC4C8]">
+              ملازمك وأدواتك الطبية في مكان واحد.
+            </p>
+          </div>
+
+          {/* Cards Grid */}
+          <div className="grid gap-3 px-8 pb-8 md:grid-cols-2">
+            {cards.map((c) => (
+              <div
+                key={c.title}
+                className="group rounded-md border border-[#D0D2CC] p-5 transition-colors hover:border-[#244E63] dark:border-[#3B484E] dark:hover:border-[#9CD2E5]"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xl">{c.icon}</span>
+                  <span className="text-[#4B555B] transition-colors group-hover:text-[#244E63] dark:text-[#BAC4C8] dark:group-hover:text-[#9CD2E5]">
+                    ←
+                  </span>
+                </div>
+                <h3 className="mt-3 text-base font-semibold">{c.title}</h3>
+                <p className="mt-1 text-xs text-[#4B555B] dark:text-[#BAC4C8]">
+                  {c.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* CTA row */}
+          <div className="flex items-center justify-between border-t border-[#D0D2CC] p-6 dark:border-[#3B484E]">
+            <p className="text-xs text-[#4B555B] dark:text-[#BAC4C8]">
+              صُنع بكل حب لطلاب كلية الطب
+            </p>
+            <button className="rounded-md bg-[#244E63] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1A3A4A] dark:bg-[#9CD2E5] dark:text-[#10232B] dark:hover:bg-[#7ABDD4]">
+              افتح المنصة ←
+            </button>
+          </div>
+        </div>
+      </div>
+    </Section>
+  );
+}
+===app/publisher/_components/ComposeForm.tsx===
+// app/publisher/_components/ComposeForm.tsx
+'use client';
+
+import { useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { Input, Select, Textarea } from '@/components/ui/Field';
+import { useToast } from '@/components/ui/Toast';
+import { postJson } from '@/lib/api-client';
+import { STAGES } from '@/lib/constants';
+import type { Stage } from '@/lib/types';
+
+interface Props {
+  password: string;
+  publisherName: string;
+  onCreated: () => void;
+}
+
+interface FormState {
+  title: string;
+  body: string;
+  stage: Stage | '';
+  link_url: string;
+  link_label: string;
+}
+
+function emptyForm(): FormState {
+  return { title: '', body: '', stage: '', link_url: '', link_label: '' };
+}
+
+function isValidUrl(url: string): boolean {
+  if (!url) return false;
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' || u.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+export function ComposeForm({ password, publisherName, onCreated }: Props) {
+  const toast = useToast();
+  const [form, setForm] = useState<FormState>(emptyForm());
+  const [saving, setSaving] = useState(false);
+
+  const canSubmit =
+    form.title.trim() !== '' &&
+    form.body.trim() !== '' &&
+    (!form.link_url.trim() || isValidUrl(form.link_url.trim()));
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canSubmit) return;
+
+    setSaving(true);
+    try {
+      await postJson('/api/admin/announcements', {
+        password,
+        action: 'create',
+        title: form.title.trim(),
+        body: form.body.trim(),
+        stage: form.stage || null,
+        link_url: form.link_url.trim() || null,
+        link_label: form.link_label.trim() || null,
+        created_by: publisherName,
+      });
+      setForm(emptyForm());
+      toast.show('تم إرسال التبليغ للمراجعة', 'success');
+      onCreated();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الإرسال', 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
+      {/* ==================== Form ==================== */}
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-4 rounded-3xl border border-line bg-white/80 p-5 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm dark:bg-paper/80"
+      >
+        <div>
+          <label className="mb-2 block text-sm font-bold text-ink">
+            العنوان الداخلي <span className="text-red-500">*</span>
+          </label>
+          <Input
+            type="text"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            placeholder="مثال: تأجيل امتحان التشريح"
+            required
+            maxLength={200}
+          />
+          <p className="mt-1 text-xs text-ink/50">
+            يظهر بخط عريض في أعلى الرسالة
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-bold text-ink">
+            نص التبليغ <span className="text-red-500">*</span>
+          </label>
+          <Textarea
+            value={form.body}
+            onChange={(e) => setForm({ ...form, body: e.target.value })}
+            placeholder="اكتب التبليغ..."
+            required
+            rows={5}
+            maxLength={2000}
+          />
+          <p className="mt-1 text-xs text-ink/50">
+            {form.body.length} / 2000
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-bold text-ink">
+            المرحلة
+          </label>
+          <Select
+            value={form.stage}
+            onChange={(e) =>
+              setForm({ ...form, stage: e.target.value as Stage | '' })
+            }
+          >
+            <option value="">كل المراحل</option>
+            {STAGES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </Select>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-[1fr_140px]">
+          <div>
+            <label className="mb-2 block text-sm font-bold text-ink">
+              رابط اختياري
+            </label>
+            <Input
+              type="url"
+              value={form.link_url}
+              onChange={(e) => setForm({ ...form, link_url: e.target.value })}
+              placeholder="https://..."
+              maxLength={1000}
+            />
+            {form.link_url.trim() && !isValidUrl(form.link_url.trim()) && (
+              <p className="mt-1 text-xs font-bold text-red-600">
+                الرابط غير صالح
+              </p>
+            )}
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-bold text-ink">
+              نص الزر
+            </label>
+            <Input
+              type="text"
+              value={form.link_label}
+              onChange={(e) => setForm({ ...form, link_label: e.target.value })}
+              placeholder="المزيد"
+              maxLength={60}
+            />
+          </div>
+        </div>
+
+        <Button
+          type="submit"
+          size="lg"
+          loading={saving}
+          disabled={!canSubmit}
+          className="w-full"
+        >
+          إرسال للمراجعة
+        </Button>
+      </form>
+
+      {/* ==================== Preview ==================== */}
+      <aside className="rounded-3xl border border-line bg-white/80 p-5 dark:bg-paper/80">
+        <h3 className="mb-3 text-sm font-bold text-ink">معاينة في البوت</h3>
+
+        <div className="rounded-2xl bg-[#17212B] p-4 text-[13px] text-white">
+          <div className="mb-2 flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-teal text-xs font-bold">
+              لو
+            </div>
+            <div className="flex-1">
+              <p className="text-xs font-bold text-teal">لوازم</p>
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-[#1D2A34] p-3">
+            <p className="whitespace-pre-line leading-relaxed">
+              📢 <b>تبليغ إداري</b>
+              {'\n\n'}
+              <b>{form.title || 'عنوان التبليغ'}</b>
+              {'\n\n'}
+              {form.body || 'نص التبليغ سيظهر هنا...'}
+            </p>
+
+            <div className="mt-3 space-y-1.5">
+              {form.link_url && (
+                <div className="rounded-lg bg-[#2A3A47] px-3 py-1.5 text-center text-xs font-bold text-teal">
+                  🔗 {form.link_label || 'المزيد'}
+                </div>
+              )}
+              <div className="rounded-lg bg-[#2A3A47] px-3 py-1.5 text-center text-xs font-bold text-teal">
+                🌐 فتح المنصة
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p className="mt-3 text-xs text-ink/50">
+          {form.stage ? (
+            <>سيُرسل فقط لمشتركي <b>{form.stage}</b></>
+          ) : (
+            <>سيُرسل لكل المشتركين المُفعّلين</>
+          )}
+        </p>
+      </aside>
+    </div>
+  );
+}
+===app/publisher/_components/MyAnnouncements.tsx===
+// app/publisher/_components/MyAnnouncements.tsx
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import { postJson } from '@/lib/api-client';
+import { useToast } from '@/components/ui/Toast';
+
+interface Props {
+  password: string;
+  publisherName: string;
+  refreshKey: number;
+}
+
+interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  stage: string | null;
+  link_url: string | null;
+  link_label: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'sent' | 'failed';
+  created_by: string;
+  created_at: string;
+  reviewed_at: string | null;
+  reviewed_note: string | null;
+  sent_at: string | null;
+  sent_count: number;
+  sent_error: string | null;
+}
+
+function StatusBadge({ status }: { status: Announcement['status'] }) {
+  const styles: Record<Announcement['status'], { label: string; cls: string }> = {
+    pending: {
+      label: 'قيد المراجعة',
+      cls: 'bg-amber/15 text-amber-800 dark:bg-amber/25 dark:text-amber-300',
+    },
+    approved: {
+      label: 'تمت الموافقة',
+      cls: 'bg-teal/10 text-teal dark:bg-teal/20',
+    },
+    rejected: {
+      label: 'مرفوض',
+      cls: 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300',
+    },
+    sent: {
+      label: 'أُرسل',
+      cls: 'bg-teal text-white',
+    },
+    failed: {
+      label: 'فشل الإرسال',
+      cls: 'bg-red-600 text-white',
+    },
+  };
+  const s = styles[status];
+  return (
+    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${s.cls}`}>
+      {s.label}
+    </span>
+  );
+}
+
+function formatDate(iso: string): string {
+  return new Intl.DateTimeFormat('ar-IQ-u-nu-latn-ca-gregory', {
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso));
+}
+
+export function MyAnnouncements({ password, publisherName, refreshKey }: Props) {
+  const toast = useToast();
+  const [items, setItems] = useState<Announcement[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await postJson<{ items: Announcement[] }>(
+        '/api/admin/announcements',
+        { password, action: 'list_mine', created_by: publisherName }
+      );
+      setItems(data.items ?? []);
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل التحميل', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [password, publisherName, toast]);
+
+  useEffect(() => {
+    load();
+  }, [load, refreshKey]);
+
+  if (loading) {
+    return (
+      <div className="space-y-2">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="h-28 skeleton-shimmer rounded-2xl" />
+        ))}
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="rounded-3xl border border-line bg-white/80 p-12 text-center dark:bg-paper/80">
+        <p className="font-bold text-ink/70">لم تُرسل أي تبليغ بعد</p>
+        <p className="mt-1 text-sm text-ink/50">
+          اذهب لتبويب «تبليغ جديد» وابدأ
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {items.map((a) => (
+        <div
+          key={a.id}
+          className="rounded-2xl border border-line bg-white/80 p-4 dark:bg-paper/80"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge status={a.status} />
+            {a.stage && (
+              <span className="rounded-full bg-teal/8 px-2 py-0.5 text-[11px] font-bold text-teal/80 dark:bg-teal/15">
+                {a.stage}
+              </span>
+            )}
+            <span className="text-[11px] text-ink/40">
+              {formatDate(a.created_at)}
+            </span>
+          </div>
+
+          <h3 className="mt-2 font-bold text-ink">{a.title}</h3>
+          <p className="mt-1 whitespace-pre-line text-sm text-ink/70">
+            {a.body}
+          </p>
+
+          {a.status === 'rejected' && a.reviewed_note && (
+            <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-300">
+              <span className="font-bold">سبب الرفض: </span>
+              {a.reviewed_note}
+            </p>
+          )}
+
+          {a.status === 'sent' && (
+            <p className="mt-2 text-xs font-bold text-teal">
+              ✅ أُرسل لـ {a.sent_count} مشترك
+            </p>
+          )}
+
+          {a.status === 'failed' && a.sent_error && (
+            <p className="mt-2 text-xs font-bold text-red-600">
+              ❌ فشل: {a.sent_error}
+            </p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+===app/publisher/_components/usePublisherAuth.ts===
+// app/publisher/_components/usePublisherAuth.ts
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import { postJson, ApiError } from '@/lib/api-client';
+import { STORAGE_KEYS } from '@/lib/constants';
+
+interface UsePublisherAuthResult {
+  password: string;
+  name: string;
+  authenticated: boolean;
+  loading: boolean;
+  error: string;
+  login: (pw: string, name: string) => Promise<boolean>;
+  logout: () => void;
+}
+
+export function usePublisherAuth(): UsePublisherAuthResult {
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [authenticated, setAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const login = useCallback(
+    async (pw: string, nameInput: string): Promise<boolean> => {
+      const trimmedPw = pw.trim();
+      const trimmedName = nameInput.trim();
+
+      if (!trimmedPw) {
+        setError('أدخل كلمة المرور');
+        return false;
+      }
+      if (!trimmedName) {
+        setError('أدخل اسمك');
+        return false;
+      }
+
+      setLoading(true);
+      setError('');
+      try {
+        await postJson('/api/admin/announcements', {
+          password: trimmedPw,
+          action: 'list_mine',
+          created_by: trimmedName,
+        });
+
+        sessionStorage.setItem(STORAGE_KEYS.publisherPassword, trimmedPw);
+        sessionStorage.setItem(STORAGE_KEYS.publisherName, trimmedName);
+        setPassword(trimmedPw);
+        setName(trimmedName);
+        setAuthenticated(true);
+        return true;
+      } catch (err) {
+        const message =
+          err instanceof ApiError && err.status === 401
+            ? 'كلمة المرور غير صحيحة'
+            : 'صار خطأ، حاول مرة أخرى.';
+        setError(message);
+        sessionStorage.removeItem(STORAGE_KEYS.publisherPassword);
+        sessionStorage.removeItem(STORAGE_KEYS.publisherName);
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  const logout = useCallback(() => {
+    sessionStorage.removeItem(STORAGE_KEYS.publisherPassword);
+    sessionStorage.removeItem(STORAGE_KEYS.publisherName);
+    setPassword('');
+    setName('');
+    setAuthenticated(false);
+    setError('');
+  }, []);
+
+  useEffect(() => {
+    const savedPw = sessionStorage.getItem(STORAGE_KEYS.publisherPassword);
+    const savedName = sessionStorage.getItem(STORAGE_KEYS.publisherName);
+    if (savedPw && savedName) {
+      login(savedPw, savedName);
+    }
+  }, [login]);
+
+  return { password, name, authenticated, loading, error, login, logout };
+}
+===app/publisher/page.tsx===
+// app/publisher/page.tsx
+'use client';
+
+import { useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Field';
+import { usePublisherAuth } from './_components/usePublisherAuth';
+import { ComposeForm } from './_components/ComposeForm';
+import { MyAnnouncements } from './_components/MyAnnouncements';
+
+type Tab = 'compose' | 'mine';
+
+function IconLock() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+    </svg>
+  );
+}
+function IconLogout() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+    </svg>
+  );
+}
+function IconPen() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+  );
+}
+function IconList() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h10M4 18h10" />
+    </svg>
+  );
+}
+
+// ==================== Login ====================
+function LoginScreen({
+  loading,
+  error,
+  onLogin,
+}: {
+  loading: boolean;
+  error: string;
+  onLogin: (pw: string, name: string) => void;
+}) {
+  const [pw, setPw] = useState('');
+  const [name, setName] = useState('');
+
+  return (
+    <main className="relative mx-auto flex min-h-[calc(100dvh-var(--nav-h))] max-w-sm flex-col items-center justify-center px-6 py-16">
+      <div className="w-full rounded-3xl border border-line bg-white/80 p-8 shadow-[0_8px_30px_rgba(14,74,74,0.08)] backdrop-blur-sm animate-slide-up dark:bg-paper/80 dark:shadow-[0_8px_30px_rgba(0,0,0,0.40)]">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-teal/10 text-teal">
+          <IconLock />
+        </div>
+        <h1 className="mt-5 text-center text-2xl font-black text-ink">
+          بوابة الناشر
+        </h1>
+        <p className="mt-2 text-center text-sm text-ink/55">
+          أرسل تبليغاً ليُراجع من المشرف ثم يُرسل للمشتركين
+        </p>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onLogin(pw, name);
+          }}
+          className="mt-6 space-y-4"
+        >
+          <Input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="اسمك (يظهر للمشرف)"
+            required
+            autoFocus
+            maxLength={100}
+            className="text-center"
+          />
+          <Input
+            type="password"
+            value={pw}
+            onChange={(e) => setPw(e.target.value)}
+            placeholder="كلمة مرور الناشرين"
+            autoComplete="current-password"
+            required
+            className="text-center"
+          />
+          {error && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-center text-sm font-bold text-red-600 dark:bg-red-950/40 dark:text-red-300" role="alert">
+              {error}
+            </p>
+          )}
+          <Button type="submit" size="lg" loading={loading} className="w-full">
+            {loading ? 'جاري التحقق...' : 'دخول'}
+          </Button>
+        </form>
+      </div>
+    </main>
+  );
+}
+
+// ==================== Page ====================
+export default function PublisherPage() {
+  const { password, name, authenticated, loading, error, login, logout } =
+    usePublisherAuth();
+  const [tab, setTab] = useState<Tab>('compose');
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  if (!authenticated) {
+    return <LoginScreen loading={loading} error={error} onLogin={login} />;
+  }
+
+  return (
+    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
+      <div className="flex flex-wrap items-center justify-between gap-3 animate-slide-up">
+        <div>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
+            ناشر
+          </span>
+          <h1 className="mt-3 text-3xl font-black text-ink sm:text-4xl">
+            مرحباً، {name}
+          </h1>
+          <p className="mt-1 text-sm text-ink/60">
+            اكتب تبليغك وسيراجعه المشرف قبل النشر
+          </p>
+        </div>
+        <Button variant="secondary" size="sm" onClick={logout} icon={<IconLogout />}>
+          تسجيل الخروج
+        </Button>
+      </div>
+
+      <div
+        role="tablist"
+        aria-label="أقسام بوابة الناشر"
+        className="mt-6 flex gap-1.5 rounded-2xl border border-line bg-white/60 p-1.5 backdrop-blur-sm dark:bg-white/[0.04] animate-slide-up"
+        style={{ animationDelay: '80ms' }}
+      >
+        <button
+          role="tab"
+          aria-selected={tab === 'compose'}
+          onClick={() => setTab('compose')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${
+            tab === 'compose'
+              ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)]'
+              : 'text-ink/60 hover:bg-ink/5'
+          }`}
+        >
+          <IconPen />
+          تبليغ جديد
+        </button>
+        <button
+          role="tab"
+          aria-selected={tab === 'mine'}
+          onClick={() => setTab('mine')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${
+            tab === 'mine'
+              ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)]'
+              : 'text-ink/60 hover:bg-ink/5'
+          }`}
+        >
+          <IconList />
+          تبليغاتي
+        </button>
+      </div>
+
+      <div className="mt-6 animate-slide-up" style={{ animationDelay: '120ms' }}>
+        {tab === 'compose' && (
+          <ComposeForm
+            password={password}
+            publisherName={name}
+            onCreated={() => {
+              setRefreshKey((k) => k + 1);
+              setTab('mine');
+            }}
+          />
+        )}
+        {tab === 'mine' && (
+          <MyAnnouncements
+            password={password}
+            publisherName={name}
+            refreshKey={refreshKey}
+          />
+        )}
+      </div>
+    </main>
+  );
+}
+
+===app/schedule/page.tsx===
+// app/schedule/page.tsx
+'use client';
+
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+} from 'react';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabaseClient';
+import { useStudentStage } from '@/hooks/useStudentStage';
+import {
+  IconArrowLeft,
+  IconCalendar,
+  IconExternal,
+  IconExpand,
+  IconWarning,
+  IconClose,
+} from '@/components/ui/Icons';
+import type { Schedule } from '@/lib/types';
+
+// ==================== Types ====================
+type ScheduleImage = Pick<Schedule, 'image_url'>;
+
+type LoadError = {
+  message: string; // رسالة عربية مفهومة للطالب
+  detail: string; // تفاصيل تقنية (قد تكون فارغة)
+};
+
+const MAIN_CLASS =
+  'mx-auto max-w-3xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10';
+
+// ==================== Helpers ====================
+// لا نقبل إلا روابط http/https (حماية من javascript: وروابط فاسدة)
+function toSafeUrl(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:'
+      ? trimmed
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+// رسالة خطأ عربية بدل عرض نص إنجليزي تقني للطالب
+function buildError(detail: string): LoadError {
+  const offline = typeof navigator !== 'undefined' && !navigator.onLine;
+  return {
+    message: offline
+      ? 'يبدو أن الإنترنت مقطوع عندك. سنعيد المحاولة تلقائياً عند رجوعه.'
+      : 'تعذّر جلب الجدول الآن. جرّب مرة ثانية بعد قليل.',
+    detail,
+  };
+}
+
+// ==================== Skeleton ====================
+function Skeleton() {
+  return (
+    <div
+      role="status"
+      aria-label="جارٍ التحميل"
+      className="mt-8 space-y-4"
+    >
+      <div className="h-4 w-40 skeleton-shimmer rounded motion-reduce:animate-none" />
+      <div className="aspect-[3/4] w-full skeleton-shimmer rounded-card motion-reduce:animate-none sm:aspect-[4/3]" />
+    </div>
+  );
+}
+
+// ==================== Back Link ====================
+function BackLink() {
+  return (
+    <Link
+      href="/"
+      className="group inline-flex items-center gap-1.5 rounded-field text-sm font-semibold text-teal transition-colors hover:text-teal-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+    >
+      <span className="transition-transform duration-200 group-hover:-translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0">
+        <IconArrowLeft aria-hidden="true" className="h-4 w-4" />
+      </span>
+      رجوع إلى لوحة الأقسام
+    </Link>
+  );
+}
+
+// ==================== Stage Badge ====================
+function StageBadge({ stage }: { stage: string }) {
+  return <span className="stage-badge">{stage}</span>;
+}
+
+// ==================== Fullscreen Viewer ====================
+function FullscreenViewer({
+  imageUrl,
+  stage,
+  onClose,
+}: {
+  imageUrl: string;
+  stage: string;
+  onClose: () => void;
+}) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const [zoomed, setZoomed] = useState(false);
+
+  // عند الفتح: نركّز على زر الإغلاق ونمنع تمرير الخلفية
+  useEffect(() => {
+    closeRef.current?.focus();
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  // Escape يغلق العارض
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  // حبس Tab داخل النافذة (Focus trap)
+  function handleKeyDown(e: ReactKeyboardEvent<HTMLDivElement>) {
+    if (e.key !== 'Tab') return;
+    const nodes = dialogRef.current?.querySelectorAll<HTMLElement>(
+      'button, [href], [tabindex]:not([tabindex="-1"])',
+    );
+    if (!nodes || nodes.length === 0) return;
+    const first = nodes[0];
+    const last = nodes[nodes.length - 1];
+    const active = document.activeElement;
+    if (e.shiftKey && active === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
+  return (
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`عرض جدول ${stage} بحجم كامل`}
+      onClick={onClose}
+      onKeyDown={handleKeyDown}
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-overlay p-4 pt-16 animate-fade-in motion-reduce:animate-none"
+    >
+      {/* زر تكبير/تصغير: مهم لجداول فيها خط صغير على الموبايل */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setZoomed((z) => !z);
+        }}
+        className="absolute start-4 top-4 inline-flex h-10 items-center rounded-field bg-paper-soft/95 px-4 text-sm font-semibold text-ink transition-colors hover:bg-paper-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+      >
+        {zoomed ? 'تصغير' : 'تكبير'}
+      </button>
+
+      <button
+        ref={closeRef}
+        type="button"
+        onClick={onClose}
+        aria-label="إغلاق"
+        className="absolute end-4 top-4 flex h-10 w-10 items-center justify-center rounded-field bg-paper-soft/95 text-ink transition-colors hover:bg-paper-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+      >
+        <IconClose aria-hidden="true" className="h-4 w-4" />
+      </button>
+
+      {/* tabIndex=0 ليتمكن مستخدم الكيبورد من تحريك الصورة عند التكبير */}
+      <div
+        tabIndex={0}
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-full max-w-6xl overflow-auto overscroll-contain rounded-card border border-line bg-paper-soft p-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
+      >
+        <img
+          src={imageUrl}
+          alt={`جدول ${stage}`}
+          decoding="async"
+          className={`block h-auto ${zoomed ? 'w-[200%] max-w-none' : 'w-full'}`}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ==================== Schedule Card ====================
+function ScheduleCard({
+  imageUrl,
+  stage,
+}: {
+  imageUrl: string;
+  stage: string;
+}) {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const lastTriggerRef = useRef<HTMLElement | null>(null);
+
+  // إذا كانت الصورة محمّلة مسبقاً (cache) قد لا يعمل onLoad
+  useEffect(() => {
+    const img = imgRef.current;
+    if (img && img.complete && img.naturalWidth > 0) {
+      setImageLoaded(true);
+    }
+  }, []);
+
+  // نتذكر الزر الذي فتح العارض لنرجع التركيز له عند الإغلاق
+  function openViewer(e: ReactMouseEvent<HTMLButtonElement>) {
+    lastTriggerRef.current = e.currentTarget;
+    setViewerOpen(true);
+  }
+
+  const closeViewer = useCallback(() => {
+    setViewerOpen(false);
+    requestAnimationFrame(() => lastTriggerRef.current?.focus());
+  }, []);
+
+  if (imageError) {
+    return (
+      <div
+        role="alert"
+        className="mt-6 flex items-start gap-3 rounded-card border border-coral/30 bg-coral/5 p-4 animate-slide-up motion-reduce:animate-none"
+      >
+        <span
+          aria-hidden="true"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-field bg-coral text-on-coral"
+        >
+          <IconWarning className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-coral-ink">
+            تعذّر تحميل صورة الجدول
+          </p>
+          <p className="mt-0.5 text-xs text-ink-soft">
+            جرّب تحديث الصفحة، أو افتح الصورة مباشرة من الرابط أدناه.
+          </p>
+          <a
+            href={imageUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-coral-ink underline underline-offset-4 hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
+          >
+            <IconExternal aria-hidden="true" className="h-3.5 w-3.5" />
+            فتح الرابط مباشرة
+            <span className="sr-only"> (يفتح في تبويب جديد)</span>
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="mt-6 card-editorial overflow-hidden p-2 animate-slide-up motion-reduce:animate-none">
+        {!imageLoaded && (
+          <div
+            aria-hidden="true"
+            className="aspect-[3/4] w-full skeleton-shimmer rounded-field motion-reduce:animate-none sm:aspect-[4/3]"
+          />
+        )}
+
+        <button
+          type="button"
+          onClick={openViewer}
+          aria-label={`عرض جدول ${stage} بحجم كامل`}
+          aria-haspopup="dialog"
+          className={`block w-full cursor-zoom-in rounded-field focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal ${
+            imageLoaded ? '' : 'hidden'
+          }`}
+        >
+          {/* الجدول هو محتوى الصفحة الرئيسي */}
+          <img
+            ref={imgRef}
+            src={imageUrl}
+            alt={`جدول ${stage}`}
+            fetchPriority="high"
+            decoding="async"
+            onLoad={() => setImageLoaded(true)}
+            onError={() => setImageError(true)}
+            className="block h-auto w-full rounded-field"
+          />
+        </button>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2 animate-slide-up motion-reduce:animate-none">
+        <button
+          type="button"
+          onClick={openViewer}
+          aria-haspopup="dialog"
+          className="inline-flex h-10 items-center gap-2 rounded-field border border-teal/25 bg-teal-tint px-4 text-sm font-semibold text-teal transition-colors hover:border-teal/50 hover:bg-teal-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+        >
+          <IconExpand aria-hidden="true" className="h-4 w-4" />
+          عرض بحجم كامل
+        </button>
+
+        <a
+          href={imageUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex h-10 items-center gap-2 rounded-field border border-line bg-paper-soft px-4 text-sm font-semibold text-ink-soft transition-colors hover:border-teal/40 hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+        >
+          <IconExternal aria-hidden="true" className="h-4 w-4" />
+          فتح في تبويب جديد
+          <span className="sr-only"> (يفتح في تبويب جديد)</span>
+        </a>
+      </div>
+
+      {viewerOpen && (
+        <FullscreenViewer
+          imageUrl={imageUrl}
+          stage={stage}
+          onClose={closeViewer}
+        />
+      )}
+    </>
+  );
+}
+
+// ==================== Empty State ====================
+function EmptyState() {
+  return (
+    <div
+      role="status"
+      className="mt-6 card-editorial p-10 text-center animate-slide-up motion-reduce:animate-none"
+    >
+      <div
+        aria-hidden="true"
+        className="mx-auto flex h-16 w-16 items-center justify-center rounded-card bg-gold-tint text-gold-ink"
+      >
+        <IconCalendar className="h-8 w-8" />
+      </div>
+      <p className="mt-4 font-bold text-ink-soft">
+        لا يوجد جدول مرفوع لمرحلتك حالياً.
+      </p>
+      <p className="mt-1 text-sm text-ink-muted">يرجى العودة لاحقاً</p>
+    </div>
+  );
+}
+
+// ==================== No Stage State ====================
+function NoStageState() {
+  return (
+    <div
+      role="status"
+      className="mt-6 card-editorial p-10 text-center animate-slide-up motion-reduce:animate-none"
+    >
+      <div
+        aria-hidden="true"
+        className="mx-auto flex h-16 w-16 items-center justify-center rounded-card bg-gold-tint text-gold-ink"
+      >
+        <IconWarning className="h-8 w-8" />
+      </div>
+      <p className="mt-4 font-bold text-ink-soft">
+        لم نعرف مرحلتك الدراسية بعد.
+      </p>
+      <p className="mt-1 text-sm text-ink-muted">
+        اختر مرحلتك من لوحة الأقسام ثم ارجع لهذه الصفحة.
+      </p>
+    </div>
+  );
+}
+
+// ==================== Error State ====================
+function ErrorState({
+  error,
+  onRetry,
+}: {
+  error: LoadError;
+  onRetry: () => void;
+}) {
+  return (
+    <div
+      role="alert"
+      className="mt-6 flex items-start gap-3 rounded-card border border-coral/30 bg-coral/5 p-4 animate-slide-up motion-reduce:animate-none"
+    >
+      <span
+        aria-hidden="true"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-field bg-coral text-on-coral"
+      >
+        <IconWarning className="h-4 w-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-bold text-coral-ink">تعذّر تحميل الجدول</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-ink-soft">
+          {error.message}
+        </p>
+        {error.detail && (
+          <p
+            dir="ltr"
+            className="mt-1 break-anywhere text-end font-mono text-[11px] text-ink-muted"
+          >
+            {error.detail}
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-3 inline-flex h-10 items-center rounded-field border border-line bg-paper-soft px-4 text-xs font-semibold text-ink-soft transition-colors hover:border-teal/40 hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+        >
+          إعادة المحاولة
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ==================== Page ====================
+export default function SchedulePage() {
+  const { stage, ready } = useStudentStage();
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<LoadError | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    if (!stage) return;
+    const currentStage = stage;
+    let cancelled = false;
+
+    async function loadData() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const { data, error: fetchError } = await supabase
+          .from('schedules')
+          .select('image_url')
+          .eq('stage', currentStage)
+          .limit(1)
+          .maybeSingle<ScheduleImage>();
+
+        if (cancelled) return;
+
+        if (fetchError) {
+          setError(buildError(fetchError.message));
+          setImageUrl(null);
+        } else {
+          setImageUrl(toSafeUrl(data?.image_url));
+        }
+      } catch (e: unknown) {
+        if (cancelled) return;
+        setError(buildError(e instanceof Error ? e.message : ''));
+        setImageUrl(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void loadData();
+    return () => {
+      cancelled = true;
+    };
+  }, [stage, reloadKey]);
+
+  const handleRetry = useCallback(() => {
+    setReloadKey((k) => k + 1);
+  }, []);
+
+  // إعادة محاولة تلقائية عند رجوع الإنترنت
+  useEffect(() => {
+    if (!error) return;
+    function onOnline() {
+      setReloadKey((k) => k + 1);
+    }
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, [error]);
+
+  // ==================== Loading (stage not ready) ====================
+  if (!ready) {
+    return (
+      <main className={MAIN_CLASS} aria-busy="true">
+        <Skeleton />
+      </main>
+    );
+  }
+
+  // ==================== No stage ====================
+  if (!stage) {
+    return (
+      <main className={MAIN_CLASS}>
+        <BackLink />
+        <NoStageState />
+      </main>
+    );
+  }
+
+  return (
+    <main className={MAIN_CLASS} aria-labelledby="schedule-title">
+      {/* ==================== Back ==================== */}
+      <BackLink />
+
+      {/* ==================== Header ==================== */}
+      <header className="mt-6 animate-slide-up motion-reduce:animate-none">
+        <StageBadge stage={stage} />
+
+        <h1
+          id="schedule-title"
+          className="mt-3 flex items-center gap-2.5 font-display text-3xl font-bold leading-tight text-ink sm:text-4xl"
+        >
+          <span
+            aria-hidden="true"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-field bg-teal-soft text-teal"
+          >
+            <IconCalendar className="h-5 w-5" />
+          </span>
+          جدول المحاضرات
+        </h1>
+
+        <p className="mt-3 text-sm leading-relaxed text-ink-soft">
+          جدول محاضرات الأسبوع لمرحلتك. اضغط على الصورة لعرضها بحجم كامل.
+        </p>
+      </header>
+
+      {/* ==================== Content ==================== */}
+      <div aria-busy={loading}>
+        {loading && <Skeleton />}
+
+        {!loading && error && (
+          <ErrorState error={error} onRetry={handleRetry} />
+        )}
+
+        {!loading && !error && !imageUrl && <EmptyState />}
+
+        {!loading && !error && imageUrl && (
+          <ScheduleCard key={imageUrl} imageUrl={imageUrl} stage={stage} />
+        )}
+      </div>
+
+      {/* ==================== Footer Note ==================== */}
+      {!loading && !error && imageUrl && (
+        <p className="mt-6 text-center text-xs leading-relaxed text-ink-muted">
+          في حال وجود خطأ في الجدول، يرجى التواصل مع إدارة المرحلة.
+        </p>
+      )}
+    </main>
+  );
+}
+===app/study-health/page.tsx===
+// app/study-health/page.tsx
+import { redirect } from 'next/navigation';
+
+export default function StudyHealthRedirectPage() {
+  redirect('/study-session');
+}
+===app/study-prompt/page.tsx===
+// app/study-prompt/page.tsx
+'use client';
+
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from 'react';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabaseClient';
+import { useStudentStage } from '@/hooks/useStudentStage';
+import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Field';
+import { useToast } from '@/components/ui/Toast';
+import { postJson } from '@/lib/api-client';
+import {
+  IconArrowLeft,
+  IconBook,
+  IconCheck,
+  IconClock,
+  IconClose,
+  IconCopy,
+  IconInbox,
+  IconSparkles,
+  IconTrending,
+  IconWarning,
+} from '@/components/ui/Icons';
+import {
+  MATERIAL_METHODS,
+  STUDY_FORMATS,
+  STUDY_FORMAT_LABELS,
+  type StudyFormat,
+} from '@/lib/constants';
+
+// ==================== Types ====================
+interface SubjectOption {
+  id: string;
+  name: string;
+}
+
+type Language = 'ar' | 'en';
+
+type LoadError = { message: string; detail: string };
+
+interface GeneratedResult {
+  text: string;
+  language: Language;
+  signature: string;
+  createdAt: number;
+}
+
+interface StoredPrefs {
+  materialMethod: string;
+  formats: StudyFormat[];
+  language: Language;
+  subjectId?: string;
+}
+
+interface HistoryItem {
+  id: string;
+  subjectName: string;
+  preview: string;
+  language: Language;
+  createdAt: number;
+}
+
+interface Preset {
+  id: string;
+  label: string;
+  emoji: string;
+  formats: StudyFormat[];
+  methodIndex: number;
+}
+
+// ==================== Constants ====================
+const MAIN_CLASS =
+  'mx-auto max-w-5xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10';
+
+const PREFS_KEY = 'lawazem_sp_prefs_v2';
+const HISTORY_KEY = 'lawazem_sp_history_v1';
+const PRESETS_KEY = 'lawazem_sp_presets_v1';
+const MAX_HISTORY = 5;
+const COPY_FEEDBACK_MS = 1500;
+
+const subjectsCache = new Map<string, SubjectOption[]>();
+const arabicCollator = new Intl.Collator('ar');
+
+// ==================== Presets الافتراضية ====================
+const DEFAULT_PRESETS: Preset[] = [
+  {
+    id: 'iraqi-summary',
+    label: 'ملخص عامي عراقي',
+    emoji: '🇮🇶',
+    formats: ['ملخص باللهجة العراقية العامية (سريع ومختصر)'],
+    methodIndex: 1,
+  },
+  {
+    id: 'quick-review',
+    label: 'مراجعة سريعة',
+    emoji: '⚡',
+    formats: [
+      'ملخص نقطي سريع ومركز',
+      'أسئلة اختيار من متعدد (MCQ) للمراجعة مع الإجابات الصحيحة وتوضيح كل خيار',
+    ],
+    methodIndex: 0,
+  },
+  {
+    id: 'deep-study',
+    label: 'دراسة عميقة',
+    emoji: '🧠',
+    formats: [
+      'شرح مبسط وواضح لمحتوى السلايد خطوة بخطوة',
+      'أسئلة نقاش عميقة تساعد على الفهم لا الحفظ',
+      'فلاش كاردز (سؤال وجواب) للحفظ السريع',
+    ],
+    methodIndex: 0,
+  },
+  {
+    id: 'exam-prep',
+    label: 'تحضير امتحان',
+    emoji: '🎯',
+    formats: [
+      'أسئلة اختيار من متعدد (MCQ) للمراجعة مع الإجابات الصحيحة وتوضيح كل خيار',
+      'مراجعة شاملة وتجميعية آخر المحاضرة بعد إرسال كل السلايدات',
+    ],
+    methodIndex: 0,
+  },
+  {
+    id: 'flashcards-only',
+    label: 'فلاش كاردز فقط',
+    emoji: '🃏',
+    formats: ['فلاش كاردز (سؤال وجواب) للحفظ السريع'],
+    methodIndex: 0,
+  },
+];
+
+// ==================== Helpers ====================
+function buildError(detail: string): LoadError {
+  const offline = typeof navigator !== 'undefined' && !navigator.onLine;
+  return {
+    message: offline
+      ? 'يبدو أن الإنترنت مقطوع عندك. سنعيد المحاولة تلقائياً عند رجوعه.'
+      : 'تعذّر تحميل المواد الآن. جرّب مرة ثانية بعد قليل.',
+    detail,
+  };
+}
+
+function isLanguage(v: unknown): v is Language {
+  return v === 'ar' || v === 'en';
+}
+
+function toSubjects(data: unknown): SubjectOption[] {
+  if (!Array.isArray(data)) return [];
+  const list: SubjectOption[] = [];
+  for (const row of data as unknown[]) {
+    if (typeof row !== 'object' || row === null) continue;
+    const r = row as Record<string, unknown>;
+    if (typeof r.id === 'string' && typeof r.name === 'string') {
+      list.push({ id: r.id, name: r.name });
+    }
+  }
+  return list.sort((a, b) => arabicCollator.compare(a.name, b.name));
+}
+
+function readPrefs(): Partial<StoredPrefs> {
+  try {
+    const raw = window.localStorage.getItem(PREFS_KEY);
+    if (!raw) return {};
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null) return {};
+    const p = parsed as Record<string, unknown>;
+    const out: Partial<StoredPrefs> = {};
+
+    if (
+      typeof p.materialMethod === 'string' &&
+      MATERIAL_METHODS.some((m) => m.value === p.materialMethod)
+    ) {
+      out.materialMethod = p.materialMethod;
+    }
+    if (Array.isArray(p.formats)) {
+      const valid = STUDY_FORMATS.filter((f) =>
+        (p.formats as unknown[]).includes(f),
+      );
+      if (valid.length > 0) out.formats = valid;
+    }
+    if (isLanguage(p.language)) out.language = p.language;
+    if (typeof p.subjectId === 'string') out.subjectId = p.subjectId;
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+function writePrefs(prefs: StoredPrefs): void {
+  try {
+    window.localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  } catch {
+    /* ignore */
+  }
+}
+
+function readHistory(): HistoryItem[] {
+  try {
+    const raw = window.localStorage.getItem(HISTORY_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return (parsed as unknown[])
+      .filter(
+        (x): x is HistoryItem =>
+          typeof x === 'object' &&
+          x !== null &&
+          typeof (x as HistoryItem).id === 'string' &&
+          typeof (x as HistoryItem).preview === 'string',
+      )
+      .slice(0, MAX_HISTORY);
+  } catch {
+    return [];
+  }
+}
+
+function pushHistory(item: HistoryItem): HistoryItem[] {
+  const current = readHistory();
+  const next = [item, ...current].slice(0, MAX_HISTORY);
+  try {
+    window.localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+  } catch {
+    /* ignore */
+  }
+  return next;
+}
+
+function readPresets(): Preset[] {
+  try {
+    const raw = window.localStorage.getItem(PRESETS_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return (parsed as Preset[]).slice(0, 12);
+  } catch {
+    return [];
+  }
+}
+
+function writePresets(presets: Preset[]): void {
+  try {
+    window.localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
+  } catch {
+    /* ignore */
+  }
+}
+
+async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    /* fallback */
+  }
+  const prev =
+    document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '0';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  } finally {
+    prev?.focus({ preventScroll: true });
+  }
+}
+
+function formatTimestamp(ts: number): string {
+  const diff = Date.now() - ts;
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return 'الآن';
+  if (min < 60) return `قبل ${min} دقيقة`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `قبل ${h} ساعة`;
+  const d = Math.floor(h / 24);
+  if (d === 1) return 'أمس';
+  return `قبل ${d} أيام`;
+}
+
+// ==================== Back Link ====================
+function BackLink() {
+  return (
+    <Link
+      href="/"
+      className="group inline-flex items-center gap-1.5 rounded-field text-sm font-semibold text-teal transition-colors hover:text-teal-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+    >
+      <span className="transition-transform duration-200 group-hover:-translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0">
+        <IconArrowLeft aria-hidden="true" className="h-4 w-4" />
+      </span>
+      رجوع إلى لوحة الأقسام
+    </Link>
+  );
+}
+
+// ==================== Skeleton ====================
+function FormSkeleton() {
+  return (
+    <div
+      role="status"
+      aria-label="جارٍ تحميل النموذج"
+      className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]"
+    >
+      <div className="space-y-5 card-editorial p-5 sm:p-6">
+        <span className="sr-only">جارٍ التحميل…</span>
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="space-y-2" aria-hidden="true">
+            <div className="h-4 w-24 skeleton-shimmer rounded motion-reduce:animate-none" />
+            <div className="h-11 w-full skeleton-shimmer rounded-field motion-reduce:animate-none" />
+          </div>
+        ))}
+      </div>
+      <div className="hidden lg:block" aria-hidden="true">
+        <div className="h-80 skeleton-shimmer rounded-card motion-reduce:animate-none" />
+      </div>
+    </div>
+  );
+}
+
+// ==================== Error State ====================
+const ErrorState = memo(function ErrorState({
+  error,
+  onRetry,
+}: {
+  error: LoadError;
+  onRetry: () => void;
+}) {
+  return (
+    <div
+      role="alert"
+      className="mt-6 flex items-start gap-3 rounded-card border border-coral/30 bg-coral/5 p-4 animate-slide-up motion-reduce:animate-none"
+    >
+      <span
+        aria-hidden="true"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-field bg-coral text-on-coral"
+      >
+        <IconWarning className="h-4 w-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-bold text-coral-ink">تعذّر تحميل المواد</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-ink-soft">
+          {error.message}
+        </p>
+        {error.detail && (
+          <p
+            dir="ltr"
+            className="mt-1 break-anywhere text-end font-mono text-[11px] text-ink-muted"
+          >
+            {error.detail}
+          </p>
+        )}
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={onRetry}
+          className="mt-3"
+        >
+          إعادة المحاولة
+        </Button>
+      </div>
+    </div>
+  );
+});
+
+// ==================== Format Meta ====================
+const FORMAT_META: Record<StudyFormat, { emoji: string; hint: string }> = {
+  'ملخص باللهجة العراقية العامية (سريع ومختصر)': {
+    emoji: '🇮🇶',
+    hint: 'شرح بالعامي العراقي — سهل وممتع',
+  },
+  'شرح مبسط وواضح لمحتوى السلايد خطوة بخطوة': {
+    emoji: '📖',
+    hint: 'كل سلايد يُشرح بلغة سهلة',
+  },
+  'أسئلة اختيار من متعدد (MCQ) للمراجعة مع الإجابات الصحيحة وتوضيح كل خيار': {
+    emoji: '✅',
+    hint: 'أسئلة مع الإجابة الصحيحة وتوضيح',
+  },
+  'فلاش كاردز (سؤال وجواب) للحفظ السريع': {
+    emoji: '🃏',
+    hint: 'بطاقات سؤال/جواب للحفظ',
+  },
+  'ملخص نقطي سريع ومركز': {
+    emoji: '⚡',
+    hint: 'نقاط مركزة بدون حشو',
+  },
+  'أسئلة نقاش عميقة تساعد على الفهم لا الحفظ': {
+    emoji: '💭',
+    hint: 'أسئلة تحفّز الفهم العميق',
+  },
+  'مراجعة شاملة وتجميعية آخر المحاضرة بعد إرسال كل السلايدات': {
+    emoji: '🎯',
+    hint: 'تُنتج بعد إرسال كل السلايدات',
+  },
+};
+
+// ==================== Format Card ====================
+function FormatCard({
+  format,
+  selected,
+  onToggle,
+}: {
+  format: StudyFormat;
+  selected: boolean;
+  onToggle: () => void;
+}) {
+  const meta = FORMAT_META[format];
+  const label = STUDY_FORMAT_LABELS[format];
+  const isColloquial = format.includes('اللهجة العراقية');
+
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={selected}
+      onClick={onToggle}
+      className={[
+        'group flex w-full items-start gap-3 rounded-card border p-3 text-start',
+        'transition-all duration-200 ease-[var(--ease-editorial)] motion-reduce:transition-none',
+        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal',
+        selected
+          ? isColloquial
+            ? 'border-gold bg-gold-tint shadow-sm'
+            : 'border-teal bg-teal-tint shadow-sm'
+          : 'border-line bg-paper-soft hover:border-teal/40 hover:bg-paper',
+      ].join(' ')}
+    >
+      <span
+        aria-hidden="true"
+        className={[
+          'flex h-9 w-9 shrink-0 items-center justify-center rounded-field text-lg',
+          'transition-colors duration-200 motion-reduce:transition-none',
+          selected
+            ? isColloquial
+              ? 'bg-gold text-on-gold'
+              : 'bg-teal text-on-teal'
+            : 'bg-paper-deep',
+        ].join(' ')}
+      >
+        {selected ? <IconCheck className="h-4 w-4" /> : meta.emoji}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-bold text-ink">
+          {label}
+        </span>
+        <span className="mt-0.5 block text-xs text-ink-muted">{meta.hint}</span>
+      </span>
+    </button>
+  );
+}
+
+// ==================== Progress Steps ====================
+function ProgressSteps({ active }: { active: number }) {
+  const steps = ['تحليل المادة', 'صياغة البرومبت', 'لمسات أخيرة'];
+  return (
+    <ol className="space-y-2.5">
+      {steps.map((label, i) => {
+        const done = i < active;
+        const current = i === active;
+        return (
+          <li key={label} className="flex items-center gap-3">
+            <span
+              className={[
+                'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-black',
+                'transition-colors duration-200 motion-reduce:transition-none',
+                done
+                  ? 'bg-teal text-on-teal'
+                  : current
+                    ? 'bg-teal/20 text-teal'
+                    : 'bg-ink/5 text-ink-muted',
+              ].join(' ')}
+            >
+              {done ? (
+                <IconCheck className="h-3 w-3" />
+              ) : current ? (
+                <span className="block h-2 w-2 animate-pulse rounded-full bg-teal motion-reduce:animate-none" />
+              ) : (
+                i + 1
+              )}
+            </span>
+            <span
+              className={[
+                'text-sm',
+                done || current ? 'font-bold text-ink' : 'text-ink-muted',
+              ].join(' ')}
+            >
+              {label}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+// ==================== Result Panel ====================
+const ResultPanel = memo(function ResultPanel({
+  result,
+  stale,
+  onCopy,
+  copied,
+  panelRef,
+}: {
+  result: GeneratedResult;
+  stale: boolean;
+  onCopy: () => void;
+  copied: boolean;
+  panelRef: React.RefObject<HTMLElement | null>;
+}) {
+  const wordCount = useMemo(
+    () => result.text.trim().split(/\s+/).filter(Boolean).length,
+    [result.text],
+  );
+
+  return (
+    <section
+      ref={panelRef}
+      tabIndex={-1}
+      aria-label="البرومبت المولّد"
+      className="scroll-mt-6 overflow-hidden rounded-card border border-teal/25 bg-paper-soft outline-none animate-slide-up motion-reduce:animate-none"
+    >
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-teal-tint px-4 py-3">
+        <h2 className="flex items-center gap-2 font-display text-sm font-bold text-teal">
+          <span
+            aria-hidden="true"
+            className="flex h-6 w-6 items-center justify-center rounded-chip bg-teal text-on-teal"
+          >
+            <IconSparkles className="h-3 w-3" />
+          </span>
+          البرومبت جاهز
+        </h2>
+        <Button
+          type="button"
+          variant={copied ? 'primary' : 'secondary'}
+          size="sm"
+          onClick={onCopy}
+          icon={
+            copied ? (
+              <IconCheck className="h-3.5 w-3.5" />
+            ) : (
+              <IconCopy className="h-3.5 w-3.5" />
+            )
+          }
+        >
+          {copied ? 'تم النسخ' : 'نسخ'}
+        </Button>
+      </header>
+
+      {stale && (
+        <p
+          role="status"
+          className="flex items-start gap-2 border-b border-warning/30 bg-warning/5 px-4 py-2.5 text-xs leading-relaxed text-ink-soft"
+        >
+          <IconWarning
+            aria-hidden="true"
+            className="mt-0.5 h-3.5 w-3.5 shrink-0"
+          />
+          غيّرت اختياراتك بعد التوليد، فهذا البرومبت لم يعد يطابقها. أعد
+          التوليد.
+        </p>
+      )}
+
+      <pre
+        dir={result.language === 'en' ? 'ltr' : 'rtl'}
+        lang={result.language}
+        tabIndex={0}
+        aria-label="نص البرومبت"
+        className="max-h-[55dvh] overflow-y-auto whitespace-pre-wrap break-anywhere p-4 text-start text-sm leading-relaxed text-ink focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-teal"
+      >
+        {result.text}
+      </pre>
+
+      {/* أزرار الفتح المباشر في أدوات AI */}
+      <div className="flex flex-wrap gap-2 border-t border-line bg-teal-tint/40 px-4 py-3">
+        <button
+          type="button"
+          onClick={() => {
+            void copyText(result.text).then((ok) => {
+              if (ok) window.open('https://chatgpt.com/', '_blank', 'noopener');
+            });
+          }}
+          className="inline-flex flex-1 min-w-[140px] items-center justify-center gap-2 rounded-field border-2 border-teal bg-teal px-4 py-2.5 text-sm font-bold text-on-teal transition-all duration-200 hover:-translate-y-0.5 hover:bg-teal-hover hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+        >
+          <span aria-hidden="true">🚀</span>
+          انسخ وافتح ChatGPT
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            void copyText(result.text).then((ok) => {
+              if (ok) window.open('https://claude.ai/new', '_blank', 'noopener');
+            });
+          }}
+          className="inline-flex flex-1 min-w-[140px] items-center justify-center gap-2 rounded-field border border-line bg-paper-soft px-4 py-2.5 text-sm font-bold text-ink-soft transition-colors hover:border-teal/40 hover:text-teal motion-reduce:transition-none"
+        >
+          <span aria-hidden="true">📎</span>
+          انسخ وافتح Claude
+        </button>
+      </div>
+
+      <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-line bg-paper-deep/40 px-4 py-2.5 text-[11px] text-ink-muted">
+        <span className="font-mono">{wordCount} كلمة</span>
+        <span>{formatTimestamp(result.createdAt)}</span>
+      </footer>
+    </section>
+  );
+});
+
+// ==================== Empty Preview ====================
+function EmptyPreview({
+  subjectName,
+  methodLabel,
+  formats,
+  language,
+}: {
+  subjectName: string | null;
+  methodLabel: string | null;
+  formats: StudyFormat[];
+  language: Language;
+}) {
+  const isEmpty = !subjectName || !methodLabel || formats.length === 0;
+  const hasColloquial = formats.some((f) => f.includes('اللهجة العراقية'));
+
+  return (
+    <section
+      aria-label="معاينة الخيارات"
+      className="hidden overflow-hidden rounded-card border border-line bg-paper-soft lg:block"
+    >
+      <header className="border-b border-line bg-paper-deep/40 px-4 py-3">
+        <h2 className="flex items-center gap-2 text-sm font-bold text-ink-soft">
+          <span aria-hidden="true" className="h-2 w-2 rounded-full bg-gold" />
+          ملخّص اختياراتك
+        </h2>
+      </header>
+
+      <dl className="space-y-3 p-4 text-sm">
+        <div className="flex items-start gap-3">
+          <dt className="w-16 shrink-0 text-xs font-bold text-ink-muted">
+            المادة
+          </dt>
+          <dd className="min-w-0 flex-1 break-anywhere font-bold text-ink">
+            {subjectName ?? '—'}
+          </dd>
+        </div>
+        <div className="flex items-start gap-3">
+          <dt className="w-16 shrink-0 text-xs font-bold text-ink-muted">
+            الطريقة
+          </dt>
+          <dd className="min-w-0 flex-1 text-xs leading-relaxed text-ink-soft">
+            {methodLabel ?? '—'}
+          </dd>
+        </div>
+        <div className="flex items-start gap-3">
+          <dt className="w-16 shrink-0 text-xs font-bold text-ink-muted">
+            الأشكال
+          </dt>
+          <dd className="min-w-0 flex-1">
+            {formats.length === 0 ? (
+              <span className="text-xs text-coral-ink">لم تختر بعد</span>
+            ) : (
+              <ul className="flex flex-wrap gap-1.5">
+                {formats.map((f) => (
+                  <li
+                    key={f}
+                    className={[
+                      'rounded-chip px-2 py-0.5 text-[11px] font-bold',
+                      f.includes('اللهجة العراقية')
+                        ? 'bg-gold-tint text-gold-ink'
+                        : 'bg-teal-tint text-teal',
+                    ].join(' ')}
+                  >
+                    {FORMAT_META[f].emoji} {STUDY_FORMAT_LABELS[f]}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </dd>
+        </div>
+        <div className="flex items-start gap-3">
+          <dt className="w-16 shrink-0 text-xs font-bold text-ink-muted">
+            اللغة
+          </dt>
+          <dd className="min-w-0 flex-1 font-bold text-ink">
+            {language === 'ar' ? 'العربية' : 'English'}
+          </dd>
+        </div>
+      </dl>
+
+      {/* 💡 تلميح استخدام الملخص العامي */}
+      {hasColloquial && (
+        <div className="border-t border-gold/30 bg-gold-tint/50 px-4 py-3">
+          <p className="flex items-center gap-1.5 text-xs font-bold text-gold-ink">
+            <span aria-hidden="true">🇮🇶</span>
+            كيف تستخدم الملخص العامي؟
+          </p>
+          <ol className="mt-2 space-y-1 ps-5 text-[11px] leading-relaxed text-ink-soft list-decimal">
+            <li>اختر طريقة إرسال: <strong>ملف الملزمة كامل</strong></li>
+            <li>اضغط <strong>«توليد البرومبت»</strong></li>
+            <li>انسخ البرومبت + افتح ChatGPT</li>
+            <li>ارفع ملف الملزمة هناك والصق البرومبت</li>
+            <li>ستحصل على ملخص بالعامي العراقي ✨</li>
+          </ol>
+        </div>
+      )}
+
+      <div className="border-t border-line bg-paper-deep/30 px-4 py-3">
+        <p className="text-[11px] leading-relaxed text-ink-muted">
+          {isEmpty
+            ? 'اختر المادة والأشكال ثم اضغط «توليد البرومبت».'
+            : 'جاهز — اضغط «توليد البرومبت» في اليسار.'}
+        </p>
+      </div>
+    </section>
+  );
+}
+
+// ==================== History ====================
+function HistoryPanel({
+  items,
+  onRestore,
+  onClear,
+}: {
+  items: HistoryItem[];
+  onRestore: (item: HistoryItem) => void;
+  onClear: () => void;
+}) {
+  if (items.length === 0) return null;
+
+  return (
+    <section
+      aria-labelledby="sp-history-title"
+      className="mt-8 animate-slide-up motion-reduce:animate-none"
+    >
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2
+          id="sp-history-title"
+          className="flex items-center gap-1.5 text-sm font-bold text-ink"
+        >
+          <IconClock aria-hidden="true" className="h-4 w-4" />
+          آخر البرومبتات
+        </h2>
+        <button
+          type="button"
+          onClick={onClear}
+          className="rounded-field px-2 py-1 text-xs font-semibold text-ink-muted transition-colors hover:text-coral-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+        >
+          مسح السجل
+        </button>
+      </div>
+
+      <ul role="list" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((item) => (
+          <li key={item.id}>
+            <button
+              type="button"
+              onClick={() => onRestore(item)}
+              className="group flex w-full flex-col gap-1.5 rounded-card border border-line bg-paper-soft p-3 text-start transition-all duration-200 hover:-translate-y-0.5 hover:border-teal/40 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate text-xs font-bold text-teal">
+                  {item.subjectName}
+                </span>
+                <span className="shrink-0 text-[10px] text-ink-muted">
+                  {formatTimestamp(item.createdAt)}
+                </span>
+              </div>
+              <p
+                dir={item.language === 'en' ? 'ltr' : 'rtl'}
+                className="line-clamp-2 break-anywhere text-start text-[11px] leading-relaxed text-ink-soft"
+              >
+                {item.preview}
+              </p>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+// ==================== Presets Bar ====================
+function PresetsBar({
+  presets,
+  onApply,
+  onSaveCurrent,
+  canSave,
+}: {
+  presets: Preset[];
+  onApply: (p: Preset) => void;
+  onSaveCurrent: () => void;
+  canSave: boolean;
+}) {
+  const all = [...DEFAULT_PRESETS, ...presets];
+  return (
+    <div className="mt-6 animate-slide-up motion-reduce:animate-none">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h2 className="flex items-center gap-1.5 text-xs font-bold text-ink-muted">
+          <IconTrending aria-hidden="true" className="h-3.5 w-3.5" />
+          قوالب جاهزة
+        </h2>
+        {canSave && (
+          <button
+            type="button"
+            onClick={onSaveCurrent}
+            className="rounded-field px-2 py-1 text-xs font-semibold text-teal transition-colors hover:text-teal-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+          >
+            + حفظ الحالي كقالب
+          </button>
+        )}
+      </div>
+      <ul className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
+        {all.map((p) => {
+          const isIraqi = p.id === 'iraqi-summary';
+          return (
+            <li key={p.id} className="shrink-0">
+              <button
+                type="button"
+                onClick={() => onApply(p)}
+                className={[
+                  'inline-flex items-center gap-2 rounded-chip border px-3 py-1.5 text-xs font-bold',
+                  'transition-all duration-200 motion-reduce:transition-none',
+                  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal',
+                  isIraqi
+                    ? 'border-gold/40 bg-gold-tint text-gold-ink hover:border-gold hover:bg-gold-soft'
+                    : 'border-line bg-paper-soft text-ink-soft hover:border-teal/40 hover:bg-teal-tint hover:text-teal',
+                ].join(' ')}
+              >
+                <span aria-hidden="true">{p.emoji}</span>
+                {p.label}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+// ==================== Main Page ====================
+export default function StudyPromptPage() {
+  const { stage, ready } = useStudentStage();
+  const toast = useToast();
+
+  const [subjects, setSubjects] = useState<SubjectOption[]>([]);
+  const [loadingSubjects, setLoadingSubjects] = useState(true);
+  const [subjectsError, setSubjectsError] = useState<LoadError | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const [subjectId, setSubjectId] = useState('');
+  const [materialMethod, setMaterialMethod] = useState<string>(
+    MATERIAL_METHODS[0].value,
+  );
+  const [selectedFormats, setSelectedFormats] = useState<StudyFormat[]>([
+    STUDY_FORMATS[0],
+  ]);
+  const [language, setLanguage] = useState<Language>('ar');
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
+
+  const [customPresets, setCustomPresets] = useState<Preset[]>([]);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+
+  const [generating, setGenerating] = useState(false);
+  const [progressStep, setProgressStep] = useState(0);
+  const [result, setResult] = useState<GeneratedResult | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const copyTimerRef = useRef<number | null>(null);
+  const resultRef = useRef<HTMLElement | null>(null);
+  const mountedRef = useRef(true);
+  const submitLockRef = useRef(false);
+
+  // ==================== Mounted ====================
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // ==================== Prefs load ====================
+  useEffect(() => {
+    const prefs = readPrefs();
+    if (prefs.materialMethod) setMaterialMethod(prefs.materialMethod);
+    if (prefs.formats) setSelectedFormats(prefs.formats);
+    if (prefs.language) setLanguage(prefs.language);
+    setCustomPresets(readPresets());
+    setHistory(readHistory());
+    setPrefsLoaded(true);
+  }, []);
+
+  // ==================== Prefs save ====================
+  useEffect(() => {
+    if (!prefsLoaded) return;
+    writePrefs({
+      materialMethod,
+      formats: selectedFormats,
+      language,
+      subjectId,
+    });
+  }, [prefsLoaded, materialMethod, selectedFormats, language, subjectId]);
+
+  // ==================== Load subjects ====================
+  useEffect(() => {
+    if (!stage) return;
+    const currentStage = stage;
+    let cancelled = false;
+
+    function applySubjects(list: SubjectOption[]) {
+      setSubjects(list);
+      setSubjectId((prev) => {
+        const stillValid = prev !== '' && list.some((s) => s.id === prev);
+        return stillValid ? prev : (list[0]?.id ?? '');
+      });
+    }
+
+    async function loadSubjects() {
+      const cached = subjectsCache.get(currentStage);
+      if (cached) {
+        applySubjects(cached);
+        setLoadingSubjects(false);
+      } else {
+        setLoadingSubjects(true);
+      }
+      setSubjectsError(null);
+
+      try {
+        const { data, error } = await supabase
+          .from('subjects')
+          .select('id, name')
+          .eq('stage', currentStage);
+
+        if (cancelled) return;
+
+        if (error) {
+          if (!cached) {
+            setSubjectsError(buildError(error.message));
+            setSubjects([]);
+          }
+          return;
+        }
+
+        const list = toSubjects(data);
+        subjectsCache.set(currentStage, list);
+        applySubjects(list);
+      } catch (e: unknown) {
+        if (cancelled) return;
+        if (!cached) {
+          setSubjectsError(buildError(e instanceof Error ? e.message : ''));
+          setSubjects([]);
+        }
+      } finally {
+        if (!cancelled) setLoadingSubjects(false);
+      }
+    }
+
+    void loadSubjects();
+    return () => {
+      cancelled = true;
+    };
+  }, [stage, reloadKey]);
+
+  // إعادة تلقائية عند رجوع النت
+  useEffect(() => {
+    if (!subjectsError) return;
+    function onOnline() {
+      setReloadKey((k) => k + 1);
+    }
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, [subjectsError]);
+
+  // تنظيف مؤقّت النسخ
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current !== null) {
+        window.clearTimeout(copyTimerRef.current);
+      }
+    };
+  }, []);
+
+  // التمرير إلى النتيجة بعد التوليد
+  useEffect(() => {
+    if (!result) return;
+    const el = resultRef.current;
+    if (!el) return;
+    const reduceMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches;
+    el.scrollIntoView({
+      behavior: reduceMotion ? 'auto' : 'smooth',
+      block: 'start',
+    });
+    el.focus({ preventScroll: true });
+  }, [result]);
+
+  const handleRetrySubjects = useCallback(() => {
+    setReloadKey((k) => k + 1);
+  }, []);
+
+  const toggleFormat = useCallback((format: StudyFormat) => {
+    setSelectedFormats((prev) => {
+      const next = prev.includes(format)
+        ? prev.filter((f) => f !== format)
+        : [...prev, format];
+      return STUDY_FORMATS.filter((f) => next.includes(f));
+    });
+  }, []);
+
+  const selectedSubject = useMemo(
+    () => subjects.find((s) => s.id === subjectId) ?? null,
+    [subjects, subjectId],
+  );
+
+  const methodLabel = useMemo(
+    () =>
+      MATERIAL_METHODS.find((m) => m.value === materialMethod)?.label ?? null,
+    [materialMethod],
+  );
+
+  const signature = useMemo(
+    () =>
+      [subjectId, materialMethod, selectedFormats.join(','), language].join('|'),
+    [subjectId, materialMethod, selectedFormats, language],
+  );
+
+  const isStale = result !== null && result.signature !== signature;
+  const noFormats = selectedFormats.length === 0;
+  const canGenerate = selectedSubject !== null && !noFormats && !generating;
+
+  const canSavePreset =
+    selectedFormats.length > 0 && materialMethod !== MATERIAL_METHODS[0].value;
+
+  // ==================== Generate ====================
+  const handleGenerate = useCallback(
+    async (e: FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      if (!canGenerate || !selectedSubject || submitLockRef.current) return;
+
+      submitLockRef.current = true;
+      setGenerating(true);
+      setProgressStep(0);
+      setResult(null);
+      setCopied(false);
+
+      const stepTimers: number[] = [];
+      stepTimers.push(window.setTimeout(() => setProgressStep(1), 500));
+      stepTimers.push(window.setTimeout(() => setProgressStep(2), 1400));
+
+      try {
+        const data = await postJson<{ prompt?: unknown }>('/api/study-prompt', {
+          subject: selectedSubject.name,
+          materialMethod,
+          formats: selectedFormats,
+          language,
+        });
+
+        if (!mountedRef.current) return;
+
+        const text = typeof data?.prompt === 'string' ? data.prompt.trim() : '';
+        if (text === '') {
+          toast.show('وصلنا رد فارغ. حاول التوليد مرة ثانية.', 'error');
+          return;
+        }
+
+        const fresh: GeneratedResult = {
+          text,
+          language,
+          signature,
+          createdAt: Date.now(),
+        };
+
+        setResult(fresh);
+
+        const preview = text.replace(/\s+/g, ' ').slice(0, 160);
+        const item: HistoryItem = {
+          id: `${fresh.createdAt}-${Math.random().toString(36).slice(2, 8)}`,
+          subjectName: selectedSubject.name,
+          preview,
+          language,
+          createdAt: fresh.createdAt,
+        };
+        setHistory(pushHistory(item));
+
+        toast.show('تم توليد البرومبت', 'success');
+      } catch (err: unknown) {
+        if (!mountedRef.current) return;
+        const offline =
+          typeof navigator !== 'undefined' && !navigator.onLine;
+        const message = offline
+          ? 'لا يوجد اتصال بالإنترنت. تحقق منه ثم حاول مرة ثانية.'
+          : err instanceof Error && err.message
+            ? err.message
+            : 'حدث خطأ، يرجى المحاولة مرة أخرى.';
+        toast.show(message, 'error');
+      } finally {
+        stepTimers.forEach((t) => window.clearTimeout(t));
+        submitLockRef.current = false;
+        if (mountedRef.current) {
+          setGenerating(false);
+          setProgressStep(0);
+        }
+      }
+    },
+    [
+      canGenerate,
+      selectedSubject,
+      materialMethod,
+      selectedFormats,
+      language,
+      signature,
+      toast,
+    ],
+  );
+
+  // ==================== Copy ====================
+  const handleCopy = useCallback(async () => {
+    if (!result) return;
+    const ok = await copyText(result.text);
+    if (!mountedRef.current) return;
+    if (!ok) {
+      toast.show('فشل النسخ — يرجى النسخ يدوياً', 'error');
+      return;
+    }
+    setCopied(true);
+    toast.show('تم النسخ', 'success');
+    if (copyTimerRef.current !== null) {
+      window.clearTimeout(copyTimerRef.current);
+    }
+    copyTimerRef.current = window.setTimeout(
+      () => setCopied(false),
+      COPY_FEEDBACK_MS,
+    );
+  }, [result, toast]);
+
+  // ==================== Preset Apply ====================
+  const handleApplyPreset = useCallback(
+    (preset: Preset) => {
+      setSelectedFormats(preset.formats);
+      const method = MATERIAL_METHODS[preset.methodIndex];
+      if (method) setMaterialMethod(method.value);
+      toast.show(`تم تطبيق «${preset.label}»`, 'success');
+    },
+    [toast],
+  );
+
+  const handleSavePreset = useCallback(() => {
+    const methodIndex = MATERIAL_METHODS.findIndex(
+      (m) => m.value === materialMethod,
+    );
+    if (methodIndex < 0 || selectedFormats.length === 0) return;
+    const label = window.prompt('اسم القالب؟')?.trim();
+    if (!label) return;
+    const newPreset: Preset = {
+      id: `custom-${Date.now()}`,
+      label: label.slice(0, 30),
+      emoji: '⭐',
+      formats: selectedFormats,
+      methodIndex,
+    };
+    const next = [...readPresets(), newPreset].slice(-12);
+    writePresets(next);
+    setCustomPresets(next);
+    toast.show('تم حفظ القالب', 'success');
+  }, [materialMethod, selectedFormats, toast]);
+
+  const handleRestoreHistory = useCallback(
+    (item: HistoryItem) => {
+      toast.show(
+        `آخر برومبت لـ «${item.subjectName}» — استخدم النسخ من النتيجة السابقة`,
+        'info',
+      );
+    },
+    [toast],
+  );
+
+  const handleClearHistory = useCallback(() => {
+    setHistory([]);
+    try {
+      window.localStorage.removeItem(HISTORY_KEY);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  // ==================== Keyboard Shortcut ====================
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && canGenerate) {
+        e.preventDefault();
+        const form = document.getElementById(
+          'sp-form',
+        ) as HTMLFormElement | null;
+        form?.requestSubmit();
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [canGenerate]);
+
+  // ==================== Render guards ====================
+  if (!ready) {
+    return (
+      <main className={MAIN_CLASS} aria-busy="true">
+        <FormSkeleton />
+      </main>
+    );
+  }
+
+  if (!stage) {
+    return (
+      <main className={MAIN_CLASS}>
+        <BackLink />
+        <div className="mt-6 card-editorial p-8 text-center animate-slide-up motion-reduce:animate-none">
+          <div
+            aria-hidden="true"
+            className="mx-auto flex h-16 w-16 items-center justify-center rounded-card bg-teal-soft text-teal"
+          >
+            <IconWarning className="h-8 w-8" />
+          </div>
+          <p className="mt-4 font-bold text-ink-soft">
+            لم تحدد مرحلتك الدراسية بعد.
+          </p>
+          <p className="mt-1 text-sm text-ink-muted">
+            اختر مرحلتك من لوحة الأقسام لتظهر لك المواد.
+          </p>
+          <Link
+            href="/"
+            className="mt-5 inline-flex h-10 items-center rounded-field border border-line bg-paper-soft px-4 text-sm font-semibold text-ink-soft transition-colors hover:border-teal/40 hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+          >
+            اختيار المرحلة
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  const noSubjects =
+    !loadingSubjects && !subjectsError && subjects.length === 0;
+
+  return (
+    <main className={MAIN_CLASS} aria-labelledby="study-prompt-title">
+      <BackLink />
+
+      {/* ==================== Header ==================== */}
+      <header className="mt-6 animate-slide-up motion-reduce:animate-none">
+        <span className="stage-badge">{stage}</span>
+        <h1
+          id="study-prompt-title"
+          className="mt-3 flex items-center gap-2.5 font-display text-3xl font-bold leading-tight text-ink sm:text-4xl"
+        >
+          <span
+            aria-hidden="true"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-field bg-teal-soft text-teal"
+          >
+            <IconSparkles className="h-5 w-5" />
+          </span>
+          أدوات الدراسة
+        </h1>
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-soft sm:text-base">
+          اختر مادتك وأشكال الشرح، وسنصيغ لك برومبت احترافياً جاهزاً للصق في
+          أي أداة ذكاء اصطناعي.
+        </p>
+      </header>
+
+      {/* ==================== Presets ==================== */}
+      {!loadingSubjects && !subjectsError && !noSubjects && (
+        <PresetsBar
+          presets={customPresets}
+          onApply={handleApplyPreset}
+          onSaveCurrent={handleSavePreset}
+          canSave={canSavePreset}
+        />
+      )}
+
+      {/* ==================== Loading ==================== */}
+      {loadingSubjects && <FormSkeleton />}
+
+      {/* ==================== Error ==================== */}
+      {!loadingSubjects && subjectsError && (
+        <ErrorState error={subjectsError} onRetry={handleRetrySubjects} />
+      )}
+
+      {/* ==================== Empty ==================== */}
+      {noSubjects && (
+        <div className="mt-6 card-editorial p-10 text-center animate-slide-up motion-reduce:animate-none">
+          <div
+            aria-hidden="true"
+            className="mx-auto flex h-16 w-16 items-center justify-center rounded-card bg-teal-soft text-teal"
+          >
+            <IconInbox className="h-8 w-8" />
+          </div>
+          <p className="mt-4 font-bold text-ink-soft">
+            لا توجد مواد مضافة لمرحلتك حالياً.
+          </p>
+          <p className="mt-1 text-sm text-ink-muted">
+            سنضيف المواد قريباً، حاول مرة ثانية بعد قليل.
+          </p>
+        </div>
+      )}
+
+      {/* ==================== Main Grid ==================== */}
+      {!loadingSubjects && !subjectsError && !noSubjects && (
+        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+          {/* ===== Left: Form ===== */}
+          <form
+            id="sp-form"
+            onSubmit={handleGenerate}
+            aria-busy={generating}
+            className="space-y-5 card-editorial p-5 animate-slide-up motion-reduce:animate-none sm:p-6"
+          >
+            {/* المادة */}
+            <div>
+              <label
+                htmlFor="sp-subject"
+                className="mb-2 flex items-center gap-1.5 text-sm font-bold text-ink"
+              >
+                <IconBook aria-hidden="true" className="h-4 w-4 text-teal" />
+                المادة
+              </label>
+              <Select
+                id="sp-subject"
+                value={subjectId}
+                onChange={(e) => setSubjectId(e.target.value)}
+                className="w-full"
+              >
+                {subjects.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            {/* طريقة الإرسال */}
+            <div>
+              <label
+                htmlFor="sp-method"
+                className="mb-2 flex items-center gap-1.5 text-sm font-bold text-ink"
+              >
+                <IconTrending aria-hidden="true" className="h-4 w-4 text-teal" />
+                كيف ستزود المحتوى للذكاء الاصطناعي؟
+              </label>
+              <Select
+                id="sp-method"
+                value={materialMethod}
+                onChange={(e) => setMaterialMethod(e.target.value)}
+                className="w-full"
+              >
+                {MATERIAL_METHODS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            {/* أشكال الشرح */}

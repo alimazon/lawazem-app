@@ -1,0 +1,2381 @@
+﻿import { useRecentViews, formatRelativeTime } from '@/hooks/useRecentViews';
+import {
+  IconClock,
+  IconDoc,
+  IconTelegram,
+  IconExternal,
+} from '@/components/ui/Icons';
+
+// ==================== Component ====================
+export function RecentViewsCard() {
+  const { recent, clearAll, mounted } = useRecentViews();
+
+  if (!mounted) return null;
+  if (recent.length === 0) return null;
+
+  return (
+    <section className="animate-slide-up">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-ink">
+          <span className="flex h-7 w-7 items-center justify-center rounded-field bg-gold/15 text-gold-ink">
+            <IconClock className="h-4 w-4" />
+          </span>
+          آخر ما زرته
+        </h2>
+        <button
+          type="button"
+          onClick={clearAll}
+          className="text-xs font-bold text-ink-muted transition-colors hover:text-coral"
+        >
+          مسح
+        </button>
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        {recent.map((view) => {
+          const isTelegram = view.file_path.includes('t.me');
+          return (
+            <a
+              key={view.id}
+              href={view.file_path}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center gap-3 rounded-card border border-line bg-paper-soft p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-teal hover:shadow-md active:scale-[0.98]"
+            >
+              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-field bg-teal/10 text-teal transition-all duration-200 group-hover:bg-teal group-hover:text-on-teal">
+                <IconDoc className="h-4 w-4" />
+              </span>
+
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-ink transition-colors group-hover:text-teal">
+                  {view.title}
+                </p>
+                <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-ink-muted">
+                  <span className="truncate">{view.subject_name}</span>
+                  <span>·</span>
+                  <span className="flex-shrink-0">
+                    {formatRelativeTime(view.viewed_at)}
+                  </span>
+                </div>
+              </div>
+
+              <span className="flex-shrink-0 text-ink-muted transition-colors group-hover:text-teal">
+                {isTelegram ? (
+                  <IconTelegram className="h-4 w-4" />
+                ) : (
+                  <IconExternal className="h-4 w-4" />
+                )}
+              </span>
+            </a>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+```
+
+## components\ReportModal.tsx
+
+```tsx
+// components/ReportModal.tsx
+'use client';
+
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { Textarea } from '@/components/ui/Field';
+import { useToast } from '@/components/ui/Toast';
+import { postJson } from '@/lib/api-client';
+import {
+  IconFlag,
+  IconClose,
+  IconCheck,
+} from '@/components/ui/Icons';
+import type { LectureNote, ReportReason } from '@/lib/types';
+
+const FP_KEY = 'device_fingerprint';
+
+function getFingerprint(): string {
+  try {
+    let fp = localStorage.getItem(FP_KEY);
+    if (!fp) {
+      fp = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      localStorage.setItem(FP_KEY, fp);
+    }
+    return fp;
+  } catch {
+    return '';
+  }
+}
+
+interface ReportModalProps {
+  note: LectureNote | null;
+  onClose: () => void;
+  onReported?: () => void;
+}
+
+export function ReportModal({ note, onClose, onReported }: ReportModalProps) {
+  const toast = useToast();
+  const [reason, setReason] = useState<ReportReason | ''>('');
+  const [noteText, setNoteText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (note) {
+      setReason('');
+      setNoteText('');
+      setDone(false);
+    }
+  }, [note]);
+
+  useEffect(() => {
+    if (!note) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [note, onClose]);
+
+  if (!note) return null;
+
+  const currentNote = note;
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!reason) {
+      toast.show('اختر سبب البلاغ', 'error');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await postJson<{ success: boolean; duplicate: boolean }>(
+        '/api/reports',
+        {
+          action: 'create',
+          lecture_note_id: currentNote.id,
+          reason,
+          note: noteText.trim() || null,
+          fingerprint: getFingerprint(),
+        }
+      );
+      setDone(true);
+      toast.show(
+        res.duplicate ? 'سبق أن أبلغت عن هذه الملزمة' : 'شكراً، وصلنا بلاغك',
+        'success'
+      );
+      onReported?.();
+      setTimeout(onClose, 1400);
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل إرسال البلاغ', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-card border border-line bg-paper p-6 shadow-xl animate-scale-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {done ? (
+          <div className="py-4 text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-card bg-teal/10 text-teal dark:bg-teal/20">
+              <IconCheck className="h-8 w-8" />
+            </div>
+            <h3 className="mt-4 text-lg font-bold text-ink">شكراً لك</h3>
+            <p className="mt-1 text-sm text-ink-soft">
+              وصلنا بلاغك وسيراجعه المشرف قريباً.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Header */}
+            <div className="flex items-start gap-3">
+              <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-field bg-gold/15 text-gold-ink">
+                <IconFlag className="h-5 w-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-lg font-bold text-ink">الإبلاغ عن مشكلة</h3>
+                <p className="mt-0.5 truncate text-xs text-ink-muted">
+                  {currentNote.title}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="إغلاق"
+                className="flex h-8 w-8 items-center justify-center rounded-field text-ink-muted transition-colors hover:bg-ink/5 hover:text-ink"
+              >
+                <IconClose className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+              <fieldset>
+                <legend className="mb-2 text-sm font-bold text-ink">
+                  ما المشكلة؟
+                </legend>
+                <div className="space-y-2">
+                  <label
+                    className={`flex cursor-pointer items-center gap-3 rounded-field border px-4 py-3 text-sm font-medium transition-all ${
+                      reason === 'dead_link'
+                        ? 'border-teal bg-teal/5 text-ink dark:bg-teal/15'
+                        : 'border-line bg-paper-soft text-ink-soft hover:border-teal/40'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="reason"
+                      value="dead_link"
+                      checked={reason === 'dead_link'}
+                      onChange={() => setReason('dead_link')}
+                      className="h-4 w-4 accent-teal"
+                    />
+                    <span className="flex-1">
+                      <span className="block font-bold text-ink">
+                        الرابط لا يعمل
+                      </span>
+                      <span className="text-xs text-ink-muted">
+                        الرابط لا يفتح أو محذوف من تيليكرام
+                      </span>
+                    </span>
+                  </label>
+
+                  <label
+                    className={`flex cursor-pointer items-center gap-3 rounded-field border px-4 py-3 text-sm font-medium transition-all ${
+                      reason === 'outdated'
+                        ? 'border-teal bg-teal/5 text-ink dark:bg-teal/15'
+                        : 'border-line bg-paper-soft text-ink-soft hover:border-teal/40'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="reason"
+                      value="outdated"
+                      checked={reason === 'outdated'}
+                      onChange={() => setReason('outdated')}
+                      className="h-4 w-4 accent-teal"
+                    />
+                    <span className="flex-1">
+                      <span className="block font-bold text-ink">
+                        الملزمة قديمة
+                      </span>
+                      <span className="text-xs text-ink-muted">
+                        المحتوى قديم أو من سنة سابقة
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              </fieldset>
+
+              <div>
+                <label
+                  htmlFor="report-note"
+                  className="mb-2 block text-sm font-bold text-ink"
+                >
+                  ملاحظة إضافية{' '}
+                  <span className="text-ink-muted">(اختياري)</span>
+                </label>
+                <Textarea
+                  id="report-note"
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  placeholder="أي تفاصيل تساعد المشرف..."
+                  rows={2}
+                  maxLength={300}
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  type="submit"
+                  loading={submitting}
+                  disabled={!reason}
+                  className="flex-1"
+                >
+                  إرسال البلاغ
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={onClose}
+                  disabled={submitting}
+                >
+                  إلغاء
+                </Button>
+              </div>
+            </form>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+## components\Reveal.tsx
+
+```tsx
+// components/Reveal.tsx
+'use client';
+
+import {
+  useEffect,
+  useRef,
+  type CSSProperties,
+  type ElementType,
+  type ReactNode,
+} from 'react';
+
+type RevealTag = 'div' | 'li' | 'section' | 'article';
+
+interface RevealProps {
+  children: ReactNode;
+  as?: RevealTag;
+  /** تأخير الظهور بالمللي ثانية (للـ stagger) */
+  delay?: number;
+  /** مقدار الإزاحة الرأسية للأسفل قبل الظهور */
+  y?: number;
+  className?: string;
+  style?: CSSProperties;
+}
+
+export function Reveal({
+  children,
+  as: Tag = 'div',
+  delay = 0,
+  y = 12,
+  className = '',
+  style,
+}: RevealProps) {
+  const ref = useRef<HTMLElement | null>(null);
+  const Component: ElementType = Tag;
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    // احترم تفضيل تقليل الحركة — أظهر مباشرة
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      el.dataset.revealed = 'true';
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          el.dataset.revealed = 'true';
+          observer.disconnect();
+        }
+      },
+      {
+        threshold: 0.08,
+        rootMargin: '0px 0px -40px 0px',
+      },
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const combinedStyle = {
+    ...style,
+    '--reveal-delay': `${delay}ms`,
+    '--reveal-y': `${y}px`,
+  } as CSSProperties;
+
+  // ✅ الحل: نستخدم callback ref بدل ref object
+  // لأن Component قد يكون div / li / section / article
+  // وTypeScript لا يستطيع توحيد أنواع الـrefs لهذه الحالات.
+  // الـcallback ref يعمل مع جميع الاحتمالات (contravariance).
+  const setRef = (el: HTMLElement | null) => {
+    ref.current = el;
+  };
+
+  return (
+    <Component
+      ref={setRef}
+      className={`reveal-scroll ${className}`.trim()}
+      style={combinedStyle}
+    >
+      {children}
+    </Component>
+  );
+}
+```
+
+## components\ThemeProvider.tsx
+
+```tsx
+// components/ThemeProvider.tsx
+'use client';
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react';
+
+type Theme = 'light' | 'dark';
+
+interface ThemeContextValue {
+  theme: Theme;
+  toggleTheme: () => void;
+  setTheme: (theme: Theme) => void;
+}
+
+const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
+
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [theme, setThemeState] = useState<Theme>('light');
+
+  // ===== تحميل الثيم المحفوظ أو المفضّل =====
+  // ===== تحميل الثيم المحفوظ — الوضع النهاري افتراضياً =====
+useEffect(() => {
+  try {
+    const saved = localStorage.getItem('theme') as Theme | null;
+    const initial: Theme = saved ?? 'light';
+    setThemeState(initial);
+    document.documentElement.classList.toggle('dark', initial === 'dark');
+  } catch {
+    /* في حال فشل localStorage */
+  }
+}, []);
+
+  // ===== تغيير الثيم =====
+  const setTheme = useCallback((next: Theme) => {
+    setThemeState(next);
+    try {
+      localStorage.setItem('theme', next);
+    } catch {
+      /* تجاهل */
+    }
+    document.documentElement.classList.toggle('dark', next === 'dark');
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setTheme(theme === 'light' ? 'dark' : 'light');
+  }, [theme, setTheme]);
+
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
+export function useTheme(): ThemeContextValue {
+  const ctx = useContext(ThemeContext);
+  if (!ctx) throw new Error('useTheme must be used within ThemeProvider');
+  return ctx;
+}
+```
+
+## components\ThemeToggle.tsx
+
+```tsx
+// components/ThemeToggle.tsx
+'use client';
+
+import { useTheme } from './ThemeProvider';
+import { IconSun, IconMoon } from '@/components/ui/Icons';
+
+export function ThemeToggle() {
+  const { theme, toggleTheme } = useTheme();
+
+  return (
+    <button
+      type="button"
+      onClick={toggleTheme}
+      aria-label={
+        theme === 'light' ? 'التحويل إلى الوضع الليلي' : 'التحويل إلى الوضع النهاري'
+      }
+      title={theme === 'light' ? 'الوضع الليلي' : 'الوضع النهاري'}
+      className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-field text-ink-soft transition-all duration-200 hover:bg-ink/5 hover:text-ink active:scale-95"
+    >
+      {/* الشمس */}
+      <IconSun
+        className={`absolute h-4 w-4 transition-all duration-300 ${
+          theme === 'light'
+            ? 'rotate-0 scale-100 opacity-100'
+            : 'rotate-90 scale-0 opacity-0'
+        }`}
+      />
+
+      {/* القمر */}
+      <IconMoon
+        className={`absolute h-4 w-4 transition-all duration-300 ${
+          theme === 'dark'
+            ? 'rotate-0 scale-100 opacity-100'
+            : '-rotate-90 scale-0 opacity-0'
+        }`}
+      />
+    </button>
+  );
+}
+```
+
+## components\TrendingNotes.tsx
+
+```tsx
+// components/TrendingNotes.tsx
+'use client';
+
+import { useEffect, useState } from 'react';
+import { postJson } from '@/lib/api-client';
+import { useRecentViews } from '@/hooks/useRecentViews';
+import {
+  IconFire,
+  IconTrending,
+  IconTelegram,
+  IconDoctor,
+} from '@/components/ui/Icons';
+import type { Stage } from '@/lib/types';
+
+// ==================== Types ====================
+interface TopNote {
+  id: string;
+  title: string;
+  professor_name: string | null;
+  subject_name: string;
+  file_path: string;
+  week_views: number;
+  views: number;
+}
+
+interface Props {
+  stage: Stage;
+}
+
+// ==================== Rank Badge ====================
+function RankBadge({ rank }: { rank: number }) {
+  const styles =
+    rank === 1
+      ? 'bg-gold text-on-gold shadow-sm'
+      : rank === 2
+        ? 'bg-ink/15 text-ink dark:bg-white/15'
+        : rank === 3
+          ? 'bg-gold/15 text-gold-ink dark:bg-gold/25'
+          : 'bg-ink/5 text-ink-muted dark:bg-white/5';
+
+  return (
+    <span
+      className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-field font-mono text-sm font-bold ${styles}`}
+    >
+      {rank}
+    </span>
+  );
+}
+
+// ==================== Component ====================
+export function TrendingNotes({ stage }: Props) {
+  const { addView } = useRecentViews();
+  const [items, setItems] = useState<TopNote[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setError('');
+      try {
+        const data = await postJson<{ items: TopNote[] }>('/api/views', {
+          action: 'top',
+          stage,
+        });
+        if (cancelled) return;
+        setItems(data.items ?? []);
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : 'فشل التحميل');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [stage]);
+
+  function handleClick(item: TopNote) {
+    addView({
+      id: item.id,
+      title: item.title,
+      subject_name: item.subject_name,
+      file_path: item.file_path,
+    });
+  }
+
+  // Skeleton
+  if (loading) {
+    return (
+      <div className="card-editorial p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <div className="h-7 w-7 skeleton-shimmer rounded-field" />
+          <div className="h-5 w-32 skeleton-shimmer rounded" />
+        </div>
+        <div className="space-y-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-14 skeleton-shimmer rounded-field" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Error — silent
+  if (error) return null;
+
+  // Empty — silent
+  if (items.length === 0) return null;
+
+  return (
+    <div className="card-editorial p-4">
+      {/* Header */}
+      <div className="mb-2 flex items-center justify-between gap-2 px-1 pt-1">
+        <div className="flex items-center gap-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-field bg-gold/15 text-gold-ink">
+            <IconFire className="h-4 w-4" />
+          </span>
+          <h2 className="text-base font-bold text-ink">الأكثر إقبالاً</h2>
+        </div>
+        <span className="hidden items-center gap-1 rounded-chip bg-teal/10 px-2 py-0.5 text-[10px] font-bold text-teal sm:inline-flex">
+          <IconTrending className="h-3 w-3" />
+          مباشر
+        </span>
+      </div>
+
+      {/* List */}
+      <div className="space-y-1">
+        {items.map((item, idx) => (
+          <a
+            key={item.id}
+            href={item.file_path}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => handleClick(item)}
+            className="group flex items-center gap-3 rounded-field border border-transparent p-2.5 transition-all duration-200 hover:border-teal/20 hover:bg-paper hover:shadow-sm dark:hover:bg-paper-soft"
+          >
+            <RankBadge rank={idx + 1} />
+
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-bold text-ink transition-colors group-hover:text-teal">
+                {item.title}
+              </p>
+              <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-ink-muted">
+                <span className="truncate font-bold text-teal">
+                  {item.subject_name}
+                </span>
+                {item.professor_name && (
+                  <>
+                    <span className="text-ink/30">·</span>
+                    <span className="inline-flex items-center gap-0.5 truncate">
+                      <IconDoctor className="h-3 w-3" />
+                      د. {item.professor_name}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-shrink-0 items-center gap-2">
+              <span className="rounded-chip bg-gold/15 px-2 py-0.5 text-[10px] font-bold text-gold-ink">
+                {item.week_views}
+              </span>
+              <span className="hidden text-ink/20 transition-colors group-hover:text-teal sm:inline">
+                <IconTelegram className="h-3.5 w-3.5" />
+              </span>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+## components\anatomy\AtlasExtras.tsx
+
+```tsx
+'use client';
+
+// components/anatomy/AtlasExtras.tsx
+import { MUSCLE_BY_ID } from '@/lib/anatomy-data';
+import {
+  BRANCH_MNEMONIC,
+  EXTRA_MUSCLES,
+  FACIAL_BRANCHES,
+  FACIAL_PALSY_COMPARISON,
+  MUSCLES_BY_BRANCH,
+} from '@/lib/anatomy-extras';
+import { chipSmall } from './ui-classes';
+
+const summaryCls =
+  'cursor-pointer list-none rounded-card px-4 py-3 font-display text-base font-bold text-ink marker:hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal [&::-webkit-details-marker]:hidden';
+const boxCls = 'rounded-card border border-line bg-paper-soft';
+
+export default function AtlasExtras({ onSelect }: { onSelect: (id: string) => void }) {
+  return (
+    <div className="mt-8 grid gap-3">
+      <details className={boxCls}>
+        <summary className={summaryCls}>فروع العصب الوجهي الخمسة</summary>
+        <div className="px-4 pb-4">
+          <p className="text-sm text-ink-soft">
+            للحفظ:{' '}
+            <bdi dir="ltr" className="rounded-chip bg-gold-tint px-2 py-0.5 font-mono text-xs text-ink">
+              {BRANCH_MNEMONIC}
+            </bdi>{' '}
+            = Temporal · Zygomatic · Buccal · Marginal mandibular · Cervical
+          </p>
+          <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+            {FACIAL_BRANCHES.map((b) => (
+              <li key={b.id} className="rounded-field border border-line bg-paper p-3">
+                <p className="text-sm font-bold text-ink">
+                  <bdi dir="ltr">{b.en}</bdi> <span className="font-normal text-ink-muted">· {b.ar}</span>
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {MUSCLES_BY_BRANCH[b.id].map((id) => (
+                    <button key={id} type="button" dir="ltr" className={chipSmall} aria-pressed={false} onClick={() => onSelect(id)}>
+                      {MUSCLE_BY_ID[id]?.short ?? MUSCLE_BY_ID[id]?.en ?? id}
+                    </button>
+                  ))}
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs text-ink-muted">
+            بعض العضلات تظهر تحت أكثر من فرع لأنها تتلقى ألياف من فرعين (مثل orbicularis oculi).
+          </p>
+        </div>
+      </details>
+
+      <details className={boxCls}>
+        <summary className={summaryCls}>شلل الوجه: UMN مقابل LMN</summary>
+        <div className="overflow-x-auto px-4 pb-4">
+          <table className="w-full min-w-[640px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-line text-start text-xs text-ink-muted">
+                <th className="py-2 pe-3 text-start font-bold">الصفة</th>
+                <th className="py-2 pe-3 text-start font-bold">UMN</th>
+                <th className="py-2 text-start font-bold">LMN</th>
+              </tr>
+            </thead>
+            <tbody>
+              {FACIAL_PALSY_COMPARISON.map((r) => (
+                <tr key={r.feature} className="border-b border-line/60 align-top">
+                  <th scope="row" dir="ltr" className="py-2 pe-3 text-left text-[13px] font-bold text-ink">{r.feature}</th>
+                  <td dir="ltr" className="py-2 pe-3 text-left text-[13px] text-ink-soft">{r.umn}</td>
+                  <td dir="ltr" className="py-2 text-left text-[13px] text-ink-soft">{r.lmn}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+
+      <details className={boxCls}>
+        <summary className={summaryCls}>عضلات مهمة لا تظهر في الرسم</summary>
+        <ul className="grid gap-3 px-4 pb-4 sm:grid-cols-2">
+          {EXTRA_MUSCLES.map((x) => (
+            <li key={x.id} dir="ltr" className="rounded-field border border-line bg-paper p-3 text-left">
+              <p className="text-sm font-bold text-ink">{x.en}</p>
+              <dl className="mt-1 text-[13px] leading-snug text-ink-soft">
+                <dt className="mt-1 text-[11px] font-bold uppercase tracking-wide text-ink-muted">Nerve</dt>
+                <dd>{x.nerve}</dd>
+                <dt className="mt-1 text-[11px] font-bold uppercase tracking-wide text-ink-muted">Origin</dt>
+                <dd>{x.origin}</dd>
+                <dt className="mt-1 text-[11px] font-bold uppercase tracking-wide text-ink-muted">Insertion</dt>
+                <dd>{x.insertion}</dd>
+                <dt className="mt-1 text-[11px] font-bold uppercase tracking-wide text-ink-muted">Action</dt>
+                <dd>{x.actEn}</dd>
+                <dt className="mt-1 text-[11px] font-bold uppercase tracking-wide text-ink-muted">Clinical</dt>
+                <dd>{x.clin}</dd>
+              </dl>
+            </li>
+          ))}
+        </ul>
+      </details>
+    </div>
+  );
+}
+```
+
+## components\anatomy\ExpressionPreview.tsx
+
+```tsx
+'use client';
+
+// components/anatomy/ExpressionPreview.tsx
+import { memo, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { computeFace, scalePose, type Pose } from '@/lib/anatomy-pose';
+
+const CYCLE = 3400;
+const ease = (x: number): number => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
+
+function kAt(t: number): number {
+  const c = t % CYCLE;
+  if (c < 800) return ease(c / 800);
+  if (c < 1900) return 1;
+  if (c < 2600) return 1 - ease((c - 1900) / 700);
+  return 0;
+}
+
+function phaseForK(k: number): number {
+  const x = k < 0.5 ? Math.sqrt(k / 2) : 1 - Math.sqrt((1 - k) / 2);
+  return x * 800;
+}
+
+interface Props {
+  pose: Pose;
+  poseKey: string;
+  onK?: (k: number) => void;
+}
+
+function ExpressionPreview({ pose, poseKey, onK }: Props) {
+  const uid = useId().replace(/:/g, '');
+  const clipL = `${uid}-cl`;
+  const clipR = `${uid}-cr`;
+
+  const [playing, setPlaying] = useState(true);
+  const [k, setK] = useState(0);
+  const kRef = useRef(0);
+  const lastKey = useRef(poseKey);
+
+  useEffect(() => {
+    try {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        setPlaying(false);
+        kRef.current = 1;
+        setK(1);
+      }
+    } catch {
+      /* تجاهل */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!playing) return;
+    const resume = lastKey.current === poseKey;
+    lastKey.current = poseKey;
+    const start = performance.now() - (resume ? phaseForK(kRef.current) : 0);
+    let raf = 0;
+    const frame = (now: number) => {
+      const next = kAt(now - start);
+      if (Math.abs(next - kRef.current) > 0.002) {
+        kRef.current = next;
+        setK(next);
+      }
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, [playing, poseKey]);
+
+  useEffect(() => {
+    onK?.(k);
+  }, [k, onK]);
+
+  const f = useMemo(() => computeFace(scalePose(pose, k)), [pose, k]);
+  const contracted = k > 0.5;
+
+  return (
+    <div className="fa-plate fa-preview">
+      <svg viewBox="0 0 220 270" aria-hidden="true" style={{ direction: 'ltr' }}>
+        <defs>
+          <clipPath id={clipL}><path d={f.eyeL} /></clipPath>
+          <clipPath id={clipR}><path d={f.eyeR} /></clipPath>
+        </defs>
+
+        <path d="M84,206 L82,270" className="fa-pl" />
+        <path d="M136,206 L138,270" className="fa-pl" />
+        <ellipse cx="36" cy="112" rx="5" ry="14" className="fa-pl" style={{ fill: 'var(--fa-skin)' }} />
+        <ellipse cx="184" cy="112" rx="5" ry="14" className="fa-pl" style={{ fill: 'var(--fa-skin)' }} />
+        <path d={f.head} className="fa-pl" style={{ fill: 'var(--fa-skin)' }} />
+
+        <g style={{ opacity: f.op.neck }}>
+          <path className="fa-pw" d="M92,214 L86,262" />
+          <path className="fa-pw" d="M100,218 L96,262" />
+          <path className="fa-pw" d="M128,214 L134,262" />
+          <path className="fa-pw" d="M120,218 L124,262" />
+        </g>
+        <g style={{ opacity: f.op.forehead }}>
+          <path className="fa-pw" d="M70,44 Q110,40 150,44" />
+          <path className="fa-pw" d="M66,54 Q110,50 154,54" />
+          <path className="fa-pw" d="M66,64 Q110,60 154,64" />
+        </g>
+        <g style={{ opacity: f.op.glabella }}>
+          <path className="fa-pw" d="M104,78 L104.5,92" />
+          <path className="fa-pw" d="M116,78 L115.5,92" />
+        </g>
+        <g style={{ opacity: f.op.nose }}>
+          <path className="fa-pw" d="M101,95 L119,95" />
+          <path className="fa-pw" d="M102,101 L118,101" />
+        </g>
+        <g style={{ opacity: f.op.squint }}>
+          <path className="fa-pw" d="M158,92 L170,86" />
+          <path className="fa-pw" d="M160,98 L173,98" />
+          <path className="fa-pw" d="M158,104 L170,110" />
+          <path className="fa-pw" d="M62,92 L50,86" />
+          <path className="fa-pw" d="M60,98 L47,98" />
+          <path className="fa-pw" d="M62,104 L50,110" />
+        </g>
+        <g style={{ opacity: f.op.temple }}>
+          <path className="fa-pw" d="M52,66 Q47,84 52,104" />
+          <path className="fa-pw" d="M168,66 Q173,84 168,104" />
+        </g>
+        <g style={{ opacity: f.op.clench }}>
+          <path className="fa-pw" style={{ strokeWidth: 2 }} d="M62,156 Q56,174 66,192" />
+          <path className="fa-pw" style={{ strokeWidth: 2 }} d="M158,156 Q164,174 154,192" />
+        </g>
+        <g style={{ opacity: f.op.cheek }}>
+          <path className="fa-pw" d="M150,148 Q158,166 148,186" />
+          <path className="fa-pw" d="M70,148 Q62,166 72,186" />
+        </g>
+        <g style={{ opacity: f.op.chin }}>
+          <path className="fa-pw" d="M96,198 Q110,193 124,198" />
+          <circle cx="102" cy="206" r="1" style={{ fill: 'var(--fa-ink)' }} />
+          <circle cx="110" cy="209" r="1" style={{ fill: 'var(--fa-ink)' }} />
+          <circle cx="118" cy="206" r="1" style={{ fill: 'var(--fa-ink)' }} />
+          <circle cx="106" cy="213" r="1" style={{ fill: 'var(--fa-ink)' }} />
+          <circle cx="114" cy="213" r="1" style={{ fill: 'var(--fa-ink)' }} />
+        </g>
+
+        <path d={f.nlfR} className="fa-pw" style={{ opacity: f.nlfOpacity }} />
+        <path d={f.nlfL} className="fa-pw" style={{ opacity: f.nlfOpacity }} />
+        <path d={f.marR} className="fa-pw" style={{ opacity: f.marOpacity }} />
+        <path d={f.marL} className="fa-pw" style={{ opacity: f.marOpacity }} />
+        <g style={{ opacity: f.op.purse }}>
+          {f.purse.map((d, i) => (
+            <path key={i} d={d} className="fa-pw" />
+          ))}
+        </g>
+
+        <path className="fa-pl" style={{ strokeOpacity: 0.35 }} d="M104,100 Q101,128 98,146" />
+        <path className="fa-pl" style={{ strokeOpacity: 0.35 }} d="M116,100 Q119,128 122,146" />
+        <path d={f.noseWingL} className="fa-pl" />
+        <path d={f.noseWingR} className="fa-pl" />
+        <path d={f.noseBase} className="fa-pl" />
+        <ellipse cx={f.nostril.lx} cy={f.nostril.y} rx={f.nostril.rad} ry="1.8" fill="var(--fa-ink)" opacity=".55" />
+        <ellipse cx={f.nostril.rx} cy={f.nostril.y} rx={f.nostril.rad} ry="1.8" fill="var(--fa-ink)" opacity=".55" />
+
+        <path d={f.eyeL} className="fa-pl" style={{ fill: 'var(--fa-eye)' }} />
+        <path d={f.eyeR} className="fa-pl" style={{ fill: 'var(--fa-eye)' }} />
+        <circle cx="80" cy="98" r="5.6" style={{ fill: 'var(--fa-iris)', opacity: f.irisOpacity }} clipPath={`url(#${clipL})`} />
+        <circle cx="140" cy="98" r="5.6" style={{ fill: 'var(--fa-iris)', opacity: f.irisOpacity }} clipPath={`url(#${clipR})`} />
+        <circle cx="80" cy="98" r="2.4" style={{ fill: 'var(--fa-ink)', opacity: f.irisOpacity }} clipPath={`url(#${clipL})`} />
+        <circle cx="140" cy="98" r="2.4" style={{ fill: 'var(--fa-ink)', opacity: f.irisOpacity }} clipPath={`url(#${clipR})`} />
+
+        <path d={f.browL} className="fa-pl" style={{ strokeWidth: 3.2 }} />
+        <path d={f.browR} className="fa-pl" style={{ strokeWidth: 3.2 }} />
+        <path d={f.mouth} className="fa-pl" style={{ fill: 'var(--fa-lip)' }} />
+      </svg>
+
+      <button
+        type="button"
+        className="fa-play"
+        aria-label={playing ? 'إيقاف الحركة' : 'تشغيل الحركة'}
+        onClick={() => setPlaying((p) => !p)}
+      >
+        {playing ? (
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <rect x="2" y="1.5" width="2.8" height="9" fill="currentColor" />
+            <rect x="7.2" y="1.5" width="2.8" height="9" fill="currentColor" />
+          </svg>
+        ) : (
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <path d="M3 1.5 L10 6 L3 10.5 Z" fill="currentColor" />
+          </svg>
+        )}
+      </button>
+
+      <div className="fa-pstate">{contracted ? 'منقبضة' : 'مسترخية'}</div>
+
+      <input
+        type="range"
+        min={0}
+        max={100}
+        value={Math.round(k * 100)}
+        aria-label="درجة الانقباض"
+        className="fa-range"
+        onChange={(e) => {
+          const v = Number(e.target.value) / 100;
+          setPlaying(false);
+          kRef.current = v;
+          setK(v);
+        }}
+      />
+    </div>
+  );
+}
+
+export default memo(ExpressionPreview);
+```
+
+## components\anatomy\face-atlas.css
+
+```css
+/* components/anatomy/face-atlas.css */
+
+.fa-plate {
+  --fa-bg: #ECEFF0; --fa-surface: #F7F9F9; --fa-ink: #14232B; --fa-muted: #55666E; --fa-line: #CAD3D7;
+  --fa-fascia: #EADFD5; --fa-skin: #E9C4B0; --fa-lip: #D98A84; --fa-brow: #4A3228;
+  --fa-eye: #F6F5F2; --fa-iris: #4F6A74; --fa-mouth: #6E2A2D;
+  --fa-muscle: #C4574F; --fa-muscle-hover: #D8746B; --fa-muscle-edge: #8B2E2A;
+  --fa-fibre: #7E2824; --fa-fibre-hi: #EBA096;
+  --fa-sel: #F5B83D; --fa-sel-edge: #14232B; --fa-sel-fibre: #9C6410;
+  --fa-ok: #4FB47F; --fa-bad: #E0634A;
+  color: var(--fa-ink);
+}
+
+/* ---------- التخطيط ---------- */
+.fa-layout {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "card" "stage";
+}
+
+/* سطح المكتب: البطاقة على اليمين وتكون Sticky */
+@media (min-width: 880px) {
+  .fa-layout {
+    grid-template-columns: minmax(0, 1fr) 380px;
+    grid-template-areas: "stage card";
+    align-items: start;
+  }
+}
+
+.fa-card { grid-area: card; min-width: 0; z-index: 10; }
+.fa-stage { grid-area: stage; min-width: 0; }
+
+/* تثبيت البطاقة فقط على الشاشات الكبيرة */
+@media (min-width: 880px) {
+  .fa-card.is-sticky { position: sticky; top: calc(var(--nav-h, 0px) + 8px); }
+  .fa-card.is-quiz { position: sticky; top: calc(var(--nav-h, 0px) + 12px); }
+}
+
+.fa-card-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 112px;
+  gap: 12px;
+  align-items: start;
+}
+@media (min-width: 880px) { .fa-card-main { grid-template-columns: minmax(0, 1fr) 128px; } }
+
+.fa-scroll { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.fa-scroll > * { flex: none; }
+
+/* ---------- لوحة الرسم ---------- */
+.fa-figure {
+  --R: .7407;
+  position: relative;
+  background: var(--fa-surface);
+  border: 1px solid var(--fa-line);
+  border-radius: 14px;
+  padding: 8px;
+  display: flex;
+  justify-content: center;
+}
+.fa-figure svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: var(--R);
+  /* يضمن ألا يتجاوز الرسم 68% من ارتفاع الشاشة على الشاشات الكبيرة */
+  max-width: calc(68vh * var(--R));
+  touch-action: manipulation;
+  direction: ltr;
+}
+
+/* ---------- العناصر الرسومية ---------- */
+.fa-base-fascia { fill: var(--fa-fascia); stroke: var(--fa-line); stroke-width: 1.2; }
+.fa-base-skin { fill: var(--fa-skin); stroke: var(--fa-muscle-edge); stroke-opacity: .5; stroke-width: .8; }
+
+.fa-m { cursor: pointer; transition: opacity .2s; }
+.fa-mo { fill: var(--fa-muscle); stroke: var(--fa-muscle-edge); stroke-width: .9; stroke-linejoin: round; }
+.fa-fa { fill: none; stroke: var(--fa-fibre); stroke-opacity: .5; stroke-width: .7; stroke-linecap: round; }
+.fa-fb { fill: none; stroke: var(--fa-fibre-hi); stroke-opacity: .55; stroke-width: .7; stroke-linecap: round; }
+.fa-m:hover .fa-mo { fill: var(--fa-muscle-hover); }
+.fa-m:focus-visible { outline: none; }
+.fa-m:focus-visible .fa-mo { stroke: var(--fa-ink); stroke-width: 2; }
+.fa-m.is-dim { opacity: .16; }
+.fa-m.is-dim:hover { opacity: .55; }
+.fa-m.is-hi .fa-mo { stroke: var(--fa-ink); stroke-width: 1.3; }
+
+.fa-sel { pointer-events: none; cursor: default; }
+.fa-sel .fa-mo { fill: var(--fa-sel); fill-opacity: calc(.78 + .22 * var(--k, 1)); stroke: var(--fa-sel-edge); stroke-width: 1.5; }
+.fa-sel .fa-fa { stroke: var(--fa-sel-fibre); stroke-opacity: .7; }
+.fa-sel .fa-fb { stroke: #fff; stroke-opacity: .55; }
+.fa-sel-ok .fa-mo { fill: var(--fa-ok); fill-opacity: .92; }
+.fa-sel-bad .fa-mo { fill: var(--fa-bad); fill-opacity: .92; }
+.fa-sel-ok .fa-fa, .fa-sel-bad .fa-fa { stroke: #0d2b1c; stroke-opacity: .55; }
+
+.fa-decor { pointer-events: none; }
+.fa-thin { fill: none; stroke: var(--fa-ink); stroke-opacity: .4; stroke-width: 1.1; }
+
+.fa-halo { fill: none; stroke: var(--fa-surface); stroke-width: 4.6; stroke-linecap: round; stroke-linejoin: round; }
+.fa-arrow { fill: none; stroke: var(--fa-ink); stroke-width: 2.2; stroke-linecap: round; stroke-dasharray: 5 4; animation: fa-flow .9s linear infinite; }
+.fa-ahead { fill: var(--fa-ink); stroke: var(--fa-surface); stroke-width: 1.2; stroke-linejoin: round; }
+@keyframes fa-flow { to { stroke-dashoffset: -9; } }
+
+.fa-lab { font-family: inherit; fill: var(--fa-ink); paint-order: stroke; stroke: var(--fa-surface); stroke-linejoin: round; cursor: pointer; }
+.fa-lab.is-sel { font-weight: 700; }
+.fa-leader { stroke: var(--fa-ink); stroke-opacity: .55; pointer-events: none; fill: none; }
+.fa-ldot { fill: var(--fa-ink); pointer-events: none; }
+
+.fa-tip {
+  position: absolute; pointer-events: none; z-index: 3;
+  background: #14232B; color: #F7F9F9; font-size: 12px; padding: 3px 8px; border-radius: 6px;
+  white-space: nowrap; transform: translate(-50%, -140%); direction: ltr;
+}
+.fa-tip[hidden] { display: none; }
+
+/* ---------- معاينة التعبير ---------- */
+.fa-preview { position: relative; border-radius: 10px; }
+.fa-preview > svg { display: block; width: 100%; height: auto; background: var(--fa-bg); border-radius: 8px; }
+.fa-pl { fill: none; stroke: var(--fa-ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.fa-pw { fill: none; stroke: var(--fa-ink); stroke-width: 1.2; stroke-linecap: round; }
+.fa-pstate { font-size: 11px; color: var(--fa-muted); text-align: center; margin-top: 2px; }
+.fa-play {
+  position: absolute; inset-inline-start: 4px; top: 4px; width: 26px; height: 26px; border-radius: 50%;
+  border: 1px solid var(--fa-line); background: var(--fa-surface); color: var(--fa-ink);
+  display: grid; place-items: center; cursor: pointer; padding: 0;
+}
+.fa-play:focus-visible, .fa-range:focus-visible { outline: 2px solid var(--fa-sel); outline-offset: 2px; }
+.fa-range { width: 100%; margin: 4px 0 0; accent-color: var(--fa-muscle); cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fa-arrow { animation: none; }
+  .fa-m { transition: none; }
+}
+```
+
+## components\anatomy\FaceAtlas.tsx
+
+```tsx
+'use client';
+
+// components/anatomy/FaceAtlas.tsx
+import { memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties, KeyboardEvent, MouseEvent, PointerEvent } from 'react';
+import './face-atlas.css';
+
+import { MUSCLES, MUSCLE_GROUPS, MUSCLE_BY_ID, ZOOMS, type ZoomId } from '@/lib/anatomy-data';
+import { GEOMETRY } from '@/lib/anatomy-geometry';
+import { canvasRatio, layoutLabels, viewBoxFor, type ViewBox } from '@/lib/anatomy-view';
+import { combinePoses, type Pose } from '@/lib/anatomy-pose';
+import { ACTION_AR, EXPRESSIONS, PEARLS_AR } from '@/lib/anatomy-ar';
+import {
+  EXAM_TIPS,
+  FACIAL_BRANCHES,
+  MUSCLES_BY_BRANCH,
+  BRANCH_MNEMONIC,
+  branchesOf,
+  innervationOf,
+  pharyngealArchOf,
+  type FacialBranch,
+} from '@/lib/anatomy-extras';
+import { makeRound } from '@/lib/anatomy-quiz';
+
+import ExpressionPreview from './ExpressionPreview';
+import QuizPanel, { type QuizState } from './QuizPanel';
+import AtlasExtras from './AtlasExtras';
+import { badge, btnGhost, chip, chipSmall } from './ui-classes';
+
+// ==================== ثوابت ====================
+type Mode = 'explore' | 'quiz';
+type DetailTab = 'anatomy' | 'nerve' | 'clinical';
+type BranchFilter = FacialBranch | 'v3' | null;
+type Tone = 'sel' | 'ok' | 'bad';
+interface SelItem { id: string; tone: Tone }
+
+const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
+const MIRROR = 'translate(400 0) scale(-1 1)';
+const BEST_KEY = 'anatomy-face-quiz-best';
+const DEFAULT_ID = 'zmaj';
+const ROUND_SIZE = 10;
+const V3_IDS: readonly string[] = MUSCLES.filter((m) => innervationOf(m) === 'V3').map((m) => m.id);
+
+const TAB_LABEL: Record<DetailTab, string> = {
+  anatomy: 'Anatomy',
+  nerve: 'Nerve',
+  clinical: 'Clinical',
+};
+
+// ==================== طبقات الرسم الثابتة ====================
+const FaceBase = memo(function FaceBase() {
+  return (
+    <g>
+      <path d="M138,380 L134,540 L266,540 L262,380 Z" className="fa-base-fascia" />
+      {[76, 324].map((cx) => (
+        <g key={cx}>
+          <ellipse cx={cx} cy={212} rx={12} ry={28} className="fa-base-skin" />
+          <path d={cx < 200 ? 'M80,196 Q70,212 80,230' : 'M320,196 Q330,212 320,230'} className="fa-thin" />
+        </g>
+      ))}
+      <path
+        d="M200,18 C120,18 80,70 80,150 C80,220 84,280 94,330 C104,372 138,412 200,430 C262,412 296,372 306,330 C316,280 320,220 320,150 C320,70 280,18 200,18 Z"
+        className="fa-base-fascia"
+      />
+      <path
+        d="M200,236 C190,252 182,278 180,296 C179,312 190,326 200,326 C210,326 221,312 220,296 C218,278 210,252 200,236 Z"
+        className="fa-base-skin"
+      />
+    </g>
+  );
+});
+
+const FaceDecor = memo(function FaceDecor({ clipId }: { clipId: string }) {
+  const side = (mirror: boolean) => (
+    <g key={mirror ? 'l' : 'r'} transform={mirror ? MIRROR : undefined}>
+      <path d="M207,172 C222,154 262,146 296,166 C264,156 226,162 207,172 Z" fill="var(--fa-brow)" stroke="var(--fa-brow)" strokeWidth={1.2} strokeLinejoin="round" />
+      <path d="M226,201 Q248,187 270,201 Q248,214 226,201 Z" fill="var(--fa-eye)" />
+      <circle cx={248} cy={201} r={8.2} fill="var(--fa-iris)" clipPath={`url(#${clipId})`} />
+      <circle cx={248} cy={201} r={3.4} fill="var(--fa-ink)" clipPath={`url(#${clipId})`} />
+      <path d="M224,201 Q248,184 272,201" fill="none" stroke="var(--fa-ink)" strokeWidth={1.5} strokeLinecap="round" />
+      <path d="M226,201 Q248,214 270,201" fill="none" stroke="var(--fa-ink)" strokeOpacity={0.5} strokeWidth={0.9} />
+      <ellipse cx={210} cy={314} rx={6.5} ry={3.4} fill="var(--fa-mouth)" />
+      <path d="M222,296 Q226,308 218,320" fill="none" stroke="var(--fa-muscle-edge)" strokeOpacity={0.55} strokeWidth={1.1} strokeLinecap="round" />
+    </g>
+  );
+  return (
+    <>
+      {side(false)}
+      {side(true)}
+      <path d="M162,347 C174,338 188,330 200,336 C212,330 226,338 238,347 C224,350 210,350 200,350 C190,350 176,350 162,347 Z" fill="var(--fa-lip)" stroke="var(--fa-mouth)" strokeWidth={0.8} strokeLinejoin="round" />
+      <path d="M163,348 C176,351 190,351 200,351 C210,351 224,351 237,348 C230,362 216,368 200,368 C184,368 170,362 163,348 Z" fill="var(--fa-lip)" stroke="var(--fa-mouth)" strokeWidth={0.8} strokeLinejoin="round" />
+    </>
+  );
+});
+
+// ==================== طبقة العضلات ====================
+const MusclesLayer = memo(function MusclesLayer({
+  highlight,
+  hideNames,
+}: {
+  highlight: ReadonlySet<string> | null;
+  hideNames: boolean;
+}) {
+  return (
+    <>
+      {MUSCLES.flatMap((m) => {
+        const geo = GEOMETRY[m.id];
+        if (!geo) return [];
+        const cls =
+          highlight === null ? 'fa-m' : highlight.has(m.id) ? 'fa-m is-hi' : 'fa-m is-dim';
+        return (m.paired ? [0, 1] : [0]).map((s) => (
+          <g
+            key={`${m.id}-${s}`}
+            className={cls}
+            data-id={m.id}
+            transform={s ? MIRROR : undefined}
+            {...(s === 0
+              ? { role: 'button', tabIndex: 0, 'aria-label': hideNames ? 'Muscle' : m.en }
+              : { 'aria-hidden': true })}
+          >
+            <path d={geo.d} className="fa-mo" fillRule={geo.evenodd ? 'evenodd' : undefined} />
+            <path d={geo.dark} className="fa-fa" />
+            <path d={geo.light} className="fa-fb" />
+          </g>
+        ));
+      })}
+    </>
+  );
+});
+
+function SelLayer({ items }: { items: readonly SelItem[] }) {
+  return (
+    <>
+      {items.flatMap(({ id, tone }) => {
+        const m = MUSCLE_BY_ID[id];
+        const geo = GEOMETRY[id];
+        if (!m || !geo) return [];
+        return (m.paired ? [0, 1] : [0]).map((s) => (
+          <g
+            key={`${id}-${s}-${tone}`}
+            className={tone === 'sel' ? 'fa-m fa-sel' : `fa-m fa-sel fa-sel-${tone}`}
+            transform={s ? MIRROR : undefined}
+          >
+            <path d={geo.d} className="fa-mo" fillRule={geo.evenodd ? 'evenodd' : undefined} />
+            <path d={geo.dark} className="fa-fa" />
+            <path d={geo.light} className="fa-fb" />
+          </g>
+        ));
+      })}
+    </>
+  );
+}
+
+function Arrow({ a, mirror }: { a: readonly [number, number, number, number]; mirror: boolean }) {
+  const [x1, y1, x2, y2] = a;
+  const ang = Math.atan2(y2 - y1, x2 - x1);
+  const s = 8;
+  const ex = x2 - 2.5 * Math.cos(ang);
+  const ey = y2 - 2.5 * Math.sin(ang);
+  const h1x = x2 - s * Math.cos(ang - 0.45);
+  const h1y = y2 - s * Math.sin(ang - 0.45);
+  const h2x = x2 - s * Math.cos(ang + 0.45);
+  const h2y = y2 - s * Math.sin(ang + 0.45);
+  const line = `M${x1},${y1} L${ex.toFixed(1)},${ey.toFixed(1)}`;
+  return (
+    <g transform={mirror ? MIRROR : undefined}>
+      <path d={line} className="fa-halo" />
+      <path d={line} className="fa-arrow" />
+      <path d={`M${x2},${y2} L${h1x.toFixed(1)},${h1y.toFixed(1)} L${h2x.toFixed(1)},${h2y.toFixed(1)} Z`} className="fa-ahead" />
+    </g>
+  );
+}
+
+function ArrowsLayer({ ids }: { ids: readonly string[] }) {
+  return (
+    <>
+      {ids.flatMap((id) => {
+        const m = MUSCLE_BY_ID[id];
+        if (!m) return [];
+        return m.arrows.flatMap((a, i) => {
+          const out = [<Arrow key={`${id}-${i}-0`} a={a} mirror={false} />];
+          if (m.paired) out.push(<Arrow key={`${id}-${i}-1`} a={a} mirror />);
+          return out;
+        });
+      })}
+    </>
+  );
+}
+
+// ==================== المكوّن الرئيسي ====================
+export default function FaceAtlas() {
+  const uid = useId().replace(/:/g, '');
+  const clipId = `${uid}-eye`;
+
+  // ----- الحالة -----
+  const [mode, setMode] = useState<Mode>('explore');
+  const [selectedId, setSelectedId] = useState<string | null>(DEFAULT_ID);
+  const [expressionId, setExpressionId] = useState<string | null>(null);
+  const [branch, setBranch] = useState<BranchFilter>(null);
+  const [zoom, setZoom] = useState<ZoomId>('whole');
+  const [labelsOn, setLabelsOn] = useState(false);
+  const [vb, setVb] = useState<ViewBox>(() => viewBoxFor('whole', false));
+  const [svgW, setSvgW] = useState(0);
+  const [emW, setEmW] = useState<Record<string, number>>({});
+  const [query, setQuery] = useState('');
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [tab, setTab] = useState<DetailTab>('anatomy');
+  const [quiz, setQuiz] = useState<QuizState | null>(null);
+  const [best, setBest] = useState(0);
+  const [copied, setCopied] = useState(false);
+
+  // ----- مراجع -----
+  const svgRef = useRef<SVGSVGElement>(null);
+  const figRef = useRef<HTMLDivElement>(null);
+  const tipRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLElement>(null);
+  const measureRef = useRef<SVGTextElement>(null);
+  const vbRef = useRef<ViewBox>(vb);
+  const labelsOnRef = useRef(false);
+  const animRef = useRef(0);
+  const reducedRef = useRef(false);
+  const interacted = useRef(false);
+  const bestRef = useRef(0);
+
+  // ==================== الكاميرا ====================
+  const animateTo = useCallback((to: ViewBox, instant = false) => {
+    cancelAnimationFrame(animRef.current);
+    const from = vbRef.current;
+    if (instant || reducedRef.current) {
+      vbRef.current = to;
+      setVb(to);
+      return;
+    }
+    const t0 = performance.now();
+    const step = (t: number) => {
+      const k = Math.min(1, (t - t0) / 450);
+      const e = 1 - Math.pow(1 - k, 3);
+      const mix = (i: 0 | 1 | 2 | 3): number => from[i] + (to[i] - from[i]) * e;
+      const next: ViewBox = [mix(0), mix(1), mix(2), mix(3)];
+      vbRef.current = next;
+      setVb(next);
+      if (k < 1) animRef.current = requestAnimationFrame(step);
+    };
+    animRef.current = requestAnimationFrame(step);
+  }, []);
+
+  const changeZoom = useCallback(
+    (z: ZoomId, instant = false) => {
+      setZoom(z);
+      animateTo(viewBoxFor(z, labelsOnRef.current), instant);
+    },
+    [animateTo],
+  );
+
+  const toggleLabels = useCallback(() => {
+    const next = !labelsOnRef.current;
+    labelsOnRef.current = next;
+    setLabelsOn(next);
+    animateTo(viewBoxFor(zoom, next), true);
+  }, [animateTo, zoom]);
+
+  useEffect(() => () => cancelAnimationFrame(animRef.current), []);
+
+  // ==================== بدء التشغيل ====================
+  useIsoLayoutEffect(() => {
+    try {
+      reducedRef.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch {
+      /* تجاهل */
+    }
+
+    let wantLabels = false;
+    try {
+      // إخفاء التسميات افتراضياً على الجوال (أقل من 1024px)
+      wantLabels = window.matchMedia('(min-width: 1024px)').matches;
+    } catch {
+      /* تجاهل */
+    }
+
+    let startZoom: ZoomId = 'whole';
+    try {
+      const p = new URLSearchParams(window.location.search);
+      const mid = p.get('m');
+      const xid = p.get('x');
+      if (xid && EXPRESSIONS.some((e) => e.id === xid)) {
+        setExpressionId(xid);
+        setSelectedId(null);
+      } else if (mid && MUSCLE_BY_ID[mid]) {
+        setSelectedId(mid);
+        startZoom = MUSCLE_BY_ID[mid].zoom;
+      }
+    } catch {
+      /* تجاهل */
+    }
+
+    labelsOnRef.current = wantLabels;
+    setLabelsOn(wantLabels);
+    setZoom(startZoom);
+    const v = viewBoxFor(startZoom, wantLabels);
+    vbRef.current = v;
+    setVb(v);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const n = Number(localStorage.getItem(BEST_KEY));
+      if (Number.isFinite(n) && n > 0) {
+        bestRef.current = n;
+        setBest(n);
+      }
+    } catch {
+      /* تجاهل */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!interacted.current || mode !== 'explore') return;
+    try {
+      const p = new URLSearchParams();
+      if (expressionId) p.set('x', expressionId);
+      else if (selectedId) p.set('m', selectedId);
+      const qs = p.toString();
+      window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
+    } catch {
+      /* تجاهل */
+    }
+  }, [selectedId, expressionId, mode]);
+
+  // ==================== القياسات ====================
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el) return;
+    setSvgW(el.getBoundingClientRect().width);
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width;
+      if (w) setSvgW(w);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = () => {
+      const t = measureRef.current;
+      if (!t || cancelled || typeof t.getComputedTextLength !== 'function') return;
+      const next: Record<string, number> = {};
+      for (const m of MUSCLES) {
+        const text = m.short ?? m.en;
+        t.textContent = text;
+        const len = t.getComputedTextLength();
+        if (len > 0) next[text] = len / 100;
+      }
+      t.textContent = '';
+      if (Object.keys(next).length) setEmW(next);
+    };
+    run();
+    try {
+      void document.fonts?.ready.then(run);
+    } catch {
+      /* تجاهل */
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // ==================== التحديد ====================
+  const scrollToFigure = useCallback(() => {
+    const fig = figRef.current;
+    const card = cardRef.current;
+    if (!fig) return;
+    const navH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nav-h')) || 0;
+    let stuck = 0;
+    if (card && getComputedStyle(card).position === 'sticky' && window.matchMedia('(max-width: 879px)').matches) {
+      stuck = card.offsetHeight;
+    }
+    const top = window.scrollY + fig.getBoundingClientRect().top - navH - stuck - 12;
+    window.scrollTo({ top: Math.max(0, top), behavior: reducedRef.current ? 'auto' : 'smooth' });
+  }, []);
+
+  const selectMuscle = useCallback(
+    (id: string, opts?: { zoom?: boolean; scroll?: boolean }) => {
+      const m = MUSCLE_BY_ID[id];
+      if (!m) return;
+      interacted.current = true;
+      setSelectedId(id);
+      setExpressionId(null);
+      if (opts?.zoom) changeZoom(m.zoom);
+      if (opts?.scroll) scrollToFigure();
+    },
+    [changeZoom, scrollToFigure],
+  );
+
+  const selectExpression = useCallback(
+    (id: string) => {
+      interacted.current = true;
+      if (expressionId === id) {
+        setExpressionId(null);
+        setSelectedId((prev) => prev ?? DEFAULT_ID);
+        return;
+      }
+      setExpressionId(id);
+      setSelectedId(null);
+      setBranch(null);
+      changeZoom('whole');
+    },
+    [changeZoom, expressionId],
+  );
+
+  const toggleBranch = useCallback((b: Exclude<BranchFilter, null>) => {
+    setBranch((prev) => (prev === b ? null : b));
+    setExpressionId(null);
+    setSelectedId((prev) => prev ?? DEFAULT_ID);
+  }, []);
+
+  // ==================== الاختبار ====================
+  const startQuiz = useCallback(() => {
+    setQuiz({
+      questions: makeRound(ROUND_SIZE),
+      index: 0,
+      picked: null,
+      score: 0,
+      streak: 0,
+      bestStreak: 0,
+      missed: [],
+      done: false,
+    });
+    setMode('quiz');
+  }, []);
+
+  const exitQuiz = useCallback(() => {
+    setMode('explore');
+    setQuiz(null);
+    changeZoom('whole');
+  }, [changeZoom]);
+
+  const answerQuiz = useCallback((choice: string) => {
+    setQuiz((prev) => {
+      if (!prev || prev.picked !== null || prev.done) return prev;
+      const q = prev.questions[prev.index];
+      if (!q) return prev;
+      const ok = choice === q.correct;
+      const streak = ok ? prev.streak + 1 : 0;
+      return {
+        ...prev,
+        picked: choice,
+        score: prev.score + (ok ? 1 : 0),
+        streak,
+        bestStreak: Math.max(prev.bestStreak, streak),
+        missed: ok || prev.missed.includes(q.id) ? prev.missed : [...prev.missed, q.id],
+      };
+    });
+  }, []);
+
+  const nextQuiz = useCallback(() => {
+    setQuiz((prev) => {
+      if (!prev || prev.picked === null) return prev;
+      const next = prev.index + 1;
+      if (next >= prev.questions.length) return { ...prev, done: true };
+      return { ...prev, index: next, picked: null };
+    });
+  }, []);
+
+  const reviewFromQuiz = useCallback(
+    (id: string) => {
+      setMode('explore');
+      setQuiz(null);
+      selectMuscle(id, { zoom: true, scroll: true });
+    },
+    [selectMuscle],
+  );
+
+  const currentQ = mode === 'quiz' && quiz && !quiz.done ? (quiz.questions[quiz.index] ?? null) : null;
+
+  useEffect(() => {
+    if (mode !== 'quiz') return;
+    const m = currentQ ? MUSCLE_BY_ID[currentQ.id] : undefined;
+    if (m && currentQ && (currentQ.kind === 'locate' || currentQ.kind === 'identify' || currentQ.kind === 'branch')) {
+      changeZoom(m.zoom);
+    } else {
+      changeZoom('whole');
+    }
+  }, [mode, currentQ, changeZoom]);
+
+  useEffect(() => {
+    if (!quiz?.done) return;
+    const b = Math.max(bestRef.current, quiz.score);
+    if (b !== bestRef.current) {
+      bestRef.current = b;
+      setBest(b);
+      try {
+        localStorage.setItem(BEST_KEY, String(b));
+      } catch {
+        /* تجاهل */
+      }
+    }
+  }, [quiz?.done, quiz?.score]);
+
+  const handlePick = useCallback(
+    (id: string) => {
+      if (mode === 'quiz') {
+        if (currentQ?.kind === 'locate' && quiz?.picked === null) answerQuiz(id);
+        return;
+      }
+      selectMuscle(id);
+    },
+    [mode, currentQ, quiz?.picked, answerQuiz, selectMuscle],
+  );
+
+  // ==================== مشتقات العرض ====================
+  const selected = selectedId ? (MUSCLE_BY_ID[selectedId] ?? null) : null;
+  const expression = expressionId ? (EXPRESSIONS.find((e) => e.id === expressionId) ?? null) : null;
+
+  const highlight = useMemo<ReadonlySet<string> | null>(() => {
+    if (mode === 'quiz') return null;
+    if (expression) return new Set(expression.muscles.map((x) => x.id));
+    if (branch === 'v3') return new Set(V3_IDS);
+    if (branch) return new Set(MUSCLES_BY_BRANCH[branch]);
+    return null;
+  }, [mode, expression, branch]);
+
+  const pose = useMemo<Pose>(() => {
+    if (expression) {
+      return combinePoses(
+        expression.muscles.map((x) => ({ pose: MUSCLE_BY_ID[x.id]?.pose ?? {}, w: x.w ?? 1 })),
+        expression.extra,
+      );
+    }
+    return selected?.pose ?? {};
+  }, [expression, selected]);
+  const poseKey = expression ? `x:${expression.id}` : `m:${selectedId ?? ''}`;
+
+  const selItems = useMemo<SelItem[]>(() => {
+    if (mode === 'explore') {
+      if (expression) return expression.muscles.map((x) => ({ id: x.id, tone: 'sel' as const }));
+      return selectedId ? [{ id: selectedId, tone: 'sel' as const }] : [];
+    }
+    if (!currentQ || !quiz) return [];
+    const picked = quiz.picked;
+    const items: SelItem[] = [];
+    if (currentQ.kind === 'identify' || currentQ.kind === 'branch') {
+      items.push({ id: currentQ.id, tone: picked !== null ? 'ok' : 'sel' });
+    } else if (currentQ.kind === 'locate') {
+      if (picked !== null) {
+        if (picked !== '__skip' && picked !== currentQ.id && MUSCLE_BY_ID[picked]) items.push({ id: picked, tone: 'bad' });
+        items.push({ id: currentQ.id, tone: 'ok' });
+      }
+    } else if (picked !== null) {
+      items.push({ id: currentQ.id, tone: 'ok' });
+    }
+    return items;
+  }, [mode, expression, selectedId, currentQ, quiz]);
+
+  const arrowIds = useMemo<string[]>(() => {
+    if (mode === 'explore') return expression ? expression.muscles.map((x) => x.id) : selectedId ? [selectedId] : [];
+    if (!currentQ || !quiz || quiz.picked === null) return [];
+    return [currentQ.id];
+  }, [mode, expression, selectedId, currentQ, quiz]);
+
+  const showLabels = labelsOn && mode === 'explore';
+  const layout = useMemo(
+    () => (showLabels ? layoutLabels(vb, svgW, (t) => emW[t] ?? t.length * 0.55) : { fs: 0, items: [] }),
+    [showLabels, vb, svgW, emW],
+  );
+
+  const onK = useCallback((k: number) => {
+    svgRef.current?.style.setProperty('--k', k.toFixed(3));
+  }, []);
+
+  // ==================== أحداث الرسم ====================
+  const idFromEvent = (e: { target: EventTarget }): string | null => {
+    const t = (e.target as Element).closest?.('[data-id]');
+    return t?.getAttribute('data-id') ?? null;
+  };
+
+  const onLayerClick = (e: MouseEvent<SVGGElement>) => {
+    const id = idFromEvent(e);
+    if (id) handlePick(id);
+  };
+
+  const onLayerKey = (e: KeyboardEvent<SVGGElement>) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const id = idFromEvent(e);
+    if (id) {
+      e.preventDefault();
+      handlePick(id);
+    }
+  };
+
+  const onLayerMove = (e: PointerEvent<SVGGElement>) => {
+    const tip = tipRef.current;
+    const fig = figRef.current;
+    if (!tip || !fig || e.pointerType !== 'mouse' || mode === 'quiz') return;
+    const id = idFromEvent(e);
+    if (!id) {
+      tip.hidden = true;
+      return;
+    }
+    const r = fig.getBoundingClientRect();
+    tip.textContent = MUSCLE_BY_ID[id]?.en ?? '';
+    tip.style.left = `${e.clientX - r.left}px`;
+    tip.style.top = `${e.clientY - r.top}px`;
+    tip.hidden = false;
+  };
+
+  const hideTip = () => {
+    if (tipRef.current) tipRef.current.hidden = true;
+  };
+
+  const share = async () => {
+    const qs = expressionId ? `x=${expressionId}` : selectedId ? `m=${selectedId}` : '';
+    const url = `${window.location.origin}${window.location.pathname}${qs ? `?${qs}` : ''}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'Facial Muscles — Lawazem', url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1800);
+      }
+    } catch {
+      /* المستخدم ألغى المشاركة */
+    }
+  };
+
+  // ==================== الفهرس ====================
+  const q = query.trim().toLowerCase();
+  const groups = useMemo(
+    () =>
+      MUSCLE_GROUPS.map((g) => ({
+        g,
+        ids: g.ids.filter((id) => {
+          if (!q) return true;
+          const m = MUSCLE_BY_ID[id];
+          if (!m) return false;
+          return [m.en, m.short, m.region, ACTION_AR[id], id].join(' ').toLowerCase().includes(q);
+        }),
+      })).filter((x) => x.ids.length > 0),
+    [q],
+  );
+
+  // ==================== العرض ====================
+  const statusText = expression
+    ? `${expression.en} — ${expression.ar}`
+    : selected
+      ? selected.en
+      : '';
+
+  const inn = selected ? innervationOf(selected) : null;
+  const arch = selected ? pharyngealArchOf(selected) : null;
+  const selBranches = selected ? branchesOf(selected) : [];
+  
+  // حساب النسبة هنا لتتوافق مع حالة التسميات
+  const dynamicR = canvasRatio(zoom, labelsOn);
+  const cardClass = `fa-card rounded-card border border-line bg-paper-soft p-3 shadow-sm sm:p-3.5 ${mode === 'quiz' ? 'is-quiz' : 'is-sticky'}`;
+
+  return (
+    <div>
+      {/* ---- شريط الأعلى ---- */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex gap-1.5" role="group" aria-label="Atlas mode">
+          <button type="button" className={chip} aria-pressed={mode === 'explore'} onClick={() => (mode === 'quiz' ? exitQuiz() : undefined)}>
+            استكشاف
+          </button>
+          <button type="button" className={chip} aria-pressed={mode === 'quiz'} onClick={() => (mode === 'explore' ? startQuiz() : undefined)}>
+            اختبر نفسك
+          </button>
+        </div>
+        {mode === 'explore' && (
+          <button type="button" className={btnGhost} onClick={share}>
+            {copied ? 'تم نسخ الرابط ✓' : 'مشاركة العضلة'}
+          </button>
+        )}
+      </div>
+
+      <p className="sr-only" role="status" aria-live="polite">{mode === 'explore' ? statusText : ''}</p>
+
+      <div className="fa-layout mt-3">
+        {/* ================= البطاقة ================= */}
+        <section ref={cardRef} className={cardClass} aria-label={mode === 'quiz' ? 'Quiz' : 'Muscle info'}>
+          {mode === 'quiz' && quiz ? (
+            <QuizPanel
+              state={quiz}
+              best={best}
+              onAnswer={answerQuiz}
+              onNext={nextQuiz}
+              onRestart={startQuiz}
+              onExit={exitQuiz}
+              onReview={reviewFromQuiz}
+            />
+          ) : (
+            <>
+              <div className="fa-card-main">
+                <div className="min-w-0">
+                  <p className="text-[11.5px] font-bold tracking-wide text-ink-muted">
+                    {expression ? 'Expression' : selected?.region}
+                  </p>
+
+                  {expression ? (
+                    <>
+                      <h2 dir="ltr" className="mt-0.5 text-start font-display text-2xl font-bold leading-tight text-ink">
+                        {expression.en}
+                      </h2>
+                      <p className="mt-0.5 text-sm font-semibold text-ink-muted">{expression.ar}</p>
+                      {expression.noteEn ? (
+                        <>
+                          <p dir="ltr" className="mt-1.5 text-start text-sm leading-relaxed text-ink-soft">{expression.noteEn}</p>
+                          <p className="mt-1 text-[12.5px] leading-relaxed text-ink-muted">{expression.note}</p>
+                        </>
+                      ) : (
+                        <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">{expression.note}</p>
+                      )}
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {expression.muscles.map((x) => (
+                          <button key={x.id} type="button" dir="ltr" className={chipSmall} aria-pressed={false} onClick={() => selectMuscle(x.id, { zoom: true })}>
+                            {MUSCLE_BY_ID[x.id]?.short ?? MUSCLE_BY_ID[x.id]?.en}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    selected && (
+                      <>
+                        <h2 dir="ltr" className="mt-0.5 text-start font-display text-2xl font-bold leading-tight text-ink">
+                          {selected.en}
+                        </h2>
+                        <p dir="ltr" className="mt-1.5 text-start text-sm leading-relaxed text-ink">{selected.actEn}</p>
+                        <p className="mt-1.5 text-[13px] leading-relaxed text-ink-muted">{ACTION_AR[selected.id]}</p>
+                        <div className="mt-2 flex flex-wrap gap-1.5" dir="ltr">
+                          {inn === 'VII' && <span className={badge}>CN VII</span>}
+                          {inn === 'V3' && <span className={badge}>CN V3</span>}
+                          {arch && <span className={badge}>Arch {arch}</span>}
+                          {selBranches.map((b) => (
+                            <span key={b} className={badge}>{FACIAL_BRANCHES.find((x) => x.id === b)?.en}</span>
+                          ))}
+                        </div>
+                      </>
+                    )
+                  )}
+                </div>
+
+                <ExpressionPreview pose={pose} poseKey={poseKey} onK={onK} />
+              </div>
+
+              {selected && !expression && (
+                <div className="mt-2 border-t border-line pt-2">
+                  <button
+                    type="button"
+                    aria-expanded={detailsOpen}
+                    onClick={() => setDetailsOpen((o) => !o)}
+                    className="text-sm font-semibold text-ink-soft hover:text-teal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
+                  >
+                    {detailsOpen ? '− ' : '+ '}
+                    <span dir="ltr">Origin, Insertion, Nerve & Clinical</span>
+                  </button>
+
+                  {detailsOpen && (
+                    <div className="mt-2">
+                      <div role="group" aria-label="Muscle details" className="flex gap-1.5">
+                        {(Object.keys(TAB_LABEL) as DetailTab[]).map((t) => (
+                          <button key={t} type="button" aria-pressed={tab === t} className={chipSmall} onClick={() => setTab(t)}>
+                            <bdi dir="ltr">{TAB_LABEL[t]}</bdi>
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="mt-2 max-h-[34vh] overflow-auto text-[13px] leading-snug">
+                        {tab === 'anatomy' && (
+                          <dl dir="ltr" className="text-left">
+                            <dt className="text-[11px] font-bold uppercase tracking-wide text-ink-muted">Origin</dt>
+                            <dd className="text-ink-soft">{selected.origin}</dd>
+                            <dt className="mt-2 text-[11px] font-bold uppercase tracking-wide text-ink-muted">Insertion</dt>
+                            <dd className="text-ink-soft">{selected.insertion}</dd>
+                          </dl>
+                        )}
+
+                        {tab === 'nerve' && (
+                          <div>
+                            <p dir="ltr" className="text-left text-ink-soft">{selected.nerve}</p>
+                            {arch && (
+                              <p className="mt-2 text-ink-soft">
+                                {arch === 2
+                                  ? 'من القوس البلعومي الثاني → عضلات التعبير تُغذّيها العصب الوجهي (VII).'
+                                  : 'من القوس البلعومي الأول → عضلات المضغ يغذّيها العصب مثلث التوائم (V3).'}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {tab === 'clinical' && (
+                          <div>
+                            <p dir="ltr" className="text-left text-ink-soft">{selected.clin}</p>
+                            {PEARLS_AR[selected.id] && (
+                              <p className="mt-2 rounded-field border border-gold/30 bg-gold-tint p-2 text-ink">{PEARLS_AR[selected.id]}</p>
+                            )}
+                            {EXAM_TIPS[selected.id] && (
+                              <p className="mt-2 text-ink-soft">
+                                <span className="font-bold text-ink">How to examine: </span>
+                                <bdi dir="ltr">{EXAM_TIPS[selected.id]?.en}</bdi>
+                                <span className="mt-0.5 block text-[12px] text-ink-muted">{EXAM_TIPS[selected.id]?.ar}</span>
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </section>
+
+        {/* ================= المسرح ================= */}
+        <section className="fa-stage">
+          <div className="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label="Zoom">
+            {(Object.keys(ZOOMS) as ZoomId[]).map((k) => (
+              <button key={k} type="button" className={chip} aria-pressed={zoom === k} onClick={() => changeZoom(k)}>
+                {ZOOMS[k].labelAr}
+              </button>
+            ))}
+            {mode === 'explore' && (
+              <>
+                <span className="mx-0.5 hidden w-px self-stretch bg-line md:block" aria-hidden="true" />
+                <button type="button" className={`${chip} hidden md:inline-flex`} aria-pressed={labelsOn} onClick={toggleLabels}>
+                  Labels
+                </button>
+              </>
+            )}
+          </div>
+
+          {mode === 'explore' && (
+            <div className="mt-2 grid gap-1.5">
+              <div className="fa-scroll" role="group" aria-label="Filter by nerve">
+                <span className="self-center pe-1 text-xs font-bold text-ink-muted">Nerve</span>
+                <button type="button" className={chipSmall} aria-pressed={branch === null && !expression} onClick={() => { setBranch(null); setExpressionId(null); setSelectedId((p) => p ?? DEFAULT_ID); }}>
+                  All
+                </button>
+                {FACIAL_BRANCHES.map((b) => (
+                  <button key={b.id} type="button" dir="ltr" className={chipSmall} aria-pressed={branch === b.id} onClick={() => toggleBranch(b.id)}>
+                    {b.en}
+                  </button>
+                ))}
+                <button type="button" className={chipSmall} aria-pressed={branch === 'v3'} onClick={() => toggleBranch('v3')}>
+                  V3 · Mastication
+                </button>
+              </div>
+
+              <div className="fa-scroll" role="group" aria-label="Expressions">
+                <span className="self-center pe-1 text-xs font-bold text-ink-muted">Expressions</span>
+                {EXPRESSIONS.map((x) => (
+                  <button key={x.id} type="button" className={chipSmall} aria-pressed={expressionId === x.id} onClick={() => selectExpression(x.id)}>
+                    <span dir="ltr">{x.en}</span> <span className="text-ink-muted">· {x.ar}</span>
+                  </button>
+                ))}
+              </div>
+
+              {branch && branch !== 'v3' && (
+                <p className="text-xs text-ink-muted">
+                  <bdi dir="ltr" className="font-mono">{BRANCH_MNEMONIC}</bdi> — Muscles highlighted receive this branch.
+                </p>
+              )}
+              {branch === 'v3' && (
+                <p className="text-xs text-ink-muted">Muscles of mastication shown: masseter, temporalis.</p>
+              )}
+            </div>
+          )}
+
+          <div ref={figRef} className="fa-plate fa-figure mt-2" style={{ '--R': dynamicR.toFixed(4) } as CSSProperties}>
+            <svg
+              ref={svgRef}
+              viewBox={vb.map((n) => n.toFixed(2)).join(' ')}
+              role="group"
+              aria-label="Anatomical drawing of the facial muscles"
+            >
+              <defs>
+                <clipPath id={clipId} clipPathUnits="userSpaceOnUse">
+                  <path d="M226,201 Q248,187 270,201 Q248,214 226,201 Z" />
+                </clipPath>
+              </defs>
+
+              <FaceBase />
+
+              <g onClick={onLayerClick} onKeyDown={onLayerKey} onPointerMove={onLayerMove} onPointerLeave={hideTip}>
+                <MusclesLayer highlight={highlight} hideNames={mode === 'quiz'} />
+              </g>
+
+              <g>
+                <SelLayer items={selItems} />
+              </g>
+
+              <g className="fa-decor">
+                <FaceDecor clipId={clipId} />
+              </g>
+
+              <g className="fa-decor">
+                <ArrowsLayer ids={arrowIds} />
+              </g>
+
+              {showLabels && layout.fs > 0 && (
+                <g>
+                  {layout.items.map((it) => (
+                    <g key={it.id}>
+                      <text
+                        x={it.tx}
+                        y={it.ty}
+                        fontSize={layout.fs}
+                        textAnchor={it.anchor}
+                        strokeWidth={layout.fs * 0.3}
+                        className={selectedId === it.id && !expression ? 'fa-lab is-sel' : 'fa-lab'}
+                        onClick={() => handlePick(it.id)}
+                      >
+                        {it.text}
+                      </text>
+                      <line x1={it.sx} y1={it.sy} x2={it.ax} y2={it.ay} className="fa-leader" strokeWidth={layout.fs * 0.07} />
+                      <circle cx={it.ax} cy={it.ay} r={layout.fs * 0.2} className="fa-ldot" />
+                    </g>
+                  ))}
+                </g>
+              )}
+
+              <text ref={measureRef} className="fa-lab" fontSize={100} x={0} y={0} visibility="hidden" aria-hidden="true" />
+            </svg>
+
+            <div ref={tipRef} className="fa-tip" hidden />
+          </div>
+
+          <p className="mt-2 text-xs leading-relaxed text-ink-muted">
+            Simplified study illustration. Arrows show the direction of pull on contraction.
+          </p>
+        </section>
+      </div>
+
+      {/* ================= الفهرس ================= */}
+      {mode === 'explore' && (
+        <section aria-label="Muscle list" className="mt-8">
+          <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line pb-2">
+            <h2 className="font-display text-lg font-bold text-ink">Muscle Index</h2>
+            <label className="block w-full sm:w-auto">
+              <span className="sr-only">Search for a muscle</span>
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search: smile, nasal, jaw..."
+                dir="ltr"
+                className="w-full rounded-field border border-line bg-paper-soft px-3 py-1.5 text-sm text-ink placeholder:text-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal sm:w-56"
+              />
+            </label>
+          </div>
+
+          {groups.length === 0 && <p className="mt-4 text-sm text-ink-muted">No matching results.</p>}
+
+          {groups.map(({ g, ids }) => (
+            <div key={g.labelEn}>
+              <h3 className="mb-1.5 mt-4 text-[11.5px] font-bold tracking-wide text-ink-muted">
+                <bdi dir="ltr">{g.labelEn}</bdi> · {g.label}
+              </h3>
+              <div className="flex flex-wrap gap-1.5">
+                {ids.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    dir="ltr"
+                    className={chip}
+                    aria-pressed={!expression && selectedId === id}
+                    onClick={() => selectMuscle(id, { zoom: true, scroll: true })}
+                  >
+                    {MUSCLE_BY_ID[id]?.en}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {mode === 'explore' && <AtlasExtras onSelect={(id) => selectMuscle(id, { zoom: true, scroll: true })} />}
+    </div>
+  );
+}
+```
+
+## components\anatomy\QuizPanel.tsx
+
+```tsx
+'use client';
+
+// components/anatomy/QuizPanel.tsx
+import { MUSCLE_BY_ID } from '@/lib/anatomy-data';
+import { ACTION_AR } from '@/lib/anatomy-ar';
+import { FACIAL_BRANCHES } from '@/lib/anatomy-extras';
+import type { Question } from '@/lib/anatomy-quiz';
+import { badge, btnGhost, btnPrimary } from './ui-classes';
+
+export interface QuizState {
+  questions: Question[];
+  index: number;
+  picked: string | null;
+  score: number;
+  streak: number;
+  bestStreak: number;
+  missed: string[];
+  done: boolean;
+}
+
+interface Props {
+  state: QuizState;
+  best: number;
+  onAnswer: (choice: string) => void;
+  onNext: () => void;
+  onRestart: () => void;
+  onExit: () => void;
+  onReview: (id: string) => void;
+}
+
+const PROMPT: Record<Question['kind'], string> = {
+  locate: 'اضغط على هذه العضلة في الرسم',
+  identify: 'ما اسم العضلة المظلَّلة في الرسم؟',
+  action: 'أي عضلة تقوم بهذه الوظيفة؟',
+  attach: 'أي عضلة لها هذا المنشأ والمرتكز؟',
+  branch: 'ما فرع العصب الوجهي الذي يغذّي هذه العضلة؟',
+};
+
+const optionBase =
+  'w-full rounded-field border px-3 py-2 text-start text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal disabled:cursor-default motion-reduce:transition-none';
+
+function optionTone(answered: boolean, isCorrect: boolean, isPicked: boolean): string {
+  if (!answered) return 'border-line bg-paper-soft text-ink hover:border-teal/50';
+  if (isCorrect) return 'border-teal bg-teal-soft text-ink';
+  if (isPicked) return 'border-coral bg-coral-soft text-ink';
+  return 'border-line bg-paper-soft text-ink-muted opacity-60';
+}
+
+export default function QuizPanel({ state, best, onAnswer, onNext, onRestart, onExit, onReview }: Props) {
+  const total = state.questions.length;
+
+  if (state.done) {
+    const pct = Math.round((state.score / total) * 100);
+    const verdict =
+      pct === 100 ? 'ممتاز! علامة كاملة.' : pct >= 80 ? 'مستواك قوي، راجع الأخطاء وتنتهي.' : pct >= 50 ? 'جيد، يحتاج مراجعة بسيطة.' : 'لا بأس، ابدأ بالاستكشاف ثم أعد المحاولة.';
+    return (
+      <div>
+        <p className="text-xs font-bold tracking-wide text-ink-muted">انتهت الجولة</p>
+        <p className="mt-1 font-display text-3xl font-bold text-ink">
+          {state.score}
+          <span className="text-lg text-ink-muted"> / {total}</span>
+        </p>
+        <p className="mt-1 text-sm text-ink-soft">{verdict}</p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <span className={badge}>أفضل نتيجة: {Math.max(best, state.score)}/{total}</span>
+          <span className={badge}>أطول سلسلة: {state.bestStreak}</span>
+        </div>
+
+        {state.missed.length > 0 && (
+          <div className="mt-3">
+            <p className="text-xs font-bold text-ink-muted">للمراجعة (اضغط لفتحها في الأطلس):</p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {state.missed.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  dir="ltr"
+                  onClick={() => onReview(id)}
+                  className="rounded-chip border border-coral/40 bg-coral-soft px-2.5 py-1 text-xs text-ink hover:border-coral focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
+                >
+                  {MUSCLE_BY_ID[id]?.en ?? id}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" className={btnPrimary} onClick={onRestart}>جولة جديدة</button>
+          <button type="button" className={btnGhost} onClick={onExit}>رجوع للأطلس</button>
+        </div>
+      </div>
+    );
+  }
+
+  const q = state.questions[state.index];
+  if (!q) return null;
+  const m = MUSCLE_BY_ID[q.id];
+  const answered = state.picked !== null;
+  const correct = answered && state.picked === q.correct;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-bold tracking-wide text-ink-muted">
+          سؤال <span className="font-mono">{state.index + 1}</span> من <span className="font-mono">{total}</span>
+        </p>
+        <div className="flex items-center gap-1.5">
+          <span className={badge}>النتيجة {state.score}</span>
+          {state.streak >= 2 && <span className={badge}>🔥 {state.streak}</span>}
+          <button type="button" onClick={onExit} className="text-xs font-semibold text-ink-muted underline-offset-2 hover:text-teal hover:underline focus-visible:outline-2 focus-visible:outline-teal">
+            خروج
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-2 h-1 overflow-hidden rounded-full bg-line" aria-hidden="true">
+        <div className="h-full bg-teal transition-all duration-300 motion-reduce:transition-none" style={{ width: `${((state.index + (answered ? 1 : 0)) / total) * 100}%` }} />
+      </div>
+
+      <h3 className="mt-3 text-sm font-bold text-ink">{PROMPT[q.kind]}</h3>
+
+      {(q.kind === 'locate' || q.kind === 'branch') && m && (
+        <p dir="ltr" className="mt-1 text-start font-display text-xl font-bold text-ink">{m.en}</p>
+      )}
+      {q.kind === 'action' && m && (
+        <p dir="ltr" className="mt-1 rounded-field border border-line bg-paper px-3 py-2 text-start text-[13px] leading-snug text-ink-soft">{m.actEn}</p>
+      )}
+      {q.kind === 'attach' && m && (
+        <dl dir="ltr" className="mt-1 rounded-field border border-line bg-paper px-3 py-2 text-start text-[13px] leading-snug text-ink-soft">
+          <dt className="text-[11px] font-bold uppercase tracking-wide text-ink-muted">Origin</dt>
+          <dd>{m.origin}</dd>
+          <dt className="mt-1 text-[11px] font-bold uppercase tracking-wide text-ink-muted">Insertion</dt>
+          <dd>{m.insertion}</dd>
+        </dl>
+      )}
+
+      {q.kind === 'locate' && !answered && (
+        <button type="button" className={`${btnGhost} mt-3 w-full`} onClick={() => onAnswer('__skip')}>
+          لا أعرف
+        </button>
+      )}
+
+      {q.kind !== 'locate' && (
+        <ul className="mt-3 grid gap-2">
+          {q.options.map((opt) => {
+            const label =
+              q.kind === 'branch'
+                ? FACIAL_BRANCHES.find((b) => b.id === opt)
+                : null;
+            const text = label ? label.en : (MUSCLE_BY_ID[opt]?.en ?? opt);
+            return (
+              <li key={opt}>
+                <button
+                  type="button"
+                  dir="ltr"
+                  disabled={answered}
+                  onClick={() => onAnswer(opt)}
+                  className={`${optionBase} ${optionTone(answered, opt === q.correct, opt === state.picked)}`}
+                >
+                  {text}
+                  {label && <span dir="rtl" className="ms-2 text-xs text-ink-muted">({label.ar})</span>}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {answered && m && (
+        <div className="mt-3 rounded-field border border-line bg-paper p-3" role="status">
+          <p className={`text-sm font-bold ${correct ? 'text-teal' : 'text-coral-ink'}`}>
+            {correct ? 'إجابة صحيحة ✓' : 'ليست صحيحة'}
+          </p>
+          <p dir="ltr" className="mt-1 text-start text-sm font-bold text-ink">{m.en}</p>
+          <p dir="ltr" className="mt-0.5 text-start text-[13px] leading-relaxed text-ink">{m.actEn}</p>
+          <p className="mt-0.5 text-[12px] leading-relaxed text-ink-muted">{ACTION_AR[m.id]}</p>
+          <p dir="ltr" className="mt-1 text-start text-xs text-ink-muted">{m.nerve}</p>
+        </div>
+      )}
+
+      {answered && (
+        <button type="button" className={`${btnPrimary} mt-3 w-full`} onClick={onNext} autoFocus>
+          {state.index + 1 >= total ? 'عرض النتيجة' : 'السؤال التالي'}
+        </button>
+      )}
+    </div>
+  );
+}
+```
+
+## components\anatomy\ui-classes.ts
+
+```ts
+// components/anatomy/ui-classes.ts
+export const chip =
+  'inline-flex items-center gap-1.5 rounded-chip border border-line bg-paper-soft px-3 py-1.5 text-sm text-ink transition-colors hover:border-teal/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-paper motion-reduce:transition-none';
+
+export const chipSmall =
+  'inline-flex items-center rounded-chip border border-line bg-paper-soft px-2.5 py-1 text-xs text-ink transition-colors hover:border-teal/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-paper motion-reduce:transition-none';
+
+export const btnPrimary =
+  'inline-flex items-center justify-center gap-1.5 rounded-field bg-teal px-4 py-2 text-sm font-bold text-paper transition-colors hover:bg-teal-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none';
+
+export const btnGhost =
+  'inline-flex items-center justify-center gap-1.5 rounded-field border border-line bg-paper-soft px-4 py-2 text-sm font-semibold text-ink transition-colors hover:border-teal/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none';
+
+export const badge =
+  'inline-flex items-center rounded-chip border border-line bg-paper px-2 py-0.5 font-mono text-[10.5px] text-ink-soft';
+```
+
+## components\ui\Badge.tsx
+
+```tsx
+```
+
+## components\ui\Button.tsx
+
+```tsx
+// components/ui/Button.tsx
+'use client';
+
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
+

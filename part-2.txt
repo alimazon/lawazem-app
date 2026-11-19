@@ -1,0 +1,2636 @@
+﻿export const EXAM_TIPS: Readonly<Record<string, { ar: string; en: string }>> = {
+  frontalis:   { ar: 'اطلب منه يرفع حاجبيه — هل تظهر تجاعيد الجبين؟',          en: 'Raise the eyebrows' },
+  corrugator:  { ar: 'اطلب منه يعبس',                                           en: 'Frown' },
+  orbOculi:    { ar: 'اطلب إغماض العينين بقوة وقارن دفن الرموش بين الجهتين',   en: 'Screw the eyes shut' },
+  zmaj:        { ar: 'اطلب ابتسامة مع إظهار الأسنان وقارن الجهتين',            en: 'Smile and show the teeth' },
+  buccinator:  { ar: 'اطلب نفخ الخدين، وراقب تسرّب الهواء',                    en: 'Puff out the cheeks' },
+  orbOris:     { ar: 'اطلب الصفير أو ضمّ الشفتين بقوة',                        en: 'Whistle / purse the lips' },
+  dli:         { ar: 'اطلب إظهار الأسنان السفلية',                             en: 'Show the lower teeth' },
+  mentalis:    { ar: 'اطلب منه يعبّس بالذقن (pout)',                            en: 'Pout' },
+  platysma:    { ar: 'اطلب فتح الفم مقابل مقاومة وراقب الشرائط العمودية',      en: 'Open the mouth against resistance' },
+  masseter:    { ar: 'اطلب صرّ الأسنان وتحسّس العضلة على زاوية الفك',          en: 'Clench the teeth and palpate' },
+  temporalis:  { ar: 'اطلب صرّ الأسنان وتحسّس العضلة فوق الصدغ',               en: 'Clench the teeth and palpate' },
+};
+
+export const FACIAL_PALSY_COMPARISON: readonly {
+  feature: string;
+  umn: string;
+  lmn: string;
+}[] = [
+  { feature: 'Lesion site',
+    umn: 'Above the facial nucleus (contralateral motor cortex / corticobulbar tract)',
+    lmn: 'Facial nucleus or the nerve itself (pons, internal acoustic meatus, facial canal, parotid)' },
+  { feature: 'Forehead',
+    umn: 'Spared (bilateral cortical input to the upper face)',
+    lmn: 'Paralysed' },
+  { feature: 'Lower face',
+    umn: 'Paralysed on the side opposite the lesion',
+    lmn: 'Paralysed on the same side as the lesion' },
+  { feature: 'Eye closure',
+    umn: 'Mostly preserved',
+    lmn: 'Lost (lagophthalmos); Bell’s phenomenon on attempted closure' },
+  { feature: 'Typical cause',
+    umn: 'Stroke',
+    lmn: 'Bell’s palsy, parotid tumour or surgery, trauma, Ramsay Hunt syndrome' },
+  { feature: 'Other signs (depend on lesion level)',
+    umn: 'Usually accompanied by limb weakness',
+    lmn: 'Loss of taste in the anterior two-thirds of the tongue (chorda tympani), hyperacusis (nerve to stapedius), reduced lacrimation' },
+];
+
+export function validateAtlas(): string[] {
+  const problems: string[] = [];
+  const ids = new Set<string>();
+
+  for (const m of MUSCLES) {
+    if (ids.has(m.id)) problems.push(`duplicate id: ${m.id}`);
+    ids.add(m.id);
+
+    if (!m.nerve.trim()) problems.push(`${m.id}: missing nerve`);
+    if (innervationOf(m) === null) problems.push(`${m.id}: nerve is neither CN VII nor CN V3`);
+
+    if (m.geometry.type === 'fan') {
+      if (m.geometry.A.length !== 8 || m.geometry.B.length !== 8) {
+        problems.push(`${m.id}: fan geometry needs 8 numbers in A and B`);
+      }
+    } else if (m.geometry.irx >= m.geometry.rx || m.geometry.iry >= m.geometry.ry) {
+      problems.push(`${m.id}: ring inner radius must be smaller than outer radius`);
+    }
+  }
+
+  const seen = new Map<string, number>();
+  for (const g of MUSCLE_GROUPS) {
+    for (const id of g.ids) {
+      if (!ids.has(id)) problems.push(`group "${g.labelEn}" references unknown muscle: ${id}`);
+      seen.set(id, (seen.get(id) ?? 0) + 1);
+    }
+  }
+  for (const id of ids) {
+    const c = seen.get(id) ?? 0;
+    if (c === 0) problems.push(`${id}: not in any group`);
+    if (c > 1) problems.push(`${id}: appears in ${c} groups`);
+  }
+
+  return problems;
+}
+
+if (process.env.NODE_ENV !== 'production') {
+  const issues = validateAtlas();
+  if (issues.length) console.warn('[anatomy] data issues:\n' + issues.join('\n'));
+}
+===.backup/anatomy-before-3d/lib__anatomy-geometry.ts===
+// lib/anatomy-geometry.ts
+import { MUSCLES, type FanGeometry, type Muscle, type RingGeometry } from './anatomy-data';
+
+export interface BuiltGeometry {
+  d: string;
+  dark: string;
+  light: string;
+  evenodd: boolean;
+}
+
+const f1 = (n: number): number => Math.round(n * 10) / 10;
+const at = (a: readonly number[], i: number): number => a[i] ?? 0;
+
+function fan(g: FanGeometry): BuiltGeometry {
+  const { A, B, n, bulge } = g;
+  let dark = '';
+  let light = '';
+
+  for (let i = 1; i < n; i++) {
+    const u = i / n;
+    const p: number[] = [];
+    for (let k = 0; k < 8; k++) p.push(f1(at(A, k) + (at(B, k) - at(A, k)) * u));
+    const seg = `M${p[0]},${p[1]}C${p[2]},${p[3]} ${p[4]},${p[5]} ${p[6]},${p[7]}`;
+    if (i % 2) dark += seg;
+    else light += seg;
+  }
+
+  const cap = (
+    px: number, py: number, qx: number, qy: number,
+    pcx: number, pcy: number, qcx: number, qcy: number,
+  ): string => {
+    const mx = (px + qx) / 2;
+    const my = (py + qy) / 2;
+    const cx = (pcx + qcx) / 2;
+    const cy = (pcy + qcy) / 2;
+    const dx = mx - cx;
+    const dy = my - cy;
+    const len = Math.hypot(dx, dy) || 1;
+    const w = Math.hypot(px - qx, py - qy);
+    const off = w < 2 ? 0 : 2 * bulge;
+    return `${f1(mx + (dx / len) * off)},${f1(my + (dy / len) * off)}`;
+  };
+
+  const end = cap(at(A, 6), at(A, 7), at(B, 6), at(B, 7), at(A, 4), at(A, 5), at(B, 4), at(B, 5));
+  const start = cap(at(B, 0), at(B, 1), at(A, 0), at(A, 1), at(B, 2), at(B, 3), at(A, 2), at(A, 3));
+
+  const d =
+    `M${A[0]},${A[1]}C${A[2]},${A[3]} ${A[4]},${A[5]} ${A[6]},${A[7]}` +
+    `Q${end} ${B[6]},${B[7]}` +
+    `C${B[4]},${B[5]} ${B[2]},${B[3]} ${B[0]},${B[1]}` +
+    `Q${start} ${A[0]},${A[1]}Z`;
+
+  return { d, dark, light, evenodd: false };
+}
+
+function ell(cx: number, cy: number, rx: number, ry: number): string {
+  return (
+    `M${f1(cx - rx)},${f1(cy)}` +
+    `a${f1(rx)},${f1(ry)} 0 1,0 ${f1(2 * rx)},0` +
+    `a${f1(rx)},${f1(ry)} 0 1,0 ${f1(-2 * rx)},0Z`
+  );
+}
+
+function ring(g: RingGeometry): BuiltGeometry {
+  let dark = '';
+  let light = '';
+  for (let i = 1; i < g.n; i++) {
+    const u = i / g.n;
+    const p = ell(g.cx, g.cy, g.irx + (g.rx - g.irx) * u, g.iry + (g.ry - g.iry) * u);
+    if (i % 2) dark += p;
+    else light += p;
+  }
+  return {
+    d: ell(g.cx, g.cy, g.rx, g.ry) + ell(g.cx, g.cy, g.irx, g.iry),
+    dark,
+    light,
+    evenodd: true,
+  };
+}
+
+export function buildGeometry(m: Muscle): BuiltGeometry {
+  return m.geometry.type === 'ring' ? ring(m.geometry) : fan(m.geometry);
+}
+
+export const GEOMETRY: Readonly<Record<string, BuiltGeometry>> = (() => {
+  const out: Record<string, BuiltGeometry> = {};
+  for (const m of MUSCLES) out[m.id] = buildGeometry(m);
+  return out;
+})();
+===.backup/anatomy-before-3d/lib__anatomy-pose.ts===
+// lib/anatomy-pose.ts
+export type Pose = Readonly<Record<string, number>>;
+
+const r2 = (x: number): number => Math.round(x * 100) / 100;
+const clamp01 = (x: number): number => Math.max(0, Math.min(1, x));
+
+export function scalePose(pose: Pose, k: number): Pose {
+  const out: Record<string, number> = {};
+  for (const key of Object.keys(pose)) out[key] = (pose[key] ?? 0) * k;
+  return out;
+}
+
+export function combinePoses(
+  parts: readonly { pose: Pose; w?: number }[],
+  extra: Pose = {},
+): Pose {
+  const out: Record<string, number> = {};
+  for (const { pose, w = 1 } of parts) {
+    for (const key of Object.keys(pose)) {
+      const v = (pose[key] ?? 0) * w;
+      if (Math.abs(v) > Math.abs(out[key] ?? 0)) out[key] = v;
+    }
+  }
+  for (const key of Object.keys(extra)) out[key] = extra[key] ?? 0;
+  return out;
+}
+
+export interface FaceShape {
+  head: string;
+  eyeL: string;
+  eyeR: string;
+  irisOpacity: number;
+  browL: string;
+  browR: string;
+  noseWingL: string;
+  noseWingR: string;
+  noseBase: string;
+  nostril: { lx: number; rx: number; y: number; rad: number };
+  mouth: string;
+  nlfL: string;
+  nlfR: string;
+  nlfOpacity: number;
+  marL: string;
+  marR: string;
+  marOpacity: number;
+  purse: readonly [string, string, string, string];
+  op: {
+    purse: number; forehead: number; glabella: number; nose: number; squint: number;
+    temple: number; clench: number; cheek: number; chin: number; neck: number;
+  };
+}
+
+export function computeFace(P: Pose): FaceShape {
+  const g = (k: string): number => P[k] ?? 0;
+
+  const hy = r2(222 + g('jaw') * 10);
+  const head =
+    `M110,14 C62,14 40,52 40,100 C40,142 50,176 68,198 C80,212 96,${hy} 110,${hy} ` +
+    `C124,${hy} 140,212 152,198 C170,176 180,142 180,100 C180,52 158,14 110,14 Z`;
+
+  const e = g('eye');
+  const eyePath = (cx: number): string =>
+    `M${cx - 14},98 Q${cx},${r2(82 + 22 * e)} ${cx + 14},98 Q${cx},${r2(112 - 8 * e)} ${cx - 14},98 Z`;
+
+  const br = g('br');
+  const bi = g('bi');
+  const bd = g('bd');
+  const A: [number, number] = [124 - 7 * bi, 80 + 6 * bi + 8 * bd - 5 * br];
+  const B: [number, number] = [140, 71 - 11 * br + 8 * bd + 3 * bi];
+  const C: [number, number] = [156, 79 - 10 * br + 7 * bd - bi];
+
+  const wf = g('flare') * 4;
+  const wy = -3 * g('lu') + 3 * g('td');
+
+  const sm = g('smile');
+  const pu = g('purse');
+  const cy = 170 - 7 * sm;
+  const hw = 20 + 6 * g('out') - 7 * pu + 3 * Math.max(sm, 0);
+  const Lx = 110 - hw;
+  const Rx = 110 + hw;
+  const ty = 166 - 4 * g('lu') - 3 * pu - Math.max(sm, 0);
+  const by = 174 + 10 * g('ld') + 12 * g('jaw') - 3 * g('lup') + 3 * pu;
+
+  const nlf = g('nlf');
+
+  return {
+    head,
+    eyeL: eyePath(80),
+    eyeR: eyePath(140),
+    irisOpacity: clamp01(1 - e < 0.15 ? 0 : 1 - e),
+    browR: `M${r2(A[0])},${r2(A[1])} Q${B[0]},${r2(B[1])} ${C[0]},${r2(C[1])}`,
+    browL: `M${r2(220 - A[0])},${r2(A[1])} Q${220 - B[0]},${r2(B[1])} ${r2(220 - C[0])},${r2(C[1])}`,
+    noseWingR: `M122,146 Q${r2(130 + wf)},${r2(152 + wy)} ${r2(126 + wf)},${r2(160 + wy)}`,
+    noseWingL: `M98,146 Q${r2(90 - wf)},${r2(152 + wy)} ${r2(94 - wf)},${r2(160 + wy)}`,
+    noseBase: `M${r2(94 - wf)},${r2(160 + wy)} Q110,${r2(168 + wy)} ${r2(126 + wf)},${r2(160 + wy)}`,
+    nostril: { lx: r2(102 - wf * 0.6), rx: r2(118 + wf * 0.6), y: r2(158.5 + wy), rad: r2(3 + g('flare') * 1.5) },
+    mouth: `M${r2(Lx)},${r2(cy)} Q110,${r2(ty)} ${r2(Rx)},${r2(cy)} Q110,${r2(by)} ${r2(Lx)},${r2(cy)} Z`,
+    nlfR: `M124,152 Q${r2(134 + 3 * nlf)},162 ${r2(Rx + 3)},${r2(cy - 3)}`,
+    nlfL: `M96,152 Q${r2(86 - 3 * nlf)},162 ${r2(Lx - 3)},${r2(cy - 3)}`,
+    nlfOpacity: clamp01(0.3 + 0.55 * nlf),
+    marR: `M${r2(Rx)},${r2(cy + 3)} Q${r2(Rx + 2)},${r2(cy + 12)} ${r2(Rx - 1)},${r2(cy + 22)}`,
+    marL: `M${r2(Lx)},${r2(cy + 3)} Q${r2(Lx - 2)},${r2(cy + 12)} ${r2(Lx + 1)},${r2(cy + 22)}`,
+    marOpacity: clamp01(g('mar')),
+    purse: [
+      `M${r2(Lx - 3)},${r2(cy - 2)} l-6,-3`,
+      `M${r2(Lx - 3)},${r2(cy + 2)} l-6,3`,
+      `M${r2(Rx + 3)},${r2(cy - 2)} l6,-3`,
+      `M${r2(Rx + 3)},${r2(cy + 2)} l6,3`,
+    ],
+    op: {
+      purse: clamp01(pu),
+      forehead: clamp01(g('fh')),
+      glabella: clamp01(g('gl')),
+      nose: clamp01(g('nr')),
+      squint: clamp01(g('sq')),
+      temple: clamp01(g('tb')),
+      clench: clamp01(g('cl')),
+      cheek: clamp01(g('ck')),
+      chin: clamp01(g('ped')),
+      neck: clamp01(g('nk')),
+    },
+  };
+}
+===.backup/anatomy-before-3d/lib__anatomy-quiz.ts===
+// lib/anatomy-quiz.ts
+import { MUSCLES, MUSCLE_BY_ID } from './anatomy-data';
+import { FACIAL_BRANCHES, branchesOf } from './anatomy-extras';
+
+export type QuestionKind = 'locate' | 'identify' | 'action' | 'attach' | 'branch';
+
+export interface Question {
+  kind: QuestionKind;
+  id: string;
+  options: string[];
+  correct: string;
+}
+
+const AMBIGUOUS_ACTION_GROUPS: readonly (readonly string[])[] = [
+  ['lls', 'zmin', 'llsan', 'lao', 'zmaj'],
+  ['masseter', 'temporalis'],
+  ['corrugator', 'procerus'],
+];
+
+function shuffle<T>(arr: readonly T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = a[i] as T;
+    a[i] = a[j] as T;
+    a[j] = t;
+  }
+  return a;
+}
+
+function sameAmbiguityGroup(a: string, b: string): boolean {
+  return AMBIGUOUS_ACTION_GROUPS.some((g) => g.includes(a) && g.includes(b));
+}
+
+function distractors(id: string, n: number, kind: QuestionKind): string[] {
+  const target = MUSCLE_BY_ID[id];
+  const pool = MUSCLES.filter(
+    (m) => m.id !== id && !(kind === 'action' && sameAmbiguityGroup(id, m.id)),
+  );
+  const same = shuffle(pool.filter((m) => m.region === target?.region));
+  const other = shuffle(pool.filter((m) => m.region !== target?.region));
+  return [...same, ...other].slice(0, n).map((m) => m.id);
+}
+
+function eligibleKinds(id: string): QuestionKind[] {
+  const m = MUSCLE_BY_ID[id];
+  const kinds: QuestionKind[] = ['locate', 'identify', 'action', 'attach'];
+  if (m && branchesOf(m).length === 1) kinds.push('branch');
+  return kinds;
+}
+
+function build(id: string, kind: QuestionKind): Question {
+  if (kind === 'locate') return { kind, id, options: [], correct: id };
+  if (kind === 'branch') {
+    const m = MUSCLE_BY_ID[id];
+    const only = m ? branchesOf(m)[0] : undefined;
+    return { kind, id, options: FACIAL_BRANCHES.map((b) => b.id), correct: only ?? 'buccal' };
+  }
+  return { kind, id, options: shuffle([id, ...distractors(id, 3, kind)]), correct: id };
+}
+
+export function makeRound(count = 10): Question[] {
+  const ids = shuffle(MUSCLES.map((m) => m.id)).slice(0, count);
+  const out: Question[] = [];
+  let prev: QuestionKind | null = null;
+  for (const id of ids) {
+    const options = shuffle(eligibleKinds(id));
+    const kind = options.find((k) => k !== prev) ?? options[0] ?? 'identify';
+    out.push(build(id, kind));
+    prev = kind;
+  }
+  return out;
+}
+===AGENTS.md===
+<!-- BEGIN:nextjs-agent-rules -->
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+<!-- END:nextjs-agent-rules -->
+
+===app/_components/Masthead.tsx===
+// app/_components/Masthead.tsx
+'use client';
+
+import { useState } from 'react';
+import type { Stage } from '@/lib/types';
+
+// ==================== Date ====================
+const DAYS = [
+  'الأحد',
+  'الاثنين',
+  'الثلاثاء',
+  'الأربعاء',
+  'الخميس',
+  'الجمعة',
+  'السبت',
+] as const;
+
+const MONTHS = [
+  'كانون الثاني',
+  'شباط',
+  'آذار',
+  'نيسان',
+  'أيار',
+  'حزيران',
+  'تموز',
+  'آب',
+  'أيلول',
+  'تشرين الأول',
+  'تشرين الثاني',
+  'كانون الأول',
+] as const;
+
+interface EditorialDate {
+  weekday: string;
+  day: number;
+  month: string;
+  year: number;
+  iso: string;
+}
+
+function getEditorialDate(now: Date): EditorialDate {
+  const pad = (n: number): string => String(n).padStart(2, '0');
+  const year = now.getFullYear();
+  const monthIndex = now.getMonth();
+  const day = now.getDate();
+
+  return {
+    weekday: DAYS[now.getDay()] ?? '',
+    day,
+    month: MONTHS[monthIndex] ?? '',
+    year,
+    iso: `${year}-${pad(monthIndex + 1)}-${pad(day)}`,
+  };
+}
+
+// ==================== Props ====================
+interface MastheadProps {
+  stage: Stage;
+  onChangeStage: () => void;
+}
+
+// ==================== Component ====================
+export function Masthead({ stage, onChangeStage }: MastheadProps) {
+  const [today] = useState<EditorialDate>(() => getEditorialDate(new Date()));
+
+  return (
+    <header className="mb-8">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pb-4">
+        {/* Start: date + stage */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <time
+            dateTime={today.iso}
+            className="flex items-baseline gap-1.5 text-ink"
+          >
+            <span className="text-xs font-medium text-ink-muted sm:text-sm">
+              {today.weekday}
+            </span>
+            <span className="font-display text-base font-bold sm:text-lg">
+              <span className="num-inline">{today.day}</span> {today.month}
+            </span>
+            <span className="num-inline hidden text-xs text-ink-muted sm:inline">
+              {today.year}
+            </span>
+          </time>
+
+          <span aria-hidden="true" className="text-gold">
+            ◆
+          </span>
+
+          <span className="stage-badge">{stage}</span>
+        </div>
+
+        {/* End: change stage */}
+        <button
+          type="button"
+          onClick={onChangeStage}
+          aria-label={`تغيير المرحلة الدراسية، الحالية: ${stage}`}
+          className="rounded-field px-3 py-2 text-xs font-semibold text-ink-soft transition-colors hover:bg-ink/5 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
+        >
+          تغيير المرحلة
+        </button>
+      </div>
+    </header>
+  );
+}
+===app/_components/SectionTile.tsx===
+// app/_components/SectionTile.tsx
+'use client';
+
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useId } from 'react';
+import type { ReactNode } from 'react';
+
+// ==================== Types ====================
+export type TileVariant =
+  | 'featured'
+  | 'teal'
+  | 'gold'
+  | 'coral'
+  | 'navy'
+  | 'locked';
+
+export type TileSize =
+  | 'hero'
+  | 'wide'
+  | 'small'
+  | 'strip'
+  | 'half'
+  | 'third';
+
+type Layout = 'hero' | 'wide' | 'small' | 'strip';
+
+export interface SubLink {
+  href: string;
+  label: string;
+  icon?: ReactNode;
+}
+
+export interface SectionTileProps {
+  href: string;
+  title: string;
+  kicker: string;
+  description: string;
+  icon: ReactNode;
+  variant?: TileVariant;
+  size?: TileSize;
+  badge?: string;
+  locked?: boolean;
+  ctaLabel?: string;
+  lockedLabel?: string;
+  /** روابط صغيرة داخل البطاقة (تفتح مسارات فرعية) */
+  subLinks?: SubLink[];
+  className?: string;
+}
+
+// ==================== Helpers ====================
+function cx(...parts: Array<string | false | null | undefined>): string {
+  return parts.filter(Boolean).join(' ');
+}
+
+function normalizeSize(size: TileSize): Layout {
+  if (size === 'half') return 'wide';
+  if (size === 'third') return 'small';
+  return size;
+}
+
+// ==================== Styles ====================
+interface VariantStyle {
+  icon: string;
+  kicker: string;
+  title: string;
+  desc: string;
+  accent: string;
+  surfaceHover: string;
+}
+
+const VARIANT_STYLE: Record<TileVariant, VariantStyle> = {
+  featured: {
+    icon: 'border border-on-teal/30 bg-on-teal/10 text-on-teal',
+    kicker: 'text-on-teal/80',
+    title: 'text-on-teal',
+    desc: 'text-on-teal/85',
+    accent: 'bg-on-teal/50',
+    surfaceHover: '',
+  },
+  teal: {
+    icon: 'border border-teal/25 bg-teal-soft text-teal',
+    kicker: 'text-teal',
+    title: 'text-ink',
+    desc: 'text-ink-soft',
+    accent: 'bg-teal',
+    surfaceHover: 'hover:border-teal/40',
+  },
+  gold: {
+    icon: 'border border-gold/25 bg-gold-soft text-gold-ink',
+    kicker: 'text-gold-ink',
+    title: 'text-ink',
+    desc: 'text-ink-soft',
+    accent: 'bg-gold',
+    surfaceHover: 'hover:border-gold/40',
+  },
+  coral: {
+    icon: 'border border-coral/25 bg-coral-soft text-coral-ink',
+    kicker: 'text-coral-ink',
+    title: 'text-ink',
+    desc: 'text-ink-soft',
+    accent: 'bg-coral',
+    surfaceHover: 'hover:border-coral/40',
+  },
+  navy: {
+    icon: 'border border-navy/25 bg-navy-soft text-navy-ink',
+    kicker: 'text-navy-ink',
+    title: 'text-ink',
+    desc: 'text-ink-soft',
+    accent: 'bg-navy',
+    surfaceHover: 'hover:border-navy/40',
+  },
+  locked: {
+    icon: 'border border-line bg-ink/5 text-ink-muted',
+    kicker: 'text-ink-muted',
+    title: 'text-ink-soft',
+    desc: 'text-ink-muted',
+    accent: '',
+    surfaceHover: '',
+  },
+};
+
+const ITEM_SPAN: Record<Layout, string> = {
+  hero: 'col-span-2 lg:col-span-2 lg:row-span-2',
+  wide: 'col-span-2 lg:col-span-2',
+  small: 'col-span-1 lg:col-span-1',
+  strip: 'col-span-2 lg:col-span-4',
+};
+
+const MIN_HEIGHT: Record<Layout, string> = {
+  hero: 'min-h-[260px] sm:min-h-[280px] lg:min-h-[292px]',
+  wide: 'min-h-[104px] lg:min-h-[116px]',
+  small: 'min-h-[150px] sm:min-h-[160px]',
+  strip: 'min-h-[84px]',
+};
+
+const PADDING: Record<Layout, string> = {
+  hero: 'p-6 sm:p-8',
+  wide: 'p-4 sm:p-5',
+  small: 'p-4 sm:p-5',
+  strip: 'px-4 py-3 sm:px-5',
+};
+
+const TITLE_SIZE: Record<Layout, string> = {
+  hero: 'text-2xl sm:text-3xl lg:text-4xl',
+  wide: 'text-lg sm:text-xl',
+  small: 'text-base sm:text-lg',
+  strip: 'text-base sm:text-lg',
+};
+
+const DESC_SIZE: Record<Layout, string> = {
+  hero: 'text-sm sm:text-base',
+  wide: 'text-xs sm:text-sm',
+  small: 'text-xs sm:text-sm',
+  strip: 'text-xs sm:text-sm',
+};
+
+const DESC_CLAMP: Record<Layout, string> = {
+  hero: 'max-w-md',
+  wide: 'line-clamp-2',
+  small: 'line-clamp-3',
+  strip: 'line-clamp-2',
+};
+
+const ICON_SIZE: Record<Layout, string> = {
+  hero: 'h-12 w-12 sm:h-14 sm:w-14',
+  wide: 'h-10 w-10 sm:h-11 sm:w-11',
+  small: 'h-9 w-9 sm:h-10 sm:w-10',
+  strip: 'h-9 w-9 sm:h-10 sm:w-10',
+};
+
+const LOCKED_HATCH =
+  'bg-[repeating-linear-gradient(135deg,transparent_0,transparent_9px,var(--line)_9px,var(--line)_10px)]';
+
+// ==================== Icons ====================
+function ArrowIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg
+      className="h-3 w-3"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="4" y="10" width="16" height="10" rx="2" />
+      <path d="M8 10V7a4 4 0 018 0v3" />
+    </svg>
+  );
+}
+
+// ==================== Grid ====================
+export function SectionTileGrid({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <ul
+      role="list"
+      className={cx(
+        'grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:grid-flow-dense',
+        className,
+      )}
+    >
+      {children}
+    </ul>
+  );
+}
+
+// ==================== Component ====================
+export function SectionTile({
+  href,
+  title,
+  kicker,
+  description,
+  icon,
+  variant = 'teal',
+  size = 'small',
+  badge,
+  locked = false,
+  ctaLabel = 'افتح',
+  lockedLabel = 'قريباً',
+  subLinks,
+  className,
+}: SectionTileProps) {
+  const uid = useId();
+  const router = useRouter();
+  const titleId = `${uid}-title`;
+  const descId = `${uid}-desc`;
+  const lockId = `${uid}-lock`;
+
+  const layout = normalizeSize(size);
+  const v: TileVariant = locked ? 'locked' : variant;
+  const style = VARIANT_STYLE[v];
+  const isFeatured = v === 'featured';
+  const isHero = layout === 'hero';
+
+  // ---------- Icon ----------
+  const iconBox = (
+    <span
+      aria-hidden="true"
+      className={cx(
+        'flex flex-shrink-0 items-center justify-center rounded-field transition-transform duration-300 motion-reduce:transition-none',
+        'group-hover:scale-105 motion-reduce:group-hover:scale-100',
+        ICON_SIZE[layout],
+        style.icon,
+      )}
+    >
+      {icon}
+    </span>
+  );
+
+  // ---------- Badges ----------
+  const badges =
+    badge || locked ? (
+      <div className="flex flex-wrap items-center gap-1.5">
+        {badge && (
+          <span
+            className={cx(
+              'inline-flex items-center rounded-chip px-2 py-0.5 text-[11px] font-bold',
+              isFeatured
+                ? 'bg-on-teal text-teal'
+                : 'bg-gold-tint text-gold-ink ring-1 ring-gold/30',
+            )}
+          >
+            {badge}
+          </span>
+        )}
+        {locked && (
+          <span
+            id={lockId}
+            className="inline-flex items-center gap-1 rounded-chip bg-ink/8 px-2 py-0.5 text-[11px] font-bold text-ink-soft"
+          >
+            <LockIcon />
+            {lockedLabel}
+          </span>
+        )}
+      </div>
+    ) : null;
+
+  // ---------- Arrow ----------
+  const arrow = !locked ? (
+    <ArrowIcon
+      className={cx(
+        'h-4 w-4 flex-shrink-0 transition-all duration-300 group-hover:-translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0',
+        isFeatured
+          ? 'text-on-teal/80'
+          : 'text-ink-muted group-hover:text-ink',
+      )}
+    />
+  ) : null;
+
+  // ---------- Sub Links ----------
+  const subLinksBlock =
+    subLinks && subLinks.length > 0 ? (
+      <div className="mt-3 flex flex-wrap gap-2">
+        {subLinks.map((s) => (
+          <span
+            key={s.href}
+            role="link"
+            tabIndex={0}
+            aria-label={s.label}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              router.push(s.href);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+                router.push(s.href);
+              }
+            }}
+            className={cx(
+              'inline-flex cursor-pointer items-center gap-1.5 rounded-chip px-2.5 py-1 text-[11px] font-bold',
+              'transition-all duration-200 motion-reduce:transition-none',
+              'focus-visible:outline-2 focus-visible:outline-offset-2',
+              isFeatured
+                ? 'border border-on-teal/30 bg-on-teal/10 text-on-teal hover:border-on-teal/60 hover:bg-on-teal/20 focus-visible:outline-on-teal'
+                : 'border border-teal/25 bg-teal-tint text-teal hover:border-teal/50 hover:bg-teal-soft focus-visible:outline-teal',
+            )}
+          >
+            {s.icon && <span className="flex-shrink-0">{s.icon}</span>}
+            <span>{s.label}</span>
+          </span>
+        ))}
+      </div>
+    ) : null;
+
+  // ---------- Body ----------
+  const body = (
+    <div className="min-w-0">
+      <p
+        className={cx(
+          'flex items-center gap-2 text-xs font-semibold',
+          style.kicker,
+        )}
+      >
+        <span
+          aria-hidden="true"
+          className="block h-px w-4 flex-shrink-0 bg-current opacity-70 transition-[width] duration-500 group-hover:w-8 motion-reduce:transition-none motion-reduce:group-hover:w-4"
+        />
+        {kicker}
+      </p>
+      <h3
+        id={titleId}
+        className={cx(
+          'mt-1.5 font-display font-bold leading-tight',
+          style.title,
+          TITLE_SIZE[layout],
+        )}
+      >
+        {title}
+      </h3>
+      <p
+        id={descId}
+        className={cx(
+          'mt-1.5 leading-relaxed',
+          style.desc,
+          DESC_SIZE[layout],
+          DESC_CLAMP[layout],
+        )}
+      >
+        {description}
+      </p>
+      {subLinksBlock}
+    </div>
+  );
+
+  // ---------- CTA (hero only) ----------
+  const cta =
+    isHero && !locked ? (
+      <span
+        className={cx(
+          'mt-6 inline-flex w-fit items-center gap-2 rounded-field px-4 py-2 text-sm font-semibold transition-all duration-300 group-hover:gap-3 motion-reduce:transition-none motion-reduce:group-hover:gap-2',
+          isFeatured ? 'bg-on-teal text-teal' : 'bg-teal text-on-teal',
+        )}
+      >
+        {ctaLabel}
+        <ArrowIcon className="h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0" />
+      </span>
+    ) : null;
+
+  // ---------- Layout ----------
+  let inner: ReactNode;
+
+  if (layout === 'hero') {
+    inner = (
+      <>
+        <div className="flex items-start justify-between gap-3">
+          {iconBox}
+          {badges && <div>{badges}</div>}
+        </div>
+        <div className="mt-auto pt-10">
+          {body}
+          {cta}
+        </div>
+      </>
+    );
+  } else if (layout === 'small') {
+    inner = (
+      <>
+        <div className="flex items-start justify-between gap-2">
+          {iconBox}
+          <div className="flex items-center gap-2">
+            {badges}
+            {arrow}
+          </div>
+        </div>
+        <div className="mt-auto pt-5">{body}</div>
+      </>
+    );
+  } else if (layout === 'wide') {
+    inner = (
+      <div className="flex flex-1 items-center gap-4">
+        {iconBox}
+        <div className="min-w-0 flex-1">{body}</div>
+        <div className="flex flex-shrink-0 flex-col items-end gap-2">
+          {badges}
+          {arrow}
+        </div>
+      </div>
+    );
+  } else {
+    inner = (
+      <div className="flex flex-1 items-center gap-4">
+        {iconBox}
+        <div className="min-w-0 flex-1">{body}</div>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          {badges}
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- Surface ----------
+  const surface = (
+    <>
+      {style.accent && (
+        <span
+          aria-hidden="true"
+          className={cx(
+            'pointer-events-none absolute inset-x-0 bottom-0 block h-[2px] origin-center scale-x-0 transition-transform duration-500',
+            'group-hover:scale-x-100 group-focus-visible:scale-x-100',
+            'motion-reduce:transition-none',
+            style.accent,
+          )}
+        />
+      )}
+
+      {isFeatured && (
+        <>
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-2 block rounded-[inherit] border border-on-teal/15"
+          />
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -bottom-20 -end-20 block h-64 w-64 rounded-full border border-on-teal/15"
+          />
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -bottom-10 -end-10 block h-40 w-40 rounded-full border border-on-teal/15"
+          />
+        </>
+      )}
+
+      <div
+        className={cx(
+          'relative z-10 flex min-w-0 flex-1 flex-col',
+          PADDING[layout],
+        )}
+      >
+        {inner}
+      </div>
+    </>
+  );
+
+  const itemClass = cx('flex min-w-0', ITEM_SPAN[layout], className);
+
+  // ==================== Locked ====================
+  if (locked) {
+    return (
+      <li className={itemClass}>
+        <div
+          role="link"
+          aria-disabled="true"
+          aria-labelledby={titleId}
+          aria-describedby={`${descId} ${lockId}`}
+          className={cx(
+            'relative flex min-w-0 flex-1 cursor-not-allowed overflow-hidden rounded-card border border-dashed border-line bg-paper-soft/60',
+            LOCKED_HATCH,
+            MIN_HEIGHT[layout],
+          )}
+        >
+          {surface}
+        </div>
+      </li>
+    );
+  }
+
+  // ==================== Active Link ====================
+  const linkClass = isFeatured
+    ? cx(
+        'relative flex min-w-0 flex-1 overflow-hidden rounded-card bg-teal text-on-teal shadow-xs transition-all duration-300',
+        'hover:-translate-y-px hover:shadow-sm',
+        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal',
+        'motion-reduce:transition-none motion-reduce:hover:translate-y-0',
+        MIN_HEIGHT[layout],
+      )
+    : cx(
+        'card-editorial card-editorial-hover relative flex min-w-0 flex-1 overflow-hidden rounded-card',
+        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal',
+        style.surfaceHover,
+        MIN_HEIGHT[layout],
+      );
+
+  return (
+    <li className={itemClass}>
+      <Link
+        href={href}
+        aria-labelledby={titleId}
+        aria-describedby={descId}
+        className={cx('group', linkClass)}
+      >
+        {surface}
+      </Link>
+    </li>
+  );
+}
+===app/admin/_components/AnnouncementsSection.tsx===
+// app/admin/_components/AnnouncementsSection.tsx
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { Input, Select, Textarea } from '@/components/ui/Field';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { postJson } from '@/lib/api-client';
+import { STAGES } from '@/lib/constants';
+import type { Stage } from '@/lib/types';
+
+interface Props {
+  password: string;
+}
+
+interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  stage: string | null;
+  link_url: string | null;
+  link_label: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'sent' | 'failed';
+  created_by: string;
+  created_at: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  reviewed_note: string | null;
+  sent_at: string | null;
+  sent_count: number;
+  sent_error: string | null;
+}
+
+type Tab = 'pending' | 'history';
+type Role = 'super_admin' | 'admin' | 'publisher';
+
+// ==================== Icons ====================
+function IconMegaphone() {
+  return (
+    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 11l18-8v18l-18-8v-2z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
+    </svg>
+  );
+}
+function IconCheck() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+  );
+}
+function IconClose() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  );
+}
+function IconTrash() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  );
+}
+function IconEdit() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+  );
+}
+function IconSend() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 11l18-8-8 18-2-8-8-2z" />
+    </svg>
+  );
+}
+function IconShield() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M5.618 4.618A2 2 0 017 4h10a2 2 0 011.382.618l.618.618A2 2 0 0120 6.618V12a8 8 0 11-16 0V6.618a2 2 0 011-1.236l.618-.764z" />
+    </svg>
+  );
+}
+
+// ==================== Helpers ====================
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return new Intl.DateTimeFormat('ar-IQ-u-nu-latn-ca-gregory', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(d);
+}
+
+function StatusBadge({ status }: { status: Announcement['status'] }) {
+  const styles: Record<Announcement['status'], { label: string; cls: string }> = {
+    pending: { label: 'قيد المراجعة', cls: 'bg-amber/15 text-amber-800 dark:bg-amber/25 dark:text-amber-300' },
+    approved: { label: 'تمت الموافقة', cls: 'bg-teal/10 text-teal dark:bg-teal/20' },
+    rejected: { label: 'مرفوض', cls: 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300' },
+    sent: { label: 'أُرسل', cls: 'bg-teal text-white' },
+    failed: { label: 'فشل الإرسال', cls: 'bg-red-600 text-white' },
+  };
+  const s = styles[status];
+  return <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${s.cls}`}>{s.label}</span>;
+}
+
+// ==================== Role Badge ====================
+function RoleBadge({ role }: { role: Role | null }) {
+  if (role === 'super_admin') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold-tint px-2.5 py-0.5 text-[11px] font-bold text-gold-ink">
+        <IconShield />
+        مشرف أعلى — يمكنك الموافقة على التبليغات
+      </span>
+    );
+  }
+  if (role === 'admin') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/30 bg-teal-tint px-2.5 py-0.5 text-[11px] font-bold text-teal">
+        مشرف — التبليغات تُرسل للمشرف الأعلى للموافقة
+      </span>
+    );
+  }
+  return null;
+}
+
+// ==================== Edit Form ====================
+interface EditFormState {
+  title: string;
+  body: string;
+  stage: Stage | '';
+  link_url: string;
+  link_label: string;
+}
+
+function formFromAnnouncement(a: Announcement): EditFormState {
+  return {
+    title: a.title,
+    body: a.body,
+    stage: (a.stage as Stage | null) ?? '',
+    link_url: a.link_url ?? '',
+    link_label: a.link_label ?? '',
+  };
+}
+
+// ==================== Card ====================
+function AnnouncementCard({
+  item,
+  password,
+  role,
+  onChanged,
+}: {
+  item: Announcement;
+  password: string;
+  role: Role | null;
+  onChanged: () => void;
+}) {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState<EditFormState>(formFromAnnouncement(item));
+  const [rejectNote, setRejectNote] = useState('');
+  const [showReject, setShowReject] = useState(false);
+
+  const isPending = item.status === 'pending';
+  const canApprove = role === 'super_admin';
+  const canEdit = role === 'super_admin';
+  const canDelete = role === 'super_admin';
+
+  async function handleApprove() {
+    const ok = await confirm(
+      'سيتم إرسال التبليغ لكل المشتركين المُفعّلين. هل أنت متأكد؟',
+      { variant: 'primary', confirmLabel: 'إرسال الآن' }
+    );
+    if (!ok) return;
+
+    setBusy(true);
+    try {
+      const res = await postJson<{ sent: number; failed: number }>(
+        '/api/admin/announcements',
+        { password, action: 'approve', id: item.id }
+      );
+      toast.show(
+        `تم الإرسال لـ ${res.sent} مشترك${res.failed > 0 ? ` (فشل: ${res.failed})` : ''}`,
+        'success'
+      );
+      onChanged();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الإرسال', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleReject() {
+    setBusy(true);
+    try {
+      await postJson('/api/admin/announcements', {
+        password, action: 'reject', id: item.id,
+        note: rejectNote.trim() || null,
+      });
+      toast.show('تم الرفض', 'success');
+      onChanged();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الرفض', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleSaveEdit() {
+    if (!form.title.trim() || !form.body.trim()) {
+      toast.show('العنوان والنص مطلوبان', 'error');
+      return;
+    }
+    setBusy(true);
+    try {
+      await postJson('/api/admin/announcements', {
+        password, action: 'edit', id: item.id,
+        title: form.title.trim(),
+        body: form.body.trim(),
+        stage: form.stage || null,
+        link_url: form.link_url.trim() || null,
+        link_label: form.link_label.trim() || null,
+      });
+      toast.show('تم التعديل', 'success');
+      setEditing(false);
+      onChanged();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل التعديل', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDelete() {
+    const ok = await confirm('حذف التبليغ نهائياً. هل أنت متأكد؟', {
+      variant: 'danger', confirmLabel: 'حذف',
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await postJson('/api/admin/announcements', {
+        password, action: 'delete', id: item.id,
+      });
+      toast.show('تم الحذف', 'success');
+      onChanged();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الحذف', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleResend() {
+    const ok = await confirm('إعادة إرسال التبليغ لكل المشتركين؟', {
+      variant: 'primary', confirmLabel: 'إعادة الإرسال',
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      const res = await postJson<{ sent: number; failed: number }>(
+        '/api/admin/announcements',
+        { password, action: 'resend', id: item.id }
+      );
+      toast.show(`أُعيد الإرسال لـ ${res.sent} مشترك`, 'success');
+      onChanged();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الإعادة', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm dark:bg-paper/80">
+      {/* Header */}
+      <div className="flex flex-wrap items-center gap-2">
+        <StatusBadge status={item.status} />
+        {item.stage ? (
+          <span className="rounded-full bg-teal/8 px-2 py-0.5 text-[11px] font-bold text-teal/80 dark:bg-teal/15">
+            {item.stage}
+          </span>
+        ) : (
+          <span className="rounded-full bg-ink/5 px-2 py-0.5 text-[11px] font-bold text-ink/60 dark:bg-white/10">
+            كل المراحل
+          </span>
+        )}
+        <span className="text-[11px] text-ink/40">
+          بواسطة {item.created_by} — {formatDate(item.created_at)}
+        </span>
+      </div>
+
+      {editing ? (
+        <div className="mt-3 space-y-2">
+          <Input
+            type="text"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            maxLength={200}
+            placeholder="العنوان"
+          />
+          <Select
+            value={form.stage}
+            onChange={(e) => setForm({ ...form, stage: e.target.value as Stage | '' })}
+            aria-label="المرحلة"
+          >
+            <option value="">كل المراحل</option>
+            {STAGES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </Select>
+          <Textarea
+            value={form.body}
+            onChange={(e) => setForm({ ...form, body: e.target.value })}
+            rows={4}
+            maxLength={2000}
+            placeholder="نص التبليغ"
+          />
+          <div className="flex flex-wrap gap-2">
+            <Input
+              type="url"
+              value={form.link_url}
+              onChange={(e) => setForm({ ...form, link_url: e.target.value })}
+              placeholder="رابط (اختياري)"
+              maxLength={1000}
+              className="min-w-0 flex-1 basis-full sm:basis-auto"
+            />
+            <Input
+              type="text"
+              value={form.link_label}
+              onChange={(e) => setForm({ ...form, link_label: e.target.value })}
+              placeholder="نص الزر"
+              maxLength={60}
+              className="w-full sm:w-40"
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={handleSaveEdit} loading={busy}>
+              حفظ التعديل
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setEditing(false);
+                setForm(formFromAnnouncement(item));
+              }}
+              disabled={busy}
+            >
+              إلغاء
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <h3 className="mt-2 break-anywhere font-bold text-ink">{item.title}</h3>
+          <p className="mt-1 whitespace-pre-line break-anywhere text-sm leading-relaxed text-ink/70">
+            {item.body}
+          </p>
+
+          {item.link_url && (
+            <a
+              href={item.link_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex items-center gap-1 break-anywhere text-xs font-bold text-teal hover:underline"
+            >
+              🔗 {item.link_label || item.link_url}
+            </a>
+          )}
+
+          {item.reviewed_note && (
+            <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-300">
+              <span className="font-bold">سبب الرفض: </span>
+              {item.reviewed_note}
+            </p>
+          )}
+
+          {item.status === 'sent' && (
+            <p className="mt-2 text-xs font-bold text-teal">
+              ✅ أُرسل لـ {item.sent_count} مشترك
+              {item.sent_error && ` (${item.sent_error})`}
+            </p>
+          )}
+
+          {item.status === 'failed' && item.sent_error && (
+            <p className="mt-2 text-xs font-bold text-red-600 dark:text-red-400">
+              ❌ {item.sent_error}
+            </p>
+          )}
+        </>
+      )}
+
+      {/* Actions */}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {isPending && !editing && (
+          <>
+            {canApprove && (
+              <Button size="sm" onClick={handleApprove} loading={busy} icon={<IconSend />}>
+                موافقة وإرسال
+              </Button>
+            )}
+            {canEdit && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setEditing(true)}
+                disabled={busy}
+                icon={<IconEdit />}
+              >
+                تعديل
+              </Button>
+            )}
+            {canApprove && (
+              <Button
+                size="sm"
+                variant="danger"
+                onClick={() => setShowReject(true)}
+                disabled={busy}
+                icon={<IconClose />}
+              >
+                رفض
+              </Button>
+            )}
+            {canDelete && (
+              <Button size="sm" variant="ghost" onClick={handleDelete} disabled={busy} icon={<IconTrash />}>
+                حذف
+              </Button>
+            )}
+            {!canApprove && (
+              <p className="self-center text-[11px] text-ink/50">
+                ⏳ بانتظار موافقة المشرف الأعلى
+              </p>
+            )}
+          </>
+        )}
+
+        {item.status === 'failed' && !editing && canApprove && (
+          <>
+            <Button size="sm" onClick={handleResend} loading={busy} icon={<IconSend />}>
+              إعادة الإرسال
+            </Button>
+            <Button size="sm" variant="ghost" onClick={handleDelete} disabled={busy} icon={<IconTrash />}>
+              حذف
+            </Button>
+          </>
+        )}
+
+        {(item.status === 'sent' || item.status === 'rejected') && !editing && canDelete && (
+          <Button size="sm" variant="ghost" onClick={handleDelete} disabled={busy} icon={<IconTrash />}>
+            حذف من السجل
+          </Button>
+        )}
+      </div>
+
+      {/* Reject inline form */}
+      {showReject && (
+        <div className="mt-3 space-y-2 rounded-xl border border-red-200 bg-red-50 p-3 dark:border-red-900/50 dark:bg-red-950/30">
+          <Input
+            type="text"
+            value={rejectNote}
+            onChange={(e) => setRejectNote(e.target.value)}
+            placeholder="سبب الرفض (اختياري، يظهر للناشر)"
+            maxLength={500}
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="danger" onClick={handleReject} loading={busy}>
+              تأكيد الرفض
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setShowReject(false);
+                setRejectNote('');
+              }}
+              disabled={busy}
+            >
+              إلغاء
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==================== Main Section ====================
+export function AnnouncementsSection({ password }: Props) {
+  const toast = useToast();
+  const [tab, setTab] = useState<Tab>('pending');
+  const [role, setRole] = useState<Role | null>(null);
+  const [pending, setPending] = useState<Announcement[]>([]);
+  const [history, setHistory] = useState<Announcement[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const whoamiRes = await postJson<{ role: Role }>('/api/admin/announcements', {
+        password, action: 'whoami',
+      });
+      setRole(whoamiRes.role);
+
+      const [pRes, hRes] = await Promise.all([
+        postJson<{ items: Announcement[] }>('/api/admin/announcements', {
+          password, action: 'list_pending',
+        }),
+        postJson<{ items: Announcement[] }>('/api/admin/announcements', {
+          password, action: 'list_history',
+        }),
+      ]);
+      setPending(pRes.items ?? []);
+      setHistory(hRes.items ?? []);
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل التحميل', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [password, toast]);
+
+  useEffect(() => { load(); }, [load]);
+
+  return (
+    <section>
+      <div className="mb-5 flex items-start gap-3 rounded-2xl border border-teal/20 bg-teal/[0.04] p-4 text-sm dark:border-teal/30 dark:bg-teal/10">
+        <span className="text-teal"><IconMegaphone /></span>
+        <div className="min-w-0">
+          <p className="font-bold text-ink">تبليغات البوت</p>
+          <p className="mt-0.5 text-ink/70">
+            راجع التبليغات الواردة. الموافقة والإرسال تحتاج صلاحية المشرف الأعلى
+            (<code className="break-anywhere rounded bg-ink/5 px-1 font-mono text-[11px]">SUPER_ADMIN_PASSWORD</code>).
+          </p>
+        </div>
+      </div>
+
+      {role && (
+        <div className="mb-4">
+          <RoleBadge role={role} />
+        </div>
+      )}
+
+      <div className="scrollbar-none mb-4 -mx-4 flex gap-1 overflow-x-auto rounded-xl border border-line bg-white/60 p-1 sm:mx-0 dark:bg-white/[0.04]">
+        <button
+          type="button"
+          onClick={() => setTab('pending')}
+          className={`flex flex-shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition-colors ${
+            tab === 'pending' ? 'bg-teal text-white' : 'text-ink/60 hover:bg-ink/5'
+          }`}
+        >
+          <span className="whitespace-nowrap">قيد المراجعة</span>
+          {pending.length > 0 && (
+            <span className="rounded-full bg-white/20 px-1.5 py-0.5 font-mono text-[10px]">
+              {pending.length}
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('history')}
+          className={`flex flex-shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition-colors ${
+            tab === 'history' ? 'bg-teal text-white' : 'text-ink/60 hover:bg-ink/5'
+          }`}
+        >
+          <span className="whitespace-nowrap">السجل</span>
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="space-y-2">
+          {[0, 1, 2].map((i) => <div key={i} className="h-32 skeleton-shimmer rounded-2xl" />)}
+        </div>
+      ) : tab === 'pending' ? (
+        pending.length === 0 ? (
+          <div className="rounded-3xl border border-line bg-white/80 p-12 text-center dark:bg-paper/80">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-teal/8 text-teal">
+              <IconCheck />
+            </div>
+            <p className="mt-4 font-bold text-ink/70">لا توجد تبليغات بانتظار المراجعة</p>
+            <p className="mt-1 text-sm text-ink/50">كل شيء تحت السيطرة ✨</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {pending.map((a) => (
+              <AnnouncementCard key={a.id} item={a} password={password} role={role} onChanged={load} />
+            ))}
+          </div>
+        )
+      ) : history.length === 0 ? (
+        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center dark:bg-paper/80">
+          <p className="font-bold text-ink/70">لا يوجد سجل بعد</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {history.map((a) => (
+            <AnnouncementCard key={a.id} item={a} password={password} role={role} onChanged={load} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+===app/admin/_components/ChannelsSection.tsx===
+// app/admin/_components/ChannelsSection.tsx
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { Input, Select } from '@/components/ui/Field';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { postJson } from '@/lib/api-client';
+import { STAGES } from '@/lib/constants';
+import type { Channel, Stage } from '@/lib/types';
+
+interface Props { password: string }
+
+interface ChannelForm {
+  name: string;
+  stage: Stage | '';
+  description: string;
+  telegram_link: string;
+  channel_password: string;
+}
+
+function emptyForm(): ChannelForm {
+  return { name: '', stage: '', description: '', telegram_link: '', channel_password: '' };
+}
+function formFromChannel(c: Channel): ChannelForm {
+  return {
+    name: c.name,
+    stage: c.stage,
+    description: c.description ?? '',
+    telegram_link: c.telegram_link,
+    channel_password: c.channel_password ?? '',
+  };
+}
+function isFormValid(f: ChannelForm): boolean {
+  return f.name.trim() !== '' && f.stage !== '' && f.telegram_link.trim() !== '';
+}
+function generateChannelPassword(): string {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let result = '';
+  for (let i = 0; i < 8; i++) result += chars[Math.floor(Math.random() * chars.length)];
+  return result;
+}
+
+function IconChat() {
+  return (
+    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+    </svg>
+  );
+}
+function IconCopy() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+    </svg>
+  );
+}
+function IconSparkles() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+    </svg>
+  );
+}
+function IconEdit() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+  );
+}
+function IconTrash() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  );
+}
+
+function CopyButton({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+  const toast = useToast();
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.show('فشل النسخ — يرجى النسخ يدوياً', 'error');
+    }
+  }
+  return (
+    <Button type="button" variant="secondary" size="xs" onClick={handleCopy} icon={<IconCopy />}>
+      {copied ? 'تم' : 'نسخ'}
+    </Button>
+  );
+}
+
+function PasswordField({
+  value, onChange, placeholder,
+}: { value: string; onChange: (v: string) => void; placeholder: string }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        maxLength={200}
+        className="min-w-0 flex-1 basis-full font-mono sm:basis-auto"
+      />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => onChange(generateChannelPassword())}
+        icon={<IconSparkles />}
+      >
+        توليد
+      </Button>
+      {value && <CopyButton value={value} />}
+    </div>
+  );
+}
+
+export function ChannelsSection({ password }: Props) {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newForm, setNewForm] = useState<ChannelForm>(emptyForm());
+  const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<ChannelForm>(emptyForm());
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await postJson<{ channels: Channel[] }>('/api/admin/channels', { password, action: 'list' });
+      setChannels(data.channels ?? []);
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل تحميل القنوات', 'error');
+      setChannels([]);
+    } finally { setLoading(false); }
+  }, [password, toast]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isFormValid(newForm)) return;
+    setAdding(true);
+    try {
+      await postJson('/api/admin/channels', {
+        password, action: 'add',
+        name: newForm.name.trim(),
+        stage: newForm.stage,
+        description: newForm.description.trim() || null,
+        telegram_link: newForm.telegram_link.trim(),
+        channel_password: newForm.channel_password.trim() || null,
+      });
+      setNewForm(emptyForm());
+      toast.show('تمت إضافة القناة', 'success');
+      load();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الإضافة', 'error');
+    } finally { setAdding(false); }
+  }
+
+  function startEdit(c: Channel) { setEditingId(c.id); setEditForm(formFromChannel(c)); }
+  function cancelEdit() { setEditingId(null); setEditForm(emptyForm()); }
+
+  async function saveEdit(id: string) {
+    if (!isFormValid(editForm)) return;
+    setSaving(true);
+    try {
+      await postJson('/api/admin/channels', {
+        password, action: 'edit', id,
+        name: editForm.name.trim(),
+        stage: editForm.stage,
+        description: editForm.description.trim() || null,
+        telegram_link: editForm.telegram_link.trim(),
+        channel_password: editForm.channel_password.trim() || null,
+      });
+      cancelEdit();
+      toast.show('تم الحفظ', 'success');
+      load();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الحفظ', 'error');
+    } finally { setSaving(false); }
+  }
+
+  async function handleDelete(c: Channel) {
+    const ok = await confirm(`حذف القناة «${c.name}» نهائياً. هل أنت متأكد؟`, { variant: 'danger', confirmLabel: 'حذف' });
+    if (!ok) return;
+    try {
+      await postJson('/api/admin/channels', { password, action: 'delete', id: c.id });
+      toast.show('تم الحذف', 'success');
+      load();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الحذف', 'error');
+    }
+  }
+
+  return (
+    <section>
+      <form
+        onSubmit={handleAdd}
+        className="mb-5 space-y-3 rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm dark:bg-paper/80"
+      >
+        <div className="flex flex-wrap gap-2">
+          <Input
+            type="text"
+            value={newForm.name}
+            onChange={(e) => setNewForm({ ...newForm, name: e.target.value })}
+            placeholder="اسم القناة"
+            required
+            maxLength={200}
+            className="min-w-0 flex-1 basis-full sm:basis-auto"
+          />
+          <Select
+            value={newForm.stage}
+            onChange={(e) => setNewForm({ ...newForm, stage: e.target.value as Stage | '' })}
+            required
+            className="w-full sm:w-44"
+            aria-label="المرحلة"
+          >
+            <option value="">اختر المرحلة</option>
+            {STAGES.map((st) => <option key={st} value={st}>{st}</option>)}
+          </Select>
+        </div>
+        <Input
+          type="text"
+          value={newForm.description}
+          onChange={(e) => setNewForm({ ...newForm, description: e.target.value })}
+          placeholder="وصف قصير (اختياري)"
+          maxLength={1000}
+        />
+        <Input
+          type="url"
+          value={newForm.telegram_link}
+          onChange={(e) => setNewForm({ ...newForm, telegram_link: e.target.value })}
+          placeholder="رابط تلغرام (https://t.me/channelname)"
+          required
+          maxLength={500}
+        />
+        <PasswordField
+          value={newForm.channel_password}
+          onChange={(v) => setNewForm({ ...newForm, channel_password: v })}
+          placeholder="كلمة مرور القناة"
+        />
+        <Button
+          type="submit"
+          loading={adding}
+          disabled={!isFormValid(newForm)}
+          className="w-full sm:w-auto"
+        >
+          إضافة قناة
+        </Button>
+      </form>
+
+      {loading ? (
+        <div className="space-y-2">
+          {[0, 1, 2].map((i) => <div key={i} className="h-28 skeleton-shimmer rounded-2xl" />)}
+        </div>
+      ) : channels.length === 0 ? (
+        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center backdrop-blur-sm dark:bg-paper/80">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-teal/8 text-teal">
+            <IconChat />
+          </div>
+          <p className="mt-4 font-bold text-ink/70">لا توجد قنوات مضافة حالياً.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {channels.map((c) => {
+            const isEditing = editingId === c.id;
+            return (
+              <div
+                key={c.id}
+                className="rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 hover:border-teal/20 dark:bg-paper/80 dark:hover:shadow-[0_4px_16px_rgba(0,0,0,0.30)]"
+              >
+                {isEditing ? (
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
+                      <Input
+                        type="text"
+                        value={editForm.name}
+                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                        maxLength={200}
+                        className="min-w-0 flex-1 basis-full sm:basis-auto"
+                        autoFocus
+                      />
+                      <Select
+                        value={editForm.stage}
+                        onChange={(e) => setEditForm({ ...editForm, stage: e.target.value as Stage | '' })}
+                        className="w-full sm:w-44"
+                        aria-label="المرحلة"
+                      >
+                        {STAGES.map((st) => <option key={st} value={st}>{st}</option>)}
+                      </Select>
+                    </div>
+                    <Input
+                      type="text"
+                      value={editForm.description}
+                      onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                      placeholder="الوصف"
+                      maxLength={1000}
+                    />
+                    <Input
+                      type="url"
+                      value={editForm.telegram_link}
+                      onChange={(e) => setEditForm({ ...editForm, telegram_link: e.target.value })}
+                      placeholder="رابط تلغرام"
+                      maxLength={500}
+                    />
+                    <PasswordField
+                      value={editForm.channel_password}
+                      onChange={(v) => setEditForm({ ...editForm, channel_password: v })}
+                      placeholder="كلمة مرور القناة"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" onClick={() => saveEdit(c.id)} loading={saving} disabled={!isFormValid(editForm)}>حفظ</Button>
+                      <Button size="sm" variant="secondary" onClick={cancelEdit} disabled={saving}>إلغاء</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-baseline gap-2">
+                        <span className="font-bold text-ink">{c.name}</span>
+                        <span className="rounded-full bg-teal/8 px-2 py-0.5 font-mono text-xs text-teal/70 dark:bg-teal/15 dark:text-teal">
+                          {c.stage}
+                        </span>
+                      </div>
+                      {c.description && (
+                        <p className="mt-1 text-sm text-ink/55">{c.description}</p>
+                      )}
+                      <a
+                        href={c.telegram_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1 inline-block break-anywhere text-sm font-medium text-teal underline decoration-teal/40 underline-offset-4 hover:text-teal/80"
+                      >
+                        {c.telegram_link}
+                      </a>
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                        <span className="font-bold text-ink/50">كلمة المرور:</span>
+                        <code className="break-anywhere rounded-md bg-ink/5 px-2 py-0.5 font-mono text-ink/80 dark:bg-white/10 dark:text-ink/90">
+                          {c.channel_password || 'غير محددة'}
+                        </code>
+                        {c.channel_password && <CopyButton value={c.channel_password} />}
+                      </div>
+                    </div>
+                    <div className="flex flex-shrink-0 flex-wrap gap-1.5">
+                      <Button size="sm" variant="secondary" onClick={() => startEdit(c)} icon={<IconEdit />}>
+                        تعديل
+                      </Button>
+                      <Button size="sm" variant="danger" onClick={() => handleDelete(c)} icon={<IconTrash />}>
+                        حذف
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+===app/admin/_components/GradesSection.tsx===
+// app/admin/_components/GradesSection.tsx
+'use client';
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { Input, Select, Textarea } from '@/components/ui/Field';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { postJson } from '@/lib/api-client';
+import {
+  GRADE_TYPE_COLORS,
+  GRADE_TYPE_EMOJIS,
+  GRADE_TYPE_LABELS,
+  GRADE_TYPES,
+  type GradeType,
+} from '@/lib/constants';
+import type { Subject } from '@/lib/types';
+
+// ==================== Types ====================
+interface Props {
+  password: string;
+}
+
+interface GradeFile {
+  id: string;
+  subject_id: string;
+  title: string;
+  grade_type: GradeType;
+  professor_name: string | null;
+  year: number | null;
+  notes: string | null;
+  file_path: string;
+  created_at: string;
+  subjects?: { name: string; stage: string } | null;
+}
+
+interface FormState {
+  subject_id: string;
+  title: string;
+  grade_type: GradeType;
+  professor_name: string;
+  year: string;
+  notes: string;
+  file_path: string;
+}
+
+function emptyForm(subjectId?: string): FormState {
+  return {
+    subject_id: subjectId ?? '',
+    title: '',
+    grade_type: 'quiz',
+    professor_name: '',
+    year: '',
+    notes: '',
+    file_path: '',
+  };
+}
+
+function formFromItem(item: GradeFile): FormState {
+  return {
+    subject_id: item.subject_id,
+    title: item.title,
+    grade_type: item.grade_type,
+    professor_name: item.professor_name ?? '',
+    year: item.year != null ? String(item.year) : '',
+    notes: item.notes ?? '',
+    file_path: item.file_path,
+  };
+}
+
+function isFormValid(f: FormState): boolean {
+  return (
+    f.subject_id.trim() !== '' &&
+    f.title.trim() !== '' &&
+    f.file_path.trim() !== ''
+  );
+}
+
+// ==================== Icons ====================
+function IconGrades() {
+  return (
+    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M9 4h6M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  );
+}
+function IconEdit() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+  );
+}
+function IconTrash() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  );
+}
+
+// ==================== Main ====================
+export function GradesSection({ password }: Props) {
+  const toast = useToast();
+  const confirm = useConfirm();
+
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [items, setItems] = useState<GradeFile[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [newForm, setNewForm] = useState<FormState>(emptyForm());
+  const [adding, setAdding] = useState(false);
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<FormState>(emptyForm());
+  const [saving, setSaving] = useState(false);
+
+  const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState<'all' | GradeType>('all');
+
+  // ===== تحميل =====
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [subjectsRes, filesRes] = await Promise.all([
+        postJson<{ subjects: Subject[] }>('/api/admin/subjects', {
+          password,
+          action: 'list',
+        }),
+        postJson<{ items: GradeFile[] }>('/api/admin/grade-files', {
+          password,
+          action: 'list',
+        }),
+      ]);
+      setSubjects(subjectsRes.subjects ?? []);
+      setItems(filesRes.items ?? []);
+      setNewForm((prev) => {
+        if (prev.subject_id || !subjectsRes.subjects?.length) return prev;
+        return { ...prev, subject_id: subjectsRes.subjects[0].id };
+      });
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل التحميل', 'error');
+      setSubjects([]);
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [password, toast]);
+
+  useEffect(() => {
+    loadAll();
+  }, [loadAll]);
+
+  const subjectNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const s of subjects) map.set(s.id, s.name);
+    return map;
+  }, [subjects]);
+
+  // ===== الفلترة =====
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return items
+      .filter((i) => filterType === 'all' || i.grade_type === filterType)
+      .filter((i) => {
+        if (!term) return true;
+        const haystack = [
+          i.title,
+          i.professor_name ?? '',
+          i.subjects?.name ?? subjectNameById.get(i.subject_id) ?? '',
+          i.notes ?? '',
+        ]
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(term);
+      });
+  }, [items, search, filterType, subjectNameById]);
+
+  // ===== إضافة =====
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isFormValid(newForm)) return;
+    setAdding(true);
+    try {
+      await postJson('/api/admin/grade-files', {
+        password,
+        action: 'add',
+        subject_id: newForm.subject_id,
+        title: newForm.title.trim(),
+        grade_type: newForm.grade_type,
+        professor_name: newForm.professor_name.trim() || null,
+        year: newForm.year ? Number(newForm.year) : null,
+        notes: newForm.notes.trim() || null,
+        file_path: newForm.file_path.trim(),
+      });
+      const kept = newForm.subject_id;
+      setNewForm({ ...emptyForm(kept), grade_type: newForm.grade_type });
+      toast.show('تمت إضافة الملف', 'success');
+      loadAll();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الإضافة', 'error');
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  // ===== تعديل =====
+  function startEdit(item: GradeFile) {
+    setEditingId(item.id);
+    setEditForm(formFromItem(item));
+  }
+  function cancelEdit() {
+    setEditingId(null);
+    setEditForm(emptyForm());
+  }
+  async function saveEdit(id: string) {
+    if (!isFormValid(editForm)) return;
+    setSaving(true);
+    try {
+      await postJson('/api/admin/grade-files', {
+        password,
+        action: 'edit',
+        id,
+        subject_id: editForm.subject_id,
+        title: editForm.title.trim(),
+        grade_type: editForm.grade_type,
+        professor_name: editForm.professor_name.trim() || null,
+        year: editForm.year ? Number(editForm.year) : null,
+        notes: editForm.notes.trim() || null,
+        file_path: editForm.file_path.trim(),
+      });
+      cancelEdit();
+      toast.show('تم الحفظ', 'success');
+      loadAll();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الحفظ', 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // ===== حذف =====
+  async function handleDelete(item: GradeFile) {
+    const ok = await confirm(`حذف «${item.title}» نهائياً. هل أنت متأكد؟`, {
+      variant: 'danger',
+      confirmLabel: 'حذف',
+    });
+    if (!ok) return;
+    try {
+      await postJson('/api/admin/grade-files', {
+        password,
+        action: 'delete',
+        id: item.id,
+      });
+      toast.show('تم الحذف', 'success');
+      loadAll();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الحذف', 'error');
+    }
+  }
+
+  // ===== الرسم =====
+  return (
+    <section>
+      {subjects.length === 0 && !loading && (
+        <div className="mb-5 rounded-2xl border border-amber/30 bg-amber/8 p-4 text-sm dark:bg-amber/15">
+          <p className="font-medium text-ink/70">
+            أضف مادة أولاً من تبويب «المواد» حتى تستطيع رفع ملفات الدرجات.
+          </p>
+        </div>
+      )}
+
+      {/* ===== نموذج الإضافة ===== */}
+      <form
+        onSubmit={handleAdd}
+        className="mb-5 space-y-3 rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.04)] dark:bg-paper/80"
+      >
+        <div className="flex flex-wrap gap-2">
+          <Select
+            value={newForm.subject_id}
+            onChange={(e) =>
+              setNewForm({ ...newForm, subject_id: e.target.value })
+            }
+            className="w-full sm:w-44"
+            disabled={subjects.length === 0}
+            aria-label="المادة"
+          >
+            <option value="">اختر المادة</option>
+            {subjects.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </Select>
+
+          <Select
+            value={newForm.grade_type}
+            onChange={(e) =>
+              setNewForm({
+                ...newForm,
+                grade_type: e.target.value as GradeType,
+              })
+            }
+            className="w-full sm:w-40"
+            aria-label="نوع الدرجة"
+          >
+            {GRADE_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {GRADE_TYPE_EMOJIS[t]} {GRADE_TYPE_LABELS[t]}
+              </option>
+            ))}
+          </Select>
+
+          <Input
+            type="text"
+            value={newForm.title}
+            onChange={(e) => setNewForm({ ...newForm, title: e.target.value })}
+            placeholder="عنوان الملف (مثال: كوز تشريح - الفصل الأول)"
+            required
+            maxLength={300}
+            className="min-w-0 flex-1 basis-full sm:basis-auto"
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Input
+            type="text"
+            value={newForm.professor_name}
+            onChange={(e) =>
+              setNewForm({ ...newForm, professor_name: e.target.value })
+            }
+            placeholder="اسم الدكتور (اختياري)"
+            maxLength={200}
+            className="min-w-0 flex-1 basis-full sm:basis-auto"
+          />
+          <Input
+            type="number"
+            inputMode="numeric"
+            min={1990}
+            max={2100}
+            value={newForm.year}
+            onChange={(e) => setNewForm({ ...newForm, year: e.target.value })}
+            placeholder="السنة"
+            className="w-full sm:w-32"
+          />
+        </div>
+
+        <Input
+          type="url"
+          value={newForm.file_path}
+          onChange={(e) =>
+            setNewForm({ ...newForm, file_path: e.target.value })
+          }
+          placeholder="رابط تلغرام أو Supabase"
+          required
+          maxLength={2000}
+        />
+
+        <Textarea
+          value={newForm.notes}
+          onChange={(e) => setNewForm({ ...newForm, notes: e.target.value })}
+          placeholder="ملاحظات إضافية (اختياري)"
+          rows={2}
+          maxLength={500}
+        />
+
+        <Button
+          type="submit"
+          loading={adding}
+          disabled={!isFormValid(newForm) || subjects.length === 0}
+          className="w-full sm:w-auto"
+        >
+          إضافة ملف
+        </Button>
+      </form>
+
+      {/* ===== أدوات البحث ===== */}
+      {!loading && items.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          <Input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="ابحث بالعنوان، الدكتور، أو المادة..."
+            className="min-w-[180px] flex-1"
+          />
+          <Select
+            value={filterType}
+            onChange={(e) =>
+              setFilterType(e.target.value as 'all' | GradeType)
+            }
+            className="w-full sm:w-40"
+            aria-label="نوع الفلترة"
+          >
+            <option value="all">كل الأنواع</option>
+            {GRADE_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {GRADE_TYPE_LABELS[t]}
+              </option>
+            ))}
+          </Select>
+        </div>
+      )}
+
+      {/* ===== القائمة ===== */}
+      {loading ? (
+        <div className="space-y-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-20 skeleton-shimmer rounded-2xl" />
+          ))}
+        </div>
+      ) : items.length === 0 ? (
+        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center dark:bg-paper/80">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-teal/8 text-teal">
+            <IconGrades />
+          </div>
+          <p className="mt-4 font-bold text-ink/70">لا توجد ملفات درجات بعد</p>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="rounded-3xl border border-line bg-white/80 p-8 text-center dark:bg-paper/80">
+          <p className="font-bold text-ink/70">لا نتائج مطابقة</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map((item) => {
+            const isEditing = editingId === item.id;
+            const subjName =
+              item.subjects?.name ??
+              subjectNameById.get(item.subject_id) ??
+              '—';
+
+            if (isEditing) {
+              return (
+                <div
+                  key={item.id}
+                  className="space-y-3 rounded-2xl border border-teal/30 bg-paper-soft p-4"
+                >
+                  <div className="flex flex-wrap gap-2">
+                    <Select
+                      value={editForm.subject_id}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          subject_id: e.target.value,
+                        })
+                      }
+                      className="w-full sm:w-44"
+                    >
+                      {subjects.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </Select>
+                    <Select
+                      value={editForm.grade_type}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          grade_type: e.target.value as GradeType,
+                        })
+                      }
+                      className="w-full sm:w-40"
+                    >
+                      {GRADE_TYPES.map((t) => (
+                        <option key={t} value={t}>
+                          {GRADE_TYPE_LABELS[t]}
+                        </option>
+                      ))}
+                    </Select>
+                    <Input
+                      type="text"
+                      value={editForm.title}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, title: e.target.value })
+                      }
+                      maxLength={300}
+                      className="min-w-0 flex-1 basis-full sm:basis-auto"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Input
+                      type="text"
+                      value={editForm.professor_name}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          professor_name: e.target.value,
+                        })
+                      }
+                      placeholder="اسم الدكتور"
+                      maxLength={200}
+                      className="min-w-0 flex-1 basis-full sm:basis-auto"
+                    />
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      min={1990}
+                      max={2100}
+                      value={editForm.year}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, year: e.target.value })
+                      }
+                      placeholder="السنة"
+                      className="w-full sm:w-32"
+                    />
+                  </div>
+                  <Input
+                    type="url"
+                    value={editForm.file_path}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, file_path: e.target.value })
+                    }
+                    maxLength={2000}
+                  />
+                  <Textarea
+                    value={editForm.notes}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, notes: e.target.value })
+                    }
+                    rows={2}
+                    maxLength={500}
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => saveEdit(item.id)}
+                      loading={saving}
+                      disabled={!isFormValid(editForm)}
+                    >
+                      حفظ
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={cancelEdit}
+                      disabled={saving}
+                    >
+                      إلغاء
+                    </Button>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div
+                key={item.id}
+                className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-line bg-paper-soft p-4"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-baseline gap-2">
+                    <span
+                      className={`rounded-chip px-2.5 py-0.5 text-[11px] font-bold ${GRADE_TYPE_COLORS[item.grade_type]}`}
+                    >
+                      {GRADE_TYPE_EMOJIS[item.grade_type]}{' '}
+                      {GRADE_TYPE_LABELS[item.grade_type]}
+                    </span>
+                    <span className="font-bold text-ink">{item.title}</span>
+                    <span className="rounded-chip bg-teal/8 px-2 py-0.5 font-mono text-xs text-teal/70 dark:bg-teal/15 dark:text-teal">
+                      {subjName}
+                    </span>
+                    {item.year != null && (
+                      <span className="rounded-md bg-ink/5 px-1.5 py-0.5 font-mono text-[10px] font-bold text-ink/50 dark:bg-white/10">
+                        {item.year}
+                      </span>
+                    )}
+                  </div>
+                  {item.professor_name && (
+                    <p className="mt-1 text-sm text-ink/50">
+                      د. {item.professor_name}
+                    </p>
+                  )}
+                  {item.notes && (
+                    <p className="mt-1 text-xs text-ink/40">{item.notes}</p>
+                  )}
+                </div>
+                <div className="flex flex-shrink-0 flex-wrap gap-1.5">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => startEdit(item)}
+                    icon={<IconEdit />}
+                  >
+                    تعديل
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    onClick={() => handleDelete(item)}
+                    icon={<IconTrash />}
+                  >
+                    حذف
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+===app/admin/_components/MaterialsSection.tsx===
+// app/admin/_components/MaterialsSection.tsx
+'use client';
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { Input, Select } from '@/components/ui/Field';
+import { TagInput } from '@/components/ui/TagInput';
+import { DropZone } from '@/components/ui/DropZone';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';

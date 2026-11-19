@@ -1,0 +1,2712 @@
+﻿          aria-hidden="true"
+          className="flex items-center justify-between rounded-card border border-line bg-paper-soft p-4"
+        >
+          <div className="h-4 w-40 skeleton-shimmer rounded motion-reduce:animate-none" />
+          <div className="h-6 w-16 skeleton-shimmer rounded-chip motion-reduce:animate-none" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function BackLink() {
+  return (
+    <Link
+      href="/"
+      className="group inline-flex items-center gap-1.5 text-sm font-bold text-teal transition-colors hover:text-teal-hover"
+    >
+      <span className="transition-transform duration-200 motion-reduce:transition-none rtl:group-hover:translate-x-1 ltr:group-hover:-translate-x-1">
+        <IconArrowRight className="h-4 w-4 ltr:rotate-180" />
+      </span>
+      رجوع إلى لوحة الأقسام
+    </Link>
+  );
+}
+
+// ==================== Icon: Grades ====================
+function IconGradesInline() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M9 4h6M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  );
+}
+
+// ==================== Target Selector ====================
+function TargetSelector({
+  target,
+  onChange,
+}: {
+  target: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div
+      className="rounded-card border border-line bg-paper-soft p-4"
+      role="group"
+      aria-labelledby="gpa-target-title"
+    >
+      <div className="mb-3 flex items-center gap-2">
+        <span
+          aria-hidden="true"
+          className="flex h-8 w-8 items-center justify-center rounded-field bg-teal/10 text-teal"
+        >
+          <IconTarget className="h-4 w-4" />
+        </span>
+        <div>
+          <p id="gpa-target-title" className="text-sm font-bold text-ink">
+            هدفي في كل مادة
+          </p>
+          <p className="text-[11px] text-ink-muted">
+            اختر هدفك، وسنخبرك بكم تحتاج في المتبقي
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-5 gap-1.5">
+        {TARGETS.map((t) => {
+          const active = target === t.value;
+          return (
+            <button
+              key={t.value}
+              type="button"
+              onClick={() => onChange(t.value)}
+              aria-pressed={active}
+              aria-label={`${t.label}، ${t.value} بالمئة`}
+              className={`rounded-field border px-1 py-2.5 text-center transition-all duration-200 motion-reduce:transition-none active:scale-95 ${
+                active
+                  ? 'border-teal bg-teal text-on-teal shadow-sm'
+                  : 'border-line bg-paper text-ink-soft hover:border-teal/40'
+              }`}
+            >
+              <p
+                aria-hidden="true"
+                className={`font-mono text-base font-bold leading-none ${
+                  active ? '' : 'text-ink'
+                }`}
+              >
+                {t.value}
+                <span className="text-[10px]">%</span>
+              </p>
+              <p
+                aria-hidden="true"
+                className={`mt-0.5 truncate text-[9px] font-bold ${
+                  active ? 'text-on-teal/90' : 'text-ink-muted'
+                }`}
+              >
+                {t.short}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ==================== Target Analysis Card ====================
+function TargetAnalysisCard({
+  analysis,
+  target,
+  subjectName,
+}: {
+  analysis: TargetAnalysis;
+  target: number;
+  subjectName: string;
+}) {
+  if (analysis.noData) {
+    return (
+      <div className="rounded-card border border-line bg-paper p-4 text-center">
+        <p className="text-sm text-ink-muted">أدخل أي درجة لتظهر لك التوقعات</p>
+      </div>
+    );
+  }
+
+  if (analysis.achieved) {
+    return (
+      <div className="rounded-card border border-teal/30 bg-teal/5 p-4">
+        <div className="flex items-start gap-3">
+          <span
+            aria-hidden="true"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-field bg-teal text-on-teal"
+          >
+            <IconCheck className="h-4 w-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-teal">
+              ضمنت {getGradeLabel(target)} في {subjectName}
+            </p>
+            <p className="mt-0.5 text-xs text-ink-soft">
+              حتى لو جبت صفر في المتبقي، لسا محقق هدفك.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (analysis.impossible) {
+    return (
+      <div className="rounded-card border border-coral/30 bg-coral/5 p-4">
+        <div className="flex items-start gap-3">
+          <span
+            aria-hidden="true"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-field bg-coral text-on-coral"
+          >
+            <IconWarning className="h-4 w-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-coral-ink">
+              صعب تحقيق {getGradeLabel(target)} في {subjectName}
+            </p>
+            <p className="mt-0.5 text-xs text-ink-soft">
+              تحتاج {fmtNeed(analysis.needFromRemaining)} درجة، والحد الأقصى
+              المتبقي {fmtNum(analysis.remainingMax)} فقط.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const progressPct =
+    analysis.targetScore > 0
+      ? Math.min(
+          100,
+          Math.max(0, (analysis.currentScore / analysis.targetScore) * 100),
+        )
+      : 0;
+
+  return (
+    <div className="rounded-card border border-gold/30 bg-gold/5 p-4">
+      <div className="flex items-start gap-3">
+        <span
+          aria-hidden="true"
+          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-field bg-gold text-on-gold"
+        >
+          <IconTrending className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-ink">
+            تحتاج{' '}
+            <span className="text-lg text-gold-ink">
+              {fmtNeed(analysis.needFromRemaining)}
+            </span>{' '}
+            درجة
+          </p>
+          <p className="mt-0.5 text-xs text-ink-soft">
+            من أصل <strong>{fmtNum(analysis.remainingMax)}</strong> متبقية لتحقق
+            تقدير {getGradeLabel(target)} في {subjectName}
+          </p>
+
+          <div className="mt-3">
+            <div className="mb-1 flex items-center justify-between text-[10px] font-bold text-ink-muted">
+              <span>حالياً: {fmtNum(analysis.currentScore)}</span>
+              <span>الهدف: {fmtNum(analysis.targetScore)}</span>
+            </div>
+            <div
+              aria-hidden="true"
+              className="h-2 overflow-hidden rounded-chip bg-ink/8 dark:bg-white/10"
+            >
+              <div
+                className="h-full rounded-chip bg-gradient-to-l from-gold to-gold-light transition-all duration-500 motion-reduce:transition-none"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==================== Status Chip ====================
+function StatusChip({
+  analysis,
+  target,
+}: {
+  analysis: TargetAnalysis;
+  target: number;
+}) {
+  if (analysis.noData) return null;
+
+  if (analysis.achieved) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-chip bg-teal/15 px-2 py-0.5 text-[10px] font-bold text-teal">
+        <IconCheck className="h-3 w-3" />
+        ضمنت {getGradeLabel(target)}
+      </span>
+    );
+  }
+
+  if (analysis.impossible) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-chip bg-coral/15 px-2 py-0.5 text-[10px] font-bold text-coral-ink">
+        <IconWarning className="h-3 w-3" />
+        {getGradeLabel(target)} صعب
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 rounded-chip bg-gold/20 px-2 py-0.5 text-[10px] font-bold text-gold-ink">
+      <IconTrending className="h-3 w-3" />
+      تحتاج {fmtNeed(analysis.needFromRemaining)} لـ{getGradeLabel(target)}
+    </span>
+  );
+}
+
+// ==================== Subject Row ====================
+interface SubjectRowProps {
+  subject: Subject;
+  index: number;
+  scores: SubjectScores | undefined;
+  target: number;
+  isOpen: boolean;
+  onToggle: (subjectId: string) => void;
+  onUpdate: (
+    subjectId: string,
+    componentKey: string,
+    field: 'max' | 'score',
+    value: string,
+  ) => void;
+  onClear: (subjectId: string, subjectName: string) => void;
+}
+
+const SubjectRow = memo(function SubjectRow({
+  subject,
+  index,
+  scores,
+  target,
+  isOpen,
+  onToggle,
+  onUpdate,
+  onClear,
+}: SubjectRowProps) {
+  const percentage = useMemo(() => calculatePercentage(scores), [scores]);
+  const analysis = useMemo(
+    () => analyzeForTarget(scores, target),
+    [scores, target],
+  );
+  const scoreColor = percentage !== null ? getScoreColor(percentage) : '';
+  const panelId = `gpa-panel-${subject.id}`;
+  const triggerId = `gpa-trigger-${subject.id}`;
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'Enter') return;
+    const el = e.target;
+    if (!(el instanceof HTMLInputElement) || !el.hasAttribute('data-gpa-score'))
+      return;
+    e.preventDefault();
+    const inputs = Array.from(
+      e.currentTarget.querySelectorAll<HTMLInputElement>(
+        'input[data-gpa-score]',
+      ),
+    );
+    const next = inputs[inputs.indexOf(el) + 1];
+    if (next) next.focus();
+    else el.blur();
+  };
+
+  return (
+    <div
+      style={{ animationDelay: `${index * 40}ms` }}
+      className="overflow-hidden rounded-card border border-line bg-paper-soft transition-all duration-200 motion-reduce:transition-none animate-slide-up motion-reduce:animate-none"
+    >
+      <button
+        id={triggerId}
+        type="button"
+        onClick={() => onToggle(subject.id)}
+        aria-expanded={isOpen}
+        aria-controls={panelId}
+        className="flex w-full items-center justify-between gap-3 p-4 text-start transition-colors hover:bg-paper"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-bold text-ink">{subject.name}</span>
+            {subject.units != null && (
+              <span className="text-xs text-ink-muted">
+                ({subject.units} وحدة)
+              </span>
+            )}
+          </div>
+          <div className="mt-1">
+            <StatusChip analysis={analysis} target={target} />
+          </div>
+        </div>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          {percentage !== null ? (
+            <span
+              className={`rounded-chip px-3 py-1 text-sm font-bold ${scoreColor}`}
+              aria-label={`النسبة ${percentage.toFixed(1)} بالمئة`}
+            >
+              {percentage.toFixed(1)}%
+            </span>
+          ) : (
+            <span
+              className="text-sm text-ink-muted"
+              aria-label="لم تُدخل درجات بعد"
+            >
+              —
+            </span>
+          )}
+          <IconChevronDown
+            aria-hidden="true"
+            className={`h-4 w-4 flex-shrink-0 text-ink-muted transition-transform duration-200 motion-reduce:transition-none ${
+              isOpen ? 'rotate-180' : ''
+            }`}
+          />
+        </div>
+      </button>
+
+      <div
+        id={panelId}
+        role="region"
+        aria-labelledby={triggerId}
+        inert={!isOpen}
+        className={`grid transition-all duration-300 motion-reduce:transition-none ease-[var(--ease-editorial)] ${
+          isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div
+            className="space-y-4 border-t border-line bg-paper/40 p-4"
+            onKeyDown={handleKeyDown}
+          >
+            <TargetAnalysisCard
+              analysis={analysis}
+              target={target}
+              subjectName={subject.name}
+            />
+
+            <div className="space-y-3">
+              {COMPONENTS.map((c) => {
+                const comp: ComponentData = scores?.[c.key] ?? {
+                  max: '',
+                  score: '',
+                };
+                const issues = getComponentIssues(comp);
+                const issueText = issues.score ?? issues.max;
+                const scoreId = `${subject.id}-${c.key}-score`;
+                const maxId = `${subject.id}-${c.key}-max`;
+                const errId = `${subject.id}-${c.key}-err`;
+                return (
+                  <div
+                    key={c.key}
+                    role="group"
+                    aria-label={c.label}
+                    className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1"
+                  >
+                    <label
+                      htmlFor={scoreId}
+                      className="w-full text-sm font-medium text-ink-soft sm:w-28"
+                    >
+                      {c.label}
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id={scoreId}
+                        type="text"
+                        inputMode="decimal"
+                        dir="ltr"
+                        autoComplete="off"
+                        enterKeyHint="next"
+                        data-gpa-score=""
+                        value={comp.score}
+                        onChange={(e) =>
+                          onUpdate(
+                            subject.id,
+                            c.key,
+                            'score',
+                            normalizeNumericInput(e.target.value),
+                          )
+                        }
+                        onFocus={(e) => e.currentTarget.select()}
+                        placeholder="درجتك"
+                        aria-invalid={issues.score !== null}
+                        aria-describedby={issueText ? errId : undefined}
+                        className="w-20 text-center"
+                      />
+                      <span
+                        className="text-sm text-ink-muted"
+                        aria-hidden="true"
+                      >
+                        من
+                      </span>
+                      <Input
+                        id={maxId}
+                        type="text"
+                        inputMode="decimal"
+                        dir="ltr"
+                        autoComplete="off"
+                        value={comp.max}
+                        onChange={(e) =>
+                          onUpdate(
+                            subject.id,
+                            c.key,
+                            'max',
+                            normalizeNumericInput(e.target.value),
+                          )
+                        }
+                        onFocus={(e) => e.currentTarget.select()}
+                        aria-label={`الدرجة العظمى لـ${c.label}`}
+                        aria-invalid={issues.max !== null}
+                        aria-describedby={issues.max ? errId : undefined}
+                        className="w-16 text-center"
+                      />
+                    </div>
+                    {issueText && (
+                      <p
+                        id={errId}
+                        className="basis-full text-xs font-medium text-coral-ink"
+                      >
+                        {issueText}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {hasAnyScore(scores) && (
+              <div className="flex justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onClear(subject.id, subject.name)}
+                  className="text-coral-ink hover:bg-coral/10"
+                >
+                  مسح درجات هذه المادة
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// ==================== GPA Tab ====================
+function GpaTab() {
+  const { stage, ready } = useStudentStage();
+  const confirm = useConfirm();
+
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [scores, setScores] = useState<AllScores>({});
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [target, setTarget] = useState<number>(50);
+  const [storageFailed, setStorageFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const storageKey = stage ? `${SCORES_KEY_PREFIX}${stage}` : '';
+  const targetKey = stage ? `${TARGET_KEY_PREFIX}${stage}` : '';
+
+  const dirtyRef = useRef(false);
+  const orphansRef = useRef<Record<string, unknown>>({});
+
+  // ---- تحميل الهدف ----
+  useEffect(() => {
+    if (!targetKey) return;
+    const saved = Number(readStorage(targetKey));
+    if (Number.isFinite(saved) && TARGETS.some((t) => t.value === saved)) {
+      setTarget(saved);
+    }
+  }, [targetKey]);
+
+  // ---- تحميل المواد + الدرجات ----
+  useEffect(() => {
+    if (!stage) return;
+    let cancelled = false;
+
+    async function loadData() {
+      setLoading(true);
+      setError('');
+
+      const { data, error: fetchError } = await supabase
+        .from('subjects')
+        .select('id, name, stage, units')
+        .eq('stage', stage)
+        .order('name');
+
+      if (cancelled) return;
+      if (fetchError) {
+        setError(fetchError.message);
+        setLoading(false);
+        return;
+      }
+
+      const subjectList = (data ?? []) as Subject[];
+      const saved = safeParseScores(readStorage(`${SCORES_KEY_PREFIX}${stage}`));
+      const ids = new Set(subjectList.map((s) => s.id));
+
+      const merged: AllScores = {};
+      for (const s of subjectList)
+        merged[s.id] = sanitizeSubjectScores(saved[s.id]);
+
+      const orphans: Record<string, unknown> = {};
+      for (const [id, value] of Object.entries(saved)) {
+        if (!ids.has(id)) orphans[id] = value;
+      }
+
+      orphansRef.current = orphans;
+      dirtyRef.current = false;
+      setSubjects(subjectList);
+      setScores(merged);
+      setLoading(false);
+    }
+    loadData();
+    return () => {
+      cancelled = true;
+    };
+  }, [stage, reloadKey]);
+
+  // ---- حفظ الدرجات ----
+  useEffect(() => {
+    if (!storageKey || !dirtyRef.current) return;
+    const ok = writeStorage(
+      storageKey,
+      JSON.stringify({ ...orphansRef.current, ...scores }),
+    );
+    setStorageFailed((prev) => (prev === !ok ? prev : !ok));
+  }, [scores, storageKey]);
+
+  const handleTargetChange = useCallback(
+    (value: number) => {
+      setTarget(value);
+      if (targetKey) writeStorage(targetKey, String(value));
+    },
+    [targetKey],
+  );
+
+  const updateComponent = useCallback(
+    (
+      subjectId: string,
+      componentKey: string,
+      field: 'max' | 'score',
+      value: string,
+    ) => {
+      dirtyRef.current = true;
+      setScores((prev) => {
+        const subject = prev[subjectId] ?? defaultSubjectScores();
+        const current: ComponentData = subject[componentKey] ?? {
+          max: '',
+          score: '',
+        };
+        return {
+          ...prev,
+          [subjectId]: {
+            ...subject,
+            [componentKey]: { ...current, [field]: value },
+          },
+        };
+      });
+    },
+    [],
+  );
+
+  const toggleExpand = useCallback((subjectId: string) => {
+    setExpanded((prev) => ({ ...prev, [subjectId]: !prev[subjectId] }));
+  }, []);
+
+  const clearSubject = useCallback(
+    async (subjectId: string, subjectName: string) => {
+      const ok = await confirm(
+        `حذف كل درجات مادة «${subjectName}». هل أنت متأكد؟`,
+        {
+          variant: 'danger',
+          confirmLabel: 'حذف',
+        },
+      );
+      if (!ok) return;
+      dirtyRef.current = true;
+      setScores((prev) => ({ ...prev, [subjectId]: defaultSubjectScores() }));
+    },
+    [confirm],
+  );
+
+  const resetScores = useCallback(async () => {
+    const ok = await confirm(
+      'حذف كل الدرجات المدخلة لهذه المرحلة. هل أنت متأكد؟',
+      {
+        variant: 'danger',
+        confirmLabel: 'حذف',
+      },
+    );
+    if (!ok) return;
+    const cleared: AllScores = {};
+    for (const s of subjects) cleared[s.id] = defaultSubjectScores();
+    orphansRef.current = {};
+    dirtyRef.current = true;
+    setScores(cleared);
+  }, [confirm, subjects]);
+
+  // ---- إحصاءات ----
+  const stats = useMemo(() => {
+    let weightedSum = 0;
+    let totalUnits = 0;
+    let simpleSum = 0;
+    let enteredCount = 0;
+    let withoutUnits = 0;
+
+    for (const s of subjects) {
+      const pct = calculatePercentage(scores[s.id]);
+      if (pct === null) continue;
+      enteredCount++;
+      simpleSum += pct;
+      const units = Number(s.units ?? 0);
+      if (Number.isFinite(units) && units > 0) {
+        totalUnits += units;
+        weightedSum += units * pct;
+      } else {
+        withoutUnits++;
+      }
+    }
+
+    const usedSimple = enteredCount > 0 && totalUnits === 0;
+    const average =
+      totalUnits > 0
+        ? weightedSum / totalUnits
+        : usedSimple
+          ? simpleSum / enteredCount
+          : null;
+
+    return {
+      average,
+      usedSimple,
+      skippedUnits: usedSimple ? 0 : withoutUnits,
+      allFilled: subjects.length > 0 && enteredCount === subjects.length,
+      progress:
+        subjects.length > 0 ? (enteredCount / subjects.length) * 100 : 0,
+      enteredCount,
+    };
+  }, [subjects, scores]);
+
+  if (!ready) {
+    return <Skeleton />;
+  }
+
+  return (
+    <div className="space-y-6">
+      {loading && <Skeleton />}
+
+      {!loading && error && (
+        <div
+          role="alert"
+          className="rounded-card border border-coral/30 bg-coral/5 p-4 text-sm text-coral-ink"
+        >
+          <p className="font-bold">خطأ في الاتصال بقاعدة البيانات</p>
+          <p className="mt-1 opacity-80">{error}</p>
+          <div className="mt-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="text-coral-ink hover:bg-coral/10"
+            >
+              إعادة المحاولة
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {!loading && !error && subjects.length === 0 && (
+        <div className="rounded-card border border-line bg-paper-soft p-10 text-center">
+          <div
+            aria-hidden="true"
+            className="mx-auto flex h-20 w-20 items-center justify-center rounded-card bg-teal/8 text-teal"
+          >
+            <IconChart className="h-10 w-10" />
+          </div>
+          <p className="mt-4 font-bold text-ink-soft">
+            لا توجد مواد مضافة لمرحلتك حالياً.
+          </p>
+        </div>
+      )}
+
+      {!loading && !error && subjects.length > 0 && (
+        <>
+          {storageFailed && (
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-card border border-gold/30 bg-gold/5 p-3 text-xs text-ink-soft"
+            >
+              <IconWarning
+                aria-hidden="true"
+                className="mt-0.5 h-4 w-4 flex-shrink-0 text-gold-ink"
+              />
+              <p>
+                تعذّر حفظ درجاتك على هذا الجهاز. ستبقى ظاهرة ما دمت في الصفحة
+                فقط.
+              </p>
+            </div>
+          )}
+
+          <TargetSelector target={target} onChange={handleTargetChange} />
+
+          {stats.enteredCount > 0 && !stats.allFilled && (
+            <div>
+              <div className="mb-1.5 flex items-center justify-between text-xs font-bold text-ink-muted">
+                <span id="gpa-progress-label">التقدم</span>
+                <span>
+                  {stats.enteredCount} من {subjects.length} مادة
+                </span>
+              </div>
+              <div
+                role="progressbar"
+                aria-labelledby="gpa-progress-label"
+                aria-valuemin={0}
+                aria-valuemax={subjects.length}
+                aria-valuenow={stats.enteredCount}
+                aria-valuetext={`${stats.enteredCount} من ${subjects.length} مادة`}
+                className="h-2 overflow-hidden rounded-chip bg-ink/8 dark:bg-white/10"
+              >
+                <div
+                  className="h-full rounded-chip bg-gradient-to-l from-teal to-teal-light transition-all duration-500 motion-reduce:transition-none"
+                  style={{ width: `${stats.progress}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            {subjects.map((s, idx) => (
+              <SubjectRow
+                key={s.id}
+                subject={s}
+                index={idx}
+                scores={scores[s.id]}
+                target={target}
+                isOpen={!!expanded[s.id]}
+                onToggle={toggleExpand}
+                onUpdate={updateComponent}
+                onClear={clearSubject}
+              />
+            ))}
+          </div>
+
+          <div
+            aria-live="polite"
+            className="overflow-hidden rounded-card border border-line bg-gradient-to-bl from-teal/5 via-teal/3 to-gold/5 p-6 text-center shadow-sm"
+          >
+            {stats.average !== null ? (
+              <>
+                <p className="text-sm font-bold text-ink-soft">
+                  {stats.allFilled ? 'معدلك النهائي' : 'معدلك الحالي (جزئي)'}
+                </p>
+                <p
+                  dir="ltr"
+                  className="mt-2 bg-gradient-to-l from-teal to-teal-light bg-clip-text font-mono text-5xl font-bold text-transparent"
+                >
+                  {stats.average.toFixed(2)}
+                  <span className="text-2xl">%</span>
+                </p>
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-chip bg-paper px-3 py-1 text-xs font-bold text-ink-soft">
+                    التقدير: {getGradeLabel(stats.average)}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-chip bg-paper px-3 py-1 text-xs font-bold text-ink-soft">
+                    <IconTarget
+                      aria-hidden="true"
+                      className="h-3.5 w-3.5 text-teal"
+                    />
+                    هدفك: {getGradeLabel(target)}
+                  </span>
+                </div>
+                {stats.usedSimple && (
+                  <p className="mt-3 text-[11px] text-ink-muted">
+                    لم تُحدَّد وحدات المواد، فاحتُسب المتوسط البسيط.
+                  </p>
+                )}
+                {stats.skippedUnits > 0 && (
+                  <p className="mt-3 text-[11px] text-ink-muted">
+                    {stats.skippedUnits} مادة بلا وحدات لم تدخل في حساب المعدل.
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-ink-muted">
+                أدخل درجاتك ليظهر معدلك.
+              </p>
+            )}
+          </div>
+
+          <div className="text-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={resetScores}
+              className="text-coral-ink hover:bg-coral/10"
+            >
+              مسح كل الدرجات
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ==================== Content (يقرأ useSearchParams) ====================
+function GpaPageContent() {
+  const { stage } = useStudentStage();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const initialTab = searchParams.get('tab') === 'grades' ? 'grades' : 'gpa';
+  const [tab, setTab] = useState<Tab>(initialTab);
+
+  // مزامنة الرابط مع التبويب
+  const handleTabChange = useCallback(
+    (newTab: Tab) => {
+      setTab(newTab);
+      const params = new URLSearchParams(searchParams.toString());
+      if (newTab === 'grades') {
+        params.set('tab', 'grades');
+      } else {
+        params.delete('tab');
+      }
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [router, pathname, searchParams],
+  );
+
+  return (
+    <main className="mx-auto max-w-2xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10">
+      <BackLink />
+
+      <div className="mt-6 animate-slide-up motion-reduce:animate-none">
+        <span className="stage-badge">{stage}</span>
+        <h1 className="mt-3 font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">
+          المعدل والدرجات
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+          احسب معدلك الموزون حسب وحدات موادك، وتصفّح ملفات الدرجات السابقة.
+        </p>
+      </div>
+
+      {/* Tabs */}
+      <div
+        role="tablist"
+        aria-label="أقسام المعدل والدرجات"
+        className="mt-6 flex gap-1.5 rounded-2xl border border-line bg-white/60 p-1.5 backdrop-blur-sm dark:bg-white/[0.04] animate-slide-up motion-reduce:animate-none"
+        style={{ animationDelay: '80ms' }}
+      >
+        <button
+          role="tab"
+          aria-selected={tab === 'gpa'}
+          onClick={() => handleTabChange('gpa')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 motion-reduce:transition-none ${
+            tab === 'gpa'
+              ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.30)]'
+              : 'text-ink/60 hover:bg-ink/5 hover:text-ink'
+          }`}
+        >
+          <IconChart aria-hidden="true" className="h-4 w-4" />
+          <span>المعدل</span>
+        </button>
+        <button
+          role="tab"
+          aria-selected={tab === 'grades'}
+          onClick={() => handleTabChange('grades')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 motion-reduce:transition-none ${
+            tab === 'grades'
+              ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.30)]'
+              : 'text-ink/60 hover:bg-ink/5 hover:text-ink'
+          }`}
+        >
+          <IconGradesInline />
+          <span>الدرجات</span>
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      <div className="mt-6">
+        <div hidden={tab !== 'gpa'}>
+          <GpaTab />
+        </div>
+        <div hidden={tab !== 'grades'}>
+          <GradesTab />
+        </div>
+      </div>
+    </main>
+  );
+}
+
+// ==================== Page (يغلّف في Suspense) ====================
+export default function GpaPage() {
+  return (
+    <Suspense fallback={<Skeleton />}>
+      <GpaPageContent />
+    </Suspense>
+  );
+}
+```
+
+## app\gpa\_components\GradesTab.tsx
+
+```tsx
+// app/gpa/_components/GradesTab.tsx
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabaseClient';
+import { useStudentStage } from '@/hooks/useStudentStage';
+import { Input } from '@/components/ui/Field';
+import {
+  GRADE_TYPE_COLORS,
+  GRADE_TYPE_EMOJIS,
+  GRADE_TYPE_LABELS,
+  GRADE_TYPES,
+  type GradeType,
+} from '@/lib/constants';
+import { IconInbox, IconSearch, IconWarning } from '@/components/ui/Icons';
+import type { Subject } from '@/lib/types';
+
+// ==================== Types ====================
+interface GradeFile {
+  id: string;
+  subject_id: string;
+  title: string;
+  grade_type: GradeType;
+  professor_name: string | null;
+  year: number | null;
+  notes: string | null;
+  file_path: string;
+  created_at: string;
+  subjects: { name: string } | Array<{ name: string }> | null;
+}
+
+interface SubjectGroup {
+  subjectId: string;
+  subjectName: string;
+  items: GradeFile[];
+}
+
+// ==================== Inline Icon ====================
+function IconGrades() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M9 4h6M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  );
+}
+
+// ==================== Helpers ====================
+function getSubjectName(rel: GradeFile['subjects']): string {
+  if (!rel) return '—';
+  if (Array.isArray(rel)) return rel[0]?.name ?? '—';
+  return rel.name ?? '—';
+}
+
+// ==================== Skeleton ====================
+function Skeleton() {
+  return (
+    <div className="space-y-6" aria-busy="true">
+      <span className="sr-only">جارٍ التحميل…</span>
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="space-y-3">
+          <div className="h-6 w-40 skeleton-shimmer rounded motion-reduce:animate-none" />
+          <div className="grid gap-2 sm:grid-cols-2">
+            {[0, 1, 2, 3].map((j) => (
+              <div
+                key={j}
+                className="h-24 skeleton-shimmer rounded-card motion-reduce:animate-none"
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ==================== Main ====================
+export function GradesTab() {
+  const { stage, ready } = useStudentStage();
+
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [items, setItems] = useState<GradeFile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState<'all' | GradeType>('all');
+
+  // ===== تحميل =====
+  useEffect(() => {
+    if (!stage) return;
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setError('');
+
+      try {
+        const { data: subjectsData } = await supabase
+          .from('subjects')
+          .select('*')
+          .eq('stage', stage)
+          .order('name');
+
+        if (cancelled) return;
+
+        const subjectList = (subjectsData ?? []) as Subject[];
+        setSubjects(subjectList);
+
+        if (subjectList.length === 0) {
+          setItems([]);
+          setLoading(false);
+          return;
+        }
+
+        const subjectIds = subjectList.map((s) => s.id);
+
+        const { data: filesData, error: filesErr } = await supabase
+          .from('grade_files')
+          .select('*, subjects(name)')
+          .in('subject_id', subjectIds)
+          .order('created_at', { ascending: false });
+
+        if (cancelled) return;
+
+        if (filesErr) {
+          setError(filesErr.message);
+          setItems([]);
+        } else {
+          setItems((filesData ?? []) as GradeFile[]);
+        }
+      } catch (e: unknown) {
+        if (cancelled) return;
+        setError(e instanceof Error ? e.message : 'خطأ غير معروف');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [stage]);
+
+  // ===== الفلترة والتجميع =====
+  const groups = useMemo<SubjectGroup[]>(() => {
+    const term = search.trim().toLowerCase();
+
+    const filteredItems = items
+      .filter((i) => filterType === 'all' || i.grade_type === filterType)
+      .filter((i) => {
+        if (!term) return true;
+        const haystack = [
+          i.title,
+          i.professor_name ?? '',
+          getSubjectName(i.subjects),
+          i.notes ?? '',
+        ]
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(term);
+      });
+
+    const map = new Map<string, SubjectGroup>();
+    for (const s of subjects) {
+      map.set(s.id, {
+        subjectId: s.id,
+        subjectName: s.name,
+        items: [],
+      });
+    }
+    for (const item of filteredItems) {
+      const group = map.get(item.subject_id);
+      if (group) group.items.push(item);
+    }
+
+    return Array.from(map.values()).filter((g) => g.items.length > 0);
+  }, [items, subjects, search, filterType]);
+
+  // ===== حالات =====
+  if (!ready) {
+    return <Skeleton />;
+  }
+
+  if (loading) {
+    return <Skeleton />;
+  }
+
+  if (error) {
+    return (
+      <div
+        role="alert"
+        className="flex items-start gap-3 rounded-card border border-coral/30 bg-coral/5 p-4"
+      >
+        <IconWarning className="mt-0.5 h-5 w-5 flex-shrink-0 text-coral-ink" />
+        <div>
+          <p className="text-sm font-bold text-coral-ink">خطأ</p>
+          <p className="mt-1 break-anywhere text-xs text-ink-soft">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (subjects.length === 0) {
+    return (
+      <div className="rounded-card border border-line bg-paper-soft p-12 text-center">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-card bg-teal/8 text-teal">
+          <IconInbox className="h-8 w-8" />
+        </div>
+        <p className="mt-4 font-bold text-ink-soft">
+          لا توجد مواد مضافة لمرحلتك.
+        </p>
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="rounded-card border border-line bg-paper-soft p-12 text-center">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-card bg-teal/8 text-teal">
+          <IconInbox className="h-8 w-8" />
+        </div>
+        <p className="mt-4 font-bold text-ink-soft">
+          لا توجد ملفات درجات بعد.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* رأس */}
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="flex items-center gap-2 text-xl font-black text-ink sm:text-2xl">
+            <IconGrades />
+            الدرجات
+          </h2>
+          <p className="mt-1 text-xs leading-relaxed text-ink-muted">
+            أرشيف ملفات الدرجات — كوزات، امتحانات يومية، فصلية، وفاينل.
+          </p>
+        </div>
+        {stage && (
+          <span className="stage-badge hidden sm:inline-flex">{stage}</span>
+        )}
+      </div>
+
+      {/* الفلاتر */}
+      <div className="flex flex-wrap gap-2">
+        <div className="relative min-w-[180px] flex-1">
+          <IconSearch className="pointer-events-none absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
+          <Input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="ابحث..."
+            className="pe-10"
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        <button
+          type="button"
+          onClick={() => setFilterType('all')}
+          className={`rounded-chip px-3 py-1.5 text-xs font-bold transition-all ${
+            filterType === 'all'
+              ? 'bg-teal text-on-teal'
+              : 'bg-ink/5 text-ink-soft hover:bg-ink/10 dark:bg-white/5'
+          }`}
+        >
+          الكل ({items.length})
+        </button>
+        {GRADE_TYPES.map((t) => {
+          const count = items.filter((i) => i.grade_type === t).length;
+          if (count === 0) return null;
+          return (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setFilterType(filterType === t ? 'all' : t)}
+              className={`rounded-chip px-3 py-1.5 text-xs font-bold transition-all ${
+                filterType === t
+                  ? 'bg-teal text-on-teal'
+                  : 'bg-ink/5 text-ink-soft hover:bg-ink/10 dark:bg-white/5'
+              }`}
+            >
+              {GRADE_TYPE_EMOJIS[t]} {GRADE_TYPE_LABELS[t]} ({count})
+            </button>
+          );
+        })}
+      </div>
+
+      {/* القائمة */}
+      {groups.length === 0 ? (
+        <div className="rounded-card border border-line bg-paper-soft p-8 text-center">
+          <p className="font-bold text-ink-soft">لا نتائج مطابقة</p>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {groups.map((group) => (
+            <section key={group.subjectId}>
+              <h3 className="mb-3 flex items-baseline gap-2 border-b border-line pb-2 font-display text-lg font-bold text-ink">
+                {group.subjectName}
+                <span className="font-mono text-xs font-normal text-ink-muted">
+                  {group.items.length}
+                </span>
+              </h3>
+
+              <ul className="grid gap-2 sm:grid-cols-2">
+                {group.items.map((item) => {
+                  const typeStyle = GRADE_TYPE_COLORS[item.grade_type];
+                  return (
+                    <li key={item.id}>
+                      <a
+                        href={item.file_path}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group flex h-full items-start gap-3 rounded-card border border-line bg-paper-soft p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-teal/40 hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-field text-lg ${typeStyle}`}
+                        >
+                          {GRADE_TYPE_EMOJIS[item.grade_type]}
+                        </span>
+
+                        <span className="min-w-0 flex-1">
+                          <span className="flex flex-wrap items-center gap-1.5">
+                            <span className="break-anywhere text-sm font-bold text-ink group-hover:text-teal">
+                              {item.title}
+                            </span>
+                            {item.year != null && (
+                              <span className="rounded-md bg-ink/5 px-1.5 py-0.5 font-mono text-[10px] font-bold text-ink/50 dark:bg-white/10">
+                                {item.year}
+                              </span>
+                            )}
+                          </span>
+                          <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-muted">
+                            <span className="font-bold">
+                              {GRADE_TYPE_LABELS[item.grade_type]}
+                            </span>
+                            {item.professor_name && (
+                              <>
+                                <span>·</span>
+                                <span className="truncate">
+                                  د. {item.professor_name}
+                                </span>
+                              </>
+                            )}
+                          </span>
+                          {item.notes && (
+                            <span className="mt-1 line-clamp-2 block text-xs text-ink-soft">
+                              {item.notes}
+                            </span>
+                          )}
+                        </span>
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+## app\grades\page.tsx
+
+```tsx
+// app/grades/page.tsx
+import { redirect } from 'next/navigation';
+
+export default function GradesRedirectPage() {
+  redirect('/gpa?tab=grades');
+}
+```
+
+## app\group-swap\page.tsx
+
+```tsx
+// app/group-swap/page.tsx
+'use client';
+
+import Link from 'next/link';
+import { useStudentStage } from '@/hooks/useStudentStage';
+
+// ==================== Icons ====================
+function IconArrowLeft() {
+  return (
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2.5}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M11 17l-5-5m0 0l5-5m-5 5h12"
+      />
+    </svg>
+  );
+}
+
+function IconClock() {
+  return (
+    <svg
+      className="h-10 w-10"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.5}
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2" />
+    </svg>
+  );
+}
+
+// ==================== Page ====================
+export default function GroupSwapPage() {
+  const { stage, ready } = useStudentStage();
+
+  if (!ready) {
+    return (
+      <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
+        <div className="h-64 skeleton-shimmer rounded-card" />
+      </main>
+    );
+  }
+
+  return (
+    <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
+      <Link
+        href="/"
+        className="group inline-flex items-center gap-1.5 text-sm font-semibold text-teal/80 transition-colors hover:text-teal"
+      >
+        <span className="transition-transform duration-200 group-hover:translate-x-1">
+          <IconArrowLeft />
+        </span>
+        رجوع إلى لوحة الأقسام
+      </Link>
+
+      <div className="mt-8 ink-reveal">
+        <div className="card-editorial overflow-hidden">
+          {/* Banner */}
+          <div className="border-b border-line bg-teal px-6 py-8 text-center">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-chip border-2 border-gold/40 bg-teal-hover text-gold">
+              <IconClock />
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="p-6 text-center sm:p-8">
+            <p className="kicker justify-center">قريباً</p>
+            <h1 className="mt-2 font-display text-2xl font-bold text-ink sm:text-3xl">
+              تبديل الكروبات
+            </h1>
+
+            <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-ink-soft sm:text-base">
+              هذه الميزة ستتيح للطلاب تبديل كروبات العملي بسهولة تامة.
+              نعمل حالياً على تجهيزها، وستكون متاحة قريباً لكل المراحل.
+            </p>
+
+            <div className="mx-auto mt-6 inline-flex items-center gap-2 rounded-chip border border-gold/40 bg-gold-soft px-4 py-2 text-xs font-semibold text-gold-ink">
+              <span aria-hidden="true">◆</span>
+              المرحلة الحالية: {stage}
+            </div>
+
+            <div className="mt-8 flex flex-wrap justify-center gap-2">
+              <Link
+                href="/lawazem"
+                className="inline-flex items-center gap-1.5 rounded-field bg-teal px-5 py-2.5 text-sm font-semibold text-on-teal transition-colors hover:bg-teal-hover active:scale-[0.98]"
+              >
+                تصفح الملازم
+              </Link>
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1.5 rounded-field border border-line-strong bg-paper-soft px-5 py-2.5 text-sm font-semibold text-ink-soft transition-colors hover:border-gold/40 hover:bg-paper-deep hover:text-ink active:scale-[0.98]"
+              >
+                العودة للرئيسية
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Note */}
+        <p className="mt-6 text-center text-xs leading-relaxed text-ink-muted">
+          سنعلن عن إطلاق الميزة عبر قنوات المنصة الرسمية.
+        </p>
+      </div>
+    </main>
+  );
+}
+```
+
+## app\histology\page.tsx
+
+```tsx
+// app/histology/page.tsx
+'use client';
+
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import { HISTOLOGY_CATEGORIES } from '@/lib/histology-seed';
+import {
+  IconArrowLeft,
+  IconWarning,
+} from '@/components/ui/Icons';
+
+// ==================== Types ====================
+interface Category {
+  id: string;
+  slug: string;
+  name_ar: string;
+  name_en: string;
+  description: string | null;
+  icon_emoji: string | null;
+  display_order: number;
+}
+
+interface CategoryWithCount extends Category {
+  slideCount: number;
+}
+
+// ==================== Helpers ====================
+function slugToSeed(slug: string) {
+  return HISTOLOGY_CATEGORIES.find((c) => c.slug === slug);
+}
+
+// ==================== Skeleton ====================
+function Skeleton() {
+  return (
+    <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <div
+          key={i}
+          className="h-48 skeleton-shimmer rounded-card motion-reduce:animate-none"
+          aria-hidden="true"
+        />
+      ))}
+    </div>
+  );
+}
+
+// ==================== Category Card ====================
+function CategoryCard({ category }: { category: CategoryWithCount }) {
+  return (
+    <Link
+      href={`/histology/${category.slug}`}
+      className="group relative flex flex-col overflow-hidden rounded-card border border-line bg-paper-soft p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-teal/40 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+    >
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 block h-[3px] origin-center scale-x-0 bg-teal transition-transform duration-500 group-hover:scale-x-100 group-focus-visible:scale-x-100 motion-reduce:transition-none"
+      />
+
+      <div className="flex items-start justify-between gap-3">
+        <span
+          aria-hidden="true"
+          className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-card bg-teal-soft text-3xl"
+        >
+          {category.icon_emoji ?? '🔬'}
+        </span>
+        <span className="rounded-chip bg-ink/5 px-2.5 py-1 font-mono text-xs font-bold text-ink-muted">
+          {category.slideCount} شريحة
+        </span>
+      </div>
+
+      <h2 className="mt-4 font-display text-lg font-bold text-ink transition-colors group-hover:text-teal sm:text-xl">
+        {category.name_ar}
+      </h2>
+      <p className="mt-1 font-mono text-xs text-ink-muted">
+        {category.name_en}
+      </p>
+      {category.description && (
+        <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-ink-soft">
+          {category.description}
+        </p>
+      )}
+
+      <div className="mt-auto flex items-center gap-1.5 pt-5 text-sm font-semibold text-teal">
+        <span>استعرض الشرائح</span>
+        <IconArrowLeft
+          aria-hidden="true"
+          className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
+        />
+      </div>
+    </Link>
+  );
+}
+
+// ==================== Page ====================
+export default function HistologyPage() {
+  const [categories, setCategories] = useState<CategoryWithCount[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setError('');
+
+      try {
+        // 1. اجلب الفئات
+        const { data: cats, error: catsErr } = await supabase
+          .from('histology_categories')
+          .select('*')
+          .order('display_order', { ascending: true });
+
+        if (cancelled) return;
+
+        if (catsErr) {
+          // جدول فارغ → استخدم البذرة
+          if (catsErr.code === 'PGRST116' || catsErr.code === '42P01') {
+            setCategories(
+              HISTOLOGY_CATEGORIES.map((c) => ({
+                id: c.slug,
+                slug: c.slug,
+                name_ar: c.name_ar,
+                name_en: c.name_en,
+                description: c.description,
+                icon_emoji: c.icon_emoji,
+                display_order: c.display_order,
+                slideCount: 0,
+              })),
+            );
+            setLoading(false);
+            return;
+          }
+          setError(catsErr.message);
+          setLoading(false);
+          return;
+        }
+
+        // جدول موجود لكن فارغ → استخدم البذرة
+        if (!cats || cats.length === 0) {
+          setCategories(
+            HISTOLOGY_CATEGORIES.map((c) => ({
+              id: c.slug,
+              slug: c.slug,
+              name_ar: c.name_ar,
+              name_en: c.name_en,
+              description: c.description,
+              icon_emoji: c.icon_emoji,
+              display_order: c.display_order,
+              slideCount: 0,
+            })),
+          );
+          setLoading(false);
+          return;
+        }
+
+        // 2. اجلب عدد الشرائح لكل فئة
+        const { data: slides } = await supabase
+          .from('histology_slides')
+          .select('category_id');
+
+        const counts = new Map<string, number>();
+        for (const s of (slides ?? []) as Array<{ category_id: string }>) {
+          counts.set(s.category_id, (counts.get(s.category_id) ?? 0) + 1);
+        }
+
+        setCategories(
+          (cats as Category[]).map((c) => ({
+            ...c,
+            slideCount: counts.get(c.id) ?? 0,
+          })),
+        );
+      } catch (e) {
+        if (cancelled) return;
+        setError(e instanceof Error ? e.message : 'خطأ غير معروف');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <main className="mx-auto max-w-5xl px-4 py-8 pb-24 sm:px-6 sm:py-10 md:pb-10">
+      <Link
+        href="/"
+        className="group inline-flex items-center gap-1.5 rounded-field text-sm font-semibold text-teal transition-colors hover:text-teal-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none"
+      >
+        <span className="transition-transform duration-200 group-hover:-translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0">
+          <IconArrowLeft aria-hidden="true" className="h-4 w-4" />
+        </span>
+        رجوع إلى لوحة الأقسام
+      </Link>
+
+      <header className="mt-6 animate-slide-up motion-reduce:animate-none">
+        <span className="inline-flex items-center gap-1.5 rounded-chip border border-teal/20 bg-teal-tint px-3 py-1 font-mono text-xs text-teal">
+          <span
+            aria-hidden="true"
+            className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal motion-reduce:animate-none"
+          />
+          أطلس نسيجي
+        </span>
+
+        <h1 className="mt-3 flex items-center gap-2.5 font-display text-3xl font-bold leading-tight text-ink sm:text-4xl">
+          <span
+            aria-hidden="true"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-field bg-teal-soft text-teal"
+          >
+            🔬
+          </span>
+          الأنسجة الأساسية
+        </h1>
+
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-soft sm:text-base">
+          استعرض الشرائح النسيجية التفاعلية لكل نوع من الأنسجة الأربعة الأساسية.
+          اضغط على أي صورة للتكبير والتنقل فيها.
+        </p>
+      </header>
+
+      {loading && <Skeleton />}
+
+      {!loading && error && (
+        <div
+          role="alert"
+          className="mt-8 flex items-start gap-3 rounded-card border border-coral/30 bg-coral/5 p-4"
+        >
+          <IconWarning
+            aria-hidden="true"
+            className="mt-0.5 h-5 w-5 flex-shrink-0 text-coral-ink"
+          />
+          <div>
+            <p className="text-sm font-bold text-coral-ink">
+              تعذّر تحميل الأطلس
+            </p>
+            <p className="mt-1 break-anywhere text-xs text-ink-soft">
+              {error}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {!loading && !error && categories.length === 0 && (
+        <div className="mt-8 rounded-card border border-line bg-paper-soft p-12 text-center">
+          <p className="text-3xl">🔬</p>
+          <p className="mt-3 font-bold text-ink-soft">
+            الأطلس قيد الإعداد
+          </p>
+          <p className="mt-1 text-sm text-ink-muted">
+            سنضيف الأنسجة قريباً
+          </p>
+        </div>
+      )}
+
+      {!loading && !error && categories.length > 0 && (
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 animate-slide-up motion-reduce:animate-none">
+          {categories.map((c) => (
+            <CategoryCard key={c.id} category={c} />
+          ))}
+        </div>
+      )}
+
+      {/* ملاحظة سفلية */}
+      <div className="mt-10 rounded-card border border-gold/30 bg-gold-tint/40 p-4 text-xs leading-relaxed text-ink-soft">
+        <p>
+          <strong className="font-bold text-gold-ink">💡 ملاحظة:</strong>{' '}
+          الصور من مصادر أكاديمية مفتوحة (CC0). هذا الأطلس مساعد دراسي — راجع
+          دائماً الشرائح الرسمية في المختبر.
+        </p>
+      </div>
+    </main>
+  );
+}
+```
+
+## app\histology\[slug]\page.tsx
+
+```tsx
+```
+
+## app\lawazem\page.tsx
+
+```tsx
+// app/lawazem/page.tsx
+'use client';
+
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabaseClient';
+import { useStudentStage } from '@/hooks/useStudentStage';
+import { useBookmarks } from '@/hooks/useBookmarks';
+import { useRecentViews } from '@/hooks/useRecentViews';
+import { Input } from '@/components/ui/Field';
+import { ReportModal } from '@/components/ReportModal';
+import { PullToRefresh } from '@/components/PullToRefresh';
+import { postJson } from '@/lib/api-client';
+import {
+  IconArrowRight,
+  IconBook,
+  IconBookmark,
+  IconClose,
+  IconDoc,
+  IconFlag,
+  IconInbox,
+  IconSearch,
+  IconTelegram,
+} from '@/components/ui/Icons';
+import type { LectureNote, Track } from '@/lib/types';
+
+// ==================== Types ====================
+interface LatestNote {
+  title: string;
+  professor: string | null;
+  createdAt: string | null;
+}
+
+interface SubjectMeta {
+  id: string;
+  name: string;
+  units: number | null;
+  noteCount: number;
+  latest: LatestNote | null;
+}
+
+interface DoctorGroup {
+  name: string;
+  notes: LectureNote[];
+}
+
+const NO_DOCTOR = 'غير محدد';
+
+// ==================== Track View (fire-and-forget) ====================
+function trackView(noteId: string) {
+  try {
+    const payload = JSON.stringify({ action: 'increment', note_id: noteId });
+    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+      const blob = new Blob([payload], { type: 'application/json' });
+      navigator.sendBeacon('/api/views', blob);
+    } else {
+      fetch('/api/views', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        keepalive: true,
+      }).catch(() => {});
+    }
+  } catch {
+    /* تجاهل */
+  }
+}
+
+// ==================== Helpers ====================
+const rtf =
+  typeof Intl !== 'undefined' && 'RelativeTimeFormat' in Intl
+    ? new Intl.RelativeTimeFormat('ar-u-nu-latn', { numeric: 'auto' })
+    : null;
+
+function timeAgo(iso: string | null | undefined): string {
+  if (!iso || !rtf) return '';
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return '';
+  const days = Math.floor((Date.now() - t) / 86_400_000);
+  if (days < 1) return 'اليوم';
+  if (days < 7) return rtf.format(-days, 'day');
+  if (days < 30) return rtf.format(-Math.floor(days / 7), 'week');
+  if (days < 365) return rtf.format(-Math.floor(days / 30), 'month');
+  return rtf.format(-Math.floor(days / 365), 'year');
+}
+
+/** ألوان أيقونات المواضيع (مثل Topics في تيليجرام) */
+const TOPIC_COLORS: readonly string[] = [
+  'bg-teal/15 text-teal',
+  'bg-gold/15 text-gold-ink',
+  'bg-success/15 text-success-ink',
+  'bg-navy/15 text-navy-ink',
+  'bg-warning/20 text-warning-ink',
+];
+
+function topicColor(id: string): string {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return TOPIC_COLORS[h % TOPIC_COLORS.length];
+}
+
+function topicInitial(name: string): string {
+  const clean = name.trim().replace(/^ال/, '');
+  return (clean || name.trim()).charAt(0) || '؟';
+}
+
+function countLabel(n: number): string {
+  return `${n} ${n === 1 ? 'ملزمة' : 'ملازم'}`;
+}
+
+function noteMatches(
+  note: LectureNote,
+  term: string,
+  tag: string | null,
+): boolean {
+  const noteTags = Array.isArray(note.tags) ? note.tags : [];
+  if (tag && !noteTags.includes(tag)) return false;
+  if (term) {
+    const lower = term.toLowerCase();
+    const inTitle = note.title.toLowerCase().includes(lower);
+    const inDoctor =
+      note.professor_name?.toLowerCase().includes(lower) ?? false;
+    const inTrack = note.track?.toLowerCase().includes(lower) ?? false;
+    const inTags = noteTags.some((t) => t.toLowerCase().includes(lower));
+    if (!inTitle && !inDoctor && !inTrack && !inTags) return false;
+  }
+  return true;
+}
+
+function sortNotes(notes: LectureNote[]): LectureNote[] {
+  return [...notes].sort((a, b) => {
+    const aNum = a.lecture_number ?? Number.POSITIVE_INFINITY;
+    const bNum = b.lecture_number ?? Number.POSITIVE_INFINITY;
+    if (aNum !== bNum) return aNum - bNum;
+    return a.title.localeCompare(b.title, 'ar');
+  });
+}
+
+function groupByDoctor(notes: LectureNote[]): DoctorGroup[] {
+  const groups: Record<string, LectureNote[]> = {};
+  for (const note of notes) {
+    const doctor = note.professor_name?.trim() || NO_DOCTOR;
+    (groups[doctor] ??= []).push(note);
+  }
+  return Object.entries(groups)
+    .map(([name, list]) => ({ name, notes: sortNotes(list) }))
+    .sort((a, b) => {
+      if (a.name === NO_DOCTOR) return 1;
+      if (b.name === NO_DOCTOR) return -1;
+      return a.name.localeCompare(b.name, 'ar');
+    });
+}
+
+function doctorLabel(name: string): string {
+  return name === NO_DOCTOR ? 'بدون دكتور' : `د. ${name}`;
+}
+
+// ==================== Skeletons ====================
+function TopicsSkeleton() {
+  return (
+    <div aria-hidden="true">
+      {[0, 1, 2, 3, 4].map((i) => (
+        <div key={i} className="flex items-center gap-3 px-4 py-3">
+          <div className="h-12 w-12 flex-shrink-0 skeleton-shimmer rounded-full" />
+          <div className="flex-1 space-y-2">
+            <div className="h-4 w-1/2 skeleton-shimmer rounded" />
+            <div className="h-3 w-4/5 skeleton-shimmer rounded" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function NotesSkeleton() {
+  return (
+    <div className="space-y-3 p-3 sm:p-4" aria-hidden="true">
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          className="flex gap-3 rounded-2xl rounded-ss-md border border-line bg-paper-soft p-3"
+        >
+          <div className="h-11 w-11 flex-shrink-0 skeleton-shimmer rounded-full" />
+          <div className="flex-1 space-y-2 pt-1">
+            <div className="h-4 w-3/4 skeleton-shimmer rounded" />
+            <div className="h-3 w-1/3 skeleton-shimmer rounded" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ==================== Topic Avatar ====================
+function TopicAvatar({
+  subject,
+  className = 'h-12 w-12 text-lg',
+}: {
+  subject: SubjectMeta;
+  className?: string;
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`flex flex-shrink-0 items-center justify-center rounded-full font-display font-bold ${topicColor(
+        subject.id,
+      )} ${className}`}
+    >
+      {topicInitial(subject.name)}
+    </span>
+  );
+}
+
+// ==================== Topic Row (قائمة المواضيع) ====================
+function TopicRow({
+  subject,
+  active,
+  count,
+  isResultCount,
+  onOpen,
+}: {
+  subject: SubjectMeta;
+  active: boolean;
+  count: number;
+  isResultCount: boolean;
+  onOpen: () => void;
+}) {
+  const { latest } = subject;
+  const when = timeAgo(latest?.createdAt);
+
+  let preview = 'لا توجد ملازم بعد';
+  if (isResultCount) {
+    preview = `${count} ${count === 1 ? 'نتيجة مطابقة' : 'نتائج مطابقة'}`;
+  } else if (latest) {
+    const prof = latest.professor?.trim();
+    preview = `${prof ? `د. ${prof}: ` : ''}${latest.title}`;
+  }
+
+  return (
+    <li className="[&:last-child_.row-line]:border-b-0">
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-current={active ? 'true' : undefined}
+        className={`flex w-full items-center gap-3 ps-4 text-start transition-colors duration-150 hover:bg-ink/[0.04] active:bg-ink/[0.07] focus-visible:outline-offset-[-2px] ${
+          active ? 'bg-teal/10 hover:bg-teal/10' : ''
+        }`}
+      >
+        <TopicAvatar subject={subject} />
+
+        <div className="row-line min-w-0 flex-1 border-b border-line-soft py-3 pe-4">
+          <div className="flex items-baseline justify-between gap-2">
+            <h2 className="truncate font-display text-[15px] font-bold text-ink">
+              {subject.name}
+            </h2>
+            {when && !isResultCount && (
+              <span className="flex-shrink-0 text-[11px] text-ink-muted">
+                {when}
+              </span>
+            )}
+          </div>
+          <div className="mt-0.5 flex items-center justify-between gap-2">
+            <p className="truncate text-[13px] text-ink-muted">{preview}</p>
+            {count > 0 && (
+              <span
+                className={`num flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${
+                  active ? 'bg-teal text-on-teal' : 'bg-teal/15 text-teal'
+                }`}
+              >
+                {count}
+              </span>
+            )}
+          </div>
+        </div>
+      </button>
+    </li>
+  );
+}
+
+// ==================== Note Bubble (الملزمة كرسالة) ====================
+function NoteBubble({
+  note,
+  subjectName,
+  reportCount,
+  onReport,
+}: {
+  note: LectureNote;
+  subjectName: string;
+  reportCount: number;
+  onReport: () => void;
+}) {
+  const { isBookmarked, toggle } = useBookmarks();
+  const { addView } = useRecentViews();
+  const bookmarked = isBookmarked(note.id);
+
+  const hasLecture = note.lecture_number != null;
+  const isTelegram = note.file_path.includes('t.me');
+  const noteTags = Array.isArray(note.tags) ? note.tags : [];
+
+  function handleOpen() {
+    addView({
+      id: note.id,
+      title: note.title,
+      subject_name: subjectName,
+      file_path: note.file_path,
+    });
+    trackView(note.id);
+  }
+
+  return (
+    <li className="defer-item">
+      <div className="max-w-full rounded-2xl rounded-ss-md border border-line bg-paper-soft p-2.5 shadow-xs md:max-w-xl">
+        <a
+          href={note.file_path}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={handleOpen}
+          className="group flex items-start gap-3 rounded-xl p-1 transition-colors hover:bg-ink/[0.03]"
+        >
+          <span
+            className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full transition-colors ${
+              hasLecture
+                ? 'num bg-teal text-base font-bold text-on-teal'
+                : 'bg-teal/15 text-teal'
+            }`}
+          >
+            {hasLecture ? note.lecture_number : <IconDoc className="h-5 w-5" />}
+          </span>
+
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-bold leading-snug text-ink group-hover:text-teal">
+              {note.title}
+            </span>
+            <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-muted">
+              {note.track && <TrackText track={note.track} />}
+              {note.year != null && <span className="num">{note.year}</span>}
+              {isTelegram && (
+                <span className="inline-flex items-center gap-1">
+                  <IconTelegram className="h-3 w-3" />
+                  تيليجرام
+                </span>
+              )}
+            </span>
+          </span>
+        </a>
+
+        {noteTags.length > 0 && (
+          <p className="mt-1.5 flex flex-wrap gap-x-2.5 gap-y-0.5 px-1 text-xs font-medium text-teal">
+            {noteTags.map((tag, i) => (
+              <span key={`${tag}-${i}`}>#{tag}</span>
+            ))}
+          </p>
+        )}
+
+        <div className="mt-1.5 flex items-center gap-1 border-t border-line-soft pt-1">
+          {reportCount >= 3 && (
+            <span
+              className="inline-flex items-center gap-1 rounded-chip bg-coral/15 px-2 py-0.5 text-[11px] font-bold text-coral-ink"
+              title={`${reportCount} بلاغ`}
+            >
+              <IconFlag className="h-3 w-3" />
+              <span className="num">{reportCount}</span>
+            </span>
+          )}
+
+          <div className="ms-auto flex items-center">
+            <button
+              type="button"
+              onClick={() => toggle(note.id)}
+              aria-label={bookmarked ? 'إزالة من المفضلة' : 'حفظ في المفضلة'}
+              aria-pressed={bookmarked}
+              className={`flex h-10 w-10 items-center justify-center rounded-full active:scale-95 ${
+                bookmarked
+                  ? 'text-gold-ink'
+                  : 'text-ink-muted hover:bg-ink/5 hover:text-ink'
+              }`}
+            >
+              <IconBookmark filled={bookmarked} className="h-[18px] w-[18px]" />
+            </button>
+            <button
+              type="button"
+              onClick={onReport}
+              aria-label="بلّغ عن مشكلة"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-ink-muted hover:bg-ink/5 hover:text-gold-ink active:scale-95"
+            >
+              <IconFlag className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function TrackText({ track }: { track: Track }) {
+  return (
+    <span
+      className={`font-bold ${track === 'نظري' ? 'text-teal' : 'text-gold-ink'}`}
+    >
+      {track}
+    </span>
+  );
+}
+
+// ==================== Topic Pane (محتوى الموضوع) ====================
+function TopicPane({
+  subject,
+  notes,
+  isLoaded,
+  isLoading,
+  isFiltering,
+  filterLabel,
+  onClearFilter,
+  reportCounts,
+  onReport,
+  onBack,
+}: {
+  subject: SubjectMeta;
+  notes: LectureNote[];
+  isLoaded: boolean;
+  isLoading: boolean;
+  isFiltering: boolean;
+  filterLabel: string;
+  onClearFilter: () => void;
+  reportCounts: Record<string, number>;
+  onReport: (note: LectureNote) => void;
+  onBack: () => void;
+}) {
+  const [doctor, setDoctor] = useState<string | null>(null);
+
+  const groups = useMemo(() => groupByDoctor(notes), [notes]);
+  const activeDoctor =
+    doctor && groups.some((g) => g.name === doctor) ? doctor : null;
+  const visibleGroups = activeDoctor
+    ? groups.filter((g) => g.name === activeDoctor)
+    : groups;
+
+  const subtitle = isLoaded
+    ? notes.length === 0
+      ? 'لا توجد ملفات'
+      : `${countLabel(notes.length)} · ${groups.length} ${
+          groups.length === 1 ? 'دكتور' : 'دكاترة'
+        }`
+    : countLabel(subject.noteCount);
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col md:overflow-y-auto md:bg-paper">
+      {/* ===== رأس الموضوع ===== */}
+      <header className="nav-glass sticky top-[var(--nav-h)] z-[var(--z-sticky)] md:top-0">
+        <div className="flex items-center gap-2 px-2 py-2 sm:px-3">
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="رجوع إلى المواضيع"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-ink-soft hover:bg-ink/5 md:hidden"
+          >
+            <IconArrowRight className="h-5 w-5" />
+          </button>
+
+          <TopicAvatar subject={subject} className="h-10 w-10 text-base" />
+
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate font-display text-base font-bold text-ink">
+              {subject.name}
+            </h2>
+            <p className="truncate text-xs text-ink-muted">{subtitle}</p>
+          </div>
+        </div>
+
+        {(groups.length > 1 || isFiltering) && (
+          <div className="flex items-center gap-2 overflow-x-auto px-3 pb-2 scrollbar-none">
+            {isFiltering && (
+              <button
+                type="button"
+                onClick={onClearFilter}
+                data-compact
+                className="inline-flex min-h-8 flex-shrink-0 items-center gap-1 rounded-chip border border-teal/40 bg-teal/10 px-3 py-1.5 text-xs font-bold text-teal active:scale-95"
+              >
+                {filterLabel}
+                <IconClose className="h-3 w-3" />
+              </button>
+            )}
+            {groups.length > 1 && (
+              <>
+                <Chip
+                  active={activeDoctor === null}
+                  onClick={() => setDoctor(null)}
+                >
+                  الكل
+                </Chip>
+                {groups.map((g) => (
+                  <Chip
+                    key={g.name}
+                    active={activeDoctor === g.name}
+                    onClick={() =>
+                      setDoctor(activeDoctor === g.name ? null : g.name)
+                    }
+                  >
+                    {doctorLabel(g.name)}
+                    <span className="num ms-1 opacity-70">{g.notes.length}</span>
+                  </Chip>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+      </header>
+
+      {/* ===== الرسائل (الملازم) ===== */}
+      {!isLoaded && isLoading && <NotesSkeleton />}
+
+      {isLoaded && notes.length === 0 && (
+        <div className="px-6 py-16 text-center">
+          <IconInbox className="mx-auto h-10 w-10 text-ink-muted/40" />
+          <p className="mt-3 text-sm font-bold text-ink-soft">
+            {isFiltering ? 'لا توجد نتائج في هذا الموضوع' : 'لا توجد ملفات حالياً'}
+          </p>
+        </div>
+      )}
+
+      {isLoaded && notes.length > 0 && (
+        <div className="space-y-5 px-3 py-4 pb-24 sm:px-4 md:pb-6">
+          {visibleGroups.map((g) => (
+            <section key={g.name} aria-label={doctorLabel(g.name)}>
+              <div className="mb-3 flex justify-center">
+                <span className="rounded-chip bg-ink/[0.07] px-3 py-1 text-xs font-bold text-ink-soft dark:bg-white/10">
+                  {doctorLabel(g.name)}
+                </span>
+              </div>
+              <ul className="space-y-2">
+                {g.notes.map((note) => (
+                  <NoteBubble
+                    key={note.id}
+                    note={note}
+                    subjectName={subject.name}
+                    reportCount={reportCounts[note.id] ?? 0}
+                    onReport={() => onReport(note)}
+                  />
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Chip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      data-compact
+      className={`inline-flex min-h-8 flex-shrink-0 items-center whitespace-nowrap rounded-chip px-3 py-1.5 text-xs font-bold active:scale-95 ${
+        active
+          ? 'bg-teal text-on-teal'
+          : 'bg-ink/5 text-ink-soft hover:bg-ink/10'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ==================== Page ====================
+export default function LawazemPage() {
+  const { stage, ready } = useStudentStage();
+
+  const [subjects, setSubjects] = useState<SubjectMeta[]>([]);
+  const [allTags, setAllTags] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const [notesBySubject, setNotesBySubject] = useState<
+    Map<string, LectureNote[]>
+  >(new Map());
+  const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [reportCounts, setReportCounts] = useState<Record<string, number>>({});
+  const [reportingNote, setReportingNote] = useState<LectureNote | null>(null);
+
+  const [eagerLoading, setEagerLoading] = useState(false);
+  const [eagerLoaded, setEagerLoaded] = useState(false);
+
+  // Pull-to-refresh state
+  const [reloadKey, setReloadKey] = useState(0);
+  const [silentReload, setSilentReload] = useState(false);
+  const refreshResolverRef = useRef<(() => void) | null>(null);
+
+  const notesRef = useRef<Map<string, LectureNote[]>>(new Map());
+  const loadingRef = useRef<Set<string>>(new Set());
+
+  const pendingReportIdsRef = useRef<Set<string>>(new Set());
+  const reportTimerRef = useRef<number | null>(null);
+  const autoOpenedRef = useRef(false);
+  // رقم دورة التحميل: يُبطل نتائج الطلبات القديمة عند إعادة التحميل
+  const loadGenRef = useRef(0);
+  const eagerStartedRef = useRef(false);
+
+  const deferredSearch = useDeferredValue(searchTerm);
+  const term = deferredSearch.trim().toLowerCase();
+  const isFiltering = term !== '' || selectedTag !== null;
+
+  // ==================== Initial load ====================
+  useEffect(() => {
+    if (!stage) return;
+    let cancelled = false;
+    const isSilent = silentReload;
+
+    function settleRefresh() {
+      if (refreshResolverRef.current) {
+        const resolve = refreshResolverRef.current;
+        refreshResolverRef.current = null;
+        resolve();
+      }
+    }
+
+    async function loadInitial() {
+      if (!isSilent) setLoading(true);
+      setError('');
+
+      loadGenRef.current += 1;
+      eagerStartedRef.current = false;
+      notesRef.current = new Map();
+      loadingRef.current = new Set();
+      setNotesBySubject(new Map());
+      setLoadingIds(new Set());
+      setEagerLoaded(false);
+      setEagerLoading(false);
+      setReportCounts({});
+
+      const { data: subjectsData, error: subjectsErr } = await supabase
+        .from('subjects')
+        .select('id, name, units')
+        .eq('stage', stage)
+        .order('name');
+
+      if (cancelled) return;
+
+      if (subjectsErr) {
+        setError(subjectsErr.message);
+        setSubjects([]);
+        setAllTags([]);
+        setLoading(false);
+        setSilentReload(false);
+        settleRefresh();
+        return;
+      }
+
+      const rawSubjects = (subjectsData ?? []) as Array<{
+        id: string;
+        name: string;
+        units: number | null;
+      }>;
+
+      if (rawSubjects.length === 0) {
+        setSubjects([]);
+        setAllTags([]);
+        setLoading(false);
+        setSilentReload(false);
+        settleRefresh();
+        return;
+      }
+
+      const ids = rawSubjects.map((s) => s.id);
+
+      // نجلب بيانات خفيفة تكفي للعدّاد ومعاينة "آخر ملزمة"
+      const { data: metaData } = await supabase
+        .from('lecture_notes')
+        .select('subject_id, tags, title, professor_name, created_at')
+        .in('subject_id', ids)
+        .limit(2000);
+
+      if (cancelled) return;
+
+      const countMap = new Map<string, number>();
+      const latestMap = new Map<string, LatestNote>();
+      const tagSet = new Set<string>();
+
+      for (const row of (metaData ?? []) as Array<{
+        subject_id: string;
+        tags: string[] | null;
+        title: string;
+        professor_name: string | null;
+        created_at: string | null;
+      }>) {
+        countMap.set(row.subject_id, (countMap.get(row.subject_id) ?? 0) + 1);
+
+        const cur = latestMap.get(row.subject_id);
+        if (!cur || (row.created_at ?? '') >= (cur.createdAt ?? '')) {
+          latestMap.set(row.subject_id, {
+            title: row.title,
+            professor: row.professor_name,
+            createdAt: row.created_at,
+          });
+        }
+
+        if (Array.isArray(row.tags)) {
+          for (const t of row.tags) tagSet.add(t);
+        }
+      }
+
+      setSubjects(
+        rawSubjects.map((s) => ({
+          id: s.id,
+          name: s.name,
+          units: s.units,
+          noteCount: countMap.get(s.id) ?? 0,
+          latest: latestMap.get(s.id) ?? null,
+        })),
+      );
+      setAllTags(Array.from(tagSet).sort((a, b) => a.localeCompare(b, 'ar')));
+      setLoading(false);
+      setSilentReload(false);
+      settleRefresh();
+    }
+
+    void loadInitial();
+
+    return () => {
+      cancelled = true;
+      settleRefresh();
+    };
+  }, [stage, reloadKey, silentReload]);
+
+  const handleRefresh = useCallback((): Promise<void> => {
+    return new Promise<void>((resolve) => {
+      refreshResolverRef.current = resolve;
+      setSilentReload(true);
+      setReloadKey((k) => k + 1);
+    });
+  }, []);
+
+  // ==================== Reports batching ====================
+  const scheduleReportsFetch = useCallback(() => {
+    if (reportTimerRef.current !== null) {
+      window.clearTimeout(reportTimerRef.current);
+    }
+    reportTimerRef.current = window.setTimeout(() => {
+      reportTimerRef.current = null;
+      const ids = Array.from(pendingReportIdsRef.current);
+      pendingReportIdsRef.current.clear();
+      if (ids.length === 0) return;
+
+      void postJson<{ counts: Record<string, number> }>('/api/reports', {
+        action: 'counts',
+        lecture_note_ids: ids,
+      })
+        .then((res) => {
+          if (res.counts) {
+            setReportCounts((prev) => ({ ...prev, ...res.counts }));
+          }
+        })
+        .catch(() => {
+          /* silent */
+        });
+    }, 300);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (reportTimerRef.current !== null) {
+        window.clearTimeout(reportTimerRef.current);
+      }
+    };
+  }, []);
+
+  // ==================== Load one subject's notes ====================
+  const loadSubjectNotes = useCallback(
+    async (subjectId: string) => {
+      if (notesRef.current.has(subjectId)) return;
+      if (loadingRef.current.has(subjectId)) return;
+
+      const gen = loadGenRef.current;
+      loadingRef.current.add(subjectId);
+      setLoadingIds(new Set(loadingRef.current));
+
+      try {
+        const { data, error: fetchErr } = await supabase
+          .from('lecture_notes')
+          .select('*')
+          .eq('subject_id', subjectId);
+
+        // دورة تحميل جديدة بدأت أثناء الانتظار — تجاهل هذه النتيجة
+        if (gen !== loadGenRef.current) return;
+
+        if (fetchErr) {
+          console.error('load notes error:', fetchErr.message);
+          return;
+        }
+
+        const notes = (data ?? []) as LectureNote[];
+        notesRef.current.set(subjectId, notes);
+        setNotesBySubject(new Map(notesRef.current));
+
+        for (const n of notes) pendingReportIdsRef.current.add(n.id);
+        if (notes.length > 0) scheduleReportsFetch();
+      } finally {
+        if (gen === loadGenRef.current) {
+          loadingRef.current.delete(subjectId);
+          setLoadingIds(new Set(loadingRef.current));
+        }
+      }
+    },
+    [scheduleReportsFetch],
+  );
+
+  // تحميل ملازم الموضوع المفتوح
+  useEffect(() => {
+    if (activeId) void loadSubjectNotes(activeId);
+  }, [activeId, loadSubjectNotes]);
+
+  // ==================== Eager load (search / tag) ====================
+  useEffect(() => {
+    if (!isFiltering) return;
+    if (eagerLoaded || eagerStartedRef.current) return;
+    if (subjects.length === 0) return;
+
+    eagerStartedRef.current = true;
+    const gen = loadGenRef.current;
+    setEagerLoading(true);
+
+    void Promise.all(subjects.map((s) => loadSubjectNotes(s.id))).finally(() => {
+      if (gen !== loadGenRef.current) return;
+      setEagerLoading(false);
+      setEagerLoaded(true);
+    });
+  }, [isFiltering, subjects, eagerLoaded, loadSubjectNotes]);
+
+  // ==================== Navigation (موضوع مفتوح + زر الرجوع) ====================
+  const openTopic = useCallback((id: string) => {
+    setActiveId(id);
+    try {
+      const st = window.history.state as { lawazimTopic?: string } | null;
+      if (st?.lawazimTopic) {
+        window.history.replaceState({ lawazimTopic: id }, '');
+      } else {
+        window.history.pushState({ lawazimTopic: id }, '');
+      }
+      window.scrollTo({ top: 0 });
+    } catch {
+      /* تجاهل */
+    }
+  }, []);
+
+  const closeTopic = useCallback(() => {
+    try {
+      const st = window.history.state as { lawazimTopic?: string } | null;
+      if (st?.lawazimTopic) {
+        window.history.back();
+        return;
+      }
+    } catch {
+      /* تجاهل */
+    }
+    setActiveId(null);
+  }, []);
+
+  // استعادة الموضوع المفتوح بعد إعادة تحميل الصفحة (history.state يبقى محفوظاً)
+  useEffect(() => {
+    try {
+      const id = (window.history.state as { lawazimTopic?: unknown } | null)
+        ?.lawazimTopic;
+      if (typeof id === 'string') setActiveId(id);
+    } catch {
+      /* تجاهل */
+    }
+  }, []);
+
+  useEffect(() => {
+    function onPop(e: PopStateEvent) {
+      const id = (e.state as { lawazimTopic?: unknown } | null)?.lawazimTopic;
+      setActiveId(typeof id === 'string' ? id : null);
+    }
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  // على الشاشات الكبيرة: افتح أول موضوع تلقائياً (مثل تيليجرام ديسكتوب)
+  useEffect(() => {
+    if (autoOpenedRef.current || loading || subjects.length === 0) return;
+    autoOpenedRef.current = true;
+    if (window.matchMedia('(min-width: 768px)').matches) {
+      setActiveId((prev) => prev ?? subjects[0].id);
+    }
+  }, [loading, subjects]);
+
+  // ==================== Derived ====================
+  const filteredSubjects = useMemo(() => {
+    return subjects.map((s) => {
+      const notes = notesBySubject.get(s.id) ?? [];
+      const isLoaded = notesBySubject.has(s.id);
+      const filtered = isFiltering
+        ? notes.filter((n) => noteMatches(n, term, selectedTag))
+        : notes;
+      return { subject: s, notes: filtered, isLoaded };
+    });
+  }, [subjects, notesBySubject, term, selectedTag, isFiltering]);
+
+  const subjectsToRender = useMemo(() => {
+    if (!isFiltering) return filteredSubjects;
+    return filteredSubjects.filter((fs) => fs.isLoaded && fs.notes.length > 0);
+  }, [filteredSubjects, isFiltering]);
+
+  const totalNotes = useMemo(
+    () => subjects.reduce((sum, s) => sum + s.noteCount, 0),
+    [subjects],
+  );
+
+  const activeEntry = activeId
+    ? (filteredSubjects.find((fs) => fs.subject.id === activeId) ?? null)
+    : null;
+  // إن لم يطابق activeId أي موضوع نبقى على القائمة بدل شاشة فارغة
+  const hasActive = activeEntry !== null;
+
+  const filterLabel = selectedTag
+    ? `#${selectedTag}`
+    : searchTerm.trim()
+      ? `«${searchTerm.trim()}»`
+      : '';
+
+  function clearFilters() {
+    setSearchTerm('');
+    setSelectedTag(null);
+  }
+
+  // ==================== Render ====================
+  if (!ready) {
+    return (
+      <div className="mx-auto w-full max-w-6xl md:px-6 md:py-6">
+        <TopicsSkeleton />
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-6xl md:px-6 md:py-6">
+      <PullToRefresh onRefresh={handleRefresh} disabled={hasActive}>
+        <div className="md:grid md:h-[calc(100dvh-var(--nav-h)-3rem)] md:min-h-[30rem] md:grid-cols-[22rem_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:overflow-hidden md:rounded-card md:border md:border-line md:bg-paper-soft lg:grid-cols-[24rem_minmax(0,1fr)]">
+          {/* ==================== قائمة المواضيع ==================== */}
+          <aside
+            className={`${
+              hasActive ? 'hidden md:flex' : 'flex'
+            } min-h-0 flex-col md:border-e md:border-line`}
+            aria-label="مواضيع الملازم"
+          >
+            <div className="px-4 pb-2 pt-5 md:pt-4">

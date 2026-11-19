@@ -1,0 +1,2667 @@
+﻿export interface TelegramUpdate {
+  update_id: number;
+  message?: TelegramMessage;
+  callback_query?: TelegramCallbackQuery;
+}
+
+// ==================== Reply Keyboard ====================
+export interface KeyboardButton {
+  text: string;
+  request_contact?: boolean;
+}
+
+export interface ReplyKeyboardMarkup {
+  keyboard: KeyboardButton[][];
+  resize_keyboard?: boolean;
+  one_time_keyboard?: boolean;
+  is_persistent?: boolean;
+  input_field_placeholder?: string;
+  remove_keyboard?: never;
+}
+
+export interface ReplyKeyboardRemove {
+  remove_keyboard: true;
+  selective?: boolean;
+}
+
+export type ReplyMarkup = ReplyKeyboardMarkup | ReplyKeyboardRemove;
+
+// ==================== Subscriber ====================
+export type OnboardingStep =
+  | 'choosing_stage'
+  | 'choosing_group'
+  | 'choosing_group_from_settings'
+  | 'choosing_subjects'
+  | 'idle';
+
+export interface Subscriber {
+  chat_id: number;
+  first_name: string | null;
+  username: string | null;
+  stage: string | null;
+  group_name: 'A' | 'B' | null;
+  subjects: string[];
+  notify_new_note: boolean;
+  notify_morning: boolean;
+  notify_streak: boolean;
+  notify_weekly: boolean;
+  notify_trending: boolean;
+  notify_announcements: boolean;
+  onboarding_step: OnboardingStep;
+  streak_count: number;
+  last_streak_date: string | null;
+  total_opens: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// ==================== Notification Toggles ====================
+export type NotifyToggleKey =
+  | 'notify_new_note'
+  | 'notify_morning'
+  | 'notify_streak'
+  | 'notify_weekly'
+  | 'notify_trending'
+  | 'notify_announcements';
+
+export const NOTIFY_TOGGLE_LABELS: Record<NotifyToggleKey, string> = {
+  notify_new_note: 'ملزمة جديدة',
+  notify_morning: 'موجز صباحي',
+  notify_streak: 'تنبيه الستريك',
+  notify_weekly: 'ملخص أسبوعي',
+  notify_trending: 'محتوى رائج',
+  notify_announcements: '📢 تبليغات إدارية',
+};
+
+// ==================== Menu Button Texts ====================
+/**
+ * نصوص أزرار الـReply Keyboard — تُستخدم في التوجيه داخل الويب هوك
+ */
+export const STUDENT_MENU_TEXTS = {
+  lawazem: '📚 الملازم',
+  dictionary: '🔍 القاموس',
+  inquiry: '📮 استفسار',
+  streak: '🔥 سلسلتي',
+  settings: '⚙️ الإعدادات',
+  help: '❓ مساعدة',
+} as const;
+
+export const ADMIN_MENU_TEXTS = {
+  newAnnounce: '📢 تبليغ جديد',
+  pending: '📋 المراجعة',
+  inquiries: '📮 الاستفسارات',
+  admins: '👥 المشرفون',
+  stats: '📊 الإحصائيات',
+  help: '📖 دليل المشرف',
+  lawazem: '📚 الملازم',
+  settings: '⚙️ الإعدادات',
+} as const;
+
+// ==================== Helpers ====================
+export function isStudentMenuText(text: string): boolean {
+  return Object.values(STUDENT_MENU_TEXTS).includes(
+    text as (typeof STUDENT_MENU_TEXTS)[keyof typeof STUDENT_MENU_TEXTS],
+  );
+}
+
+export function isAdminMenuText(text: string): boolean {
+  return Object.values(ADMIN_MENU_TEXTS).includes(
+    text as (typeof ADMIN_MENU_TEXTS)[keyof typeof ADMIN_MENU_TEXTS],
+  );
+}
+```
+
+## lib\telegram\handlers\admin.ts
+
+```ts
+// lib/telegram/handlers/admin.ts
+import {
+  sendMessage,
+  editMessageText,
+  answerCallbackQuery,
+  escapeHtml,
+} from '../../telegram';
+import { getSupabaseAdmin } from '../../supabaseAdmin';
+import {
+  listAdmins,
+  registerAdmin,
+  deactivateAdmin,
+  roleLabel,
+  type TelegramAdmin,
+  type AdminRole,
+} from '../../telegram-admins';
+import { sendAnnouncement } from '../../telegram-notifications';
+import { setSession, clearSession, getSession } from '../sessions';
+import {
+  pendingItemKeyboard,
+  roleKeyboard,
+  SUPER_ADMIN_MENU,
+  ADMIN_MENU,
+} from './menus';
+import { ADMIN_MENU_TEXTS } from '../types';
+import { countPendingInquiries } from '../inquiries';
+
+// ==================== Admin Help ====================
+export async function sendAdminHelp(
+  chatId: number,
+  admin: TelegramAdmin,
+): Promise<void> {
+  const isSuper = admin.role === 'super_admin';
+  const lines: string[] = [];
+
+  lines.push(`📖 <b>دليل ${isSuper ? 'المشرف الأعلى' : 'المشرف'}</b>`);
+  lines.push('');
+  lines.push(`👤 دورك: <b>${roleLabel(admin.role)}</b>`);
+  lines.push('');
+  lines.push('👇 استخدم الأزرار الثابتة بالأسفل، أو الأوامر النصية.');
+  lines.push('');
+  lines.push('━━━━━━━━━━━━━━━━━━━');
+  lines.push('🗺️ <b>الأوامر المتاحة</b>');
+  lines.push('━━━━━━━━━━━━━━━━━━━');
+  lines.push('');
+  lines.push('📢 <code>/announce</code> — إنشاء تبليغ بقوالب جاهزة');
+
+  if (isSuper) {
+    lines.push('📋 <code>/pending</code> — التبليغات قيد المراجعة');
+    lines.push('📜 <code>/history</code> — آخر التبليغات');
+    lines.push('📊 <code>/stats</code> — إحصائيات البوت');
+    lines.push('📮 <code>/inquiries</code> — الاستفسارات');
+    lines.push('👥 <code>/admins</code> — قائمة المشرفين');
+    lines.push('➕ <code>/add_admin</code> — إضافة مشرف');
+    lines.push('➖ <code>/remove_admin</code> — حذف مشرف');
+  } else {
+    lines.push('📋 <code>/pending</code> — عرض المعلقة (بدون موافقة)');
+  }
+
+  lines.push('❌ <code>/cancel</code> — إلغاء أي عملية');
+  lines.push('📖 <code>/admin_help</code> — هذا الدليل');
+
+  await sendMessage(chatId, lines.join('\n'), {
+    reply_markup: isSuper ? SUPER_ADMIN_MENU : ADMIN_MENU,
+  });
+}
+
+// ==================== Pending List ====================
+export async function handlePendingList(chatId: number): Promise<void> {
+  const { data } = await getSupabaseAdmin()
+    .from('telegram_announcements')
+    .select('*')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true })
+    .limit(15);
+
+  const items = (data ?? []) as Array<{
+    id: string;
+    title: string;
+    body: string;
+    stage: string | null;
+    created_by: string;
+  }>;
+
+  if (items.length === 0) {
+    await sendMessage(chatId, '✅ لا توجد تبليغات بانتظار المراجعة.');
+    return;
+  }
+
+  await sendMessage(chatId, `📋 <b>${items.length}</b> تبليغ بانتظار المراجعة:`);
+
+  for (const a of items) {
+    const lines: string[] = [];
+    lines.push(`📢 <b>${escapeHtml(a.title)}</b>`);
+    lines.push(
+      `🎯 ${
+        a.stage ? escapeHtml(a.stage) : 'كل المراحل'
+      } • 👤 ${escapeHtml(a.created_by)}`,
+    );
+    lines.push('');
+    lines.push(escapeHtml(a.body));
+    await sendMessage(chatId, lines.join('\n'), {
+      reply_markup: pendingItemKeyboard(a.id),
+    });
+  }
+}
+
+// ==================== Approve ====================
+export async function handleApprove(
+  cb: {
+    id: string;
+    from: { id: number };
+    message?: { chat: { id: number }; message_id: number };
+  },
+  id: string,
+  admin: TelegramAdmin,
+): Promise<void> {
+  if (admin.role !== 'super_admin') {
+    await answerCallbackQuery(cb.id, '❌ غير مصرح — تحتاج صلاحية مشرف أعلى');
+    return;
+  }
+
+  const chatId = cb.message?.chat.id ?? 0;
+  const messageId = cb.message?.message_id ?? 0;
+  if (!chatId) return;
+
+  const supabase = getSupabaseAdmin();
+
+  const { data: existing } = await supabase
+    .from('telegram_announcements')
+    .select('status')
+    .eq('id', id)
+    .maybeSingle<{ status: string }>();
+
+  if (!existing) {
+    await answerCallbackQuery(cb.id, 'التبليغ غير موجود');
+    return;
+  }
+  if (existing.status !== 'pending') {
+    await answerCallbackQuery(cb.id, 'تمت معالجة هذا التبليغ مسبقاً');
+    return;
+  }
+
+  await answerCallbackQuery(cb.id, '⏳ جاري الإرسال...');
+
+  await supabase
+    .from('telegram_announcements')
+    .update({
+      status: 'approved',
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: 'super_admin',
+    })
+    .eq('id', id);
+
+  let result: Awaited<ReturnType<typeof sendAnnouncement>>;
+  try {
+    result = await sendAnnouncement(id);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'خطأ غير معروف';
+    await supabase
+      .from('telegram_announcements')
+      .update({ status: 'failed', sent_error: msg })
+      .eq('id', id);
+    await sendMessage(chatId, `❌ فشل الإرسال: ${escapeHtml(msg)}`);
+    return;
+  }
+
+  if (result.error) {
+    await supabase
+      .from('telegram_announcements')
+      .update({
+        status: 'failed',
+        sent_error: result.error,
+        sent_count: result.sent,
+      })
+      .eq('id', id);
+    await sendMessage(chatId, `❌ فشل الإرسال: ${escapeHtml(result.error)}`);
+    return;
+  }
+
+  await supabase
+    .from('telegram_announcements')
+    .update({
+      status: 'sent',
+      sent_at: new Date().toISOString(),
+      sent_count: result.sent,
+      sent_error: result.failed > 0 ? `فشل ${result.failed}` : null,
+    })
+    .eq('id', id);
+
+  if (messageId) {
+    await editMessageText(chatId, messageId, '✅ تم الإرسال', {
+      reply_markup: { inline_keyboard: [] },
+    });
+  }
+
+  await sendMessage(
+    chatId,
+    `✅ <b>تم الإرسال</b>\n\n📤 نجح: ${result.sent}\n❌ فشل: ${result.failed}`,
+  );
+}
+
+// ==================== Reject ====================
+export async function handleRejectStart(
+  cb: {
+    id: string;
+    message?: { chat: { id: number }; message_id: number };
+  },
+  id: string,
+  admin: TelegramAdmin,
+): Promise<void> {
+  if (admin.role !== 'super_admin') {
+    await answerCallbackQuery(cb.id, '❌ غير مصرح');
+    return;
+  }
+
+  const chatId = cb.message?.chat.id ?? 0;
+  if (!chatId) return;
+
+  await setSession(chatId, 'reject', 'awaiting_reason', {
+    announcement_id: id,
+  });
+
+  await answerCallbackQuery(cb.id);
+  await sendMessage(
+    chatId,
+    '📝 اكتب <b>سبب الرفض</b> (أو أرسل <code>-</code> بدون سبب) — أو /cancel للإلغاء:',
+  );
+}
+
+export async function handleRejectText(
+  chatId: number,
+  text: string,
+  admin: TelegramAdmin,
+): Promise<void> {
+  if (admin.role !== 'super_admin') {
+    await clearSession(chatId);
+    return;
+  }
+
+  const session = await getSession(chatId);
+  if (!session || session.flow_type !== 'reject') {
+    await clearSession(chatId);
+    return;
+  }
+
+  const id = session.flow_data.announcement_id as string | undefined;
+  if (!id) {
+    await clearSession(chatId);
+    return;
+  }
+
+  const trimmed = text.trim();
+  const note = trimmed === '-' || trimmed === '' ? null : trimmed.slice(0, 500);
+
+  const { error } = await getSupabaseAdmin()
+    .from('telegram_announcements')
+    .update({
+      status: 'rejected',
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: 'super_admin',
+      reviewed_note: note,
+    })
+    .eq('id', id)
+    .eq('status', 'pending');
+
+  await clearSession(chatId);
+
+  if (error) {
+    await sendMessage(chatId, '❌ فشل الرفض. حاول مرة ثانية.');
+    return;
+  }
+
+  await sendMessage(chatId, '✅ تم رفض التبليغ.');
+}
+
+// ==================== Delete ====================
+export async function handleDeleteAnnouncement(
+  cb: {
+    id: string;
+    message?: { chat: { id: number }; message_id: number };
+  },
+  id: string,
+  admin: TelegramAdmin,
+): Promise<void> {
+  if (admin.role !== 'super_admin') {
+    await answerCallbackQuery(cb.id, '❌ غير مصرح');
+    return;
+  }
+
+  const chatId = cb.message?.chat.id ?? 0;
+  const messageId = cb.message?.message_id ?? 0;
+  if (!chatId) return;
+
+  await getSupabaseAdmin().from('telegram_announcements').delete().eq('id', id);
+  await answerCallbackQuery(cb.id, 'تم الحذف');
+  if (messageId) {
+    await editMessageText(chatId, messageId, '🗑 تم حذف التبليغ.', {
+      reply_markup: { inline_keyboard: [] },
+    });
+  } else {
+    await sendMessage(chatId, '🗑 تم حذف التبليغ.');
+  }
+}
+
+// ==================== History ====================
+export async function handleHistory(chatId: number): Promise<void> {
+  const { data } = await getSupabaseAdmin()
+    .from('telegram_announcements')
+    .select('id, title, status, sent_count, sent_at, created_at, reviewed_note')
+    .in('status', ['sent', 'rejected', 'failed'])
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  const items = (data ?? []) as Array<{
+    id: string;
+    title: string;
+    status: string;
+    sent_count: number;
+    sent_at: string | null;
+    created_at: string;
+    reviewed_note: string | null;
+  }>;
+
+  if (items.length === 0) {
+    await sendMessage(chatId, 'لا يوجد سجل بعد.');
+    return;
+  }
+
+  const lines: string[] = ['📜 <b>آخر التبليغات</b>', ''];
+  for (const a of items) {
+    const emoji =
+      a.status === 'sent' ? '✅' : a.status === 'rejected' ? '❌' : '⚠️';
+    lines.push(`${emoji} <b>${escapeHtml(a.title)}</b>`);
+    if (a.status === 'sent') lines.push(`  أُرسل لـ ${a.sent_count} مشترك`);
+    if (a.status === 'rejected' && a.reviewed_note)
+      lines.push(`  ${escapeHtml(a.reviewed_note)}`);
+    lines.push('');
+  }
+  await sendMessage(chatId, lines.join('\n'));
+}
+
+// ==================== Stats ====================
+export async function handleStats(chatId: number): Promise<void> {
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const [
+    subsCount,
+    pendingAnnCount,
+    sentAnnCount,
+    pendingInqCount,
+    adminsCount,
+  ] = await Promise.all([
+    supabaseAdmin
+      .from('telegram_subscribers')
+      .select('chat_id', { count: 'exact', head: true }),
+    supabaseAdmin
+      .from('telegram_announcements')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending'),
+    supabaseAdmin
+      .from('telegram_announcements')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'sent'),
+    countPendingInquiries(),
+    supabaseAdmin
+      .from('telegram_admins')
+      .select('chat_id', { count: 'exact', head: true })
+      .eq('is_active', true),
+  ]);
+
+  const lines: string[] = [];
+  lines.push('📊 <b>إحصائيات البوت</b>');
+  lines.push('');
+  lines.push(`👥 المشتركون: <b>${subsCount.count ?? 0}</b>`);
+  lines.push(`👤 المشرفون النشطون: <b>${adminsCount.count ?? 0}</b>`);
+  lines.push('');
+  lines.push(`📋 تبليغات منتظرة: <b>${pendingAnnCount.count ?? 0}</b>`);
+  lines.push(`📤 تبليغات أُرسلت: <b>${sentAnnCount.count ?? 0}</b>`);
+  lines.push(`📮 استفسارات منتظرة: <b>${pendingInqCount}</b>`);
+
+  await sendMessage(chatId, lines.join('\n'));
+}
+
+// ==================== List Admins ====================
+export async function handleListAdmins(chatId: number): Promise<void> {
+  const admins = await listAdmins();
+  if (admins.length === 0) {
+    await sendMessage(chatId, 'لا يوجد مشرفون مسجّلون.');
+    return;
+  }
+
+  const lines: string[] = ['👥 <b>قائمة المشرفين</b>', ''];
+  for (const a of admins) {
+    lines.push(
+      `• <b>${escapeHtml(a.first_name)}</b> ${
+        a.username ? `(@${escapeHtml(a.username)})` : ''
+      }`,
+    );
+    lines.push(`  <code>${a.chat_id}</code> — ${roleLabel(a.role)}`);
+  }
+  await sendMessage(chatId, lines.join('\n'));
+}
+
+// ==================== Add Admin ====================
+export async function handleAddAdminStart(chatId: number): Promise<void> {
+  await setSession(chatId, 'add_admin', 'awaiting_chat_id', {});
+  await sendMessage(
+    chatId,
+    '👤 <b>إضافة مشرف جديد</b>\n\nأرسل <b>Chat ID</b> أو <b>@username</b> للمشرف:\n' +
+      '<i>يجب أن يبدأ محادثة مع البوت أول مرة.</i>',
+    {
+      reply_markup: {
+        inline_keyboard: [[{ text: '❌ إلغاء', callback_data: 'admin_cancel' }]],
+      },
+    },
+  );
+}
+
+export async function handleAddAdminChatId(
+  chatId: number,
+  text: string,
+): Promise<void> {
+  const clean = text.trim().replace(/^@/, '');
+  let targetId: number | null = null;
+
+  if (/^-?\d+$/.test(clean)) {
+    targetId = Number(clean);
+  } else {
+    const { data } = await getSupabaseAdmin()
+      .from('telegram_subscribers')
+      .select('chat_id')
+      .ilike('username', clean)
+      .maybeSingle<{ chat_id: number }>();
+    if (data) targetId = data.chat_id;
+  }
+
+  if (!targetId) {
+    await sendMessage(
+      chatId,
+      '❌ ما لقيت هذا المستخدم. تأكد من الـChat ID أو أن اليوزر بدأ محادثة مع البوت.',
+    );
+    return;
+  }
+
+  await setSession(chatId, 'add_admin', 'awaiting_role', {
+    target_chat_id: targetId,
+  });
+
+  await sendMessage(
+    chatId,
+    `👤 تم اختيار: <code>${targetId}</code>\n\nاختر الدور:`,
+    { reply_markup: roleKeyboard() },
+  );
+}
+
+export async function handleAddAdminRole(
+  cb: {
+    id: string;
+    message?: { chat: { id: number }; message_id: number };
+  },
+  role: AdminRole,
+): Promise<void> {
+  const chatId = cb.message?.chat.id ?? 0;
+  const messageId = cb.message?.message_id ?? 0;
+  if (!chatId) return;
+
+  const session = await getSession(chatId);
+  if (!session || session.flow_type !== 'add_admin') {
+    await answerCallbackQuery(cb.id, 'انتهت الجلسة');
+    return;
+  }
+
+  const targetId = session.flow_data.target_chat_id as number | undefined;
+  if (!targetId) {
+    await answerCallbackQuery(cb.id, 'لا يوجد هدف');
+    return;
+  }
+
+  const { data: sub } = await getSupabaseAdmin()
+    .from('telegram_subscribers')
+    .select('first_name, username')
+    .eq('chat_id', targetId)
+    .maybeSingle<{ first_name: string | null; username: string | null }>();
+
+  const result = await registerAdmin({
+    chatId: targetId,
+    username: sub?.username ?? null,
+    firstName: sub?.first_name ?? `Admin ${targetId}`,
+    role,
+    addedBy: chatId,
+  });
+
+  await clearSession(chatId);
+
+  if (!result.ok) {
+    await answerCallbackQuery(cb.id, `فشل: ${result.error ?? ''}`, true);
+    return;
+  }
+
+  await answerCallbackQuery(cb.id, 'تمت الإضافة');
+
+  const confirm = `✅ تم إضافة <code>${targetId}</code> بدور <b>${roleLabel(
+    role,
+  )}</b>.`;
+  if (messageId) {
+    await editMessageText(chatId, messageId, confirm);
+  } else {
+    await sendMessage(chatId, confirm);
+  }
+
+  try {
+    await sendMessage(
+      targetId,
+      `🎉 <b>تم تفعيلك في بوت لوازم</b>\n\nالدور: <b>${roleLabel(role)}</b>\n\n` +
+        (role === 'super_admin'
+          ? 'يمكنك الموافقة على التبليغات وإرسالها عبر /pending.'
+          : role === 'admin'
+            ? 'يمكنك إنشاء تبليغات عبر /announce، وسيراجعها المشرف الأعلى.'
+            : 'يمكنك إنشاء تبليغات عبر /announce.') +
+        '\n\n📖 اكتب /admin_help للمزيد',
+      { reply_markup: role === 'super_admin' ? SUPER_ADMIN_MENU : ADMIN_MENU },
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+// ==================== Remove Admin ====================
+export async function handleRemoveAdmin(
+  chatId: number,
+  text: string,
+): Promise<void> {
+  const parts = text.split(/\s+/).slice(1);
+  if (parts.length === 0 || !/^-?\d+$/.test(parts[0])) {
+    await sendMessage(chatId, '❌ الصيغة: <code>/remove_admin CHAT_ID</code>');
+    return;
+  }
+  const targetId = Number(parts[0]);
+
+  if (targetId === chatId) {
+    await sendMessage(chatId, '❌ ما تكدر تحذف نفسك.');
+    return;
+  }
+
+  const result = await deactivateAdmin(targetId);
+  if (!result.ok) {
+    await sendMessage(
+      chatId,
+      `❌ فشل الحذف: ${escapeHtml(result.error ?? '')}`,
+    );
+    return;
+  }
+  await sendMessage(chatId, `✅ تم حذف <code>${targetId}</code>.`);
+}
+
+// ==================== Quick Add Admin ====================
+export async function quickAddAdmin(
+  chatId: number,
+  targetId: number,
+  role: AdminRole,
+): Promise<void> {
+  const { data: sub } = await getSupabaseAdmin()
+    .from('telegram_subscribers')
+    .select('first_name, username')
+    .eq('chat_id', targetId)
+    .maybeSingle<{ first_name: string | null; username: string | null }>();
+
+  const result = await registerAdmin({
+    chatId: targetId,
+    username: sub?.username ?? null,
+    firstName: sub?.first_name ?? `Admin ${targetId}`,
+    role,
+    addedBy: chatId,
+  });
+
+  if (!result.ok) {
+    await sendMessage(
+      chatId,
+      `❌ فشل الإضافة: ${escapeHtml(result.error ?? '')}`,
+    );
+    return;
+  }
+
+  await sendMessage(
+    chatId,
+    `✅ تم إضافة <code>${targetId}</code> بدور <b>${roleLabel(role)}</b>.`,
+  );
+
+  try {
+    await sendMessage(
+      targetId,
+      `🎉 <b>تم تفعيلك في بوت لوازم</b>\n\nالدور: <b>${roleLabel(role)}</b>\n\n📖 اكتب /admin_help للمزيد`,
+      { reply_markup: role === 'super_admin' ? SUPER_ADMIN_MENU : ADMIN_MENU },
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+// ==================== Menu Button Router ====================
+export async function handleAdminMenuButton(
+  chatId: number,
+  text: string,
+  admin: TelegramAdmin,
+): Promise<boolean> {
+  const isSuper = admin.role === 'super_admin';
+
+  if (text === ADMIN_MENU_TEXTS.newAnnounce) {
+    const { handleAnnounceStart } = await import('./announce');
+    await handleAnnounceStart(chatId);
+    return true;
+  }
+
+  if (text === ADMIN_MENU_TEXTS.pending) {
+    await handlePendingList(chatId);
+    return true;
+  }
+
+  if (text === ADMIN_MENU_TEXTS.inquiries && isSuper) {
+    const { handleInquiriesList } = await import('./inquiries');
+    await handleInquiriesList(chatId);
+    return true;
+  }
+
+  if (text === ADMIN_MENU_TEXTS.admins && isSuper) {
+    await handleListAdmins(chatId);
+    return true;
+  }
+
+  if (text === ADMIN_MENU_TEXTS.stats && isSuper) {
+    await handleStats(chatId);
+    return true;
+  }
+
+  if (text === ADMIN_MENU_TEXTS.help) {
+    await sendAdminHelp(chatId, admin);
+    return true;
+  }
+
+  return false;
+}
+```
+
+## lib\telegram\handlers\announce.ts
+
+```ts
+// lib/telegram/handlers/announce.ts
+import {
+  sendMessage,
+  editMessageText,
+  answerCallbackQuery,
+  escapeHtml,
+  STAGE_MAP,
+} from '../../telegram';
+import {
+  setSession,
+  clearSession,
+  getSession,
+  emptyAnnouncementDraft,
+  type AnnouncementDraft,
+} from '../sessions';
+import {
+  templatePickerKeyboard,
+  draftPreviewKeyboard,
+  stageListKeyboard,
+  backToDraftKeyboard,
+} from './menus';
+import { getTemplate } from '../templates';
+import { notifySuperAdminsNewAnnouncementPending } from '../notify-admins';
+import { getSupabaseAdmin } from '../../supabaseAdmin';
+import type { TelegramAdmin } from '../../telegram-admins';
+
+// ==================== Preview Builder ====================
+function buildPreview(draft: AnnouncementDraft): string {
+  const lines: string[] = [];
+  lines.push('📢 <b>معاينة التبليغ</b>');
+  lines.push('');
+  lines.push(
+    `🎯 المرحلة: <b>${
+      draft.stage ? escapeHtml(draft.stage) : 'كل المراحل'
+    }</b>`,
+  );
+
+  if (draft.templateId) {
+    const tpl = getTemplate(draft.templateId);
+    if (tpl) lines.push(`🏷️ القالب: ${tpl.emoji} ${escapeHtml(tpl.label)}`);
+  }
+  lines.push('');
+  lines.push('━━━━━━━━━━━━━━━');
+  if (draft.title) {
+    lines.push(`<b>${escapeHtml(draft.title)}</b>`);
+  } else {
+    lines.push('<i>(لا يوجد عنوان)</i>');
+  }
+  lines.push('━━━━━━━━━━━━━━━');
+  lines.push('');
+  if (draft.body) {
+    lines.push(escapeHtml(draft.body));
+  } else {
+    lines.push('<i>(لا يوجد نص)</i>');
+  }
+  if (draft.link_url) {
+    lines.push('');
+    lines.push(`🔗 ${escapeHtml(draft.link_label || draft.link_url)}`);
+  }
+  return lines.join('\n');
+}
+
+// ==================== Start ====================
+export async function handleAnnounceStart(chatId: number): Promise<void> {
+  await clearSession(chatId);
+  await sendMessage(
+    chatId,
+    `📢 <b>تبليغ جديد</b>\n\nاختر قالباً جاهزاً (يمكنك تعديله لاحقاً):`,
+    { reply_markup: templatePickerKeyboard() },
+  );
+}
+
+// ==================== Pick Template ====================
+export async function handleTemplatePick(
+  cb: {
+    id: string;
+    from: { id: number };
+    message?: { chat: { id: number }; message_id: number };
+  },
+  templateId: string,
+): Promise<void> {
+  const chatId = cb.message?.chat.id ?? 0;
+  const messageId = cb.message?.message_id ?? 0;
+  if (!chatId || !messageId) return;
+
+  const tpl = getTemplate(templateId);
+  if (!tpl) {
+    await answerCallbackQuery(cb.id, 'قالب غير معروف');
+    return;
+  }
+
+  const draft: AnnouncementDraft = {
+    ...emptyAnnouncementDraft(),
+    templateId: tpl.id,
+    title: tpl.title,
+    body: tpl.body,
+    link_label: tpl.linkLabel ?? null,
+  };
+
+  await setSession(chatId, 'announce', 'draft', { draft });
+  await answerCallbackQuery(cb.id, `تم اختيار ${tpl.label}`);
+
+  await editMessageText(chatId, messageId, buildPreview(draft), {
+    reply_markup: draftPreviewKeyboard(),
+  });
+}
+
+// ==================== Edit Title ====================
+export async function handleEditTitleStart(cb: {
+  id: string;
+  message?: { chat: { id: number }; message_id: number };
+}): Promise<void> {
+  const chatId = cb.message?.chat.id ?? 0;
+  if (!chatId) return;
+
+  const session = await getSession(chatId);
+  if (!session || session.flow_type !== 'announce') {
+    await answerCallbackQuery(cb.id, 'انتهت الجلسة');
+    return;
+  }
+
+  const draft = session.flow_data.draft as AnnouncementDraft;
+  await setSession(chatId, 'announce', 'edit_title', { draft });
+
+  await answerCallbackQuery(cb.id);
+  await sendMessage(
+    chatId,
+    `✏️ <b>تعديل العنوان</b>\n\nالعنوان الحالي:\n<code>${escapeHtml(
+      draft.title ?? '',
+    )}</code>\n\nأرسل العنوان الجديد:`,
+    { reply_markup: backToDraftKeyboard() },
+  );
+}
+
+// ==================== Edit Body ====================
+export async function handleEditBodyStart(cb: {
+  id: string;
+  message?: { chat: { id: number }; message_id: number };
+}): Promise<void> {
+  const chatId = cb.message?.chat.id ?? 0;
+  if (!chatId) return;
+
+  const session = await getSession(chatId);
+  if (!session || session.flow_type !== 'announce') {
+    await answerCallbackQuery(cb.id, 'انتهت الجلسة');
+    return;
+  }
+
+  const draft = session.flow_data.draft as AnnouncementDraft;
+  await setSession(chatId, 'announce', 'edit_body', { draft });
+
+  await answerCallbackQuery(cb.id);
+  await sendMessage(
+    chatId,
+    `✏️ <b>تعديل النص</b>\n\nالنص الحالي:\n\n<i>${escapeHtml(
+      draft.body ?? '',
+    )}</i>\n\nأرسل النص الجديد:`,
+    { reply_markup: backToDraftKeyboard() },
+  );
+}
+
+// ==================== Add Link ====================
+export async function handleAddLinkStart(cb: {
+  id: string;
+  message?: { chat: { id: number }; message_id: number };
+}): Promise<void> {
+  const chatId = cb.message?.chat.id ?? 0;
+  if (!chatId) return;
+
+  const session = await getSession(chatId);
+  if (!session || session.flow_type !== 'announce') {
+    await answerCallbackQuery(cb.id, 'انتهت الجلسة');
+    return;
+  }
+
+  const draft = session.flow_data.draft as AnnouncementDraft;
+  await setSession(chatId, 'announce', 'edit_link_url', { draft });
+
+  await answerCallbackQuery(cb.id);
+  await sendMessage(
+    chatId,
+    `🔗 <b>إضافة رابط</b>\n\nأرسل الرابط (يبدأ بـ http أو https):\n\n💡 أو أرسل <code>-</code> لحذف الرابط الحالي.`,
+    { reply_markup: backToDraftKeyboard() },
+  );
+}
+
+// ==================== Choose Stage ====================
+export async function handleChooseStageStart(cb: {
+  id: string;
+  message?: { chat: { id: number }; message_id: number };
+}): Promise<void> {
+  const chatId = cb.message?.chat.id ?? 0;
+  if (!chatId) return;
+
+  const session = await getSession(chatId);
+  if (!session || session.flow_type !== 'announce') {
+    await answerCallbackQuery(cb.id, 'انتهت الجلسة');
+    return;
+  }
+
+  await setSession(chatId, 'announce', 'choose_stage', session.flow_data);
+  await answerCallbackQuery(cb.id);
+  await sendMessage(chatId, '🎯 اختر المرحلة:', {
+    reply_markup: stageListKeyboard(),
+  });
+}
+
+// ==================== Stage Picked ====================
+export async function handleStagePick(
+  cb: {
+    id: string;
+    message?: { chat: { id: number }; message_id: number };
+  },
+  code: string,
+): Promise<void> {
+  const chatId = cb.message?.chat.id ?? 0;
+  const messageId = cb.message?.message_id ?? 0;
+  if (!chatId) return;
+
+  const session = await getSession(chatId);
+  if (!session || session.flow_type !== 'announce') {
+    await answerCallbackQuery(cb.id, 'انتهت الجلسة');
+    return;
+  }
+
+  const draft = { ...(session.flow_data.draft as AnnouncementDraft) };
+
+  if (code === 'all') {
+    draft.stage = null;
+  } else {
+    const stage = STAGE_MAP[code];
+    if (!stage) {
+      await answerCallbackQuery(cb.id, 'مرحلة غير معروفة');
+      return;
+    }
+    draft.stage = stage;
+  }
+
+  await setSession(chatId, 'announce', 'draft', { draft });
+
+  await answerCallbackQuery(cb.id, draft.stage ?? 'كل المراحل');
+
+  const text = buildPreview(draft);
+  if (messageId) {
+    await editMessageText(chatId, messageId, text, {
+      reply_markup: draftPreviewKeyboard(),
+    });
+  } else {
+    await sendMessage(chatId, text, { reply_markup: draftPreviewKeyboard() });
+  }
+}
+
+// ==================== Back to Draft ====================
+export async function handleBackToDraft(cb: {
+  id: string;
+  message?: { chat: { id: number }; message_id: number };
+}): Promise<void> {
+  const chatId = cb.message?.chat.id ?? 0;
+  if (!chatId) return;
+
+  const session = await getSession(chatId);
+  if (!session || session.flow_type !== 'announce') {
+    await answerCallbackQuery(cb.id, 'انتهت الجلسة');
+    return;
+  }
+
+  const draft = session.flow_data.draft as AnnouncementDraft;
+  await setSession(chatId, 'announce', 'draft', { draft });
+
+  await answerCallbackQuery(cb.id);
+  await sendMessage(chatId, buildPreview(draft), {
+    reply_markup: draftPreviewKeyboard(),
+  });
+}
+
+// ==================== Text Input Router ====================
+export async function handleAnnounceTextInput(
+  chatId: number,
+  text: string,
+  step: string,
+): Promise<void> {
+  const session = await getSession(chatId);
+  if (!session || session.flow_type !== 'announce') {
+    await clearSession(chatId);
+    return;
+  }
+
+  const draft = { ...(session.flow_data.draft as AnnouncementDraft) };
+  const trimmed = text.trim();
+
+  if (step === 'edit_title') {
+    if (trimmed.length < 3 || trimmed.length > 200) {
+      await sendMessage(chatId, '❌ العنوان يجب أن يكون بين 3 و 200 حرف.');
+      return;
+    }
+    draft.title = trimmed;
+  } else if (step === 'edit_body') {
+    if (trimmed.length < 5 || trimmed.length > 2000) {
+      await sendMessage(chatId, '❌ النص يجب أن يكون بين 5 و 2000 حرف.');
+      return;
+    }
+    draft.body = trimmed;
+  } else if (step === 'edit_link_url') {
+    if (trimmed === '-') {
+      draft.link_url = null;
+      draft.link_label = null;
+    } else {
+      try {
+        const u = new URL(trimmed);
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error();
+      } catch {
+        await sendMessage(
+          chatId,
+          '❌ رابط غير صالح. يجب أن يبدأ بـ https://',
+        );
+        return;
+      }
+      draft.link_url = trimmed;
+    }
+  }
+
+  await setSession(chatId, 'announce', 'draft', { draft });
+  await sendMessage(chatId, buildPreview(draft), {
+    reply_markup: draftPreviewKeyboard(),
+  });
+}
+
+// ==================== Submit ====================
+export async function handleAnnounceSubmit(
+  cb: {
+    id: string;
+    message?: { chat: { id: number }; message_id: number };
+  },
+  admin: TelegramAdmin,
+): Promise<void> {
+  const chatId = cb.message?.chat.id ?? 0;
+  const messageId = cb.message?.message_id ?? 0;
+  if (!chatId) return;
+
+  const session = await getSession(chatId);
+  if (!session || session.flow_type !== 'announce') {
+    await answerCallbackQuery(cb.id, 'انتهت الجلسة');
+    return;
+  }
+
+  const draft = session.flow_data.draft as AnnouncementDraft;
+  if (!draft.title || !draft.body) {
+    await answerCallbackQuery(cb.id, 'العنوان والنص مطلوبان', true);
+    return;
+  }
+
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data, error } = await supabaseAdmin
+    .from('telegram_announcements')
+    .insert({
+      title: draft.title,
+      body: draft.body,
+      stage: draft.stage,
+      link_url: draft.link_url,
+      link_label: draft.link_label,
+      created_by: admin.first_name,
+      status: 'pending',
+    })
+    .select('id')
+    .single<{ id: string }>();
+
+  await clearSession(chatId);
+
+  if (error || !data) {
+    await answerCallbackQuery(cb.id, 'فشل الحفظ', true);
+    await sendMessage(chatId, '❌ فشل إنشاء التبليغ. حاول مرة ثانية.');
+    return;
+  }
+
+  await answerCallbackQuery(cb.id, 'تم الإرسال للمراجعة');
+
+  const text = `✅ <b>تم إرسال التبليغ للمراجعة</b>\n\nرقم: <code>${data.id.slice(
+    0,
+    8,
+  )}</code>\n\n${
+    admin.role === 'super_admin'
+      ? 'يمكنك الموافقة الآن من /pending.'
+      : 'سيتم إعلامك عند الموافقة أو الرفض.'
+  }`;
+
+  if (messageId) {
+    await editMessageText(chatId, messageId, text);
+  } else {
+    await sendMessage(chatId, text);
+  }
+
+  // إشعار السوبر أدمن (fire-and-forget)
+  void notifySuperAdminsNewAnnouncementPending({
+    id: data.id,
+    title: draft.title,
+    body: draft.body,
+    stage: draft.stage,
+    created_by: admin.first_name,
+  });
+}
+
+// ==================== Cancel ====================
+export async function handleAnnounceCancel(chatId: number): Promise<void> {
+  await clearSession(chatId);
+  await sendMessage(chatId, '❌ تم الإلغاء.');
+}
+```
+
+## lib\telegram\handlers\inquiries.ts
+
+```ts
+// lib/telegram/handlers/inquiries.ts
+import {
+  sendMessage,
+  answerCallbackQuery,
+  escapeHtml,
+} from '../../telegram';
+import { getSubscriber } from '../subscribers';
+import {
+  createInquiry,
+  listPendingInquiries,
+  countPendingInquiries,
+  getInquiry,
+  answerInquiry,
+  closeInquiry,
+  formatInquiryForAdmin,
+} from '../inquiries';
+import { setSession, clearSession, getSession } from '../sessions';
+import { notifySuperAdminsNewInquiry } from '../notify-admins';
+import { inquiryActionsKeyboard, STUDENT_MENU } from './menus';
+
+// ==================== Student: Start ====================
+export async function handleInquiryStart(chatId: number): Promise<void> {
+  const sub = await getSubscriber(chatId);
+  if (!sub || !sub.stage) {
+    await sendMessage(chatId, 'يجب أن تكمل التسجيل أولاً.\nاكتب /start');
+    return;
+  }
+
+  await setSession(chatId, 'inquiry', 'awaiting_question', {});
+  await sendMessage(
+    chatId,
+    `📮 <b>استفسار جديد</b>\n\n✍️ اكتب سؤالك أو استفسارك في رسالة واحدة، وسيصل للإدارة مباشرة.`,
+    {
+      reply_markup: {
+        inline_keyboard: [[{ text: '❌ إلغاء', callback_data: 'inq_cancel' }]],
+      },
+    },
+  );
+}
+
+// ==================== Student: Submit ====================
+export async function handleInquiryText(
+  chatId: number,
+  text: string,
+): Promise<void> {
+  const sub = await getSubscriber(chatId);
+
+  const result = await createInquiry({
+    chatId,
+    studentName: sub?.first_name ?? null,
+    stage: sub?.stage ?? null,
+    question: text,
+  });
+
+  await clearSession(chatId);
+
+  if (!result.ok) {
+    await sendMessage(chatId, `❌ فشل الإرسال: ${result.error}`, {
+      reply_markup: STUDENT_MENU,
+    });
+    return;
+  }
+
+  await sendMessage(
+    chatId,
+    `✅ <b>وصلنا استفسارك</b>\n\nسيتم الرد عليك في أقرب وقت. شكراً لك 🌟`,
+    { reply_markup: STUDENT_MENU },
+  );
+
+  // إشعار السوبر أدمن (fire-and-forget)
+  void notifySuperAdminsNewInquiry(result.inquiry);
+}
+
+// ==================== Admin: List Pending ====================
+export async function handleInquiriesList(chatId: number): Promise<void> {
+  const pending = await listPendingInquiries(10);
+
+  if (pending.length === 0) {
+    await sendMessage(chatId, '✅ لا توجد استفسارات بانتظار الرد.');
+    return;
+  }
+
+  await sendMessage(
+    chatId,
+    `📮 <b>${pending.length}</b> استفسار بانتظار الرد:`,
+  );
+
+  for (const inq of pending) {
+    const text = formatInquiryForAdmin(inq, escapeHtml);
+    await sendMessage(chatId, text, {
+      reply_markup: inquiryActionsKeyboard(inq.id),
+    });
+  }
+}
+
+// ==================== Admin: Start Reply ====================
+export async function handleInquiryReplyStart(
+  cb: {
+    id: string;
+    message?: { chat: { id: number }; message_id: number };
+  },
+  inquiryId: string,
+): Promise<void> {
+  const chatId = cb.message?.chat.id ?? 0;
+  if (!chatId) return;
+
+  const inq = await getInquiry(inquiryId);
+  if (!inq || inq.status !== 'pending') {
+    await answerCallbackQuery(cb.id, 'الاستفسار غير موجود أو تمت معالجته');
+    return;
+  }
+
+  await setSession(chatId, 'inquiry', 'awaiting_reply', {
+    inquiry_id: inquiryId,
+  });
+
+  await answerCallbackQuery(cb.id);
+  await sendMessage(
+    chatId,
+    `💬 <b>الرد على استفسار</b>\n\n👤 ${escapeHtml(
+      inq.student_name ?? 'غير معروف',
+    )}\n\n❓ ${escapeHtml(inq.question)}\n\n✍️ اكتب ردك الآن:`,
+    {
+      reply_markup: {
+        inline_keyboard: [[{ text: '❌ إلغاء', callback_data: 'inq_cancel' }]],
+      },
+    },
+  );
+}
+
+// ==================== Admin: Submit Reply ====================
+export async function handleInquiryReplyText(
+  chatId: number,
+  text: string,
+  adminChatId: number,
+): Promise<void> {
+  const session = await getSession(chatId);
+  if (!session || session.flow_type !== 'inquiry') {
+    await clearSession(chatId);
+    return;
+  }
+
+  const inquiryId = session.flow_data.inquiry_id as string | undefined;
+  if (!inquiryId) {
+    await clearSession(chatId);
+    await sendMessage(
+      chatId,
+      '❌ لم أجد الاستفسار، حاول مرة ثانية من القائمة.',
+    );
+    return;
+  }
+
+  const result = await answerInquiry({
+    id: inquiryId,
+    reply: text,
+    adminChatId,
+  });
+
+  await clearSession(chatId);
+
+  if (!result.ok || !result.inquiry) {
+    await sendMessage(
+      chatId,
+      `❌ فشل الحفظ: ${result.error ?? 'غير معروف'}`,
+    );
+    return;
+  }
+
+  const inq = result.inquiry;
+
+  // إرسال الرد للطالب
+  const studentLines: string[] = [];
+  studentLines.push('📬 <b>ردّ الإدارة على استفسارك</b>');
+  studentLines.push('');
+  studentLines.push('❓ <b>سؤالك:</b>');
+  studentLines.push(escapeHtml(inq.question));
+  studentLines.push('');
+  studentLines.push('💬 <b>الرد:</b>');
+  studentLines.push(escapeHtml(text));
+
+  try {
+    await sendMessage(inq.chat_id, studentLines.join('\n'), {
+      reply_markup: STUDENT_MENU,
+    });
+  } catch {
+    await sendMessage(
+      chatId,
+      '⚠️ تم الحفظ لكن تعذّر إرسال الرد للطالب.',
+    );
+    return;
+  }
+
+  await sendMessage(chatId, '✅ تم إرسال الرد للطالب.');
+}
+
+// ==================== Admin: Close ====================
+export async function handleInquiryClose(
+  cb: {
+    id: string;
+    message?: { chat: { id: number }; message_id: number };
+  },
+  inquiryId: string,
+): Promise<void> {
+  const chatId = cb.message?.chat.id ?? 0;
+  if (!chatId) return;
+
+  const result = await closeInquiry(inquiryId);
+  await answerCallbackQuery(
+    cb.id,
+    result.ok ? 'تم الإغلاق' : result.error ?? 'فشل',
+  );
+
+  if (result.ok && result.inquiry) {
+    // إشعار الطالب بأن استفساره تم الاطلاع عليه
+    try {
+      await sendMessage(
+        result.inquiry.chat_id,
+        `📭 تم الاطلاع على استفسارك وإغلاقه. إن كان لديك سؤال آخر، أرسل استفساراً جديداً.`,
+        { reply_markup: STUDENT_MENU },
+      );
+    } catch {
+      /* ignore */
+    }
+
+    await sendMessage(chatId, '✅ تم إغلاق الاستفسار.');
+  }
+}
+
+// ==================== Cancel ====================
+export async function handleInquiryCancel(chatId: number): Promise<void> {
+  await clearSession(chatId);
+  await sendMessage(chatId, '❌ تم الإلغاء.', {
+    reply_markup: STUDENT_MENU,
+  });
+}
+
+// ==================== Count ====================
+export async function getPendingInquiriesCount(): Promise<number> {
+  return countPendingInquiries();
+}
+```
+
+## lib\telegram\handlers\menus.ts
+
+```ts
+// lib/telegram/handlers/menus.ts
+import type {
+  ReplyKeyboardMarkup,
+  ReplyKeyboardRemove,
+} from '../types';
+import { ANNOUNCEMENT_TEMPLATES } from '../templates';
+import { STAGES } from '../../constants';
+import type { InlineKeyboardMarkup } from '../../telegram';
+
+// ==================== Reply Keyboards ====================
+export { STUDENT_MENU_TEXTS, ADMIN_MENU_TEXTS } from '../types';
+
+export const STUDENT_MENU: ReplyKeyboardMarkup = {
+  keyboard: [
+    [{ text: '📚 الملازم' }, { text: '🔍 القاموس' }],
+    [{ text: '📮 استفسار' }, { text: '🔥 سلسلتي' }],
+    [{ text: '⚙️ الإعدادات' }, { text: '❓ مساعدة' }],
+  ],
+  resize_keyboard: true,
+  is_persistent: true,
+};
+
+export const SUPER_ADMIN_MENU: ReplyKeyboardMarkup = {
+  keyboard: [
+    [{ text: '📢 تبليغ جديد' }, { text: '📋 المراجعة' }],
+    [{ text: '📮 الاستفسارات' }, { text: '👥 المشرفون' }],
+    [{ text: '📊 الإحصائيات' }, { text: '📖 دليل المشرف' }],
+    [{ text: '📚 الملازم' }, { text: '⚙️ الإعدادات' }],
+  ],
+  resize_keyboard: true,
+  is_persistent: true,
+};
+
+export const ADMIN_MENU: ReplyKeyboardMarkup = {
+  keyboard: [
+    [{ text: '📢 تبليغ جديد' }],
+    [{ text: '📚 الملازم' }, { text: '⚙️ الإعدادات' }],
+    [{ text: '📖 دليل المشرف' }],
+  ],
+  resize_keyboard: true,
+  is_persistent: true,
+};
+
+export function removeReplyKeyboard(): ReplyKeyboardRemove {
+  return { remove_keyboard: true };
+}
+
+// ==================== Announcement Templates Picker ====================
+export function templatePickerKeyboard(): InlineKeyboardMarkup {
+  const rows: { text: string; callback_data: string }[][] = [];
+  const templates = ANNOUNCEMENT_TEMPLATES;
+
+  for (let i = 0; i < templates.length; i += 2) {
+    const row = [
+      {
+        text: `${templates[i].emoji} ${templates[i].label}`,
+        callback_data: `tpl_pick:${templates[i].id}`,
+      },
+    ];
+    if (templates[i + 1]) {
+      row.push({
+        text: `${templates[i + 1].emoji} ${templates[i + 1].label}`,
+        callback_data: `tpl_pick:${templates[i + 1].id}`,
+      });
+    }
+    rows.push(row);
+  }
+
+  rows.push([{ text: '❌ إلغاء', callback_data: 'ann_cancel' }]);
+  return { inline_keyboard: rows };
+}
+
+// ==================== Draft Preview Actions ====================
+export function draftPreviewKeyboard(): InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [
+        { text: '✏️ تعديل العنوان', callback_data: 'ann_edit_title' },
+        { text: '✏️ تعديل النص', callback_data: 'ann_edit_body' },
+      ],
+      [
+        { text: '🎯 اختيار المرحلة', callback_data: 'ann_choose_stage' },
+        { text: '🔗 إضافة رابط', callback_data: 'ann_add_link' },
+      ],
+      [{ text: '✅ إرسال للمراجعة', callback_data: 'ann_submit' }],
+      [{ text: '❌ إلغاء', callback_data: 'ann_cancel' }],
+    ],
+  };
+}
+
+// ==================== Stage Picker ====================
+export function stageListKeyboard(): InlineKeyboardMarkup {
+  const rows: { text: string; callback_data: string }[][] = STAGES.map(
+    (s, i) => [{ text: s, callback_data: `ann_stage:${i + 1}` }],
+  );
+  rows.push([{ text: '🌐 كل المراحل', callback_data: 'ann_stage:all' }]);
+  rows.push([{ text: '↩️ رجوع', callback_data: 'ann_back_to_draft' }]);
+  return { inline_keyboard: rows };
+}
+
+// ==================== Announcement Actions ====================
+export function announceApprovalKeyboard(id: string): InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [
+        { text: '✅ موافقة وإرسال', callback_data: `ann_approve:${id}` },
+        { text: '❌ رفض', callback_data: `ann_reject:${id}` },
+      ],
+      [{ text: '🗑 حذف', callback_data: `ann_delete:${id}` }],
+    ],
+  };
+}
+
+export function pendingItemKeyboard(id: string): InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [
+        { text: '✅ إرسال', callback_data: `ann_approve:${id}` },
+        { text: '❌ رفض', callback_data: `ann_reject:${id}` },
+      ],
+    ],
+  };
+}
+
+// ==================== Add Admin ====================
+export function roleKeyboard(): InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [{ text: '👑 مشرف أعلى', callback_data: 'addadmin_role:super_admin' }],
+      [{ text: '🛡 مشرف', callback_data: 'addadmin_role:admin' }],
+      [{ text: '✍️ ناشر', callback_data: 'addadmin_role:publisher' }],
+      [{ text: '❌ إلغاء', callback_data: 'admin_cancel' }],
+    ],
+  };
+}
+
+// ==================== Inquiry Actions ====================
+export function inquiryActionsKeyboard(id: string): InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [
+        { text: '💬 رد', callback_data: `inq_reply:${id}` },
+        { text: '✅ إغلاق بدون رد', callback_data: `inq_close:${id}` },
+      ],
+    ],
+  };
+}
+
+// ==================== Cancel / Back ====================
+export function cancelOnlyKeyboard(
+  callback = 'ann_cancel',
+): InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [[{ text: '❌ إلغاء', callback_data: callback }]],
+  };
+}
+
+export function backToDraftKeyboard(): InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [{ text: '↩️ رجوع للمعاينة', callback_data: 'ann_back_to_draft' }],
+    ],
+  };
+}
+```
+
+## lib\telegram\handlers\student.ts
+
+```ts
+// lib/telegram/handlers/student.ts
+import {
+  sendMessage,
+  editMessageText,
+  answerCallbackQuery,
+  escapeHtml,
+  STAGE_MAP,
+  type InlineKeyboardMarkup,
+} from '../../telegram';
+import { getSupabaseAdmin } from '../../supabaseAdmin';
+import { STAGES } from '../../constants';
+import {
+  getSubscriber,
+  upsertSubscriber,
+  isFullyOnboarded,
+  groupLabel,
+  groupEmoji,
+} from '../subscribers';
+import {
+  STUDENT_MENU,
+  STUDENT_MENU_TEXTS,
+} from './menus';
+import type {
+  Subscriber,
+  TelegramMessage,
+  TelegramCallbackQuery,
+  NotifyToggleKey,
+} from '../types';
+import { NOTIFY_TOGGLE_LABELS } from '../types';
+
+// ==================== Keyboards ====================
+function stageKeyboard(): InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [{ text: '📘 المرحلة الأولى', callback_data: 'stage:1' }],
+      [{ text: '📗 المرحلة الثانية', callback_data: 'stage:2' }],
+      [{ text: '📙 المرحلة الثالثة', callback_data: 'stage:3' }],
+    ],
+  };
+}
+
+function groupKeyboard(): InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [{ text: '🔵 كروب A', callback_data: 'group:A' }],
+      [{ text: '🟡 كروب B', callback_data: 'group:B' }],
+    ],
+  };
+}
+
+function startKeyboard(baseUrl: string): InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [{ text: '⚙️ الإعدادات', callback_data: 'settings:show' }],
+      [{ text: '🔄 تحديث التسجيل', callback_data: 'onboarding:restart' }],
+      [{ text: '🌐 افتح المنصة', url: baseUrl }],
+    ],
+  };
+}
+
+// ==================== Public Menu (Reply Keyboard) ====================
+/**
+ * أرسل القائمة الثابتة للطالب.
+ * تُستدعى عند أول /start أو عندما يطلبها.
+ */
+export async function sendStudentMenu(
+  chatId: number,
+  intro: string,
+): Promise<boolean> {
+  return sendMessage(chatId, intro, {
+    reply_markup: STUDENT_MENU,
+  });
+}
+
+// ==================== /start ====================
+export async function handleStart(
+  msg: TelegramMessage,
+  baseUrl: string,
+): Promise<void> {
+  if (!msg.from) return;
+  const chatId = msg.chat.id;
+  const firstName = msg.from.first_name ?? '';
+
+  const existing = await getSubscriber(chatId);
+
+  // ✅ مسجّل بالكامل — لا تطلب منه المرحلة من جديد
+  if (isFullyOnboarded(existing) && existing) {
+    const subjectCount = existing.subjects.length;
+    const groupLine = `${groupEmoji(existing.group_name!)} <b>${groupLabel(
+      existing.group_name!,
+    )}</b>`;
+
+    const lines: string[] = [];
+    lines.push(
+      `👋 <b>أهلاً من جديد${firstName ? `، ${escapeHtml(firstName)}` : ''}!</b>`,
+    );
+    lines.push('');
+    lines.push(`📌 مرحلتك: <b>${escapeHtml(existing.stage!)}</b>`);
+    lines.push(`👥 كروبك: ${groupLine}`);
+    lines.push(
+      `📚 موادك: <b>${subjectCount > 0 ? `${subjectCount} مادة` : 'الكل'}</b>`,
+    );
+    lines.push('');
+    lines.push('👇 استخدم الأزرار بالأسفل للتنقل.');
+
+    await sendMessage(chatId, lines.join('\n'), {
+      reply_markup: STUDENT_MENU,
+    });
+    return;
+  }
+
+  // ===== مسجّل جزئياً أو جديد → ابدأ التسجيل =====
+  await upsertSubscriber(msg.from, { onboarding_step: 'choosing_stage' });
+
+  const greeting = firstName ? `، ${escapeHtml(firstName)}` : '';
+  const text = existing
+    ? `👋 أهلاً من جديد${greeting}!\n\nاختر مرحلتك الدراسية:`
+    : `👋 أهلاً${greeting}!\n\nأنا <b>بوت لوازم</b> — سأخبرك بالجديد في مرحلتك مباشرة.\n\nاختر مرحلتك الدراسية:`;
+
+  await sendMessage(chatId, text, { reply_markup: stageKeyboard() });
+}
+
+// ==================== Stage Selection ====================
+export async function handleStageSelection(
+  cb: TelegramCallbackQuery,
+  code: string,
+): Promise<void> {
+  if (!cb.message) return;
+  const chatId = cb.message.chat.id;
+  const messageId = cb.message.message_id;
+
+  const stage = STAGE_MAP[code];
+  if (!stage) {
+    await answerCallbackQuery(cb.id, 'مرحلة غير معروفة');
+    return;
+  }
+
+  await upsertSubscriber(cb.from, {
+    stage,
+    group_name: null,
+    subjects: [],
+    onboarding_step: 'choosing_group',
+  });
+
+  await answerCallbackQuery(cb.id, `تم اختيار ${stage}`);
+  await editMessageText(
+    chatId,
+    messageId,
+    `📚 <b>${escapeHtml(stage)}</b>\n\nالآن اختر كروبك النظري:`,
+    { reply_markup: groupKeyboard() },
+  );
+}
+
+// ==================== Group Selection ====================
+export async function handleGroupSelection(
+  cb: TelegramCallbackQuery,
+  code: string,
+  baseUrl: string,
+): Promise<void> {
+  if (!cb.message) return;
+  const chatId = cb.message.chat.id;
+  const messageId = cb.message.message_id;
+
+  if (code !== 'A' && code !== 'B') {
+    await answerCallbackQuery(cb.id, 'كروب غير معروف');
+    return;
+  }
+
+  const before = await getSubscriber(chatId);
+  const fromSettings = before?.onboarding_step === 'choosing_group_from_settings';
+
+  if (fromSettings) {
+    await upsertSubscriber(cb.from, {
+      group_name: code,
+      onboarding_step: 'idle',
+    });
+    await answerCallbackQuery(cb.id, `تم اختيار ${groupLabel(code)}`);
+    await sendSettings(chatId, messageId);
+  } else {
+    await upsertSubscriber(cb.from, {
+      group_name: code,
+      onboarding_step: 'choosing_subjects',
+    });
+    await answerCallbackQuery(cb.id, `تم اختيار ${groupLabel(code)}`);
+    await sendSubjectsKeyboard(chatId, messageId, before?.stage ?? '');
+  }
+}
+
+// ==================== Subject Toggle ====================
+export async function handleSubjectToggle(
+  cb: TelegramCallbackQuery,
+  subjectName: string,
+): Promise<void> {
+  if (!cb.message) return;
+  const chatId = cb.message.chat.id;
+  const messageId = cb.message.message_id;
+
+  const sub = await getSubscriber(chatId);
+  if (!sub) {
+    await answerCallbackQuery(cb.id, 'حدث خطأ، أعد /start');
+    return;
+  }
+
+  const current = new Set(sub.subjects ?? []);
+  if (current.has(subjectName)) {
+    current.delete(subjectName);
+    await answerCallbackQuery(cb.id, `تم إلغاء ${subjectName}`);
+  } else {
+    current.add(subjectName);
+    await answerCallbackQuery(cb.id, `تم إضافة ${subjectName}`);
+  }
+
+  await upsertSubscriber(cb.from, { subjects: Array.from(current) });
+  await sendSubjectsKeyboard(chatId, messageId, sub.stage ?? '');
+}
+
+// ==================== Subjects Keyboard ====================
+export async function sendSubjectsKeyboard(
+  chatId: number,
+  messageId: number,
+  stage: string,
+): Promise<void> {
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const { data } = await supabaseAdmin
+    .from('subjects')
+    .select('name')
+    .eq('stage', stage)
+    .order('name');
+
+  const subjectNames = (data ?? []).map((s: { name: string }) => s.name);
+
+  const sub = await getSubscriber(chatId);
+  const selected = new Set(sub?.subjects ?? []);
+
+  const text = `📚 <b>اختر موادك</b>
+
+المرحلة: <b>${escapeHtml(stage)}</b>
+
+اضغط على المواد التي تريد متابعتها فقط.
+إذا لم تختر أي مادة → ستصلك تحديثات <b>كل المواد</b>.
+
+المحددة حالياً: <b>${
+    selected.size > 0 ? `${selected.size} مادة` : 'كل المواد'
+  }</b>`;
+
+  const rows: { text: string; callback_data: string }[][] = [];
+  subjectNames.slice(0, 20).forEach((name) => {
+    const isSelected = selected.has(name);
+    rows.push([
+      {
+        text: `${isSelected ? '✅' : '⬜'} ${name}`,
+        callback_data: `subj:${name.slice(0, 40)}`,
+      },
+    ]);
+  });
+
+  rows.push([{ text: '🎯 تم', callback_data: 'subj_done' }]);
+
+  await editMessageText(chatId, messageId, text, {
+    reply_markup: { inline_keyboard: rows },
+  });
+}
+
+// ==================== Subjects Done ====================
+export async function handleSubjectsDone(
+  cb: TelegramCallbackQuery,
+  baseUrl: string,
+): Promise<void> {
+  if (!cb.message) return;
+  const chatId = cb.message.chat.id;
+  const messageId = cb.message.message_id;
+
+  const wasOnboarding = (await getSubscriber(chatId))?.onboarding_step === 'choosing_subjects';
+
+  await upsertSubscriber(cb.from, { onboarding_step: 'idle' });
+
+  const sub = await getSubscriber(chatId);
+
+  // ✅ إشعار السوبر أدمن فقط بتسجيل طالب جديد
+  if (wasOnboarding && sub) {
+    const { notifySuperAdminsNewSubscriber } = await import('../notify-admins');
+    void notifySuperAdminsNewSubscriber(sub);
+  }
+
+  // ✅ إشعار السوبر أدمن بتسجيل طالب جديد
+  if (wasOnboarding && sub) {
+    const { notifySuperAdminsNewSubscriber } = await import('../notify-admins');
+    void notifySuperAdminsNewSubscriber(sub);
+  }
+  const subjectCount = sub?.subjects.length ?? 0;
+  const groupLine = sub?.group_name
+    ? `${groupEmoji(sub.group_name)} <b>${groupLabel(sub.group_name)}</b>`
+    : '⚠️ غير محدد';
+
+  const text = `✅ <b>تم التسجيل!</b>
+
+📌 المرحلة: <b>${escapeHtml(sub?.stage ?? '')}</b>
+👥 الكروب: ${groupLine}
+📚 المواد: <b>${subjectCount > 0 ? `${subjectCount} مادة` : 'الكل'}</b>
+
+من الآن، سأخبرك بالجديد المناسب لك مباشرة. 🎯
+
+استخدم الأزرار بالأسفل للتنقل.`;
+
+  await answerCallbackQuery(cb.id, 'تم التسجيل بنجاح!');
+  await editMessageText(chatId, messageId, text, {
+    reply_markup: { inline_keyboard: [[{ text: '🌐 افتح المنصة', url: baseUrl }]] },
+  });
+
+  // بعد لحظة، أرسل الـReply Keyboard
+  if (wasOnboarding) {
+    setTimeout(() => {
+      void sendMessage(chatId, '👇 <b>قائمتك الجديدة:</b>', {
+        reply_markup: STUDENT_MENU,
+      });
+    }, 800);
+  }
+}
+
+// ==================== /help ====================
+export async function sendHelp(chatId: number, baseUrl: string): Promise<void> {
+  const lines: string[] = [];
+  lines.push('🧭 <b>قائمة الأوامر</b>');
+  lines.push('');
+  lines.push('<b>⚙️ للمشتركين</b>');
+  lines.push('<code>/start</code> — التسجيل / تعديل الإعدادات');
+  lines.push('<code>/settings</code> — الإشعارات والكروب');
+  lines.push('<code>/streak</code> — سلسلة أيامك');
+  lines.push('<code>/ask</code> — إرسال استفسار للإدارة');
+  lines.push('<code>/stop</code> — إلغاء الاشتراك');
+  lines.push('');
+  lines.push('💡 يمكنك أيضاً استخدام الأزرار بالأسفل 👇');
+  lines.push('');
+  lines.push(`<a href="${baseUrl}">🌐 افتح المنصة</a>`);
+
+  await sendMessage(chatId, lines.join('\n'), {
+    reply_markup: STUDENT_MENU,
+  });
+}
+
+// ==================== /streak ====================
+export async function sendStreak(chatId: number): Promise<void> {
+  const sub = await getSubscriber(chatId);
+  if (!sub || !sub.stage) {
+    await sendMessage(chatId, `أنت غير مشترك بعد.\nاكتب /start للتسجيل.`);
+    return;
+  }
+
+  const streak = sub.streak_count ?? 0;
+  const total = sub.total_opens ?? 0;
+
+  const badges: string[] = [];
+  if (total >= 1) badges.push('🌱 بداية الرحلة');
+  if (total >= 10) badges.push('📚 قارئ');
+  if (total >= 50) badges.push('💪 مذاكر جدي');
+  if (total >= 100) badges.push('🏆 أسطورة');
+  if (streak >= 3) badges.push(`🔥 ${streak} أيام متتالية`);
+  if (streak >= 7) badges.push('⚡ أسبوع كامل');
+  if (streak >= 30) badges.push('👑 شهر كامل');
+
+  const lines: string[] = [];
+  lines.push(`🔥 <b>سلسلتك</b>\n`);
+  lines.push(`📅 <b>${streak}</b> ${streak === 1 ? 'يوم متتالي' : 'أيام متتالية'}`);
+  lines.push(`📖 <b>${total}</b> ملزمة فتحتها من البوت`);
+
+  if (badges.length > 0) {
+    lines.push('\n<b>شاراتك:</b>');
+    badges.forEach((b) => lines.push(b));
+  } else {
+    lines.push('\n💡 افتح ملزمة اليوم لتبدأ سلسلتك!');
+  }
+
+  await sendMessage(chatId, lines.join('\n'), {
+    reply_markup: STUDENT_MENU,
+  });
+}
+
+// ==================== /settings ====================
+export async function sendSettings(
+  chatId: number,
+  messageId?: number,
+): Promise<void> {
+  const sub = await getSubscriber(chatId);
+  if (!sub || !sub.stage) {
+    await sendMessage(chatId, `اكتب /start للتسجيل أولاً.`);
+    return;
+  }
+
+  const groupLine = sub.group_name
+    ? `${groupEmoji(sub.group_name)} <b>${groupLabel(sub.group_name)}</b>`
+    : '⚠️ <i>لم تُحدد بعد</i>';
+
+  const text = `⚙️ <b>الإعدادات</b>
+
+المرحلة: <b>${escapeHtml(sub.stage)}</b>
+الكروب: ${groupLine}
+المواد: <b>${sub.subjects.length > 0 ? sub.subjects.length : 'الكل'}</b>
+
+اختر ما تريد استقباله:`;
+
+  const check = (v: boolean) => (v ? '✅' : '⬜');
+
+  const keyboard: InlineKeyboardMarkup = {
+    inline_keyboard: [
+      [
+        { text: `${check(sub.notify_new_note)} ملزمة جديدة`, callback_data: 'tog:new_note' },
+        { text: `${check(sub.notify_morning)} موجز صباحي`, callback_data: 'tog:morning' },
+      ],
+      [
+        { text: `${check(sub.notify_streak)} تنبيه الستريك`, callback_data: 'tog:streak' },
+        { text: `${check(sub.notify_weekly)} ملخص أسبوعي`, callback_data: 'tog:weekly' },
+      ],
+      [
+        { text: `${check(sub.notify_trending)} محتوى رائج`, callback_data: 'tog:trending' },
+      ],
+      [
+        { text: `${check(sub.notify_announcements)} 📢 تبليغات إدارية`, callback_data: 'tog:announcements' },
+      ],
+      [
+        { text: '👥 تغيير الكروب', callback_data: 'settings:group' },
+        { text: '📚 تغيير المواد', callback_data: 'settings:subjects' },
+      ],
+      [{ text: '🔄 تغيير المرحلة', callback_data: 'settings:stage' }],
+    ],
+  };
+
+  if (messageId) {
+    await editMessageText(chatId, messageId, text, { reply_markup: keyboard });
+  } else {
+    await sendMessage(chatId, text, { reply_markup: keyboard });
+  }
+}
+
+// ==================== Toggle Notification ====================
+const TOGGLE_MAP: Record<string, NotifyToggleKey> = {
+  new_note: 'notify_new_note',
+  morning: 'notify_morning',
+  streak: 'notify_streak',
+  weekly: 'notify_weekly',
+  trending: 'notify_trending',
+  announcements: 'notify_announcements',
+};
+
+export async function handleToggleNotification(
+  cb: TelegramCallbackQuery,
+  key: string,
+): Promise<void> {
+  if (!cb.message) return;
+  const chatId = cb.message.chat.id;
+  const messageId = cb.message.message_id;
+
+  const column = TOGGLE_MAP[key];
+  if (!column) {
+    await answerCallbackQuery(cb.id, 'خيار غير معروف');
+    return;
+  }
+
+  const sub = await getSubscriber(chatId);
+  if (!sub) {
+    await answerCallbackQuery(cb.id, 'حدث خطأ');
+    return;
+  }
+
+  const current = sub[column] as boolean;
+  await upsertSubscriber(cb.from, { [column]: !current } as Partial<Subscriber>);
+
+  await answerCallbackQuery(cb.id, !current ? 'تم التفعيل' : 'تم الإلغاء');
+  await sendSettings(chatId, messageId);
+}
+
+// ==================== Settings Navigation ====================
+export async function handleSettingsNavigation(
+  cb: TelegramCallbackQuery,
+  action: string,
+): Promise<void> {
+  if (!cb.message) return;
+  const chatId = cb.message.chat.id;
+  const messageId = cb.message.message_id;
+
+  const sub = await getSubscriber(chatId);
+  if (!sub || !sub.stage) {
+    await answerCallbackQuery(cb.id, 'حدد المرحلة أولاً');
+    return;
+  }
+
+  if (action === 'stage') {
+    await upsertSubscriber(cb.from, { onboarding_step: 'choosing_stage' });
+    await answerCallbackQuery(cb.id);
+    await editMessageText(chatId, messageId, 'اختر مرحلتك:', {
+      reply_markup: stageKeyboard(),
+    });
+    return;
+  }
+
+  if (action === 'group') {
+    await upsertSubscriber(cb.from, {
+      onboarding_step: 'choosing_group_from_settings',
+    });
+    await answerCallbackQuery(cb.id);
+    await editMessageText(
+      chatId,
+      messageId,
+      `📚 <b>${escapeHtml(sub.stage)}</b>\n\nاختر كروبك الجديد:`,
+      { reply_markup: groupKeyboard() },
+    );
+    return;
+  }
+
+  if (action === 'subjects') {
+    await upsertSubscriber(cb.from, { onboarding_step: 'choosing_subjects' });
+    await answerCallbackQuery(cb.id);
+    await sendSubjectsKeyboard(chatId, messageId, sub.stage);
+    return;
+  }
+
+  if (action === 'show') {
+    await answerCallbackQuery(cb.id);
+    await sendSettings(chatId);
+    return;
+  }
+
+  if (action === 'restart') {
+    await upsertSubscriber(cb.from, {
+      stage: null,
+      group_name: null,
+      subjects: [],
+      onboarding_step: 'choosing_stage',
+    });
+    await answerCallbackQuery(cb.id, 'اختر مرحلتك من جديد');
+    await editMessageText(
+      chatId,
+      messageId,
+      '🔄 <b>إعادة التسجيل</b>\n\nاختر مرحلتك الدراسية:',
+      { reply_markup: stageKeyboard() },
+    );
+    return;
+  }
+}
+
+// ==================== /stop ====================
+export async function handleStop(chatId: number): Promise<void> {
+  const { deleteSubscriber } = await import('../subscribers');
+  await deleteSubscriber(chatId);
+
+  await sendMessage(
+    chatId,
+    `👋 <b>تم إلغاء اشتراكك</b>\n\nلن تصلك إشعارات بعد الآن.\nيمكنك العودة في أي وقت بـ /start`,
+    { reply_markup: { remove_keyboard: true } },
+  );
+}
+
+// ==================== Menu Buttons ====================
+/**
+ * يتعامل مع أزرار الـReply Keyboard الخاصة بالطالب.
+ * يُرجع true إذا تعامل مع الزر، false إذا لا.
+ */
+export async function handleStudentMenuButton(
+  chatId: number,
+  text: string,
+  baseUrl: string,
+): Promise<boolean> {
+  if (text === STUDENT_MENU_TEXTS.lawazem) {
+    await sendMessage(chatId, `📚 <b>الملازم</b>\n\nاضغط الزر لفتحها:`, {
+      reply_markup: {
+        inline_keyboard: [[{ text: '🌐 فتح الملازم', url: `${baseUrl}/lawazem` }]],
+      },
+    });
+    return true;
+  }
+
+  if (text === STUDENT_MENU_TEXTS.dictionary) {
+    await sendMessage(chatId, `🔍 <b>القاموس الطبي</b>\n\nاضغط الزر لفتحه:`, {
+      reply_markup: {
+        inline_keyboard: [[{ text: '🌐 فتح القاموس', url: `${baseUrl}/dictionary` }]],
+      },
+    });
+    return true;
+  }
+
+  if (text === STUDENT_MENU_TEXTS.streak) {
+    await sendStreak(chatId);
+    return true;
+  }
+
+  if (text === STUDENT_MENU_TEXTS.settings) {
+    await sendSettings(chatId);
+    return true;
+  }
+
+  if (text === STUDENT_MENU_TEXTS.help) {
+    await sendHelp(chatId, baseUrl);
+    return true;
+  }
+
+  // 📮 استفسار → يُعالج في inquiries.ts
+  return false;
+}
+```
+
+## public\sw.js
+
+```js
+// public/sw.js
+// Service Worker — لوازم
+// استراتيجية: Network-first مع Cache fallback
+// لا يخزّن: /api/ ولا Supabase ولا الطلبات غير GET
+
+const CACHE_NAME = 'lawazem-v1';
+const MAX_CACHE_ENTRIES = 60;
+
+// ==================== Install ====================
+self.addEventListener('install', () => {
+  // تفعيل النسخة الجديدة فوراً بدل انتظار إغلاق كل التبويبات
+  self.skipWaiting();
+});
+
+// ==================== Activate ====================
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    (async () => {
+      // احذف كل الـcaches القديمة
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter((key) => key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
+      );
+      // تولّى السيطرة على كل التبويبات المفتوحة
+      await self.clients.claim();
+    })()
+  );
+});
+
+// ==================== Fetch ====================
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+
+  // تجاهل غير GET
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+
+  // تجاهل كل الطلبات خارج الأصل (Supabase, Groq, ...)
+  if (url.origin !== self.location.origin) return;
+
+  // تجاهل API (محتوى حيّ)
+  if (url.pathname.startsWith('/api/')) return;
+
+  // تجاهل طلبات Next.js dev/HMR (لو صار تشغيل محلي)
+  if (url.pathname.startsWith('/_next/webpack-hmr')) return;
+
+  event.respondWith(handleRequest(request));
+});
+
+// ==================== Handler ====================
+async function handleRequest(request) {
+  const cache = await caches.open(CACHE_NAME);
+
+  try {
+    // 1. جرّب الشبكة أولاً
+    const response = await fetch(request);
+
+    // خزّن فقط الاستجابات الناجحة
+    if (response.ok && response.type === 'basic') {
+      // نحفظ نسخة قبل ما نرجّع الأصل
+      const clone = response.clone();
+      cache.put(request, clone).catch(() => {});
+      // نظّف cache لو كبر أكثر من اللازم
+      trimCache(cache).catch(() => {});
+    }
+
+    return response;
+  } catch {
+    // 2. لو الشبكة فشلت، جرّب الـcache
+    const cached = await cache.match(request);
+    if (cached) return cached;
+
+    // 3. لو ما فيه cache — جرّب الصفحة الرئيسية
+    //    (تُخزَّن بعد أول زيارة ناجحة)
+    const home = await cache.match('/');
+    if (home) return home;
+
+    // 4. لا شيء متاح — أرجِع صفحة offline بسيطة
+    return new Response(offlinePage(), {
+      status: 503,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    });
+  }
+}
+
+// ==================== Trim Cache ====================
+async function trimCache(cache) {
+  const keys = await cache.keys();
+  if (keys.length <= MAX_CACHE_ENTRIES) return;
+  // احذف الأقدم (ترتيب الإدراج مضمون في Cache API)
+  const toDelete = keys.slice(0, keys.length - MAX_CACHE_ENTRIES);
+  await Promise.all(toDelete.map((key) => cache.delete(key)));
+}
+
+// ==================== Offline Fallback ====================
+function offlinePage() {
+  return `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>لا يوجد اتصال — لوازم</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #F7F6F2;
+      color: #1A211F;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+      text-align: center;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #131918; color: #ECEFEE; }
+      .card { background: #1B2220 !important; border-color: #2C3635 !important; }
+    }
+    .card {
+      background: #FFFFFF;
+      border: 1px solid #E4E0D6;
+      border-radius: 24px;
+      padding: 40px 24px;
+      max-width: 380px;
+      width: 100%;
+      box-shadow: 0 8px 30px rgba(26,33,31,0.06);
+    }
+    .icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 20px;
+      background: rgba(14,74,74,0.10);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #0E4A4A;
+    }
+    @media (prefers-color-scheme: dark) {
+      .icon { background: rgba(77,184,184,0.20); color: #4DB8B8; }
+    }
+    h1 {
+      font-size: 20px;
+      font-weight: 900;
+      margin: 0 0 8px;
+    }
+    p {
+      font-size: 14px;
+      line-height: 1.6;
+      opacity: 0.6;
+      margin: 0 0 20px;
+    }
+    button {
+      background: #0E4A4A;
+      color: #FFFFFF;
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 24px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+    }
+    @media (prefers-color-scheme: dark) {
+      button { background: #4DB8B8; color: #131918; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"/>
+      </svg>
+    </div>
+    <h1>لا يوجد اتصال بالإنترنت</h1>
+    <p>تحقق من اتصالك وحاول مرة ثانية. المحتوى الذي زرته مؤخراً قد يكون متاحاً في الـcache.</p>
+    <button onclick="window.location.reload()">أعد المحاولة</button>
+  </div>
+</body>
+</html>`;
+}
+```
+
+
+===public/atlas/ATTRIBUTION.md===
+# Anatomy model attribution
+
+`head-neck.glb` is a simplified subset (head, neck, skull, cervical vertebrae, head and neck muscles) adapted from:
+
+- BodyParts3D, © The Database Center for Life Science, licensed under CC BY-SA 2.1 Japan (https://creativecommons.org/licenses/by-sa/2.1/jp/) and CC BY 4.0 (https://dbarchive.biosciencedbc.jp/en/bodyparts3d/lic.html).
+- Z-Anatomy by Gauthier Kervyn, licensed under CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/), for the facial muscles.
+- Mesh selection and packaging via BodyExplorer by Johan Bellander (MIT): https://github.com/JohanBellander/BodyExplorer
+
+Adaptations: axes converted (millimetres, Z-up to 100 mm units, Y-up), meshes welded, decimated with meshoptimizer, normals recomputed, selection limited to the head and neck.
+
+This adapted model file is distributed under CC BY-SA 4.0. The application source code is not affected by this licence.
+
+===public/sw.js===
+// public/sw.js
+// Service Worker — لوازم
+// استراتيجية: Network-first مع Cache fallback
+// لا يخزّن: /api/ ولا Supabase ولا الطلبات غير GET
+
+const CACHE_NAME = 'lawazem-v1';
+const MAX_CACHE_ENTRIES = 60;
+
+// ==================== Install ====================
+self.addEventListener('install', () => {
+  // تفعيل النسخة الجديدة فوراً بدل انتظار إغلاق كل التبويبات
+  self.skipWaiting();
+});
+
+// ==================== Activate ====================
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    (async () => {
+      // احذف كل الـcaches القديمة
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter((key) => key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
+      );
+      // تولّى السيطرة على كل التبويبات المفتوحة
+      await self.clients.claim();
+    })()
+  );
+});
+
+// ==================== Fetch ====================
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+
+  // تجاهل غير GET
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+
+  // تجاهل كل الطلبات خارج الأصل (Supabase, Groq, ...)
+  if (url.origin !== self.location.origin) return;
+
+  // تجاهل API (محتوى حيّ)
+  if (url.pathname.startsWith('/api/')) return;
+
+  // تجاهل طلبات Next.js dev/HMR (لو صار تشغيل محلي)
+  if (url.pathname.startsWith('/_next/webpack-hmr')) return;
+
+  event.respondWith(handleRequest(request));
+});
+
+// ==================== Handler ====================
+async function handleRequest(request) {
+  const cache = await caches.open(CACHE_NAME);
+
+  try {
+    // 1. جرّب الشبكة أولاً
+    const response = await fetch(request);
+
+    // خزّن فقط الاستجابات الناجحة
+    if (response.ok && response.type === 'basic') {
+      // نحفظ نسخة قبل ما نرجّع الأصل
+      const clone = response.clone();
+      cache.put(request, clone).catch(() => {});
+      // نظّف cache لو كبر أكثر من اللازم
+      trimCache(cache).catch(() => {});
+    }
+
+    return response;
+  } catch {
+    // 2. لو الشبكة فشلت، جرّب الـcache
+    const cached = await cache.match(request);
+    if (cached) return cached;
+
+    // 3. لو ما فيه cache — جرّب الصفحة الرئيسية
+    //    (تُخزَّن بعد أول زيارة ناجحة)
+    const home = await cache.match('/');
+    if (home) return home;
+
+    // 4. لا شيء متاح — أرجِع صفحة offline بسيطة
+    return new Response(offlinePage(), {
+      status: 503,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    });
+  }
+}
+
+// ==================== Trim Cache ====================
+async function trimCache(cache) {
+  const keys = await cache.keys();
+  if (keys.length <= MAX_CACHE_ENTRIES) return;
+  // احذف الأقدم (ترتيب الإدراج مضمون في Cache API)
+  const toDelete = keys.slice(0, keys.length - MAX_CACHE_ENTRIES);
+  await Promise.all(toDelete.map((key) => cache.delete(key)));
+}
+
+// ==================== Offline Fallback ====================
+function offlinePage() {
+  return `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>لا يوجد اتصال — لوازم</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #F7F6F2;
+      color: #1A211F;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+      text-align: center;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #131918; color: #ECEFEE; }
+      .card { background: #1B2220 !important; border-color: #2C3635 !important; }
+    }
+    .card {
+      background: #FFFFFF;
+      border: 1px solid #E4E0D6;
+      border-radius: 24px;
+      padding: 40px 24px;
+      max-width: 380px;
+      width: 100%;
+      box-shadow: 0 8px 30px rgba(26,33,31,0.06);
+    }
+    .icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 20px;
+      background: rgba(14,74,74,0.10);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #0E4A4A;
+    }
+    @media (prefers-color-scheme: dark) {
+      .icon { background: rgba(77,184,184,0.20); color: #4DB8B8; }
+    }
+    h1 {
+      font-size: 20px;
+      font-weight: 900;
+      margin: 0 0 8px;
+    }
+    p {
+      font-size: 14px;
+      line-height: 1.6;
+      opacity: 0.6;
+      margin: 0 0 20px;
+    }
+    button {
+      background: #0E4A4A;
+      color: #FFFFFF;
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 24px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+    }
+    @media (prefers-color-scheme: dark) {
+      button { background: #4DB8B8; color: #131918; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"/>
+      </svg>
+    </div>
+    <h1>لا يوجد اتصال بالإنترنت</h1>
+    <p>تحقق من اتصالك وحاول مرة ثانية. المحتوى الذي زرته مؤخراً قد يكون متاحاً في الـcache.</p>
+    <button onclick="window.location.reload()">أعد المحاولة</button>
+  </div>
+</body>
+</html>`;
+}
+===README.md===
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+
+## Getting Started
+
+First, run the development server:
+
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+===tsconfig.json===
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "baseUrl": ".",
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "**/*.mts"
+  ],
+  "exclude": ["node_modules", ".backup"]
+}
+===vercel.json===
+{
+  "crons": [
+    {
+      "path": "/api/cron/morning",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/streak",
+      "schedule": "0 18 * * *"
+    }
+  ]
+}

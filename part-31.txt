@@ -1,0 +1,3080 @@
+﻿  const B: [number, number] = [140, 71 - 11 * br + 8 * bd + 3 * bi];
+  const C: [number, number] = [156, 79 - 10 * br + 7 * bd - bi];
+
+  const wf = g('flare') * 4;
+  const wy = -3 * g('lu') + 3 * g('td');
+
+  const sm = g('smile');
+  const pu = g('purse');
+  const cy = 170 - 7 * sm;
+  const hw = 20 + 6 * g('out') - 7 * pu + 3 * Math.max(sm, 0);
+  const Lx = 110 - hw;
+  const Rx = 110 + hw;
+  const ty = 166 - 4 * g('lu') - 3 * pu - Math.max(sm, 0);
+  const by = 174 + 10 * g('ld') + 12 * g('jaw') - 3 * g('lup') + 3 * pu;
+
+  const nlf = g('nlf');
+
+  return {
+    head,
+    eyeL: eyePath(80),
+    eyeR: eyePath(140),
+    irisOpacity: clamp01(1 - e < 0.15 ? 0 : 1 - e),
+    browR: `M${r2(A[0])},${r2(A[1])} Q${B[0]},${r2(B[1])} ${C[0]},${r2(C[1])}`,
+    browL: `M${r2(220 - A[0])},${r2(A[1])} Q${220 - B[0]},${r2(B[1])} ${r2(220 - C[0])},${r2(C[1])}`,
+    noseWingR: `M122,146 Q${r2(130 + wf)},${r2(152 + wy)} ${r2(126 + wf)},${r2(160 + wy)}`,
+    noseWingL: `M98,146 Q${r2(90 - wf)},${r2(152 + wy)} ${r2(94 - wf)},${r2(160 + wy)}`,
+    noseBase: `M${r2(94 - wf)},${r2(160 + wy)} Q110,${r2(168 + wy)} ${r2(126 + wf)},${r2(160 + wy)}`,
+    nostril: { lx: r2(102 - wf * 0.6), rx: r2(118 + wf * 0.6), y: r2(158.5 + wy), rad: r2(3 + g('flare') * 1.5) },
+    mouth: `M${r2(Lx)},${r2(cy)} Q110,${r2(ty)} ${r2(Rx)},${r2(cy)} Q110,${r2(by)} ${r2(Lx)},${r2(cy)} Z`,
+    nlfR: `M124,152 Q${r2(134 + 3 * nlf)},162 ${r2(Rx + 3)},${r2(cy - 3)}`,
+    nlfL: `M96,152 Q${r2(86 - 3 * nlf)},162 ${r2(Lx - 3)},${r2(cy - 3)}`,
+    nlfOpacity: clamp01(0.3 + 0.55 * nlf),
+    marR: `M${r2(Rx)},${r2(cy + 3)} Q${r2(Rx + 2)},${r2(cy + 12)} ${r2(Rx - 1)},${r2(cy + 22)}`,
+    marL: `M${r2(Lx)},${r2(cy + 3)} Q${r2(Lx - 2)},${r2(cy + 12)} ${r2(Lx + 1)},${r2(cy + 22)}`,
+    marOpacity: clamp01(g('mar')),
+    purse: [
+      `M${r2(Lx - 3)},${r2(cy - 2)} l-6,-3`,
+      `M${r2(Lx - 3)},${r2(cy + 2)} l-6,3`,
+      `M${r2(Rx + 3)},${r2(cy - 2)} l6,-3`,
+      `M${r2(Rx + 3)},${r2(cy + 2)} l6,3`,
+    ],
+    op: {
+      purse: clamp01(pu),
+      forehead: clamp01(g('fh')),
+      glabella: clamp01(g('gl')),
+      nose: clamp01(g('nr')),
+      squint: clamp01(g('sq')),
+      temple: clamp01(g('tb')),
+      clench: clamp01(g('cl')),
+      cheek: clamp01(g('ck')),
+      chin: clamp01(g('ped')),
+      neck: clamp01(g('nk')),
+    },
+  };
+}
+```
+
+## lib\anatomy-quiz.ts
+
+```ts
+// lib/anatomy-quiz.ts
+import { MUSCLES, MUSCLE_BY_ID } from './anatomy-data';
+import { FACIAL_BRANCHES, branchesOf } from './anatomy-extras';
+
+export type QuestionKind = 'locate' | 'identify' | 'action' | 'attach' | 'branch';
+
+export interface Question {
+  kind: QuestionKind;
+  id: string;
+  options: string[];
+  correct: string;
+}
+
+const AMBIGUOUS_ACTION_GROUPS: readonly (readonly string[])[] = [
+  ['lls', 'zmin', 'llsan', 'lao', 'zmaj'],
+  ['masseter', 'temporalis'],
+  ['corrugator', 'procerus'],
+];
+
+function shuffle<T>(arr: readonly T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = a[i] as T;
+    a[i] = a[j] as T;
+    a[j] = t;
+  }
+  return a;
+}
+
+function sameAmbiguityGroup(a: string, b: string): boolean {
+  return AMBIGUOUS_ACTION_GROUPS.some((g) => g.includes(a) && g.includes(b));
+}
+
+function distractors(id: string, n: number, kind: QuestionKind): string[] {
+  const target = MUSCLE_BY_ID[id];
+  const pool = MUSCLES.filter(
+    (m) => m.id !== id && !(kind === 'action' && sameAmbiguityGroup(id, m.id)),
+  );
+  const same = shuffle(pool.filter((m) => m.region === target?.region));
+  const other = shuffle(pool.filter((m) => m.region !== target?.region));
+  return [...same, ...other].slice(0, n).map((m) => m.id);
+}
+
+function eligibleKinds(id: string): QuestionKind[] {
+  const m = MUSCLE_BY_ID[id];
+  const kinds: QuestionKind[] = ['locate', 'identify', 'action', 'attach'];
+  if (m && branchesOf(m).length === 1) kinds.push('branch');
+  return kinds;
+}
+
+function build(id: string, kind: QuestionKind): Question {
+  if (kind === 'locate') return { kind, id, options: [], correct: id };
+  if (kind === 'branch') {
+    const m = MUSCLE_BY_ID[id];
+    const only = m ? branchesOf(m)[0] : undefined;
+    return { kind, id, options: FACIAL_BRANCHES.map((b) => b.id), correct: only ?? 'buccal' };
+  }
+  return { kind, id, options: shuffle([id, ...distractors(id, 3, kind)]), correct: id };
+}
+
+export function makeRound(count = 10): Question[] {
+  const ids = shuffle(MUSCLES.map((m) => m.id)).slice(0, count);
+  const out: Question[] = [];
+  let prev: QuestionKind | null = null;
+  for (const id of ids) {
+    const options = shuffle(eligibleKinds(id));
+    const kind = options.find((k) => k !== prev) ?? options[0] ?? 'identify';
+    out.push(build(id, kind));
+    prev = kind;
+  }
+  return out;
+}
+```
+
+## lib\anatomy-view.ts
+
+```ts
+// lib/anatomy-view.ts
+import { MUSCLES, ZOOMS, type Muscle, type ZoomId } from './anatomy-data';
+
+export const W0 = 400;
+export const H0 = 540;
+export const LABEL_MARGIN = 170;
+
+export type ViewBox = readonly [number, number, number, number];
+
+/** يحسب نسبة العرض إلى الارتفاع للـ SVG بناءً على التقريب والتسميات */
+export const canvasRatio = (zoom: ZoomId, labelsOn: boolean): number => {
+  if (!labelsOn) return W0 / H0;
+  const z = ZOOMS[zoom];
+  const w = z.size + 2 * LABEL_MARGIN;
+  const h = (z.size * H0) / W0;
+  return w / h;
+};
+
+export function viewBoxFor(zoom: ZoomId, labelsOn: boolean): ViewBox {
+  const z = ZOOMS[zoom];
+  const h = (z.size * H0) / W0;
+  const w = labelsOn ? z.size + 2 * LABEL_MARGIN : z.size;
+  return [z.center[0] - w / 2, z.center[1] - h / 2, w, h];
+}
+
+export interface PlacedLabel {
+  id: string;
+  text: string;
+  ax: number;
+  ay: number;
+  tx: number;
+  ty: number;
+  anchor: 'start' | 'end';
+  sx: number;
+  sy: number;
+}
+
+export interface LabelLayout {
+  fs: number;
+  items: PlacedLabel[];
+}
+
+interface Raw {
+  m: Muscle;
+  ax: number;
+  ay: number;
+  ly: number;
+}
+
+export function layoutLabels(
+  vb: ViewBox,
+  widthPx: number,
+  emWidth: (text: string) => number,
+): LabelLayout {
+  if (!(widthPx > 0)) return { fs: 0, items: [] };
+
+  const s = widthPx / vb[2];
+  const fs = 11 / s;
+  const lineH = fs * 1.45;
+  const lists: [Raw[], Raw[]] = [[], []];
+
+  for (const m of MUSCLES) {
+    const ax = m.label.s === 'L' ? W0 - m.label.x : m.label.x;
+    const ay = m.label.y;
+    if (ax < vb[0] + fs || ax > vb[0] + vb[2] - fs || ay < vb[1] + fs || ay > vb[1] + vb[3] - fs) continue;
+    lists[m.label.s === 'L' ? 0 : 1].push({ m, ax, ay, ly: ay });
+  }
+
+  const items: PlacedLabel[] = [];
+
+  lists.forEach((list, si) => {
+    list.sort((a, b) => a.ay - b.ay);
+
+    for (let i = 1; i < list.length; i++) {
+      const cur = list[i];
+      const prev = list[i - 1];
+      if (cur && prev && cur.ly < prev.ly + lineH) cur.ly = prev.ly + lineH;
+    }
+
+    const maxY = vb[1] + vb[3] - fs;
+    for (let i = list.length - 1; i >= 0; i--) {
+      const cur = list[i];
+      if (!cur) continue;
+      const lim = maxY - (list.length - 1 - i) * lineH;
+      if (cur.ly > lim) cur.ly = lim;
+    }
+
+    for (const it of list) {
+      const text = it.m.short ?? it.m.en;
+      const x = si === 0 ? vb[0] + fs * 0.5 : vb[0] + vb[2] - fs * 0.5;
+      const len = emWidth(text) * fs;
+      items.push({
+        id: it.m.id,
+        text,
+        ax: it.ax,
+        ay: it.ay,
+        tx: x,
+        ty: it.ly + fs * 0.35,
+        anchor: si === 0 ? 'start' : 'end',
+        sx: si === 0 ? x + len + fs * 0.4 : x - len - fs * 0.4,
+        sy: it.ly,
+      });
+    }
+  });
+
+  return { fs, items };
+}
+```
+
+## lib\api-client.ts
+
+```ts
+// lib/api-client.ts
+import { supabase } from './supabaseClient';
+
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+export async function postJson<TResponse = unknown, TBody = unknown>(
+  url: string,
+  body: TBody,
+  init?: RequestInit
+): Promise<TResponse> {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    ...init,
+  });
+
+  let data: unknown = null;
+  try {
+    data = await res.json();
+  } catch {
+    /* response wasn't JSON */
+  }
+
+  if (!res.ok) {
+    const message =
+      (data && typeof data === 'object' && 'error' in data && typeof (data as { error: unknown }).error === 'string'
+        ? (data as { error: string }).error
+        : null) || `فشل الطلب (${res.status})`;
+    throw new ApiError(message, res.status);
+  }
+
+  return data as TResponse;
+}
+
+export async function uploadToStorage(
+  bucket: string,
+  filePath: string,
+  file: File | Blob,
+  options?: { upsert?: boolean }
+): Promise<string> {
+  const { error } = await supabase.storage.from(bucket).upload(filePath, file, options);
+  if (error) throw new ApiError(`فشل رفع الملف: ${error.message}`, 500);
+  const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
+  return data.publicUrl;
+}
+
+export function buildStoragePath(prefix: string, fileName: string): string {
+  const safeName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+  return `${prefix}/${Date.now()}-${safeName}`;
+}
+```
+
+## lib\api-server.ts
+
+```ts
+// lib/api-server.ts
+import { NextResponse } from 'next/server';
+import { getSupabaseAdmin } from './supabaseAdmin';
+
+export type AdminLevel = 'super' | 'admin';
+
+export function jsonError(message: string, status = 400) {
+  return NextResponse.json({ error: message }, { status });
+}
+
+export function jsonOk<T extends object>(data: T) {
+  return NextResponse.json(data);
+}
+
+export function resolveAdminLevel(password: unknown): AdminLevel | null {
+  if (typeof password !== 'string' || password === '') return null;
+
+  const superPw = process.env.SUPER_ADMIN_PASSWORD;
+  if (superPw && password === superPw) return 'super';
+
+  const adminPw = process.env.ADMIN_PASSWORD;
+  if (adminPw && password === adminPw) return 'admin';
+
+  return null;
+}
+
+export function requireAdminPassword(password: unknown): boolean {
+  return resolveAdminLevel(password) !== null;
+}
+
+type AdminGuardResult =
+  | { ok: true; supabaseAdmin: ReturnType<typeof getSupabaseAdmin>; level: AdminLevel }
+  | { ok: false; response: NextResponse };
+
+export function adminGuard(password: unknown): AdminGuardResult {
+  const level = resolveAdminLevel(password);
+  if (!level) {
+    return { ok: false, response: jsonError('كلمة المرور غير صحيحة', 401) };
+  }
+  return { ok: true, supabaseAdmin: getSupabaseAdmin(), level };
+}
+
+export function safeString(value: unknown, max = 5000): string {
+  if (typeof value !== 'string') return '';
+  return value.trim().slice(0, max);
+}
+
+export function safeOptionalString(value: unknown, max = 5000): string | null {
+  const s = safeString(value, max);
+  return s === '' ? null : s;
+}
+```
+
+## lib\constants.ts
+
+```ts
+// lib/constants.ts
+import type { ContentType, Group, MedicalCategory, Stage } from './types';
+
+export const STAGES: readonly Stage[] = [
+  'المرحلة الأولى',
+  'المرحلة الثانية',
+  'المرحلة الثالثة',
+] as const;
+
+export const GROUPS: readonly Group[] = ['A', 'B'] as const;
+
+export const GROUP_LABELS: Record<Group, string> = {
+  A: 'كروب A',
+  B: 'كروب B',
+};
+
+export const CONTENT_TYPES: readonly ContentType[] = [
+  'assignment',
+  'lecture_note',
+  'summary',
+  'task',
+] as const;
+
+export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
+  assignment: 'واجب',
+  lecture_note: 'ملزمة',
+  summary: 'ملخص',
+  task: 'مهمة | سشن',
+};
+
+export const STORAGE_KEYS = {
+  studentStage: 'student_stage',
+  adminPassword: 'admin_password',
+  channelId: 'channel_id',
+  channelPassword: 'channel_password',
+  publisherPassword: 'publisher_password',
+  publisherName: 'publisher_name',
+} as const;
+
+export const STORAGE_BUCKETS = {
+  scheduleImages: 'schedule-images',
+  channelImages: 'channel-images',
+  channelFiles: 'channel-files',
+} as const;
+
+// ==================== Study Formats ====================
+export const STUDY_FORMATS = [
+  'ملخص باللهجة العراقية العامية (سريع ومختصر)',
+  'شرح مبسط وواضح لمحتوى السلايد خطوة بخطوة',
+  'أسئلة اختيار من متعدد (MCQ) للمراجعة مع الإجابات الصحيحة وتوضيح كل خيار',
+  'فلاش كاردز (سؤال وجواب) للحفظ السريع',
+  'ملخص نقطي سريع ومركز',
+  'أسئلة نقاش عميقة تساعد على الفهم لا الحفظ',
+  'مراجعة شاملة وتجميعية آخر المحاضرة بعد إرسال كل السلايدات',
+] as const;
+
+export type StudyFormat = (typeof STUDY_FORMATS)[number];
+
+export const STUDY_FORMAT_LABELS: Record<StudyFormat, string> = {
+  'ملخص باللهجة العراقية العامية (سريع ومختصر)': 'ملخص عامي',
+  'شرح مبسط وواضح لمحتوى السلايد خطوة بخطوة': 'شرح مبسط',
+  'أسئلة اختيار من متعدد (MCQ) للمراجعة مع الإجابات الصحيحة وتوضيح كل خيار': 'أسئلة اختيار من متعدد (MCQ)',
+  'فلاش كاردز (سؤال وجواب) للحفظ السريع': 'فلاش كاردز',
+  'ملخص نقطي سريع ومركز': 'ملخص نقطي',
+  'أسئلة نقاش عميقة تساعد على الفهم لا الحفظ': 'أسئلة نقاش عميقة',
+  'مراجعة شاملة وتجميعية آخر المحاضرة بعد إرسال كل السلايدات': 'مراجعة شاملة آخر المحاضرة',
+};
+
+export const MATERIAL_METHODS = [
+  {
+    value: 'الطالب راح يرسل صورة سلايد واحد بكل رسالة، سلايد بعد سلايد لين نهاية المحاضرة',
+    label: 'إرسال صور السلايدات (سلايد بكل رسالة)',
+  },
+  {
+    value: 'الطالب راح يرسل ملف الملزمة (PDF) كامل دفعة وحدة برسالة وحدة',
+    label: 'إرسال ملف الملزمة كامل دفعة وحدة',
+  },
+  {
+    value: 'الطالب راح ينسخ نص جزء من الملزمة ويلصقه بكل رسالة، جزء بعد جزء',
+    label: 'نسخ ولصق نص الملزمة على أجزاء',
+  },
+] as const;
+
+// ==================== Dictionary v2 ====================
+export const MEDICAL_CATEGORIES: readonly MedicalCategory[] = [
+  'general',
+  'anatomy',
+  'physiology',
+  'pathology',
+  'pharmacology',
+  'microbiology',
+  'biochemistry',
+  'histology',
+  'embryology',
+  'immunology',
+  'clinical',
+] as const;
+
+export const MEDICAL_CATEGORY_LABELS: Record<MedicalCategory, string> = {
+  general: 'عام',
+  anatomy: 'تشريح',
+  physiology: 'فسلجة',
+  pathology: 'أمراض',
+  pharmacology: 'أدوية',
+  microbiology: 'أحياء دقيقة',
+  biochemistry: 'كيمياء حيوية',
+  histology: 'أنسجة',
+  embryology: 'أجنة',
+  immunology: 'مناعة',
+  clinical: 'سريري',
+};
+
+export const MEDICAL_CATEGORY_EMOJIS: Record<MedicalCategory, string> = {
+  general: '📚',
+  anatomy: '🦴',
+  physiology: '⚙️',
+  pathology: '🦠',
+  pharmacology: '💊',
+  microbiology: '🧫',
+  biochemistry: '🧬',
+  histology: '🔬',
+  embryology: '👶',
+  immunology: '🛡️',
+  clinical: '🩺',
+};
+// ==================== Grade Types ====================
+export const GRADE_TYPES = [
+  'quiz',
+  'daily',
+  'midterm',
+  'final',
+  'other',
+] as const;
+
+export type GradeType = (typeof GRADE_TYPES)[number];
+
+export const GRADE_TYPE_LABELS: Record<GradeType, string> = {
+  quiz: 'كوز',
+  daily: 'امتحان يومي',
+  midterm: 'امتحان فصلي',
+  final: 'فاينل',
+  other: 'أخرى',
+};
+
+export const GRADE_TYPE_EMOJIS: Record<GradeType, string> = {
+  quiz: '📝',
+  daily: '📋',
+  midterm: '📊',
+  final: '🎯',
+  other: '📁',
+};
+
+export const GRADE_TYPE_COLORS: Record<GradeType, string> = {
+  quiz: 'bg-gold-soft text-gold-ink',
+  daily: 'bg-teal-soft text-teal',
+  midterm: 'bg-navy-soft text-navy-ink',
+  final: 'bg-coral-soft text-coral-ink',
+  other: 'bg-ink/5 text-ink-soft',
+};
+```
+
+## lib\histology-seed.ts
+
+```ts
+// lib/histology-seed.ts
+/**
+ * بيانات البذرة لأنواع الأنسجة الأساسية
+ * تُستخدم لزرع الجداول عند أول تشغيل أو للعرض في حال عدم الاتصال
+ */
+
+export interface HistologyCategorySeed {
+  slug: string;
+  name_ar: string;
+  name_en: string;
+  description: string;
+  icon_emoji: string;
+  display_order: number;
+}
+
+export const HISTOLOGY_CATEGORIES: HistologyCategorySeed[] = [
+  {
+    slug: 'epithelial',
+    name_ar: 'الأنسجة الطلائية',
+    name_en: 'Epithelial Tissue',
+    description:
+      'الأنسجة التي تغطي الأسطح، تبطن التجاويف، وتشكّل الغدد. تتكون من خلايا متراصة مع مسافة قليلة بينها.',
+    icon_emoji: '🟦',
+    display_order: 1,
+  },
+  {
+    slug: 'connective',
+    name_ar: 'الأنسجة الضامة',
+    name_en: 'Connective Tissue',
+    description:
+      'تدعم الأعضاء وتربطها. تشمل الأنسجة الرخوة، الغضاريف، العظام، الدم، والأنسجة الدهنية.',
+    icon_emoji: '🟨',
+    display_order: 2,
+  },
+  {
+    slug: 'muscle',
+    name_ar: 'الأنسجة العضلية',
+    name_en: 'Muscle Tissue',
+    description:
+      'مسؤولة عن الحركة. ثلاثة أنواع: الهيكلية (إرادية)، الملساء، والقلبية (لا إرادية).',
+    icon_emoji: '🟥',
+    display_order: 3,
+  },
+  {
+    slug: 'nervous',
+    name_ar: 'الأنسجة العصبية',
+    name_en: 'Nervous Tissue',
+    description:
+      'تستقبل وتنقل الإشارات. تتكوّن من العصبونات والخلايا الدبقية.',
+    icon_emoji: '🟪',
+    display_order: 4,
+  },
+];
+
+// ═══════════════════════════════════════════════════════════
+// شرائح البذرة (روابط من Bioscience Image Library — CC0)
+// استبدلها بروابطك لاحقاً
+// ═══════════════════════════════════════════════════════════
+
+export interface HistologySlideSeed {
+  category_slug: string;
+  title_ar: string;
+  title_en: string;
+  description: string;
+  image_url: string;
+  thumbnail_url: string;
+  stain: string;
+  magnification: string;
+  display_order: number;
+}
+
+/**
+ * ⚠️ استبدل هذه الروابط بروابطك الفعلية بعد رفع الصور إلى Supabase Storage
+ * أو استخدم روابط من مكتبة Bioscience Image Library (CC0) بعد تحميلها
+ *
+ * لأغراض التطوير فقط، استخدم الصور التجريبية أدناه
+ */
+export const HISTOLOGY_SLIDES: HistologySlideSeed[] = [
+  // ═══ صور تجريبية للأنسجة الطلائية ═══
+  {
+    category_slug: 'epithelial',
+    title_ar: 'نسيج طلائي حرشفي بسيط',
+    title_en: 'Simple Squamous Epithelium',
+    description: 'طبقة واحدة من الخلايا المسطحة — تُوجد في الأوعية الدموية والحويصلات الهوائية.',
+    image_url: 'https://upload.wikimedia.org/wikipedia/commons/e/e0/Simple_squamous_epithelium.jpg',
+    thumbnail_url: 'https://upload.wikimedia.org/wikipedia/commons/e/e0/Simple_squamous_epithelium.jpg',
+    stain: 'H&E',
+    magnification: '40x',
+    display_order: 1,
+  },
+  {
+    category_slug: 'epithelial',
+    title_ar: 'نسيج طلائي مكعبي بسيط',
+    title_en: 'Simple Cuboidal Epithelium',
+    description: 'طبقة واحدة من الخلايا المكعبة — تُوجد في الأنابيب الكلوية والغدد.',
+    image_url: 'https://upload.wikimedia.org/wikipedia/commons/6/6f/Simple_cuboidal_epithelium.jpg',
+    thumbnail_url: 'https://upload.wikimedia.org/wikipedia/commons/6/6f/Simple_cuboidal_epithelium.jpg',
+    stain: 'H&E',
+    magnification: '40x',
+    display_order: 2,
+  },
+  {
+    category_slug: 'epithelial',
+    title_ar: 'نسيج طلائي عمودي بسيط',
+    title_en: 'Simple Columnar Epithelium',
+    description: 'طبقة واحدة من الخلايا الأطول من عرضها — تُوجد في الأمعاء والمعدة.',
+    image_url: 'https://upload.wikimedia.org/wikipedia/commons/4/4c/Simple_columnar_epithelium.jpg',
+    thumbnail_url: 'https://upload.wikimedia.org/wikipedia/commons/4/4c/Simple_columnar_epithelium.jpg',
+    stain: 'H&E',
+    magnification: '40x',
+    display_order: 3,
+  },
+
+  // ═══ صور تجريبية للأنسجة الضامة ═══
+  {
+    category_slug: 'connective',
+    title_ar: 'نسيج ضام رخو',
+    title_en: 'Loose Connective Tissue',
+    description: 'ألياف متباعدة مع خلايا متعددة — يملأ الفراغات بين الأعضاء.',
+    image_url: 'https://upload.wikimedia.org/wikipedia/commons/2/2e/Loose_connective_tissue.jpg',
+    thumbnail_url: 'https://upload.wikimedia.org/wikipedia/commons/2/2e/Loose_connective_tissue.jpg',
+    stain: 'H&E',
+    magnification: '40x',
+    display_order: 1,
+  },
+  {
+    category_slug: 'connective',
+    title_ar: 'نسيج ضام كثيف منتظم',
+    title_en: 'Dense Regular Connective Tissue',
+    description: 'ألياف كولاجينية متوازية — يُوجد في الأوتار والأربطة.',
+    image_url: 'https://upload.wikimedia.org/wikipedia/commons/5/5d/Dense_regular_connective_tissue.jpg',
+    thumbnail_url: 'https://upload.wikimedia.org/wikipedia/commons/5/5d/Dense_regular_connective_tissue.jpg',
+    stain: 'H&E',
+    magnification: '40x',
+    display_order: 2,
+  },
+
+  // ═══ صور تجريبية للأنسجة العضلية ═══
+  {
+    category_slug: 'muscle',
+    title_ar: 'عضلة هيكلية',
+    title_en: 'Skeletal Muscle',
+    description: 'ألياف عضلية طويلة متعددة الأنوية — تحت السيطرة الإرادية.',
+    image_url: 'https://upload.wikimedia.org/wikipedia/commons/3/3f/Skeletal_muscle_histology.jpg',
+    thumbnail_url: 'https://upload.wikimedia.org/wikipedia/commons/3/3f/Skeletal_muscle_histology.jpg',
+    stain: 'H&E',
+    magnification: '40x',
+    display_order: 1,
+  },
+  {
+    category_slug: 'muscle',
+    title_ar: 'عضلة ملساء',
+    title_en: 'Smooth Muscle',
+    description: 'خلايا مغزلية بنواة واحدة مركزية — تُوجد في الأعضاء الداخلية.',
+    image_url: 'https://upload.wikimedia.org/wikipedia/commons/8/8b/Smooth_muscle_histology.jpg',
+    thumbnail_url: 'https://upload.wikimedia.org/wikipedia/commons/8/8b/Smooth_muscle_histology.jpg',
+    stain: 'H&E',
+    magnification: '40x',
+    display_order: 2,
+  },
+
+  // ═══ صور تجريبية للأنسجة العصبية ═══
+  {
+    category_slug: 'nervous',
+    title_ar: 'خلايا عصبية',
+    title_en: 'Neurons',
+    description: 'عصبونات بأجسام خلوية وامتدادات — تُوجد في الدماغ والحبل الشوكي.',
+    image_url: 'https://upload.wikimedia.org/wikipedia/commons/b/b6/Multipolar_neuron_histology.jpg',
+    thumbnail_url: 'https://upload.wikimedia.org/wikipedia/commons/b/b6/Multipolar_neuron_histology.jpg',
+    stain: 'Silver stain',
+    magnification: '100x',
+    display_order: 1,
+  },
+];
+```
+
+## lib\strings.ts
+
+```ts
+// lib/strings.ts
+/**
+ * ملف النصوص المركزي
+ * كل النصوص العربية للموقع موجودة هنا بصيغة فصحى رسمية.
+ * تعديل أي نص هنا يظهر في كل مكان يستخدمه.
+ */
+
+export const strings = {
+  // ==================== عام ====================
+  common: {
+    appName: 'لوازم',
+    loading: 'جاري التحميل...',
+    backToHome: 'العودة إلى لوحة الأقسام',
+    backToChannels: 'العودة إلى القنوات',
+    save: 'حفظ',
+    cancel: 'إلغاء',
+    delete: 'حذف',
+    edit: 'تعديل',
+    add: 'إضافة',
+    confirm: 'تأكيد',
+    retry: 'إعادة المحاولة',
+    all: 'الكل',
+    filter: 'تصفية',
+    remove: 'إزالة',
+    copied: 'تم النسخ',
+    copy: 'نسخ',
+    close: 'إغلاق',
+  },
+
+  // ==================== التنقل ====================
+  nav: {
+    home: 'الرئيسية',
+    lawazem: 'الملازم',
+    channels: 'القنوات',
+    schedule: 'الجدول',
+    studyPrompt: 'أدوات الدراسة',
+    gpa: 'المعدل',
+    bottomNavLabel: 'التنقل السفلي',
+  },
+
+  // ==================== الصفحة الرئيسية ====================
+  home: {
+    badge: 'منصة لطلبة جامعة العميد',
+    chooseStage: 'اختر مرحلتك الدراسية',
+    chooseStageDesc: 'نعرض لك المحتوى المناسب لمرحلتك — قنوات، جداول، وكل ما تحتاجه.',
+    changeStageHint: 'يمكنك تغييرها لاحقاً في أي وقت',
+    greeting: 'ماذا تحتاج اليوم؟',
+    greetingDesc: 'كل شيء في مكان واحد — اختر القسم الذي تحتاجه',
+    changeStage: 'تغيير المرحلة',
+    chooseAction: 'اختر',
+    openAction: 'فتح',
+    footer:
+      'صُنع بكل حب لطلاب كلية الطب · جامعة العميد · برمجة وإعداد الطالب: علي مازن @E_W_9',
+    sections: {
+      lawazem: 'الملازم',
+      lawazemDesc: 'ملازم الدكاترة مرتبة حسب المادة',
+      channels: 'القنوات الدراسية',
+      channelsDesc: 'دليل قنوات التلغرام الدراسية',
+      schedule: 'الجدول',
+      scheduleDesc: 'جدول المحاضرات الأسبوعي لمرحلتك',
+      studyPrompt: 'أدوات الدراسة',
+      studyPromptDesc: 'برومبت ذكي يدرس معك بالذكاء الاصطناعي',
+      gpa: 'المعدل',
+      gpaDesc: 'احفظ درجاتك واحسب معدلك الموزون حسب وحدات موادك',
+    },
+  },
+
+  // ==================== الملازم ====================
+  lawazem: {
+    title: 'الملازم والمصادر',
+    backLink: 'العودة إلى لوحة الأقسام',
+    searchPlaceholder: 'ابحث باسم الملزمة، الدكتور، أو وسم...',
+    filterLabel: 'تصفية:',
+    summaryPrefix: 'ملزمة موزعة على',
+    summaryMiddle: 'مادة',
+    emptySubjects: 'لا توجد مواد مضافة لمرحلتك حالياً.',
+    emptyNotes: 'لا توجد ملفات حالياً.',
+    emptyNotesShort: 'لا توجد ملفات حالياً',
+    noResults: 'لا توجد نتائج مطابقة',
+    noResultsFor: (search: string) => `البحث: «${search}»`,
+    noResultsTag: (tag: string) => `الوسم: #${tag}`,
+    doctorCount: (n: number) => (n === 1 ? 'دكتور' : 'دكاترة'),
+    noteCount: (n: number) => (n === 1 ? 'ملزمة' : 'ملازم'),
+    withoutDoctor: 'بدون دكتور',
+    doctorPrefix: 'د.',
+    lectureLabel: 'محاضرة',
+    trackTheoretical: 'نظري',
+    trackPractical: 'عملي',
+    bookmark: 'إضافة إلى المفضلة',
+    removeBookmark: 'إزالة من المفضلة',
+    openOnTelegram: 'فتح على تلغرام',
+    openFile: 'فتح الملف',
+  },
+
+  // ==================== آخر ما زرته ====================
+  recent: {
+    title: 'آخر ما زرته',
+    clear: 'مسح',
+    justNow: 'الآن',
+    minutesAgo: (n: number) => `قبل ${n} دقيقة`,
+    hoursAgo: (n: number) => `قبل ${n} ساعة`,
+    yesterday: 'أمس',
+    daysAgo: (n: number) => `قبل ${n} أيام`,
+    weeksAgo: (n: number) => `قبل ${n} أسابيع`,
+    longAgo: 'منذ فترة',
+  },
+
+  // ==================== القنوات ====================
+  channels: {
+    title: 'قنوات الدراسة',
+    backLink: 'العودة إلى لوحة الأقسام',
+    searchPlaceholder: 'ابحث باسم القناة...',
+    searchContentPlaceholder: 'ابحث بعنوان المحتوى...',
+    channelsCount: (n: number) =>
+      n === 1 ? 'قناة متاحة لمرحلتك' : `${n} قناة متاحة لمرحلتك`,
+    empty: 'لا توجد قنوات مضافة لمرحلتك حالياً.',
+    checkLater: 'يرجى العودة لاحقاً',
+    noResults: 'لا توجد نتائج مطابقة',
+    openChannel: 'فتح صفحة القناة',
+    openTelegram: 'فتح القناة على تلغرام',
+    notFound: 'لم نجد هذه القناة.',
+    pinned: 'مثبّت',
+    emptyContent: 'لا يوجد محتوى مضاف لهذه القناة حالياً.',
+    emptySearchContent: 'لا توجد نتائج مطابقة لبحثك',
+    filePrefix: (n: number) => `ملف ${n}`,
+    dueDateLabel: 'تاريخ التسليم:',
+    dueExpired: 'انتهى الموعد',
+    dueToday: 'التسليم اليوم!',
+    dueSoon: (days: number, date: string) =>
+      `تاريخ التسليم: ${date} (بعد ${days} ${days === 1 ? 'يوم' : 'أيام'})`,
+  },
+
+  // ==================== الجدول ====================
+  schedule: {
+    title: 'جدول المحاضرات',
+    backLink: 'العودة إلى لوحة الأقسام',
+    empty: 'لا يوجد جدول مرفوع لمرحلتك حالياً.',
+    checkLater: 'يرجى العودة لاحقاً',
+    openFullSize: 'فتح الصورة بحجم كامل',
+  },
+
+  // ==================== المعدل ====================
+  gpa: {
+    title: 'المعدل',
+    backLink: 'العودة إلى لوحة الأقسام',
+    description:
+      'افتح كل مادة وأدخل درجاتك أولاً بأول على مدار السنة. يمكنك تعديل «من كم» لكل محطة إذا كانت تختلف بكل مادة. الدرجات تُحفظ في متصفحك فقط.',
+    empty: 'لا توجد مواد مضافة لمرحلتك حالياً.',
+    progress: 'التقدم',
+    progressText: (entered: number, total: number) => `${entered} من ${total} مادة`,
+    units: 'وحدة',
+    noScores: 'لا توجد درجات',
+    yourScorePlaceholder: 'درجتك',
+    fromLabel: 'من',
+    finalAverage: 'معدلك النهائي',
+    partialAverage: 'معدلك الحالي (جزئي)',
+    enterScores: 'أدخل درجاتك ليظهر معدلك.',
+    clearAll: 'مسح كل الدرجات',
+    confirmClear: 'حذف كل الدرجات المدخلة لهذه المرحلة. هل أنت متأكد؟',
+    components: {
+      first: 'الفصل الأول',
+      mid: 'المد',
+      second: 'الفصل الثاني',
+      finalTheory: 'الفاينل (نظري)',
+      finalPractical: 'الفاينل (عملي)',
+    },
+  },
+
+  // ==================== أدوات الدراسة ====================
+  studyPrompt: {
+    title: 'أدوات الدراسة',
+    backLink: 'العودة إلى لوحة الأقسام',
+    description:
+      'اختر مادتك وطريقة إرسال المحتوى، وسنصيغ لك برومبت احترافي تنسخه وتستخدمه في أي أداة ذكاء اصطناعي.',
+    empty: 'لا توجد مواد مضافة لمرحلتك حالياً.',
+    subjectLabel: 'المادة',
+    methodLabel: 'كيف ستزود المحتوى للذكاء الاصطناعي؟',
+    formatsLabel: 'شكل الشرح المطلوب',
+    formatsHint: '(يمكنك اختيار أكثر من خيار)',
+    formatsError: 'اختر طريقة شرح واحدة على الأقل.',
+    languageLabel: 'لغة البرومبت',
+    arabic: 'بالعربية',
+    english: 'بالإنجليزية',
+    generateBtn: 'توليد البرومبت',
+    generatingBtn: 'جاري التوليد...',
+    resultReady: 'البرومبت جاهز',
+    resultNote:
+      'انسخ هذا النص والصقه في أي أداة ذكاء اصطناعي تفضلها، ثم ابدأ بإرسال سلايداتك حسب الطريقة التي اخترتها.',
+    generateSuccess: 'تم توليد البرومبت',
+    generateFailed: 'حدث خطأ، يرجى المحاولة مرة أخرى.',
+    copySuccess: 'تم النسخ',
+    copyFailed: 'فشل النسخ — يرجى النسخ يدوياً',
+    loadFailed: 'فشل تحميل المواد',
+  },
+
+  // ==================== لوحة التحكم ====================
+  admin: {
+    title: 'لوحة التحكم',
+    badge: 'مشرف',
+    logout: 'تسجيل الخروج',
+    loginTitle: 'دخول المشرف',
+    loginDesc: 'أدخل كلمة مرور المشرف للوصول إلى لوحة التحكم',
+    passwordPlaceholder: 'كلمة المرور',
+    passwordRequired: 'أدخل كلمة المرور',
+    loginBtn: 'دخول',
+    loggingIn: 'جاري التحقق...',
+    passwordIncorrect: 'كلمة المرور غير صحيحة',
+    genericError: 'حدث خطأ، يرجى المحاولة مرة أخرى.',
+    tabs: {
+      subjects: 'المواد',
+      materials: 'الملازم',
+      channels: 'القنوات',
+      schedules: 'الجدول',
+    },
+  },
+
+  // ==================== المواد (لوحة التحكم) ====================
+  subjects: {
+    addPlaceholder: 'اسم المادة الجديدة',
+    chooseStagePlaceholder: 'اختر المرحلة',
+    addBtn: 'إضافة',
+    empty: 'لا توجد مواد مضافة حالياً.',
+    emptyHint: 'أضف أول مادة من الأعلى',
+    editBtn: 'تعديل',
+    deleteBtn: 'حذف',
+    saveBtn: 'حفظ',
+    cancelBtn: 'إلغاء',
+    confirmDelete: (name: string) =>
+      `حذف مادة «${name}» سيحذف جميع الملازم والأسئلة المرتبطة بها نهائياً. هل أنت متأكد؟`,
+    loadFailed: 'فشل تحميل المواد',
+    addSuccess: 'تمت إضافة المادة',
+    addFailed: 'فشل إضافة المادة',
+    editSuccess: 'تم الحفظ',
+    editFailed: 'فشل الحفظ',
+    deleteSuccess: 'تم الحذف',
+    deleteFailed: 'فشل الحذف',
+  },
+
+  // ==================== الملازم (لوحة التحكم) ====================
+  materials: {
+    warningNoSubjects:
+      'أضف مادة أولاً من تبويب «المواد» لتتمكن من إضافة الملازم.',
+    chooseSubjectPlaceholder: 'اختر المادة',
+    chooseTrackPlaceholder: 'نظري / عملي',
+    trackTheoretical: 'نظري',
+    trackPractical: 'عملي',
+    titlePlaceholder: 'اسم الملزمة / المحاضرة',
+    professorPlaceholder: 'اسم الدكتور (اختياري)',
+    lectureNumberPlaceholder: 'رقم المحاضرة',
+    fileSectionLabel: 'ملف الملزمة',
+    fileUrlPlaceholder: 'الصق رابط تلغرام أو Supabase يدوياً',
+    fileReady: 'الملف جاهز',
+    telegramLink: 'رابط تلغرام',
+    tagsLabel: 'الوسوم (Tags)',
+    tagsSuggestions: [
+      'نظري',
+      'عملي',
+      'محاضرة',
+      'ملخص',
+      'أساسيات',
+      'مراجعة',
+      'سلايدات',
+      'امتحان',
+      'واجب',
+      'فاينل',
+    ],
+    addBtn: 'إضافة ملزمة',
+    empty: 'لا توجد ملازم مضافة حالياً.',
+    saveBtn: 'حفظ',
+    cancelBtn: 'إلغاء',
+    editBtn: 'تعديل',
+    deleteBtn: 'حذف',
+    confirmDelete: (title: string) =>
+      `حذف الملزمة «${title}» نهائياً. هل أنت متأكد؟`,
+    loadFailed: 'فشل تحميل البيانات',
+    addSuccess: 'تمت إضافة الملزمة',
+    addFailed: 'فشل الإضافة',
+    editSuccess: 'تم الحفظ',
+    editFailed: 'فشل الحفظ',
+    deleteSuccess: 'تم الحذف',
+    deleteFailed: 'فشل الحذف',
+    uploadSuccess: 'تم رفع الملف',
+    uploadFailed: 'فشل رفع الملف',
+  },
+
+  // ==================== القنوات (لوحة التحكم) ====================
+  adminChannels: {
+    namePlaceholder: 'اسم القناة',
+    descriptionPlaceholder: 'وصف قصير (اختياري)',
+    descriptionEditPlaceholder: 'الوصف',
+    telegramPlaceholder: 'رابط تلغرام (https://t.me/channelname)',
+    telegramEditPlaceholder: 'رابط تلغرام',
+    passwordPlaceholder: 'كلمة مرور القناة',
+    generateBtn: 'توليد',
+    copyBtn: 'نسخ',
+    copiedBtn: 'تم',
+    copyFailed: 'فشل النسخ — يرجى النسخ يدوياً',
+    addBtn: 'إضافة قناة',
+    empty: 'لا توجد قنوات مضافة حالياً.',
+    saveBtn: 'حفظ',
+    cancelBtn: 'إلغاء',
+    editBtn: 'تعديل',
+    deleteBtn: 'حذف',
+    confirmDelete: (name: string) =>
+      `حذف القناة «${name}» نهائياً. هل أنت متأكد؟`,
+    loadFailed: 'فشل تحميل القنوات',
+    addSuccess: 'تمت إضافة القناة',
+    addFailed: 'فشل الإضافة',
+    editSuccess: 'تم الحفظ',
+    editFailed: 'فشل الحفظ',
+    deleteSuccess: 'تم الحذف',
+    deleteFailed: 'فشل الحذف',
+    passwordLabel: 'كلمة المرور:',
+    passwordNotSet: 'غير محددة',
+  },
+
+  // ==================== الجدول (لوحة التحكم) ====================
+  adminSchedules: {
+    description:
+      'ارفع صورة جدول المحاضرات لكل مرحلة، وستظهر للطلاب مباشرة في صفحة «الجدول».',
+    changeBtn: 'تغيير',
+    uploadPrompt: 'رفع صورة الجدول',
+    uploadHint: 'PNG / JPG / WebP — بحد أقصى 5 ميجا',
+    uploadingImage: 'جاري رفع الصورة...',
+    saving: 'جاري الحفظ...',
+    uploadSuccess: (stage: string) => `تم رفع جدول ${stage}`,
+    uploadFailed: 'فشل رفع الصورة',
+    imageLoadError: 'تعذّر تحميل الصورة الحالية.',
+    uploadNew: 'رفع صورة جديدة',
+    fileTypeError: 'نوع الملف غير مدعوم. استخدم PNG أو JPG أو WebP.',
+    fileSizeError: 'حجم الصورة كبير جداً (بحد أقصى 5 ميجا).',
+    loadFailed: 'فشل تحميل الجداول',
+  },
+
+  // ==================== بوابة القناة ====================
+  channelPortal: {
+    loginTitle: 'دخول صاحب القناة',
+    loginDesc: 'اختر قناتك وأدخل كلمة المرور التي أعطاك إياها المشرف.',
+    chooseChannelPlaceholder: 'اختر قناتك',
+    passwordPlaceholder: 'كلمة مرور القناة',
+    loginBtn: 'دخول',
+    loggingIn: 'جاري التحقق...',
+    passwordIncorrect: 'كلمة المرور غير صحيحة',
+    genericError: 'حدث خطأ، يرجى المحاولة مرة أخرى.',
+    channelPrefix: 'قناة:',
+    viewsLabel: (n: number) => `${n} زيارة`,
+    logout: 'تسجيل الخروج',
+    tabs: {
+      content: 'المحتوى',
+      settings: 'الإعدادات',
+    },
+  },
+
+  // ==================== محتوى القناة ====================
+  channelContent: {
+    filesLabel: 'الملفات والروابط',
+    fileNamePlaceholder: (n: number) => `اسم الملف ${n} (اختياري)`,
+    deleteBtn: 'حذف',
+    uploading: 'جاري الرفع...',
+    urlPlaceholder: 'أو الصق رابطاً بديلاً',
+    addSlotBtn: '+ إضافة ملف / رابط',
+    searchPlaceholder: 'ابحث بعنوان المحتوى...',
+    filterAll: 'جميع الأنواع',
+    folderPlaceholder: 'اسم المجلد (اختياري)',
+    descriptionPlaceholder: 'تفاصيل إضافية (اختياري)',
+    pinLabel: 'تثبيت هذا المنشور في أعلى القناة',
+    pinned: 'مثبّت',
+    dueDate: (date: string) => `تاريخ التسليم: ${date}`,
+    pinTooltip: 'تثبيت',
+    unpinTooltip: 'إلغاء التثبيت',
+    titlePlaceholder: 'العنوان',
+    addBtn: 'إضافة',
+    saveBtn: 'حفظ',
+    cancelBtn: 'إلغاء',
+    editBtn: 'تعديل',
+    deleteBtnFull: 'حذف',
+    empty: 'لا يوجد محتوى مضاف حالياً.',
+    emptyHint: 'أضف أول منشور من الأعلى',
+    noResults: 'لا توجد نتائج مطابقة',
+    fileSizeError: 'حجم الملف كبير جداً (بحد أقصى 20 ميجا).',
+    loadFailed: 'فشل تحميل المحتوى',
+    uploadSuccess: 'تم رفع الملف',
+    uploadFailed: 'فشل رفع الملف',
+    addSuccess: 'تمت إضافة المحتوى',
+    addFailed: 'فشل الإضافة',
+    editSuccess: 'تم الحفظ',
+    editFailed: 'فشل الحفظ',
+    pinFailed: 'فشل التثبيت',
+    confirmDelete: (title: string) => `حذف «${title}» نهائياً. هل أنت متأكد؟`,
+    deleteSuccess: 'تم الحذف',
+    deleteFailed: 'فشل الحذف',
+  },
+
+  // ==================== إعدادات القناة ====================
+  channelSettings: {
+    infoText:
+      'الاسم والمرحلة ورابط تلغرام يديرها المشرف. يمكنك تعديل الصورة والوصف فقط.',
+    imageLabel: 'صورة القناة',
+    changeImageBtn: 'تغيير',
+    imageLoadError: 'تعذّر تحميل الصورة الحالية.',
+    uploadNewImage: 'رفع صورة جديدة',
+    imageUploadPrompt: 'رفع صورة للقناة',
+    imageUploading: 'جاري الرفع...',
+    imageHint: 'PNG / JPG / WebP / GIF — بحد أقصى 5 ميجا',
+    descriptionLabel: 'وصف القناة',
+    descriptionPlaceholder: 'وصف مختصر للقناة...',
+    saveBtn: 'حفظ',
+    unsavedChanges: 'توجد تغييرات غير محفوظة',
+    imageTypeError: 'نوع الصورة غير مدعوم (PNG / JPG / WebP / GIF).',
+    imageSizeError: 'حجم الصورة كبير جداً (بحد أقصى 5 ميجا).',
+    imageUploadSuccess: 'تم رفع الصورة — لا تنسَ الحفظ',
+    imageUploadFailed: 'فشل رفع الصورة',
+    saveSuccess: 'تم حفظ بيانات القناة',
+    saveFailed: 'فشل الحفظ',
+
+    passwordSection: 'تغيير كلمة المرور',
+    passwordNote:
+      'بعد التغيير، لن تعمل كلمة المرور القديمة. تأكد من حفظ الجديدة في مكان آمن.',
+    newPasswordLabel: 'كلمة المرور الجديدة',
+    newPasswordPlaceholder: '4 أحرف على الأقل',
+    confirmPasswordLabel: 'تأكيد كلمة المرور',
+    confirmPasswordPlaceholder: 'أعد كتابتها',
+    passwordMismatch: 'كلمتا المرور غير متطابقتين.',
+    changePasswordBtn: 'تغيير كلمة المرور',
+    passwordChangeSuccess: 'تم تغيير كلمة المرور',
+    passwordChangeFailed: 'فشل التغيير',
+  },
+
+  // ==================== Drop Zone ====================
+  dropZone: {
+    dragActive: 'أفلت الملف هنا',
+    dragIdle: 'اسحب الملف هنا أو اضغط للاختيار',
+    uploading: 'جاري الرفع...',
+    hint: (maxSize: number) =>
+      `PDF، Word، PowerPoint، صور — بحد أقصى ${maxSize} ميجا`,
+    fileSizeError: (maxSize: number) =>
+      `حجم الملف كبير جداً (بحد أقصى ${maxSize} ميجا)`,
+    fileTypeError: 'نوع الملف غير مدعوم',
+    tooManyFiles: 'اختر ملفاً واحداً فقط',
+    selectFailed: 'فشل اختيار الملف',
+  },
+
+  // ==================== Tag Input ====================
+  tagInput: {
+    placeholder: 'أضف وسماً...',
+    removeAria: (tag: string) => `حذف وسم ${tag}`,
+    maxReached: (max: number) => `وصلت إلى الحد الأقصى (${max} وسوم)`,
+    hint: (count: number, max: number) =>
+      `اضغط Enter أو فاصلة لإضافة وسم — ${count}/${max}`,
+  },
+
+  // ==================== رسائل الأخطاء ====================
+  errors: {
+    invalidRequest: 'الطلب غير صالح',
+    unknownAction: 'إجراء غير معروف',
+    idRequired: 'المعرّف مطلوب',
+    unauthorized: 'غير مصرح',
+    channelNotFound: 'القناة غير موجودة',
+    passwordIncorrect: 'كلمة المرور غير صحيحة',
+    dbError: 'حدث خطأ في الاتصال بقاعدة البيانات',
+    loadFailed: 'فشل تحميل البيانات',
+    saveFailed: 'فشل الحفظ',
+    deleteFailed: 'فشل الحذف',
+    addFailed: 'فشل الإضافة',
+  },
+} as const;
+
+// ==================== Type Helpers ====================
+export type Strings = typeof strings;
+```
+
+## lib\study-sounds.ts
+
+```ts
+// lib/study-sounds.ts
+/**
+ * أصوات جلسة الدراسة — أربع فئات:
+ *  🌧️ أصوات هادئة (loop)
+ *  📖 قرآن كريم (بدون loop)
+ *  🎙️ أدعية وقصائد (بدون loop)
+ *  🎵 أخرى (بدون loop)
+ *
+ * ⭐ لإضافة صوت:
+ *  1. ارفع الملف إلى /public/sounds/ (أو Supabase Storage للملفات الكبيرة)
+ *  2. أضف سطراً في CUSTOM_SOUNDS أدناه
+ *  3. الطالب سيراه تلقائياً في الفئة المناسبة
+ */
+
+export type SoundCategory = 'ambient' | 'quran' | 'recitation' | 'other';
+
+export interface AmbientSound {
+  id: string;
+  label: string;
+  emoji: string;
+  source: string; // '/sounds/x.mp3' أو 'https://...'
+  category: SoundCategory;
+  /** true = يشتغل بلا توقف (للأصوات الهادئة) */
+  loop: boolean;
+}
+
+// ==================== Meta ====================
+export const SOUND_CATEGORY_META: Record<
+  SoundCategory,
+  { label: string; emoji: string }
+> = {
+  ambient: { label: 'أصوات هادئة', emoji: '🌧️' },
+  quran: { label: 'قرآن كريم', emoji: '📖' },
+  recitation: { label: 'أدعية وقصائد', emoji: '🎙️' },
+  other: { label: 'متنوّع', emoji: '🎵' },
+};
+
+// ==================== Ambient (loop) ====================
+export const AMBIENT_SOUNDS: readonly AmbientSound[] = [
+  {
+    id: 'rain',
+    label: 'مطر',
+    emoji: '🌧️',
+    source: '/sounds/rain.mp3',
+    category: 'ambient',
+    loop: true,
+  },
+  {
+    id: 'waves',
+    label: 'موج',
+    emoji: '🌊',
+    source: '/sounds/waves.mp3',
+    category: 'ambient',
+    loop: true,
+  },
+  {
+    id: 'forest',
+    label: 'غابة',
+    emoji: '🌲',
+    source: '/sounds/forest.mp3',
+    category: 'ambient',
+    loop: true,
+  },
+  {
+    id: 'cafe',
+    label: 'مقهى',
+    emoji: '☕',
+    source: '/sounds/cafe.mp3',
+    category: 'ambient',
+    loop: true,
+  },
+  {
+    id: 'fireplace',
+    label: 'مدفأة',
+    emoji: '🔥',
+    source: '/sounds/fireplace.mp3',
+    category: 'ambient',
+    loop: true,
+  },
+  {
+    id: 'wind',
+    label: 'ريح',
+    emoji: '🍃',
+    source: '/sounds/wind.mp3',
+    category: 'ambient',
+    loop: true,
+  },
+  {
+    id: 'night',
+    label: 'ليل',
+    emoji: '🌙',
+    source: '/sounds/night.mp3',
+    category: 'ambient',
+    loop: true,
+  },
+  {
+    id: 'white_noise',
+    label: 'ضجيج أبيض',
+    emoji: '📻',
+    source: '/sounds/white-noise.mp3',
+    category: 'ambient',
+    loop: true,
+  },
+  {
+    id: 'brown_noise',
+    label: 'ضجيج بني',
+    emoji: '🟤',
+    source: '/sounds/brown-noise.mp3',
+    category: 'ambient',
+    loop: true,
+  },
+];
+
+// ==================== Custom (ملفاتك — القرآن والأدعية) ====================
+/**
+ * ⭐ فعّل الأسطر بحذف // بعد رفع الملفات.
+ * كل مثال يوضح الاسم المتوقع للملف في المجلد.
+ *
+ * القرآن → public/sounds/quran/
+ * الأدعية → public/sounds/dua/
+ */
+export const CUSTOM_SOUNDS: readonly AmbientSound[] = [
+  // ═══════════ 📖 قرآن كريم ═══════════
+  {
+    id: 'quran_yasin',
+    label: 'سورة يس',
+    emoji: '📖',
+    source:
+      'https://kwcutxqzyyrqlijavrgh.supabase.co/storage/v1/object/public/sounds/quran/yasin.mp3',
+    category: 'quran',
+    loop: false,
+  },
+  {
+    id: 'quran_taha',
+    label: 'سورة طه',
+    emoji: '📖',
+    source:
+      'https://kwcutxqzyyrqlijavrgh.supabase.co/storage/v1/object/public/sounds/quran/taha.mp3',
+    category: 'quran',
+    loop: false,
+  },
+  {
+    id: 'quran_yosf',
+    label: 'سورة يوسف',
+    emoji: '📖',
+    source:
+      'https://kwcutxqzyyrqlijavrgh.supabase.co/storage/v1/object/public/sounds/quran/yosf.mp3',
+    category: 'quran',
+    loop: false,
+  },
+
+  // ═══════════ 🤲 أدعية ═══════════
+  {
+    id: 'dua_ashor',
+    label: 'زيارة عاشوراء',
+    emoji: '🤲',
+    source:
+      'https://kwcutxqzyyrqlijavrgh.supabase.co/storage/v1/object/public/sounds/dua/ashor.mp3',
+    category: 'recitation',
+    loop: false,
+  },
+  {
+    id: 'dua_tawassul',
+    label: 'دعاء التوسل',
+    emoji: '🤲',
+    source:
+      'https://kwcutxqzyyrqlijavrgh.supabase.co/storage/v1/object/public/sounds/dua/tawassul.mp3',
+    category: 'recitation',
+    loop: false,
+  },
+  {
+    id: 'dua_nudba',
+    label: 'دعاء الندبة',
+    emoji: '🤲',
+    source:
+      'https://kwcutxqzyyrqlijavrgh.supabase.co/storage/v1/object/public/sounds/dua/nudba.mp3',
+    category: 'recitation',
+    loop: false,
+  },
+];
+
+// ==================== Aggregate ====================
+export const ALL_SOUNDS: readonly AmbientSound[] = [
+  ...AMBIENT_SOUNDS,
+  ...CUSTOM_SOUNDS,
+];
+
+export function soundsByCategory(cat: SoundCategory): AmbientSound[] {
+  return ALL_SOUNDS.filter((s) => s.category === cat);
+}
+
+export function getAvailableCategories(): SoundCategory[] {
+  const order: SoundCategory[] = ['ambient', 'quran', 'recitation', 'other'];
+  return order.filter((cat) => soundsByCategory(cat).length > 0);
+}
+
+export function findSound(id: string): AmbientSound | null {
+  return ALL_SOUNDS.find((s) => s.id === id) ?? null;
+}
+
+export const ALERT_SOUND = '/sounds/alert.mp3';
+```
+
+## lib\supabaseAdmin.ts
+
+```ts
+// lib/supabaseAdmin.ts
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+
+let cached: SupabaseClient | null = null;
+
+export function getSupabaseAdmin(): SupabaseClient {
+  if (cached) return cached;
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SECRET_KEY;
+
+  if (!url || !key) {
+    throw new Error(
+      'متغيرات بيئة Supabase Admin ناقصة: تأكد من NEXT_PUBLIC_SUPABASE_URL و SUPABASE_SECRET_KEY'
+    );
+  }
+
+  cached = createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  return cached;
+}
+```
+
+## lib\supabaseClient.ts
+
+```ts
+// lib/supabaseClient.ts
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    'متغيرات بيئة Supabase ناقصة: تأكد من NEXT_PUBLIC_SUPABASE_URL و NEXT_PUBLIC_SUPABASE_ANON_KEY'
+  );
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+```
+
+## lib\telegram-admins.ts
+
+```ts
+// lib/telegram-admins.ts
+import { getSupabaseAdmin } from './supabaseAdmin';
+
+export type AdminRole = 'super_admin' | 'admin' | 'publisher';
+
+export interface TelegramAdmin {
+  chat_id: number;
+  username: string | null;
+  first_name: string;
+  role: AdminRole;
+  added_by: number | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// ==================== قراءة ====================
+export async function getAdmin(
+  chatId: number,
+): Promise<TelegramAdmin | null> {
+  const { data } = await getSupabaseAdmin()
+    .from('telegram_admins')
+    .select('*')
+    .eq('chat_id', chatId)
+    .eq('is_active', true)
+    .maybeSingle<TelegramAdmin>();
+  return data ?? null;
+}
+
+export async function getAdminByUsername(
+  username: string,
+): Promise<TelegramAdmin | null> {
+  const clean = username.replace(/^@/, '').toLowerCase();
+  if (!clean) return null;
+  const { data } = await getSupabaseAdmin()
+    .from('telegram_admins')
+    .select('*')
+    .eq('is_active', true)
+    .ilike('username', clean)
+    .maybeSingle<TelegramAdmin>();
+  return data ?? null;
+}
+
+export async function listAdmins(): Promise<TelegramAdmin[]> {
+  const { data } = await getSupabaseAdmin()
+    .from('telegram_admins')
+    .select('*')
+    .eq('is_active', true)
+    .order('created_at', { ascending: true });
+  return (data ?? []) as TelegramAdmin[];
+}
+
+export async function listSuperAdmins(): Promise<TelegramAdmin[]> {
+  const { data } = await getSupabaseAdmin()
+    .from('telegram_admins')
+    .select('*')
+    .eq('role', 'super_admin')
+    .eq('is_active', true);
+  return (data ?? []) as TelegramAdmin[];
+}
+
+export async function hasAnySuperAdmin(): Promise<boolean> {
+  const { count } = await getSupabaseAdmin()
+    .from('telegram_admins')
+    .select('chat_id', { count: 'exact', head: true })
+    .eq('role', 'super_admin')
+    .eq('is_active', true);
+  return (count ?? 0) > 0;
+}
+
+// ==================== كتابة ====================
+export async function registerAdmin(args: {
+  chatId: number;
+  username: string | null;
+  firstName: string;
+  role: AdminRole;
+  addedBy: number | null;
+}): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await getSupabaseAdmin()
+    .from('telegram_admins')
+    .upsert(
+      {
+        chat_id: args.chatId,
+        username: args.username,
+        first_name: args.firstName,
+        role: args.role,
+        added_by: args.addedBy,
+        is_active: true,
+      },
+      { onConflict: 'chat_id' },
+    );
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function deactivateAdmin(
+  chatId: number,
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await getSupabaseAdmin()
+    .from('telegram_admins')
+    .update({ is_active: false })
+    .eq('chat_id', chatId);
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export function roleLabel(role: AdminRole): string {
+  if (role === 'super_admin') return 'مشرف أعلى';
+  if (role === 'admin') return 'مشرف';
+  return 'ناشر';
+}
+
+export function canApprove(role: AdminRole): boolean {
+  return role === 'super_admin';
+}
+```
+
+## lib\telegram-notifications.ts
+
+```ts
+// lib/telegram-notifications.ts
+import { getSupabaseAdmin } from './supabaseAdmin';
+import { sendMessage, escapeHtml, type InlineKeyboardMarkup } from './telegram';
+import { listSuperAdmins } from './telegram-admins';
+import type { Group } from './types';
+
+// ==================== Base URL ====================
+function getBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '');
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return 'https://lawazem.vercel.app';
+}
+
+// ==================== Types ====================
+interface SubscriberLite {
+  chat_id: number;
+  stage: string | null;
+  subjects: string[];
+  group_name: Group | null;
+}
+
+export interface NewNoteInfo {
+  id: string;
+  title: string;
+  subject_name: string;
+  professor_name: string | null;
+  stage: string;
+  group_name: Group | null; // ← جديد
+}
+
+// ==================== Batching ====================
+const BATCH_SIZE = 25;
+const BATCH_DELAY_MS = 1000;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function groupLabel(g: Group): string {
+  return g === 'A' ? 'كروب A' : 'كروب B';
+}
+
+// ==================== Notify: New Note ====================
+export async function notifyNewLectureNote(info: NewNoteInfo): Promise<void> {
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const { data: subs, error } = await supabaseAdmin
+    .from('telegram_subscribers')
+    .select('chat_id, stage, subjects, group_name')
+    .eq('stage', info.stage)
+    .eq('notify_new_note', true);
+
+  if (error) {
+    console.error('[notify] fetch subscribers error:', error.message);
+    return;
+  }
+
+  if (!subs || subs.length === 0) return;
+
+  const subscribers = (subs as SubscriberLite[]).filter((s) => {
+    // فلترة الكروب: إن كانت الملزمة محددة لكروب معيّن، نرسلها لأصحابه فقط
+    if (info.group_name !== null) {
+      if (s.group_name !== info.group_name) return false;
+    }
+    // فلترة المادة
+    if (!s.subjects || s.subjects.length === 0) return true;
+    return s.subjects.includes(info.subject_name);
+  });
+
+  if (subscribers.length === 0) return;
+
+  const baseUrl = getBaseUrl();
+  const lines: string[] = [];
+  lines.push('📚 <b>ملزمة جديدة!</b>');
+  lines.push('');
+  lines.push(`📘 ${escapeHtml(info.subject_name)}`);
+  lines.push(`📝 <b>${escapeHtml(info.title)}</b>`);
+
+  if (info.professor_name) {
+    lines.push(`👨‍🏫 د. ${escapeHtml(info.professor_name)}`);
+  }
+
+  if (info.group_name) {
+    lines.push(`👥 ${groupLabel(info.group_name)}`);
+  }
+
+  const text = lines.join('\n');
+
+  for (let i = 0; i < subscribers.length; i += BATCH_SIZE) {
+    const batch = subscribers.slice(i, i + BATCH_SIZE);
+
+    await Promise.allSettled(
+      batch.map((sub) => {
+        const keyboard: InlineKeyboardMarkup = {
+          inline_keyboard: [
+            [
+              {
+                text: '📖 افتح الملزمة',
+                url: `${baseUrl}/api/telegram/go?n=${info.id}&c=${sub.chat_id}`,
+              },
+            ],
+            [{ text: '🌐 كل الملازم', url: `${baseUrl}/lawazem` }],
+          ],
+        };
+        return sendMessage(sub.chat_id, text, { reply_markup: keyboard });
+      })
+    );
+
+    if (i + BATCH_SIZE < subscribers.length) {
+      await delay(BATCH_DELAY_MS);
+    }
+  }
+
+  console.log(`[notify] sent to ${subscribers.length} subscribers`);
+}
+
+// ==================== Morning Digest ====================
+export async function sendMorningDigest(): Promise<{ sent: number }> {
+  const supabaseAdmin = getSupabaseAdmin();
+  const baseUrl = getBaseUrl();
+
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+  const { data: notes, error: notesErr } = await supabaseAdmin
+    .from('lecture_notes')
+    .select('id, title, professor_name, created_at, group_name, subjects!inner(name, stage)')
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if (notesErr) {
+    console.error('[morning] fetch notes error:', notesErr.message);
+    return { sent: 0 };
+  }
+
+  if (!notes || notes.length === 0) {
+    console.log('[morning] no new notes in last 24h');
+    return { sent: 0 };
+  }
+
+  function pickRelation(rel: unknown): { name: string; stage: string } {
+    if (Array.isArray(rel) && rel[0]) {
+      const first = rel[0] as { name?: unknown; stage?: unknown };
+      return {
+        name: typeof first.name === 'string' ? first.name : '',
+        stage: typeof first.stage === 'string' ? first.stage : '',
+      };
+    }
+    if (rel && typeof rel === 'object') {
+      const obj = rel as { name?: unknown; stage?: unknown };
+      return {
+        name: typeof obj.name === 'string' ? obj.name : '',
+        stage: typeof obj.stage === 'string' ? obj.stage : '',
+      };
+    }
+    return { name: '', stage: '' };
+  }
+
+  // نبني فهرساً حسب المرحلة + الكروب
+  const byStageGroup: Record<string, { title: string; subject: string; group: Group | null }[]> = {};
+  for (const n of notes as Array<{
+    id: string;
+    title: string;
+    professor_name: string | null;
+    group_name: Group | null;
+    subjects: unknown;
+  }>) {
+    const rel = pickRelation(n.subjects);
+    if (!rel.stage) continue;
+    if (!byStageGroup[rel.stage]) byStageGroup[rel.stage] = [];
+    byStageGroup[rel.stage].push({
+      title: n.title,
+      subject: rel.name,
+      group: n.group_name,
+    });
+  }
+
+  const { data: subs, error: subsErr } = await supabaseAdmin
+    .from('telegram_subscribers')
+    .select('chat_id, stage, subjects, group_name')
+    .eq('notify_morning', true)
+    .not('stage', 'is', null);
+
+  if (subsErr) {
+    console.error('[morning] fetch subscribers error:', subsErr.message);
+    return { sent: 0 };
+  }
+
+  if (!subs || subs.length === 0) return { sent: 0 };
+
+  let sent = 0;
+  const subscribers = subs as SubscriberLite[];
+
+  for (let i = 0; i < subscribers.length; i += BATCH_SIZE) {
+    const batch = subscribers.slice(i, i + BATCH_SIZE);
+
+    await Promise.allSettled(
+      batch.map(async (sub) => {
+        if (!sub.stage) return;
+        const stageNotes = byStageGroup[sub.stage] ?? [];
+
+        // فلترة حسب الكروب أولاً
+        const groupFiltered = stageNotes.filter((n) => {
+          if (n.group === null) return true; // للكل
+          return n.group === sub.group_name;
+        });
+
+        if (groupFiltered.length === 0) return;
+
+        const filtered =
+          sub.subjects && sub.subjects.length > 0
+            ? groupFiltered.filter((n) => sub.subjects.includes(n.subject))
+            : groupFiltered;
+
+        if (filtered.length === 0) return;
+
+        const preview = filtered.slice(0, 5);
+        const extra = filtered.length - preview.length;
+
+        const lines: string[] = [];
+        lines.push('🌅 <b>صباح الخير</b>');
+        lines.push('');
+        lines.push(
+          `أمس أُضيفت <b>${filtered.length}</b> ${
+            filtered.length === 1 ? 'ملزمة' : 'ملازم'
+          } لمرحلتك:`
+        );
+        lines.push('');
+
+        for (const n of preview) {
+          const g = n.group ? ` <i>(${groupLabel(n.group)})</i>` : '';
+          lines.push(`• <b>${escapeHtml(n.subject)}</b>: ${escapeHtml(n.title)}${g}`);
+        }
+
+        if (extra > 0) {
+          lines.push(`<i>+ ${extra} أخرى...</i>`);
+        }
+
+        const keyboard: InlineKeyboardMarkup = {
+          inline_keyboard: [
+            [{ text: '🌐 تصفح الكل', url: `${baseUrl}/lawazem` }],
+          ],
+        };
+
+        const ok = await sendMessage(sub.chat_id, lines.join('\n'), {
+          reply_markup: keyboard,
+        });
+        if (ok) sent++;
+      })
+    );
+
+    if (i + BATCH_SIZE < subscribers.length) {
+      await delay(BATCH_DELAY_MS);
+    }
+  }
+
+  console.log(`[morning] sent to ${sent} subscribers`);
+  return { sent };
+}
+
+// ==================== Streak Reminder ====================
+export async function sendStreakReminder(): Promise<{ sent: number }> {
+  const supabaseAdmin = getSupabaseAdmin();
+  const baseUrl = getBaseUrl();
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const { data: subs, error } = await supabaseAdmin
+    .from('telegram_subscribers')
+    .select('chat_id, streak_count, last_streak_date, stage')
+    .eq('notify_streak', true)
+    .gt('streak_count', 0)
+    .neq('last_streak_date', today)
+    .not('stage', 'is', null);
+
+  if (error) {
+    console.error('[streak] fetch subscribers error:', error.message);
+    return { sent: 0 };
+  }
+
+  if (!subs || subs.length === 0) return { sent: 0 };
+
+  let sent = 0;
+  const subscribers = subs as Array<{
+    chat_id: number;
+    streak_count: number;
+    stage: string | null;
+  }>;
+
+  for (let i = 0; i < subscribers.length; i += BATCH_SIZE) {
+    const batch = subscribers.slice(i, i + BATCH_SIZE);
+
+    await Promise.allSettled(
+      batch.map(async (sub) => {
+        const lines: string[] = [];
+        lines.push('🔥 <b>لا تكسر سلسلتك!</b>');
+        lines.push('');
+        lines.push(
+          `لديك <b>${sub.streak_count}</b> ${
+            sub.streak_count === 1 ? 'يوم متتالي' : 'أيام متتالية'
+          } — لا تخسرها اليوم.`
+        );
+        lines.push('');
+        lines.push('افتح أي ملزمة للحفاظ عليها:');
+
+        const keyboard: InlineKeyboardMarkup = {
+          inline_keyboard: [
+            [{ text: '📚 تصفح الملازم', url: `${baseUrl}/lawazem` }],
+          ],
+        };
+
+        const ok = await sendMessage(sub.chat_id, lines.join('\n'), {
+          reply_markup: keyboard,
+        });
+        if (ok) sent++;
+      })
+    );
+
+    if (i + BATCH_SIZE < subscribers.length) {
+      await delay(BATCH_DELAY_MS);
+    }
+  }
+
+  console.log(`[streak] sent to ${sent} subscribers`);
+  return { sent };
+}
+
+// ==================== Stats ====================
+export async function getBotStats(): Promise<{
+  total: number;
+  byStage: Record<string, number>;
+  byGroup: Record<string, number>;
+  streaks: { avg: number; max: number; active: number };
+}> {
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const { data } = await supabaseAdmin
+    .from('telegram_subscribers')
+    .select('stage, group_name, streak_count');
+
+  const subs = (data ?? []) as Array<{
+    stage: string | null;
+    group_name: Group | null;
+    streak_count: number;
+  }>;
+
+  const byStage: Record<string, number> = {};
+  const byGroup: Record<string, number> = { A: 0, B: 0, 'غير محدد': 0 };
+  let totalStreak = 0;
+  let maxStreak = 0;
+  let activeStreaks = 0;
+
+  for (const s of subs) {
+    const stage = s.stage ?? 'غير محدد';
+    byStage[stage] = (byStage[stage] ?? 0) + 1;
+
+    const g = s.group_name ?? 'غير محدد';
+    byGroup[g] = (byGroup[g] ?? 0) + 1;
+
+    const st = s.streak_count ?? 0;
+    totalStreak += st;
+    if (st > maxStreak) maxStreak = st;
+    if (st > 0) activeStreaks++;
+  }
+
+  return {
+    total: subs.length,
+    byStage,
+    byGroup,
+    streaks: {
+      avg: subs.length > 0 ? Math.round((totalStreak / subs.length) * 10) / 10 : 0,
+      max: maxStreak,
+      active: activeStreaks,
+    },
+  };
+}
+
+// ==================== Announcements ====================
+export interface AnnouncementResult {
+  sent: number;
+  failed: number;
+  error?: string;
+}
+
+export async function sendAnnouncement(
+  announcementId: string
+): Promise<AnnouncementResult> {
+  const supabaseAdmin = getSupabaseAdmin();
+  const baseUrl = getBaseUrl();
+
+  const { data: ann, error: fetchError } = await supabaseAdmin
+    .from('telegram_announcements')
+    .select('id, title, body, stage, link_url, link_label')
+    .eq('id', announcementId)
+    .maybeSingle<{
+      id: string;
+      title: string;
+      body: string;
+      stage: string | null;
+      link_url: string | null;
+      link_label: string | null;
+    }>();
+
+  if (fetchError || !ann) {
+    return { sent: 0, failed: 0, error: 'التبليغ غير موجود' };
+  }
+
+  let query = supabaseAdmin
+    .from('telegram_subscribers')
+    .select('chat_id')
+    .eq('notify_announcements', true);
+
+  if (ann.stage) {
+    query = query.eq('stage', ann.stage);
+  }
+
+  const { data: subs, error: subsError } = await query;
+
+  if (subsError) {
+    return { sent: 0, failed: 0, error: subsError.message };
+  }
+
+  const subscribers = (subs ?? []) as Array<{ chat_id: number }>;
+  if (subscribers.length === 0) {
+    return { sent: 0, failed: 0 };
+  }
+
+  const lines: string[] = [];
+  lines.push('📢 <b>تبليغ إداري</b>');
+  lines.push('');
+  lines.push(`<b>${escapeHtml(ann.title)}</b>`);
+  lines.push('');
+  lines.push(escapeHtml(ann.body));
+
+  const text = lines.join('\n');
+
+  const keyboard: InlineKeyboardMarkup = {
+    inline_keyboard: [],
+  };
+
+  if (ann.link_url) {
+    keyboard.inline_keyboard.push([
+      {
+        text: ann.link_label?.trim() || 'المزيد',
+        url: ann.link_url,
+      },
+    ]);
+  }
+
+  keyboard.inline_keyboard.push([
+    { text: '🌐 فتح المنصة', url: baseUrl },
+  ]);
+
+  let sent = 0;
+  let failed = 0;
+
+  for (let i = 0; i < subscribers.length; i += BATCH_SIZE) {
+    const batch = subscribers.slice(i, i + BATCH_SIZE);
+
+    const results = await Promise.allSettled(
+      batch.map((sub) =>
+        sendMessage(sub.chat_id, text, { reply_markup: keyboard })
+      )
+    );
+
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value === true) sent++;
+      else failed++;
+    }
+
+    if (i + BATCH_SIZE < subscribers.length) {
+      await delay(BATCH_DELAY_MS);
+    }
+  }
+
+  console.log(
+    `[announcement] id=${announcementId} sent=${sent} failed=${failed}`
+  );
+  return { sent, failed };
+}
+// ==================== Notify Super Admins (new announcement) ====================
+export async function notifySuperAdminsNewAnnouncement(info: {
+  id: string;
+  title: string;
+  body: string;
+  stage: string | null;
+  created_by: string;
+}): Promise<void> {
+  const supers = await listSuperAdmins();
+  if (supers.length === 0) return;
+
+  const lines: string[] = [];
+  lines.push('📢 <b>تبليغ جديد بانتظار المراجعة</b>');
+  lines.push('');
+  lines.push(`👤 من: ${escapeHtml(info.created_by)}`);
+  lines.push(`🎯 ${info.stage ? escapeHtml(info.stage) : 'كل المراحل'}`);
+  lines.push('');
+  lines.push(`<b>${escapeHtml(info.title)}</b>`);
+  lines.push('');
+  lines.push(escapeHtml(info.body));
+
+  const keyboard: InlineKeyboardMarkup = {
+    inline_keyboard: [
+      [
+        { text: '✅ موافقة وإرسال', callback_data: `ann_approve:${info.id}` },
+        { text: '❌ رفض', callback_data: `ann_reject:${info.id}` },
+      ],
+      [{ text: '🗑 حذف', callback_data: `ann_delete:${info.id}` }],
+    ],
+  };
+
+  for (const s of supers) {
+    try {
+      await sendMessage(s.chat_id, lines.join('\n'), { reply_markup: keyboard });
+    } catch {
+      /* تجاهل */
+    }
+  }
+}
+```
+
+## lib\telegram.ts
+
+```ts
+// lib/telegram.ts
+
+const API_BASE = 'https://api.telegram.org';
+
+// ==================== Types ====================
+export interface InlineKeyboardButton {
+  text: string;
+  callback_data?: string;
+  url?: string;
+}
+
+export interface InlineKeyboardMarkup {
+  inline_keyboard: InlineKeyboardButton[][];
+}
+
+import type {
+  ReplyKeyboardMarkup,
+  ReplyKeyboardRemove,
+} from './telegram/types';
+
+export interface SendMessageOptions {
+  parse_mode?: 'HTML' | 'MarkdownV2' | 'Markdown';
+  disable_web_page_preview?: boolean;
+  reply_markup?:
+    | InlineKeyboardMarkup
+    | ReplyKeyboardMarkup
+    | ReplyKeyboardRemove;
+}
+
+// ==================== Token ====================
+function getToken(): string {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) throw new Error('TELEGRAM_BOT_TOKEN غير مُعد');
+  return token;
+}
+
+export function getWebhookSecret(): string | undefined {
+  return process.env.TELEGRAM_WEBHOOK_SECRET;
+}
+
+// ==================== Send Message ====================
+export async function sendMessage(
+  chatId: number,
+  text: string,
+  options: SendMessageOptions = {}
+): Promise<boolean> {
+  const token = getToken();
+  try {
+    const res = await fetch(`${API_BASE}/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: options.parse_mode ?? 'HTML',
+        disable_web_page_preview: options.disable_web_page_preview ?? true,
+        reply_markup: options.reply_markup,
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      console.error('[tg] sendMessage failed:', res.status, body.slice(0, 300));
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('[tg] sendMessage error:', err);
+    return false;
+  }
+}
+
+// ==================== Edit Message ====================
+export async function editMessageText(
+  chatId: number,
+  messageId: number,
+  text: string,
+  options: SendMessageOptions = {}
+): Promise<boolean> {
+  const token = getToken();
+  try {
+    const res = await fetch(`${API_BASE}/bot${token}/editMessageText`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId,
+        text,
+        parse_mode: options.parse_mode ?? 'HTML',
+        disable_web_page_preview: options.disable_web_page_preview ?? true,
+        reply_markup: options.reply_markup,
+      }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+// ==================== Answer Callback ====================
+export async function answerCallbackQuery(
+  callbackQueryId: string,
+  text?: string,
+  showAlert = false
+): Promise<void> {
+  const token = getToken();
+  try {
+    await fetch(`${API_BASE}/bot${token}/answerCallbackQuery`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        callback_query_id: callbackQueryId,
+        text,
+        show_alert: showAlert,
+      }),
+    });
+  } catch {
+    /* تجاهل */
+  }
+}
+
+// ==================== Set / Delete Webhook ====================
+export async function setWebhook(
+  webhookUrl: string,
+  secretToken?: string
+): Promise<{ ok: boolean; description: string }> {
+  const token = getToken();
+  const payload: Record<string, unknown> = {
+    url: webhookUrl,
+    allowed_updates: ['message', 'callback_query'],
+    drop_pending_updates: true,
+  };
+  if (secretToken) payload.secret_token = secretToken;
+
+  try {
+    const res = await fetch(`${API_BASE}/bot${token}/setWebhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = (await res.json()) as { ok?: boolean; description?: string };
+    return {
+      ok: !!data.ok,
+      description: data.description ?? (data.ok ? 'تم بنجاح' : 'فشل'),
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      description: err instanceof Error ? err.message : 'خطأ غير معروف',
+    };
+  }
+}
+
+export async function deleteWebhook(): Promise<boolean> {
+  const token = getToken();
+  try {
+    const res = await fetch(`${API_BASE}/bot${token}/deleteWebhook`, {
+      method: 'POST',
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+// ==================== Helpers ====================
+export function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+// ==================== Stage Helpers ====================
+export const STAGE_MAP: Record<string, string> = {
+  '1': 'المرحلة الأولى',
+  '2': 'المرحلة الثانية',
+  '3': 'المرحلة الثالثة',
+};
+
+export const STAGE_REVERSE: Record<string, string> = {
+  'المرحلة الأولى': '1',
+  'المرحلة الثانية': '2',
+  'المرحلة الثالثة': '3',
+};
+
+export function stageLabel(code: string): string {
+  return STAGE_MAP[code] ?? code;
+}
+// ==================== Helper: getAdminChatIds ====================
+// (يُستخدم من telegram-admins.ts، لا يحتاج تعديل الملف)
+
+// ==================== Message Helpers ====================
+export function bold(text: string): string {
+  return `<b>${text}</b>`;
+}
+
+export function code(text: string): string {
+  return `<code>${text}</code>`;
+}
+
+export function italic(text: string): string {
+  return `<i>${text}</i>`;
+}
+
+export function truncate(text: string, max = 3500): string {
+  if (text.length <= max) return text;
+  return text.slice(0, max - 1) + '…';
+}
+```
+
+## lib\types.ts
+
+```ts
+// lib/types.ts
+
+export type Stage = 'المرحلة الأولى' | 'المرحلة الثانية' | 'المرحلة الثالثة';
+
+export type Group = 'A' | 'B';
+
+export type ContentType = 'assignment' | 'lecture_note' | 'summary' | 'task';
+
+export type Track = 'نظري' | 'عملي';
+
+export type MedicalCategory =
+  | 'general'
+  | 'anatomy'
+  | 'physiology'
+  | 'pathology'
+  | 'pharmacology'
+  | 'microbiology'
+  | 'biochemistry'
+  | 'histology'
+  | 'embryology'
+  | 'immunology'
+  | 'clinical';
+
+export interface Subject {
+  id: string;
+  name: string;
+  stage: Stage;
+  units: number | null;
+  created_at?: string;
+}
+
+export interface LectureNote {
+  id: string;
+  subject_id: string;
+  title: string;
+  professor_name: string | null;
+  lecture_number: number | null;
+  track: Track | null;
+  tags: string[];
+  year: number | null;
+  group_name: Group | null;
+  file_path: string;
+  status?: string;
+  created_at?: string;
+  subjects?: { name: string } | null;
+}
+
+export type ReportReason = 'dead_link' | 'outdated';
+
+export interface LectureNoteReport {
+  id: string;
+  lecture_note_id: string;
+  reason: ReportReason;
+  note: string | null;
+  created_at: string;
+  resolved_at: string | null;
+  resolved_action: 'deleted' | 'ignored' | null;
+  lecture_notes?: {
+    id: string;
+    title: string;
+    subject_id: string;
+    professor_name: string | null;
+    year: number | null;
+    file_path: string;
+    subjects?: { name: string } | null;
+  } | null;
+}
+
+export interface FileEntry {
+  label: string | null;
+  url: string;
+}
+
+export interface Channel {
+  id: string;
+  name: string;
+  stage: Stage;
+  description: string | null;
+  telegram_link: string;
+  channel_password: string | null;
+  image_url: string | null;
+  views: number;
+  created_at?: string;
+}
+
+export interface ChannelContent {
+  id: string;
+  channel_id: string;
+  content_type: ContentType;
+  title: string;
+  description: string | null;
+  due_date: string | null;
+  track: Track | null;
+  tags: string[];
+  file_urls: FileEntry[];
+  folder: string | null;
+  pinned: boolean;
+  created_at?: string;
+}
+
+export interface Schedule {
+  stage: Stage;
+  image_url: string | null;
+  updated_at?: string;
+}
+
+export interface ChannelListItem {
+  id: string;
+  name: string;
+}
+
+// ==================== Dictionary v2 ====================
+export interface DictionaryDeepExplanation {
+  overview: string;
+  mechanism: string;
+  clinical: string;
+  confusions: string[];
+  mnemonic: string | null;
+}
+```
+
+## lib\telegram\inquiries.ts
+
+```ts
+// lib/telegram/inquiries.ts
+import { getSupabaseAdmin } from '../supabaseAdmin';
+
+// ==================== Types ====================
+export interface Inquiry {
+  id: string;
+  chat_id: number;
+  student_name: string | null;
+  stage: string | null;
+  question: string;
+  status: 'pending' | 'answered' | 'closed';
+  admin_reply: string | null;
+  replied_by: number | null;
+  replied_at: string | null;
+  created_at: string;
+}
+
+// ==================== Create ====================
+export async function createInquiry(args: {
+  chatId: number;
+  studentName: string | null;
+  stage: string | null;
+  question: string;
+}): Promise<{ ok: true; inquiry: Inquiry } | { ok: false; error: string }> {
+  const question = args.question.trim().slice(0, 1500);
+  if (!question) return { ok: false, error: 'السؤال فارغ' };
+
+  const { data, error } = await getSupabaseAdmin()
+    .from('telegram_inquiries')
+    .insert({
+      chat_id: args.chatId,
+      student_name: args.studentName,
+      stage: args.stage,
+      question,
+    })
+    .select('*')
+    .single<Inquiry>();
+
+  if (error || !data) {
+    console.error('[inquiries] create error:', error?.message);
+    return { ok: false, error: error?.message ?? 'فشل الحفظ' };
+  }
+
+  return { ok: true, inquiry: data };
+}
+
+// ==================== Read ====================
+export async function listPendingInquiries(
+  limit = 10,
+): Promise<Inquiry[]> {
+  const { data, error } = await getSupabaseAdmin()
+    .from('telegram_inquiries')
+    .select('*')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    console.error('[inquiries] list pending error:', error.message);
+    return [];
+  }
+  return (data ?? []) as Inquiry[];
+}
+
+export async function countPendingInquiries(): Promise<number> {
+  const { count, error } = await getSupabaseAdmin()
+    .from('telegram_inquiries')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending');
+  if (error) return 0;
+  return count ?? 0;
+}
+
+export async function getInquiry(id: string): Promise<Inquiry | null> {
+  const { data, error } = await getSupabaseAdmin()
+    .from('telegram_inquiries')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle<Inquiry>();
+  if (error || !data) return null;
+  return data;
+}
+
+// ==================== Answer ====================
+export async function answerInquiry(args: {
+  id: string;
+  reply: string;
+  adminChatId: number;
+}): Promise<{ ok: boolean; inquiry?: Inquiry; error?: string }> {
+  const reply = args.reply.trim().slice(0, 1500);
+  if (!reply) return { ok: false, error: 'الرد فارغ' };
+
+  const { data, error } = await getSupabaseAdmin()
+    .from('telegram_inquiries')
+    .update({
+      status: 'answered',
+      admin_reply: reply,
+      replied_by: args.adminChatId,
+      replied_at: new Date().toISOString(),
+    })
+    .eq('id', args.id)
+    .eq('status', 'pending')
+    .select('*')
+    .maybeSingle<Inquiry>();
+
+  if (error) {
+    console.error('[inquiries] answer error:', error.message);
+    return { ok: false, error: error.message };
+  }
+  if (!data) return { ok: false, error: 'الاستفسار غير موجود أو تمت معالجته' };
+  return { ok: true, inquiry: data };
+}
+
+// ==================== Close without reply ====================
+export async function closeInquiry(
+  id: string,
+): Promise<{ ok: boolean; inquiry?: Inquiry; error?: string }> {
+  const { data, error } = await getSupabaseAdmin()
+    .from('telegram_inquiries')
+    .update({ status: 'closed' })
+    .eq('id', id)
+    .eq('status', 'pending')
+    .select('*')
+    .maybeSingle<Inquiry>();
+
+  if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: false, error: 'الاستفسار غير موجود' };
+  return { ok: true, inquiry: data };
+}
+
+// ==================== Format ====================
+export function formatInquiryForAdmin(
+  inq: Inquiry,
+  escapeHtml: (s: string) => string,
+): string {
+  const lines: string[] = [];
+  lines.push('📮 <b>استفسار جديد</b>');
+  lines.push('');
+  lines.push(`👤 ${escapeHtml(inq.student_name ?? 'غير معروف')}`);
+  if (inq.stage) lines.push(`📌 ${escapeHtml(inq.stage)}`);
+  lines.push('');
+  lines.push('❓ <b>السؤال:</b>');
+  lines.push(escapeHtml(inq.question));
+  return lines.join('\n');
+}
+```
+
+## lib\telegram\notify-admins.ts
+
+```ts
+// lib/telegram/notify-admins.ts
+import {
+  sendMessage,
+  escapeHtml,
+  type InlineKeyboardMarkup,
+} from '../telegram';
+import { listSuperAdmins } from '../telegram-admins';
+import type { Subscriber } from './types';
+import { groupLabel, groupEmoji } from './subscribers';
+import type { Inquiry } from './inquiries';
+
+// ==================== New Inquiry ====================
+export async function notifySuperAdminsNewInquiry(
+  inq: Inquiry,
+): Promise<void> {
+  const supers = await listSuperAdmins();
+  if (supers.length === 0) return;
+
+  const lines: string[] = [];
+  lines.push('📮 <b>استفسار جديد</b>');
+  lines.push('');
+  lines.push(`👤 ${escapeHtml(inq.student_name ?? 'غير معروف')}`);
+  if (inq.stage) lines.push(`📌 ${escapeHtml(inq.stage)}`);
+  lines.push('');
+  lines.push('❓ <b>السؤال:</b>');
+  lines.push(escapeHtml(inq.question));
+
+  const kb: InlineKeyboardMarkup = {
+    inline_keyboard: [
+      [
+        { text: '💬 رد', callback_data: `inq_reply:${inq.id}` },
+        { text: '✅ إغلاق بدون رد', callback_data: `inq_close:${inq.id}` },
+      ],
+    ],
+  };
+
+  const text = lines.join('\n');
+  for (const s of supers) {
+    try {
+      await sendMessage(s.chat_id, text, { reply_markup: kb });
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+// ==================== New Subscriber ====================
+export async function notifySuperAdminsNewSubscriber(
+  sub: Subscriber,
+): Promise<void> {
+  const supers = await listSuperAdmins();
+  if (supers.length === 0) return;
+
+  const subjectCount = sub.subjects.length;
+  const groupLine = sub.group_name
+    ? `${groupEmoji(sub.group_name)} <b>${groupLabel(sub.group_name)}</b>`
+    : '—';
+
+  const lines: string[] = [];
+  lines.push('🎉 <b>مشترك جديد</b>');
+  lines.push('');
+  lines.push(
+    `👤 ${escapeHtml(sub.first_name ?? 'غير معروف')}${
+      sub.username ? ` (@${escapeHtml(sub.username)})` : ''
+    }`,
+  );
+  lines.push(`📌 ${escapeHtml(sub.stage ?? '—')}`);
+  lines.push(`👥 ${groupLine}`);
+  lines.push(`📚 ${subjectCount > 0 ? `${subjectCount} مادة` : 'كل المواد'}`);
+
+  const text = lines.join('\n');
+  for (const s of supers) {
+    try {
+      await sendMessage(s.chat_id, text);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+// ==================== New Pending Announcement ====================
+export async function notifySuperAdminsNewAnnouncementPending(info: {
+  id: string;
+  title: string;
+  body: string;
+  stage: string | null;
+  created_by: string;
+}): Promise<void> {
+  const supers = await listSuperAdmins();
+  if (supers.length === 0) return;
+
+  const lines: string[] = [];
+  lines.push('📢 <b>تبليغ جديد بانتظار المراجعة</b>');
+  lines.push('');
+  lines.push(`👤 من: ${escapeHtml(info.created_by)}`);
+  lines.push(`🎯 ${info.stage ? escapeHtml(info.stage) : 'كل المراحل'}`);
+  lines.push('');
+  lines.push(`<b>${escapeHtml(info.title)}</b>`);
+  lines.push('');
+  lines.push(escapeHtml(info.body));
+
+  const kb: InlineKeyboardMarkup = {
+    inline_keyboard: [
+      [
+        { text: '✅ موافقة وإرسال', callback_data: `ann_approve:${info.id}` },
+        { text: '❌ رفض', callback_data: `ann_reject:${info.id}` },
+      ],
+      [{ text: '🗑 حذف', callback_data: `ann_delete:${info.id}` }],
+    ],
+  };
+
+  const text = lines.join('\n');
+  for (const s of supers) {
+    try {
+      await sendMessage(s.chat_id, text, { reply_markup: kb });
+    } catch {
+      /* ignore */
+    }
+  }
+}
+```
+
+## lib\telegram\sessions.ts
+
+```ts
+// lib/telegram/sessions.ts
+import { getSupabaseAdmin } from '../supabaseAdmin';
+
+// ==================== Types ====================
+export type SessionFlowType =
+  | 'idle'
+  | 'announce'
+  | 'add_admin'
+  | 'reject'
+  | 'inquiry';
+
+export interface AnnouncementDraft {
+  templateId: string | null;
+  title: string | null;
+  body: string | null;
+  stage: string | null;
+  link_url: string | null;
+  link_label: string | null;
+}
+
+export interface Session {
+  chat_id: number;
+  flow_type: SessionFlowType;
+  flow_step: string | null;
+  flow_data: Record<string, unknown>;
+  updated_at: string;
+}
+
+// ==================== Helpers ====================
+const SESSION_TTL_MS = 60 * 60 * 1000; // ساعة واحدة
+
+function isFresh(updatedAt: string): boolean {
+  const t = Date.parse(updatedAt);
+  if (Number.isNaN(t)) return false;
+  return Date.now() - t < SESSION_TTL_MS;
+}
+
+// ==================== Read ====================
+export async function getSession(
+  chatId: number,
+): Promise<Session | null> {
+  const { data, error } = await getSupabaseAdmin()
+    .from('telegram_sessions')
+    .select('*')
+    .eq('chat_id', chatId)
+    .maybeSingle<Session>();
+
+  if (error || !data) return null;
+  if (!isFresh(data.updated_at)) {
+    // جلسة قديمة — نظّفها
+    void clearSession(chatId);
+    return null;
+  }
+  return data;
+}
+
+// ==================== Write ====================
+export async function setSession(
+  chatId: number,
+  flowType: SessionFlowType,
+  flowStep: string | null,
+  flowData: Record<string, unknown> = {},
+): Promise<void> {
+  const { error } = await getSupabaseAdmin()
+    .from('telegram_sessions')
+    .upsert(
+      {
+        chat_id: chatId,
+        flow_type: flowType,
+        flow_step: flowStep,
+        flow_data: flowData,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'chat_id' },
+    );
+
+  if (error) {
+    console.error('[sessions] setSession error:', error.message);
+  }
+}
+
+export async function clearSession(chatId: number): Promise<void> {
+  const { error } = await getSupabaseAdmin()
+    .from('telegram_sessions')
+    .delete()
+    .eq('chat_id', chatId);
+  if (error) {
+    console.error('[sessions] clearSession error:', error.message);
+  }
+}
+
+// ==================== Cleanup ====================
+/**
+ * احذف كل الجلسات القديمة (أكثر من ساعة بدون تحديث).
+ * تُستدعى من الويب هوك sporadically.
+ */
+export async function cleanupStaleSessions(): Promise<void> {
+  const cutoff = new Date(Date.now() - SESSION_TTL_MS).toISOString();
+  const { error } = await getSupabaseAdmin()
+    .from('telegram_sessions')
+    .delete()
+    .lt('updated_at', cutoff);
+  if (error) {
+    console.error('[sessions] cleanup error:', error.message);
+  }
+}
+
+// ==================== Typed getters ====================
+export async function getAnnouncementDraft(
+  chatId: number,
+): Promise<AnnouncementDraft | null> {
+  const s = await getSession(chatId);
+  if (!s || s.flow_type !== 'announce') return null;
+  const draft = s.flow_data.draft as AnnouncementDraft | undefined;
+  return draft ?? null;
+}
+
+export function emptyAnnouncementDraft(): AnnouncementDraft {
+  return {
+    templateId: null,
+    title: null,
+    body: null,
+    stage: null,
+    link_url: null,
+    link_label: null,
+  };
+}
+```
+
+## lib\telegram\subscribers.ts
+
+```ts
+// lib/telegram/subscribers.ts
+import { getSupabaseAdmin } from '../supabaseAdmin';
+import type { Subscriber, OnboardingStep } from './types';
+
+// ==================== Read ====================
+export async function getSubscriber(
+  chatId: number,
+): Promise<Subscriber | null> {
+  const { data, error } = await getSupabaseAdmin()
+    .from('telegram_subscribers')
+    .select('*')
+    .eq('chat_id', chatId)
+    .maybeSingle<Subscriber>();
+
+  if (error) {
+    console.error('[subs] get error:', error.message);
+    return null;
+  }
+  return data ?? null;
+}
+
+// ==================== Upsert ====================
+export async function upsertSubscriber(
+  user: { id: number; first_name?: string; username?: string },
+  patch: Partial<Subscriber>,
+): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  const existing = await getSubscriber(user.id);
+
+  if (existing) {
+    const { error } = await supabase
+      .from('telegram_subscribers')
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('chat_id', user.id);
+    if (error) console.error('[subs] update error:', error.message);
+  } else {
+    const { error } = await supabase.from('telegram_subscribers').insert({
+      chat_id: user.id,
+      first_name: user.first_name ?? null,
+      username: user.username ?? null,
+      ...patch,
+    });
+    if (error) console.error('[subs] insert error:', error.message);
+  }
+}
+
+// ==================== Onboarding helpers ====================
+export function isFullyOnboarded(sub: Subscriber | null): boolean {
+  if (!sub) return false;
+  return (
+    sub.stage !== null &&
+    sub.group_name !== null &&
+    sub.onboarding_step === 'idle'
+  );
+}
+
+export async function setOnboardingStep(
+  chatId: number,
+  step: OnboardingStep,
+): Promise<void> {
+  const { error } = await getSupabaseAdmin()
+    .from('telegram_subscribers')
+    .update({ onboarding_step: step, updated_at: new Date().toISOString() })
+    .eq('chat_id', chatId);
+  if (error) console.error('[subs] setOnboardingStep error:', error.message);
+}
+
+// ==================== Delete (unsubscribe) ====================
+export async function deleteSubscriber(chatId: number): Promise<void> {
+  const { error } = await getSupabaseAdmin()
+    .from('telegram_subscribers')
+    .delete()
+    .eq('chat_id', chatId);
+  if (error) console.error('[subs] delete error:', error.message);
+}
+
+// ==================== Stats ====================
+export async function countSubscribers(): Promise<number> {
+  const { count, error } = await getSupabaseAdmin()
+    .from('telegram_subscribers')
+    .select('chat_id', { count: 'exact', head: true });
+  if (error) return 0;
+  return count ?? 0;
+}
+
+// ==================== Group label helpers ====================
+export function groupLabel(g: 'A' | 'B'): string {
+  return g === 'A' ? 'كروب A' : 'كروب B';
+}
+
+export function groupEmoji(g: 'A' | 'B'): string {
+  return g === 'A' ? '🔵' : '🟡';
+}
+```
+
+## lib\telegram\templates.ts
+
+```ts
+// lib/telegram/templates.ts
+/**
+ * قوالب التبليغات الجاهزة
+ * المشرف يختار قالب → يظهر عنوان ونص جاهز قابل للتعديل
+ */
+
+export interface AnnouncementTemplate {
+  id: string;
+  emoji: string;
+  label: string;
+  title: string;
+  body: string;
+  linkLabel?: string;
+  hint?: string;
+}
+
+export const ANNOUNCEMENT_TEMPLATES: readonly AnnouncementTemplate[] = [
+  {
+    id: 'homework',
+    emoji: '📝',
+    label: 'واجب جديد',
+    title: 'واجب جديد',
+    body: 'مطلوب منكم واجب في مادة [اسم المادة].\n\n📌 التفاصيل:\n[اكتب التفاصيل هنا]\n\n⏰ آخر موعد للتسليم: [التاريخ]',
+    linkLabel: 'تسليم الواجب',
+    hint: 'عدّل اسم المادة، التفاصيل، وموعد التسليم',
+  },
+  {
+    id: 'quiz',
+    emoji: '📋',
+    label: 'كوز',
+    title: 'كوز في [اسم المادة]',
+    body: 'سيكون هناك كوز في مادة [اسم المادة].\n\n📚 الفصول المشمولة: [اذكر الفصول]\n📅 التاريخ: [التاريخ]\n⏰ الوقت: [الوقت]\n🏛 القاعة: [القاعة]',
+    hint: 'حدّد المادة، الفصول، التاريخ، والوقت',
+  },
+  {
+    id: 'midterm',
+    emoji: '📊',
+    label: 'امتحان فصلي',
+    title: 'امتحان فصلي في [اسم المادة]',
+    body: 'امتحان فصلي في مادة [اسم المادة].\n\n📚 الفصول المشمولة: [الفصول]\n📅 التاريخ: [التاريخ]\n⏰ الوقت: [الوقت]\n🏛 القاعة: [القاعة]\n\n💡 ركزوا على: [نقاط مهمة]',
+    hint: 'اشرح تفاصيل الامتحان كاملة',
+  },
+  {
+    id: 'final',
+    emoji: '🎯',
+    label: 'امتحان فاينل',
+    title: 'جدول الفاينل',
+    body: 'جدول امتحانات الفاينل:\n\n📅 [التاريخ] — [المادة]\n📅 [التاريخ] — [المادة]\n📅 [التاريخ] — [المادة]\n\nبالتوفيق للجميع 🌟',
+    hint: 'اكتب جدول الامتحانات كاملاً',
+  },
+  {
+    id: 'postpone',
+    emoji: '⏰',
+    label: 'تأجيل',
+    title: 'تأجيل [محاضرة/امتحان]',
+    body: 'تم تأجيل [محاضرة/امتحان] في مادة [اسم المادة].\n\n❌ الموعد الأصلي: [التاريخ القديم]\n✅ الموعد الجديد: [التاريخ الجديد]\n\nيرجى الانتباه للجدول المحدّث.',
+    hint: 'حدّد ما تم تأجيله والموعد الجديد',
+  },
+  {
+    id: 'holiday',
+    emoji: '🎉',
+    label: 'عطلة / تعطيل',
+    title: 'تعطيل رسمي',
+    body: 'تعلن الكلية تعطيلاً رسمياً يوم [اليوم/التاريخ].\n\n📌 السبب: [اذكر السبب]\n📅 تستأنف الدراسة: [التاريخ]\n\nاستمتعوا بالراحة 🌿',
+    hint: 'اذكر التاريخ والسبب',
+  },
+  {
+    id: 'reminder',
+    emoji: '🔔',
+    label: 'تذكير',
+    title: 'تذكير مهم',
+    body: 'تذكير: [اكتب ما تريد تذكير الطلاب به].\n\n⏰ الموعد: [التاريخ/الوقت]\n\nيرجى الانتباه.',
+    hint: 'اكتب التذكير بدقة',
+  },
+  {
+    id: 'room_change',
+    emoji: '🔄',
+    label: 'تغيير قاعة',
+    title: 'تغيير قاعة المحاضرة',
+    body: 'تم تغيير قاعة محاضرة [اسم المادة].\n\n❌ القاعة القديمة: [القديمة]\n✅ القاعة الجديدة: [الجديدة]\n\n📅 ابتداءً من: [التاريخ]',
+    hint: 'حدّد المادة والقاعة الجديدة',
+  },
+  {
+    id: 'general',
+    emoji: '📢',
+    label: 'تبليغ عام',
+    title: 'تبليغ إداري',
+    body: '[اكتب نص التبليغ هنا]',
+    hint: 'تبليغ عام — عدّل العنوان والنص',
+  },
+  {
+    id: 'custom',
+    emoji: '✏️',
+    label: 'مخصص (فراغ)',
+    title: '',
+    body: '',
+    hint: 'اكتب من الصفر',
+  },
+] as const;
+
+// ==================== Helpers ====================
+export function getTemplate(id: string): AnnouncementTemplate | null {
+  return ANNOUNCEMENT_TEMPLATES.find((t) => t.id === id) ?? null;
+}
+
+/**
+ * يُرجع معاينة قصيرة من نص القالب (أول 60 حرف)
+ */
+export function previewOf(body: string): string {
+  const firstLine = body.split('\n')[0] ?? '';
+  return firstLine.length > 60 ? firstLine.slice(0, 57) + '…' : firstLine;
+}
+```
+
+## lib\telegram\types.ts
+
+```ts
+// lib/telegram/types.ts
+/**
+ * كل الأنواع الخاصة ببوت تيليكرام
+ */
+
+// ==================== Telegram Update ====================
+export interface TelegramUser {
+  id: number;
+  first_name?: string;
+  username?: string;
+}
+
+export interface TelegramChat {
+  id: number;
+  type: string;
+}
+
+export interface TelegramMessage {
+  message_id: number;
+  from?: TelegramUser;
+  chat: TelegramChat;
+  text?: string;
+}
+
+export interface TelegramCallbackQuery {
+  id: string;
+  from: TelegramUser;
+  message?: {
+    message_id: number;
+    chat: TelegramChat;
+  };
+  data?: string;
+}
+

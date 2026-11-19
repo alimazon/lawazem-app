@@ -1,0 +1,2627 @@
+﻿```
+
+## app\globals.css
+
+```css
+/* ============================================
+   لوازم — Design System v9.0
+   "مطبعة الجامعة" — Campus Ink
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================
+   Light — Paper & Ink
+   ============================================ */
+:root {
+  /* الورق */
+  --paper: #F4F2EC;
+  --paper-deep: #E7E9E3;
+  --paper-soft: #FFFFFF;
+
+  /* الحبر */
+  --ink: #252B30;
+  --ink-soft: #4B555B;
+  --ink-muted: #7A8288;
+
+  /* Primary — أزرق الحبر (كان teal) */
+  --teal: #244E63;
+  --teal-light: #2E5E76;
+  --teal-glow: #3A7490;
+  --teal-hover: #1A3A4A;
+  --teal-active: #122B37;
+  --teal-soft: #E1EAEF;
+  --teal-tint: rgba(36, 78, 99, 0.06);
+  --on-teal: #FFFFFF;
+
+  /* Accent — طوبي محروق (كان gold) */
+  --gold: #8B3E28;
+  --gold-light: #A44A32;
+  --gold-hover: #6E2F1E;
+  --gold-active: #5A2517;
+  --gold-soft: #F1E0DA;
+  --gold-tint: rgba(139, 62, 40, 0.07);
+  --gold-ink: #6E2F1E;
+  --on-gold: #FFFFFF;
+
+  /* Navy — أزرق داكن إضافي */
+  --navy: #1A2B36;
+  --navy-light: #2A3F4C;
+  --navy-soft: #DEE5E9;
+  --navy-ink: #1A2B36;
+
+  /* Semantic */
+  --success: #3D6E4A;
+  --success-soft: #DEE9E1;
+  --success-ink: #2A4D33;
+  --info: #244E63;
+  --info-soft: #E1EAEF;
+  --info-ink: #1A3A4A;
+  --warning: #9A6A15;
+  --warning-soft: #F1E6C8;
+  --warning-ink: #6E4C0F;
+
+  /* Coral — نسخة الطوبي للتنبيهات */
+  --coral: #8B3E28;
+  --coral-soft: #F1E0DA;
+  --coral-ink: #6E2F1E;
+  --coral-strong: #6E2F1E;
+  --on-coral: #FFFFFF;
+
+  /* Amber — توافق */
+  --amber: #9A6A15;
+  --amber-soft: #F1E6C8;
+
+  /* الحدود */
+  --line: #D0D2CC;
+  --line-soft: #E2E3DD;
+  --line-strong: #B5B8B0;
+  --line-ink: #252B30;
+
+  /* States */
+  --disabled-bg: #E7E9E3;
+  --disabled-ink: #A0A4A8;
+  --focus-ring: #244E63;
+  --field-border: #B5B8B0;
+  --overlay: rgba(37, 43, 48, 0.55);
+  --glass-bg: rgba(244, 242, 236, 0.94);
+  --grain-opacity: 0.025;
+
+  /* Elevation — شبه معدومة */
+  --shadow-rgb: 37 43 48;
+  --elev-0: none;
+  --elev-1: 0 1px 2px rgb(var(--shadow-rgb) / 0.04);
+  --elev-2: 0 1px 3px rgb(var(--shadow-rgb) / 0.06);
+  --elev-3: 0 2px 6px rgb(var(--shadow-rgb) / 0.07);
+  --elev-4: 0 4px 12px rgb(var(--shadow-rgb) / 0.09);
+  --elev-5: 0 8px 24px rgb(var(--shadow-rgb) / 0.12);
+
+  --shadow-xs: var(--elev-1);
+  --shadow-sm: var(--elev-2);
+  --shadow-md: var(--elev-3);
+  --shadow-lg: var(--elev-4);
+  --shadow-xl: var(--elev-5);
+
+  --link-color: #244E63;
+}
+
+/* ============================================
+   Dark — Ink on Dark Paper
+   ============================================ */
+.dark {
+  --paper: #141A1E;
+  --paper-deep: #0C1014;
+  --paper-soft: #1D262B;
+
+  --ink: #F1F3F0;
+  --ink-soft: #BAC4C8;
+  --ink-muted: #8B959A;
+
+  --teal: #9CD2E5;
+  --teal-light: #B0DCEA;
+  --teal-glow: #C4E6F0;
+  --teal-hover: #7ABDD4;
+  --teal-active: #5FA8C2;
+  --teal-soft: rgba(156, 210, 229, 0.12);
+  --teal-tint: rgba(156, 210, 229, 0.08);
+  --on-teal: #10232B;
+
+  --gold: #F2A18C;
+  --gold-light: #F5B8A6;
+  --gold-hover: #E88A72;
+  --gold-active: #DC7860;
+  --gold-soft: rgba(242, 161, 140, 0.12);
+  --gold-tint: rgba(242, 161, 140, 0.08);
+  --gold-ink: #F5B8A6;
+  --on-gold: #2A1712;
+
+  --navy: #8FA5B0;
+  --navy-light: #A8BCC6;
+  --navy-soft: rgba(143, 165, 176, 0.12);
+  --navy-ink: #A8BCC6;
+
+  --success: #7BC28A;
+  --success-soft: rgba(123, 194, 138, 0.14);
+  --success-ink: #A0D4AB;
+  --info: #9CD2E5;
+  --info-soft: rgba(156, 210, 229, 0.14);
+  --info-ink: #B0DCEA;
+  --warning: #E8BC6A;
+  --warning-soft: rgba(232, 188, 106, 0.14);
+  --warning-ink: #F0CE8A;
+
+  --coral: #F2A18C;
+  --coral-soft: rgba(242, 161, 140, 0.14);
+  --coral-ink: #F5B8A6;
+  --coral-strong: #F2A18C;
+  --on-coral: #2A1712;
+
+  --amber: #E8BC6A;
+  --amber-soft: rgba(232, 188, 106, 0.14);
+
+  --line: #3B484E;
+  --line-soft: #2A363B;
+  --line-strong: #4F5D63;
+  --line-ink: #F1F3F0;
+
+  --disabled-bg: #202A30;
+  --disabled-ink: #5E6A70;
+  --focus-ring: #9CD2E5;
+  --field-border: #4F5D63;
+  --overlay: rgba(0, 0, 0, 0.72);
+  --glass-bg: rgba(20, 26, 30, 0.94);
+  --grain-opacity: 0.02;
+
+  --shadow-rgb: 0 0 0;
+  --elev-1: 0 1px 2px rgb(var(--shadow-rgb) / 0.4);
+  --elev-2: 0 1px 3px rgb(var(--shadow-rgb) / 0.5);
+  --elev-3: 0 2px 6px rgb(var(--shadow-rgb) / 0.55);
+  --elev-4: 0 4px 12px rgb(var(--shadow-rgb) / 0.6);
+  --elev-5: 0 8px 24px rgb(var(--shadow-rgb) / 0.7);
+
+  --link-color: #9CD2E5;
+}
+
+/* ============================================
+   Tokens مشتركة
+   ============================================ */
+:root {
+  --fs-display: clamp(2rem, 1.5rem + 2.5vw, 3.5rem);     --lh-display: 1.2;
+  --fs-h1: clamp(1.75rem, 1.4rem + 1.6vw, 2.5rem);       --lh-h1: 1.25;
+  --fs-h2: clamp(1.375rem, 1.2rem + 0.8vw, 1.875rem);    --lh-h2: 1.3;
+  --fs-h3: clamp(1.125rem, 1.05rem + 0.4vw, 1.375rem);   --lh-h3: 1.4;
+  --fs-h4: 1rem;                                         --lh-h4: 1.5;
+  --fs-lead: 1.0625rem;                                  --lh-lead: 1.8;
+  --fs-body: 1rem;                                       --lh-body: 1.75;
+  --fs-small: 0.875rem;                                  --lh-small: 1.65;
+  --fs-caption: 0.75rem;                                 --lh-caption: 1.55;
+
+  /* Radius — 6px للبطاقات */
+  --r-field: 0.375rem;
+  --r-card: 0.375rem;
+  --r-chip: 999px;
+
+  --measure: 42rem;
+  --nav-h: 3.75rem;
+  --gutter: clamp(1rem, 4vw, 2rem);
+  --section-y: clamp(2.5rem, 6vw, 4rem);
+
+  --z-sticky: 20; --z-nav: 30; --z-dropdown: 40;
+  --z-overlay: 50; --z-modal: 60; --z-toast: 70;
+
+  --ease-editorial: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms; --dur-base: 200ms; --dur-slow: 350ms;
+}
+
+/* ============================================
+   Tailwind Theme Mapping
+   ============================================ */
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-deep: var(--paper-deep);
+  --color-paper-soft: var(--paper-soft);
+
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-muted: var(--ink-muted);
+
+  --color-teal: var(--teal);
+  --color-teal-light: var(--teal-light);
+  --color-teal-glow: var(--teal-glow);
+  --color-teal-soft: var(--teal-soft);
+  --color-teal-tint: var(--teal-tint);
+  --color-teal-hover: var(--teal-hover);
+  --color-teal-active: var(--teal-active);
+  --color-on-teal: var(--on-teal);
+
+  --color-navy: var(--navy);
+  --color-navy-light: var(--navy-light);
+  --color-navy-soft: var(--navy-soft);
+  --color-navy-ink: var(--navy-ink);
+
+  --color-gold: var(--gold);
+  --color-gold-light: var(--gold-light);
+  --color-gold-hover: var(--gold-hover);
+  --color-gold-soft: var(--gold-soft);
+  --color-gold-tint: var(--gold-tint);
+  --color-gold-ink: var(--gold-ink);
+  --color-on-gold: var(--on-gold);
+
+  --color-coral: var(--coral);
+  --color-coral-soft: var(--coral-soft);
+  --color-coral-ink: var(--coral-ink);
+  --color-coral-strong: var(--coral-strong);
+  --color-on-coral: var(--on-coral);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-ink: var(--success-ink);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-ink: var(--info-ink);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-ink: var(--warning-ink);
+  --color-danger: var(--coral-strong);
+  --color-danger-soft: var(--coral-soft);
+  --color-danger-ink: var(--coral-ink);
+
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-line-strong: var(--line-strong);
+  --color-line-ink: var(--line-ink);
+
+  --color-disabled: var(--disabled-bg);
+  --color-disabled-ink: var(--disabled-ink);
+  --color-focus: var(--focus-ring);
+  --color-field-border: var(--field-border);
+  --color-overlay: var(--overlay);
+
+  /* Fonts */
+  --font-display: "Readex Pro", "Segoe UI", Tahoma, system-ui, sans-serif;
+  --font-body: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, system-ui, sans-serif;
+  --font-kufi: "Readex Pro", system-ui, sans-serif;
+  --font-sans: var(--font-body);
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --text-display: var(--fs-display);  --text-display--line-height: var(--lh-display);
+  --text-h1: var(--fs-h1);            --text-h1--line-height: var(--lh-h1);
+  --text-h2: var(--fs-h2);            --text-h2--line-height: var(--lh-h2);
+  --text-h3: var(--fs-h3);            --text-h3--line-height: var(--lh-h3);
+  --text-h4: var(--fs-h4);            --text-h4--line-height: var(--lh-h4);
+  --text-lead: var(--fs-lead);        --text-lead--line-height: var(--lh-lead);
+  --text-body: var(--fs-body);        --text-body--line-height: var(--lh-body);
+  --text-small: var(--fs-small);      --text-small--line-height: var(--lh-small);
+  --text-caption: var(--fs-caption);  --text-caption--line-height: var(--lh-caption);
+
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+
+  --radius-field: var(--r-field);
+  --radius-card: var(--r-card);
+  --radius-chip: var(--r-chip);
+  --spacing-section: var(--section-y);
+  --spacing-gutter: var(--gutter);
+  --container-measure: var(--measure);
+
+  --animate-fade-in: fadeIn 0.25s ease-out;
+  --animate-slide-up: slideUp 0.3s var(--ease-editorial);
+  --animate-scale-in: scaleIn 0.2s var(--ease-editorial);
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+  --animate-ink-fade: inkFade 0.4s var(--ease-editorial);
+}
+
+/* ============================================
+   Keyframes
+   ============================================ */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes inkFade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ✨ دائرة المؤقت (study-session) */
+@keyframes ringBlink { 50% { opacity: 0.25; } }
+@keyframes ringBreathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.035); }
+}
+@keyframes ringWarn { 50% { opacity: 0.25; } }
+@keyframes ringBloom {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ============================================
+   Base
+   ============================================ */
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-block-start: calc(var(--nav-h) + 1rem);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+  }
+
+  html.dark { color-scheme: dark; }
+
+  body {
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    font-weight: 400;
+    font-kerning: normal;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Headings — Readex Pro */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.005em;
+    text-wrap: balance;
+  }
+
+  h1 { line-height: var(--lh-h1); font-weight: 700; }
+  h2 { line-height: var(--lh-h2); font-weight: 600; }
+  h3 { line-height: var(--lh-h3); font-weight: 600; }
+
+  p { text-wrap: pretty; }
+
+  .font-mono, code, kbd, pre, .num {
+    font-family: var(--font-mono);
+    font-feature-settings: "tnum" 1, "zero" 1;
+  }
+
+  a, button, input, select, textarea, summary, [role="button"] {
+    transition-property: color, background-color, border-color, opacity, transform, box-shadow;
+    transition-duration: var(--dur-base);
+    transition-timing-function: var(--ease-editorial);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--gold) 25%, transparent);
+    color: var(--ink);
+  }
+
+  * { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--line-strong); }
+
+  select option, select optgroup {
+    background-color: var(--paper-soft);
+    color: var(--ink);
+  }
+}
+
+/* ============================================
+   Utilities
+   ============================================ */
+@utility skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--ink) 5%, transparent) 0%,
+    color-mix(in srgb, var(--ink) 11%, transparent) 50%,
+    color-mix(in srgb, var(--ink) 5%, transparent) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@utility ink-reveal {
+  animation: inkFade 0.45s var(--ease-editorial) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+@utility icon-sm { inline-size: 1rem; block-size: 1rem; flex-shrink: 0; }
+@utility icon-md { inline-size: 1.25rem; block-size: 1.25rem; flex-shrink: 0; }
+@utility icon-lg { inline-size: 1.5rem; block-size: 1.5rem; flex-shrink: 0; }
+
+@utility break-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@utility num-inline {
+  display: inline-block;
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* ✨ حركات دائرة المؤقت */
+@utility ring-colon {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: ringBlink 1s steps(1, end) infinite;
+  }
+}
+@utility ring-breathe {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: ringBreathe 6s ease-in-out infinite;
+  }
+}
+@utility ring-warn {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: ringWarn 1s ease-in-out infinite;
+  }
+}
+@utility ring-bloom {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: ringBloom 1.2s var(--ease-editorial) both;
+  }
+}
+
+/* ============================================
+   CAMPUS INK ORNAMENTS
+   ============================================ */
+
+@utility kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--gold-ink);
+  line-height: 1;
+  &::before {
+    content: '';
+    inline-size: 1rem;
+    block-size: 2px;
+    background: var(--gold);
+  }
+}
+
+@utility editorial-underline {
+  position: relative;
+  display: inline-block;
+  &::after {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-end: -0.375rem;
+    inline-size: 2.5rem;
+    block-size: 2px;
+    background: var(--teal);
+  }
+}
+
+@utility divider-campus {
+  position: relative;
+  block-size: 8px;
+  margin-block: 1.5rem;
+  &::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline: 0;
+    block-size: 1px;
+    background: var(--line-strong);
+  }
+  &::after {
+    content: '';
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    inline-size: 6px;
+    block-size: 6px;
+    background: var(--paper);
+    border: 1px solid var(--gold);
+    transform: translate(-50%, -50%) rotate(45deg);
+  }
+}
+
+@utility masthead-rule {
+  position: relative;
+  padding-block-start: 0.875rem;
+  border-block-start: 2px solid var(--teal);
+  &::after {
+    content: '';
+    position: absolute;
+    inset-block-start: 4px;
+    inset-inline: 0;
+    block-size: 1px;
+    background: var(--line-strong);
+  }
+}
+
+@utility margin-mark {
+  position: relative;
+  padding-inline-start: 1rem;
+  &::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-start: 0.55em;
+    inline-size: 4px;
+    block-size: 4px;
+    background: var(--gold);
+    transform: rotate(45deg);
+  }
+}
+
+@utility paper-texture {
+  position: relative;
+  isolation: isolate;
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: var(--grain-opacity);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .15 0 0 0 0 .17 0 0 0 0 .18 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+
+/* ============================================
+   Prose
+   ============================================ */
+@utility prose-editorial {
+  max-inline-size: var(--measure);
+  font-size: 1.0625rem;
+  line-height: 1.85;
+  color: var(--ink);
+
+  & > * + * { margin-block-start: 1.25em; }
+  & h2 { font-size: var(--fs-h2); line-height: var(--lh-h2); margin-block-start: 2em; }
+  & h3 { font-size: var(--fs-h3); line-height: var(--lh-h3); margin-block-start: 1.75em; }
+  & h4 { font-size: var(--fs-h4); margin-block-start: 1.5em; }
+  & :is(h2, h3, h4) + * { margin-block-start: 0.75em; }
+  & p:first-of-type { font-size: var(--fs-lead); line-height: var(--lh-lead); color: var(--ink-soft); }
+  & a {
+    color: var(--link-color);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--gold) 70%, transparent);
+    text-underline-offset: 0.3em;
+  }
+  & a:hover { text-decoration-color: currentColor; }
+  & strong { font-weight: 600; }
+  & ul, & ol { padding-inline-start: 1.5em; }
+  & ul { list-style: disc; }
+  & ol { list-style: decimal; }
+  & li + li { margin-block-start: 0.5em; }
+  & li::marker { color: var(--gold); }
+  & blockquote {
+    padding-inline-start: 1.25rem;
+    border-inline-start: 3px solid var(--gold);
+    color: var(--ink-soft);
+    font-family: var(--font-display);
+    font-size: var(--fs-h4);
+    line-height: 1.75;
+  }
+  & :not(pre) > code {
+    padding: 0.1em 0.4em;
+    border-radius: 0.25rem;
+    background: var(--paper-deep);
+    font-size: 0.9em;
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+  & pre {
+    direction: ltr;
+    overflow-x: auto;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-field);
+    background: var(--paper-deep);
+    font-size: var(--fs-small);
+    line-height: 1.7;
+  }
+  & img, & figure { max-inline-size: 100%; border-radius: var(--r-field); }
+  & figcaption { margin-block-start: 0.5em; font-size: var(--fs-caption); color: var(--ink-muted); }
+  & table { inline-size: 100%; border-collapse: collapse; font-size: var(--fs-small); }
+  & th, & td { padding: 0.625rem 0.75rem; border-block-end: 1px solid var(--line); text-align: start; }
+  & th { font-weight: 600; border-block-end-color: var(--line-strong); }
+  & hr { border: 0; block-size: 1px; background: var(--line); margin-block: 2.5em; }
+}
+
+/* ============================================
+   Components
+   ============================================ */
+@utility card-editorial {
+  background-color: var(--paper-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  box-shadow: var(--elev-1);
+  transition-property: border-color, box-shadow, transform, background-color;
+  transition-duration: var(--dur-slow);
+  transition-timing-function: var(--ease-editorial);
+}
+
+@utility card-editorial-hover {
+  transition-property: border-color, box-shadow, transform;
+  transition-duration: var(--dur-slow);
+  transition-timing-function: var(--ease-editorial);
+  @media (hover: hover) {
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--elev-3);
+      border-color: color-mix(in srgb, var(--teal) 45%, var(--line));
+    }
+  }
+  &:active { transform: translateY(0); }
+}
+
+@utility link-editorial {
+  color: var(--link-color);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--gold) 70%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.3em;
+  &:hover { text-decoration-color: currentColor; text-decoration-thickness: 2px; }
+}
+
+@utility field-editorial {
+  inline-size: 100%;
+  min-block-size: 2.75rem;
+  padding-block: 0.625rem;
+  padding-inline: 0.875rem;
+  color: var(--ink);
+  background-color: var(--paper-soft);
+  font-size: var(--fs-body);
+  border: 1px solid var(--field-border);
+  border-radius: var(--r-field);
+  @media (min-width: 40rem) { font-size: var(--fs-small); }
+  &::placeholder { color: var(--ink-muted); }
+  &:hover { border-color: color-mix(in srgb, var(--teal) 45%, var(--field-border)); }
+  &:focus-visible { border-color: var(--teal); outline-offset: 2px; }
+  &:disabled { background: var(--disabled-bg); color: var(--disabled-ink); cursor: not-allowed; }
+  &[aria-invalid="true"] { border-color: var(--coral-strong); }
+}
+
+@utility nav-glass {
+  background-color: var(--glass-bg);
+  -webkit-backdrop-filter: blur(12px) saturate(1.15);
+  backdrop-filter: blur(12px) saturate(1.15);
+  border-block-end: 1px solid var(--line);
+}
+
+@utility stage-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding-block: 0.25rem;
+  padding-inline: 0.625rem;
+  border-radius: var(--r-chip);
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--teal);
+  background-color: var(--teal-soft);
+  border: 1px solid color-mix(in srgb, var(--teal) 20%, transparent);
+}
+
+@utility bento-lg { grid-column: span 2; grid-row: span 2; }
+@utility bento-wide { grid-column: span 2; grid-row: span 1; }
+@utility bento-sm { grid-column: span 1; grid-row: span 1; }
+
+@utility badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding-block: 0.125rem;
+  padding-inline: 0.5rem;
+  border-radius: 0.25rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  line-height: 1.6;
+  white-space: nowrap;
+  color: var(--b-fg, var(--ink-soft));
+  background-color: var(--b-bg, var(--paper-deep));
+  border: 1px solid var(--b-bd, var(--line));
+}
+@utility badge-neutral { --b-fg: var(--ink-soft); --b-bg: var(--paper-deep); --b-bd: var(--line); }
+@utility badge-teal { --b-fg: var(--teal); --b-bg: var(--teal-soft); --b-bd: color-mix(in srgb, var(--teal) 22%, transparent); }
+@utility badge-gold { --b-fg: var(--gold-ink); --b-bg: var(--gold-soft); --b-bd: color-mix(in srgb, var(--gold) 40%, transparent); }
+@utility badge-coral { --b-fg: var(--coral-ink); --b-bg: var(--coral-soft); --b-bd: color-mix(in srgb, var(--coral) 30%, transparent); }
+@utility badge-navy { --b-fg: var(--navy-ink); --b-bg: var(--navy-soft); --b-bd: color-mix(in srgb, var(--navy) 25%, transparent); }
+@utility badge-success { --b-fg: var(--success-ink); --b-bg: var(--success-soft); --b-bd: color-mix(in srgb, var(--success) 30%, transparent); }
+@utility badge-info { --b-fg: var(--info-ink); --b-bg: var(--info-soft); --b-bd: color-mix(in srgb, var(--info) 30%, transparent); }
+@utility badge-warning { --b-fg: var(--warning-ink); --b-bg: var(--warning-soft); --b-bd: color-mix(in srgb, var(--warning) 40%, transparent); }
+@utility badge-solid { --b-fg: var(--on-teal); --b-bg: var(--teal); --b-bd: var(--teal); }
+
+@utility defer-render {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 600px;
+}
+
+@utility defer-item {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 100px;
+}
+
+@utility pb-safe { padding-block-end: max(1rem, env(safe-area-inset-bottom)); }
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+/* خلفية الصفحة */
+@utility campus-paper {
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%, color-mix(in srgb, var(--gold) 4%, transparent), transparent 70%),
+    var(--paper);
+}
+
+/* ============================================
+   Reduced Motion
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  html { color-scheme: light; }
+  body { background: #fff; color: #000; }
+  .no-print, .nav-glass { display: none !important; }
+}
+
+/* ============================================
+   Reveal on scroll
+   ============================================ */
+.reveal-scroll {
+  opacity: 0;
+  transform: translateY(var(--reveal-y, 12px));
+  transition:
+    opacity 400ms cubic-bezier(0.16, 1, 0.3, 1) var(--reveal-delay, 0ms),
+    transform 500ms cubic-bezier(0.16, 1, 0.3, 1) var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+.reveal-scroll[data-revealed='true'] {
+  opacity: 1;
+  transform: translateY(0);
+  will-change: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-scroll {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ============================================
+   منع refresh المتصفح الأصلي (Chrome Android)
+   ============================================ */
+html {
+  overscroll-behavior-y: contain;
+}
+
+/* ============================================
+   Responsive Guard Rails
+   ============================================ */
+
+/* 1. منع أي تمرير أفقي غير مقصود */
+html,
+body {
+  max-width: 100vw;
+  overflow-x: clip;
+}
+
+/* 2. اللمسات: كل زر/رابط تفاعلي ≥ 44px على الموبايل */
+@media (pointer: coarse) {
+  button,
+  [role='button'],
+  a[href],
+  input[type='checkbox'],
+  input[type='radio'],
+  summary {
+    min-height: 44px;
+  }
+
+  a.card-editorial,
+  a[role='listitem'],
+  [role='listitem'] a,
+  button[data-compact] {
+    min-height: 0;
+  }
+}
+
+/* 3. على الشاشات الصغيرة جداً (320-360px) */
+@media (max-width: 360px) {
+  :root {
+    --gutter: 0.875rem;
+    --section-y: 2rem;
+  }
+
+  h1 {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* 4. الصور والـSVG لا تتجاوز حاوياتها */
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+/* 5. النصوص الطويلة */
+body {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* 6. جداول فيها أعمدة كثيرة */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+/* 7. لوحة المفاتيح على iOS */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+```
+
+## app\layout.tsx
+
+```tsx
+// app/layout.tsx
+import type { Metadata, Viewport } from 'next';
+import './globals.css';
+import { ToastProvider } from '@/components/ui/Toast';
+import { ConfirmProvider } from '@/components/ui/ConfirmDialog';
+import { ThemeProvider } from '@/components/ThemeProvider';
+import { NavBar } from '@/components/NavBar';
+import { MobileBottomNav } from '@/components/MobileBottomNav';
+import { PWARegister } from '@/components/PWARegister';
+
+export const metadata: Metadata = {
+  title: 'لوازم — كلية طب جامعة العميد',
+  description:
+    'منصة تعاونية لملازم ومصادر وجميع احتياجات طلاب كلية الطب جامعة العميد',
+  applicationName: 'لوازم',
+  appleWebApp: {
+    capable: true,
+    title: 'لوازم',
+    statusBarStyle: 'default',
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  icons: {
+    icon: [{ url: '/icon.png', type: 'image/png', sizes: '512x512' }],
+    apple: [{ url: '/apple-icon.png', type: 'image/png', sizes: '180x180' }],
+  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#F4F2EC' },
+    { media: '(prefers-color-scheme: dark)', color: '#141A1E' },
+  ],
+};
+
+const THEME_INIT_SCRIPT = `
+(function() {
+  try {
+    var saved = localStorage.getItem('theme');
+    var theme = saved || 'light';
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
+    document.documentElement.style.colorScheme = theme;
+  } catch (e) {}
+})();
+`;
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="ar" dir="rtl" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
+      <body className="min-h-dvh bg-paper">
+        <ThemeProvider>
+          <ToastProvider>
+            <ConfirmProvider>
+              <NavBar />
+              <div id="main-content" className="pb-20 md:pb-0">{children}</div>
+              <MobileBottomNav />
+              <PWARegister />
+            </ConfirmProvider>
+          </ToastProvider>
+        </ThemeProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+## app\manifest.ts
+
+```ts
+// app/manifest.ts
+import type { MetadataRoute } from 'next';
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: 'لوازم — كلية طب جامعة العميد',
+    short_name: 'لوازم',
+    description: 'منصة تعاونية لملازم ومصادر وجميع احتياجات طلاب كلية الطب',
+    start_url: '/',
+    scope: '/',
+    display: 'standalone',
+    orientation: 'portrait',
+    background_color: '#F4F2EC',
+    theme_color: '#244E63',
+    lang: 'ar',
+    dir: 'rtl',
+    categories: ['education', 'medical'],
+    icons: [
+      {
+        src: '/icon.png',
+        sizes: '192x192 512x512',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/apple-icon.png',
+        sizes: '180x180',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
+    ],
+  };
+}
+```
+
+## app\page.tsx
+
+```tsx
+// app/page.tsx
+'use client';
+
+import { useEffect, useState } from 'react';
+import type { CSSProperties } from 'react';
+import Image from 'next/image';
+import { STAGES, STORAGE_KEYS } from '@/lib/constants';
+import { BackgroundPattern } from '@/components/BackgroundPattern';
+import { TrendingNotes } from '@/components/TrendingNotes';
+import { BotChannelCard } from '@/components/BotChannelCard';
+import { Masthead } from './_components/Masthead';
+import { SectionTile, SectionTileGrid } from './_components/SectionTile';
+import type { TileSize, TileVariant } from './_components/SectionTile';
+import type { Stage } from '@/lib/types';
+import {
+  IconArrowLeft,
+  IconBook,
+  IconCalendar,
+  IconChannels,
+  IconChart,
+  IconHealth,
+  IconSparkles,
+  IconSwap,
+} from '@/components/ui/Icons';
+
+// ==================== Helpers ====================
+type RevealStyle = CSSProperties & { '--i'?: number };
+function reveal(i: number): RevealStyle { return { '--i': i }; }
+function isStage(value: string | null): value is Stage {
+  return value !== null && (STAGES as readonly string[]).includes(value);
+}
+function cx(...parts: Array<string | false | null | undefined>): string {
+  return parts.filter(Boolean).join(' ');
+}
+function pad(n: number): string { return String(n).padStart(2, '0'); }
+
+// ==================== Editorial ====================
+function DoubleRule({ className }: { className?: string }) {
+  return (
+    <div aria-hidden="true" className={cx('border-t-2 border-ink', className)}>
+      <div className="mt-[3px] border-t border-ink/40" />
+    </div>
+  );
+}
+
+function EditorialRule({ className }: { className?: string }) {
+  return (
+    <div aria-hidden="true" className={cx('flex items-center gap-3', className)}>
+      <span className="h-px flex-1 bg-line" />
+      <span className="text-[9px] leading-none text-gold-ink">◆</span>
+      <span className="h-px flex-1 bg-line" />
+    </div>
+  );
+}
+
+// ==================== Icons ====================
+function IconTimer() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="13" r="8" />
+      <path d="M12 9v4l3 2M9 2h6" />
+    </svg>
+  );
+}
+
+function IconAtlas() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+      <circle cx="12" cy="10" r="3" />
+      <path d="M12 13v4" />
+    </svg>
+  );
+}
+
+// ==================== Section Config ====================
+interface Section {
+  href: string;
+  title: string;
+  kicker: string;
+  description: string;
+  icon: React.ReactNode;
+  variant: Exclude<TileVariant, 'locked'>;
+  size: TileSize;
+  ctaLabel?: string;
+  badge?: string;
+  locked?: boolean;
+  lockedLabel?: string;
+}
+
+const SECTIONS: Section[] = [
+  {
+    href: '/lawazem',
+    title: 'الملازم والمصادر',
+    kicker: 'المكتبة',
+    description: 'ملازم الدكاترة مرتبة حسب المادة والدكتور، مع وسوم للتصفية السريعة.',
+    icon: <IconBook />,
+    variant: 'featured',
+    size: 'hero',
+    ctaLabel: 'تصفّح الملازم',
+  },
+  {
+    href: '/channels',
+    title: 'القنوات',
+    kicker: 'الانضمام',
+    description: 'دليل قنوات التليكرام لكل مادة.',
+    icon: <IconChannels />,
+    variant: 'teal',
+    size: 'small',
+  },
+  {
+    href: '/schedule',
+    title: 'الجدول',
+    kicker: 'التنظيم',
+    description: 'جدول محاضراتك الأسبوعي.',
+    icon: <IconCalendar />,
+    variant: 'coral',
+    size: 'small',
+  },
+  {
+    href: '/study-prompt',
+    title: 'جات الدراسة',
+    kicker: 'أدوات AI',
+    description: 'برومبت ذكي يولّد لك شرحاً تفاعلياً لمحاضراتك، مع بطاقات وأسئلة.',
+    icon: <IconSparkles />,
+    variant: 'navy',
+    size: 'wide',
+  },
+  {
+    href: '/gpa',
+    title: 'المعدل والدرجات',
+    kicker: 'التتبع',
+    description: 'احسب معدلك، تصفّح ملفات الدرجات، واعرف موقعك.',
+    icon: <IconChart />,
+    variant: 'teal',
+    size: 'wide',
+  },
+  {
+    href: '/study-session',
+    title: 'جلسة دراسة',
+    kicker: 'التركيز',
+    description: 'مؤقت بومودورو + أصوات هادئة + تحليل عاداتك.',
+    icon: <IconTimer />,
+    variant: 'coral',
+    size: 'wide',
+  },
+  {
+    href: '/anatomy', // استبدلنا الأنسجة بالأطالس
+    title: 'الأطالس',
+    kicker: 'تفاعلي',
+    description: 'أطلس التشريح والأنسجة التفاعلي.',
+    icon: <IconAtlas />,
+    variant: 'teal',
+    size: 'wide',
+  },
+  {
+    href: '/group-swap',
+    title: 'تبديل الكروبات',
+    kicker: 'العملي',
+    description: 'بدّل كروبك العملي بسهولة — مغلق حالياً.',
+    icon: <IconSwap />,
+    variant: 'navy',
+    size: 'wide',
+    locked: true,
+    lockedLabel: 'قريباً',
+  },
+];
+
+// ==================== Stage Card ====================
+function StageCard({
+  stage,
+  index,
+  onClick,
+}: {
+  stage: string;
+  index: number;
+  onClick: () => void;
+}) {
+  const number = pad(index + 1);
+
+  return (
+    <div className="ink-reveal" style={reveal(index + 3)}>
+      <button
+        type="button"
+        onClick={onClick}
+        className="group relative block w-full overflow-hidden rounded-card border border-line bg-paper-soft p-6 text-start transition-all duration-200 hover:-translate-y-px hover:border-teal hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+      >
+        <div className="absolute inset-x-0 top-0 h-[3px] origin-center scale-x-0 bg-gold transition-transform duration-500 group-hover:scale-x-100 group-focus-visible:scale-x-100 motion-reduce:transition-none" />
+        <span aria-hidden="true" className="absolute end-4 top-4 font-mono text-xs font-medium text-ink-muted">
+          {number}
+        </span>
+        <span className="relative block font-display text-2xl font-bold text-ink">
+          {stage}
+        </span>
+        <span className="relative mt-6 flex items-center gap-1.5 text-sm font-semibold text-teal">
+          <span>اختر</span>
+          <IconArrowLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0" />
+        </span>
+      </button>
+    </div>
+  );
+}
+
+// ==================== Page ====================
+export default function HomePage() {
+  const [stage, setStage] = useState<Stage | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.studentStage);
+      if (isStage(saved)) setStage(saved);
+    } catch { /* تجاهل */ }
+    setLoaded(true);
+  }, []);
+
+  function chooseStage(s: Stage) {
+    try { localStorage.setItem(STORAGE_KEYS.studentStage, s); } catch {}
+    setStage(s);
+    window.dispatchEvent(new Event('student-stage-change'));
+  }
+
+  function changeStage() {
+    try { localStorage.removeItem(STORAGE_KEYS.studentStage); } catch {}
+    setStage(null);
+    window.dispatchEvent(new Event('student-stage-change'));
+  }
+
+  if (!loaded) {
+    return <main className="min-h-dvh bg-paper" aria-busy="true" />;
+  }
+
+  if (!stage) {
+    return (
+      <>
+        <BackgroundPattern />
+        <main className="relative mx-auto flex min-h-[calc(100dvh-var(--nav-h))] max-w-3xl flex-col items-center justify-center px-4 py-12 text-center sm:px-6 sm:py-16">
+          <div className="ink-reveal">
+            <span className="inline-flex items-center gap-2 rounded-chip border border-line bg-paper-soft px-4 py-1.5 font-mono text-[11px] font-medium uppercase tracking-widest text-ink-soft">
+              <span className="h-1.5 w-1.5 rounded-full bg-teal" aria-hidden="true" />
+              منصة لطلبة جامعة العميد
+            </span>
+          </div>
+          <h1 id="stage-heading" className="mt-8 font-display text-4xl font-bold leading-tight text-ink sm:text-5xl ink-reveal" style={reveal(1)}>
+            اختر مرحلتك الدراسية
+          </h1>
+          <EditorialRule className="mt-6 w-40 ink-reveal" />
+          <p className="mt-6 max-w-md text-base leading-relaxed text-ink-soft ink-reveal" style={reveal(2)}>
+            في لوازم نعرض لك المحتوى المناسب لمرحلتك — قنوات، جداول، وكل ما تحتاجه.
+          </p>
+          <div role="group" aria-labelledby="stage-heading" className="relative mt-12 grid w-full gap-4 sm:grid-cols-3">
+            {STAGES.map((s, i) => (
+              <StageCard key={s} stage={s} index={i} onClick={() => chooseStage(s)} />
+            ))}
+          </div>
+          <p className="mt-10 text-xs text-ink-muted ink-reveal" style={reveal(6)}>
+            يمكنك تغييرها لاحقاً
+          </p>
+        </main>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <BackgroundPattern />
+      <main className="relative mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-6 sm:pb-12 sm:pt-8">
+        <h1 className="sr-only">لوازم — الصفحة الرئيسية</h1>
+        <Masthead stage={stage} onChangeStage={changeStage} />
+
+        <section aria-labelledby="sections-heading" className="mt-10">
+          <div className="ink-reveal" style={reveal(1)}>
+            <DoubleRule />
+            <div className="mt-4 flex items-end justify-between gap-4">
+              <div>
+                <p className="kicker">الأقسام</p>
+                <h2 id="sections-heading" className="mt-2 font-display text-xl font-bold leading-tight text-ink sm:text-2xl">
+                  كل ما تحتاجه في مكان واحد
+                </h2>
+              </div>
+              <p className="flex-shrink-0 pb-1 text-xs text-ink-muted">
+                <span className="font-mono">{pad(SECTIONS.length)}</span> أقسام
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 ink-reveal" style={reveal(2)}>
+            <SectionTileGrid>
+              {SECTIONS.map((sec) => (
+                <SectionTile
+                  key={sec.href}
+                  href={sec.href}
+                  title={sec.title}
+                  kicker={sec.kicker}
+                  description={sec.description}
+                  icon={sec.icon}
+                  variant={sec.variant}
+                  size={sec.size}
+                  badge={sec.badge}
+                  ctaLabel={sec.ctaLabel}
+                  locked={sec.locked === true}
+                  lockedLabel={sec.lockedLabel ?? 'قريباً'}
+                />
+              ))}
+            </SectionTileGrid>
+          </div>
+        </section>
+
+        <section aria-labelledby="community-heading" className="mt-20">
+          <EditorialRule className="mx-auto mb-10 max-w-xs" />
+          <div className="mx-auto mb-10 max-w-2xl text-center ink-reveal" style={reveal(3)}>
+            <div className="flex justify-center">
+              <p className="kicker">تابعنا</p>
+            </div>
+            <h2 id="community-heading" className="mt-3 font-display text-2xl font-bold leading-tight text-ink sm:text-3xl">
+              ابقَ على اطلاع
+            </h2>
+            <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-ink-soft sm:text-base">
+              كل جديد يصلك مباشرة — بدون ما تفتح الموقع كل يوم.
+            </p>
+          </div>
+          <div className="mx-auto flex max-w-5xl flex-wrap justify-center gap-4">
+            <div className="w-full lg:w-[58%]">
+              <BotChannelCard />
+            </div>
+            <div className="w-full empty:hidden lg:w-[38%]">
+              <TrendingNotes stage={stage} />
+            </div>
+          </div>
+        </section>
+
+        <footer className="mt-20">
+          <DoubleRule />
+          <div className="flex flex-col items-center gap-4 pb-4 pt-8 text-center">
+            <Image src="/logo.png" alt="" width={32} height={32} className="h-8 w-8 object-contain opacity-60" />
+            <p className="text-xs leading-relaxed text-ink-soft sm:text-sm">
+              صُنع بكل حب لطلاب كلية الطب · جامعة العميد
+            </p>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-ink-muted">
+              علي مازن — @E_W_9
+            </p>
+          </div>
+        </footer>
+      </main>
+    </>
+  );
+}
+```
+
+## app\admin\page.tsx
+
+```tsx
+// app/admin/page.tsx
+'use client';
+
+import { useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Field';
+import { useAdminAuth } from './_components/useAdminAuth';
+import { SubjectsSection } from './_components/SubjectsSection';
+import { MaterialsSection } from './_components/MaterialsSection';
+import { GradesSection } from './_components/GradesSection';
+import { ChannelsSection } from './_components/ChannelsSection';
+import { SchedulesSection } from './_components/SchedulesSection';
+import { ReportsSection } from './_components/ReportsSection';
+import { AnnouncementsSection } from './_components/AnnouncementsSection';
+
+type Tab =
+  | 'subjects'
+  | 'materials'
+  | 'grades'
+  | 'channels'
+  | 'schedules'
+  | 'reports'
+  | 'announcements';
+
+const TABS: ReadonlyArray<{ id: Tab; label: string; icon: React.ReactNode }> = [
+  { id: 'subjects', label: 'المواد', icon: <IconBook /> },
+  { id: 'materials', label: 'الملازم', icon: <IconDoc /> },
+  { id: 'grades', label: 'الدرجات', icon: <IconGrades /> },
+  { id: 'channels', label: 'القنوات', icon: <IconChat /> },
+  { id: 'schedules', label: 'الجدول', icon: <IconCalendar /> },
+  { id: 'reports', label: 'البلاغات', icon: <IconReport /> },
+  { id: 'announcements', label: 'تبليغات البوت', icon: <IconMegaphone /> },
+];
+
+// ==================== Icons ====================
+function IconBook() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+    </svg>
+  );
+}
+function IconDoc() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  );
+}
+function IconGrades() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M9 4h6M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  );
+}
+function IconChat() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+    </svg>
+  );
+}
+function IconCalendar() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  );
+}
+function IconReport() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+    </svg>
+  );
+}
+function IconMegaphone() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 11l18-8v18l-18-8v-2z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
+    </svg>
+  );
+}
+function IconLock() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+    </svg>
+  );
+}
+function IconLogout() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+    </svg>
+  );
+}
+
+// ==================== Login Screen ====================
+function LoginScreen({
+  loading,
+  error,
+  onLogin,
+}: {
+  loading: boolean;
+  error: string;
+  onLogin: (pw: string) => void;
+}) {
+  const [pw, setPw] = useState('');
+
+  return (
+    <main className="relative mx-auto flex min-h-[calc(100dvh-var(--nav-h))] max-w-sm flex-col items-center justify-center px-4 py-16 sm:px-6">
+      <div className="w-full rounded-3xl border border-line bg-white/80 p-6 shadow-[0_8px_30px_rgba(14,74,74,0.08)] backdrop-blur-sm animate-slide-up dark:bg-paper/80 dark:shadow-[0_8px_30px_rgba(0,0,0,0.40)] sm:p-8">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-teal/10 text-teal">
+          <IconLock />
+        </div>
+        <h1 className="mt-5 text-center text-2xl font-black text-ink">دخول المشرف</h1>
+        <p className="mt-2 text-center text-sm text-ink/55">
+          أدخل كلمة مرور المشرف للوصول إلى لوحة التحكم
+        </p>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onLogin(pw);
+          }}
+          className="mt-6 space-y-4"
+        >
+          <Input
+            type="password"
+            value={pw}
+            onChange={(e) => setPw(e.target.value)}
+            placeholder="كلمة المرور"
+            autoComplete="current-password"
+            required
+            autoFocus
+            className="text-center"
+          />
+          {error && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-center text-sm font-bold text-red-600 dark:bg-red-950/40 dark:text-red-300" role="alert">
+              {error}
+            </p>
+          )}
+          <Button type="submit" size="lg" loading={loading} className="w-full">
+            {loading ? 'جاري التحقق...' : 'دخول'}
+          </Button>
+        </form>
+      </div>
+    </main>
+  );
+}
+
+// ==================== Page ====================
+export default function AdminPage() {
+  const { password, authenticated, loading, error, login, logout } = useAdminAuth();
+  const [tab, setTab] = useState<Tab>('subjects');
+
+  if (!authenticated) {
+    return <LoginScreen loading={loading} error={error} onLogin={login} />;
+  }
+
+  return (
+    <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
+      <div className="flex flex-wrap items-center justify-between gap-3 animate-slide-up">
+        <div className="min-w-0">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/20 bg-teal/5 px-3 py-1 font-mono text-xs uppercase tracking-widest text-teal dark:border-teal/30 dark:bg-teal/15">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal" />
+            مشرف
+          </span>
+          <h1 className="mt-3 text-2xl font-black text-ink sm:text-3xl md:text-4xl">
+            لوحة التحكم
+          </h1>
+        </div>
+        <Button variant="secondary" size="sm" onClick={logout} icon={<IconLogout />}>
+          تسجيل الخروج
+        </Button>
+      </div>
+
+      <div
+        role="tablist"
+        aria-label="أقسام لوحة التحكم"
+        className="scrollbar-none mt-6 -mx-4 flex gap-1.5 overflow-x-auto rounded-2xl border border-line bg-white/60 p-1.5 backdrop-blur-sm sm:mx-0 sm:overflow-visible dark:bg-white/[0.04] animate-slide-up"
+        style={{ animationDelay: '80ms' }}
+      >
+        {TABS.map((t) => {
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={active}
+              aria-controls={`panel-${t.id}`}
+              onClick={() => setTab(t.id)}
+              className={`flex flex-shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition-all duration-200 sm:px-4 ${
+                active
+                  ? 'bg-teal text-white shadow-[0_2px_8px_rgba(14,74,74,0.24)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.30)]'
+                  : 'text-ink/60 hover:bg-ink/5 hover:text-ink dark:hover:bg-white/5'
+              }`}
+            >
+              {t.icon}
+              <span className="whitespace-nowrap">{t.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        role="tabpanel"
+        id={`panel-${tab}`}
+        className="mt-6 animate-slide-up"
+        style={{ animationDelay: '120ms' }}
+        aria-label={TABS.find((t) => t.id === tab)?.label}
+      >
+        {tab === 'subjects' && <SubjectsSection password={password} />}
+        {tab === 'materials' && <MaterialsSection password={password} />}
+        {tab === 'grades' && <GradesSection password={password} />}
+        {tab === 'channels' && <ChannelsSection password={password} />}
+        {tab === 'schedules' && <SchedulesSection password={password} />}
+        {tab === 'reports' && <ReportsSection password={password} />}
+        {tab === 'announcements' && <AnnouncementsSection password={password} />}
+      </div>
+    </main>
+  );
+}
+```
+
+## app\admin\_components\AnnouncementsSection.tsx
+
+```tsx
+// app/admin/_components/AnnouncementsSection.tsx
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { Input, Select, Textarea } from '@/components/ui/Field';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { postJson } from '@/lib/api-client';
+import { STAGES } from '@/lib/constants';
+import type { Stage } from '@/lib/types';
+
+interface Props {
+  password: string;
+}
+
+interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  stage: string | null;
+  link_url: string | null;
+  link_label: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'sent' | 'failed';
+  created_by: string;
+  created_at: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  reviewed_note: string | null;
+  sent_at: string | null;
+  sent_count: number;
+  sent_error: string | null;
+}
+
+type Tab = 'pending' | 'history';
+type Role = 'super_admin' | 'admin' | 'publisher';
+
+// ==================== Icons ====================
+function IconMegaphone() {
+  return (
+    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 11l18-8v18l-18-8v-2z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
+    </svg>
+  );
+}
+function IconCheck() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+  );
+}
+function IconClose() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  );
+}
+function IconTrash() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  );
+}
+function IconEdit() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+  );
+}
+function IconSend() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 11l18-8-8 18-2-8-8-2z" />
+    </svg>
+  );
+}
+function IconShield() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M5.618 4.618A2 2 0 017 4h10a2 2 0 011.382.618l.618.618A2 2 0 0120 6.618V12a8 8 0 11-16 0V6.618a2 2 0 011-1.236l.618-.764z" />
+    </svg>
+  );
+}
+
+// ==================== Helpers ====================
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return new Intl.DateTimeFormat('ar-IQ-u-nu-latn-ca-gregory', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(d);
+}
+
+function StatusBadge({ status }: { status: Announcement['status'] }) {
+  const styles: Record<Announcement['status'], { label: string; cls: string }> = {
+    pending: { label: 'قيد المراجعة', cls: 'bg-amber/15 text-amber-800 dark:bg-amber/25 dark:text-amber-300' },
+    approved: { label: 'تمت الموافقة', cls: 'bg-teal/10 text-teal dark:bg-teal/20' },
+    rejected: { label: 'مرفوض', cls: 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300' },
+    sent: { label: 'أُرسل', cls: 'bg-teal text-white' },
+    failed: { label: 'فشل الإرسال', cls: 'bg-red-600 text-white' },
+  };
+  const s = styles[status];
+  return <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${s.cls}`}>{s.label}</span>;
+}
+
+// ==================== Role Badge ====================
+function RoleBadge({ role }: { role: Role | null }) {
+  if (role === 'super_admin') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold-tint px-2.5 py-0.5 text-[11px] font-bold text-gold-ink">
+        <IconShield />
+        مشرف أعلى — يمكنك الموافقة على التبليغات
+      </span>
+    );
+  }
+  if (role === 'admin') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-teal/30 bg-teal-tint px-2.5 py-0.5 text-[11px] font-bold text-teal">
+        مشرف — التبليغات تُرسل للمشرف الأعلى للموافقة
+      </span>
+    );
+  }
+  return null;
+}
+
+// ==================== Edit Form ====================
+interface EditFormState {
+  title: string;
+  body: string;
+  stage: Stage | '';
+  link_url: string;
+  link_label: string;
+}
+
+function formFromAnnouncement(a: Announcement): EditFormState {
+  return {
+    title: a.title,
+    body: a.body,
+    stage: (a.stage as Stage | null) ?? '',
+    link_url: a.link_url ?? '',
+    link_label: a.link_label ?? '',
+  };
+}
+
+// ==================== Card ====================
+function AnnouncementCard({
+  item,
+  password,
+  role,
+  onChanged,
+}: {
+  item: Announcement;
+  password: string;
+  role: Role | null;
+  onChanged: () => void;
+}) {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState<EditFormState>(formFromAnnouncement(item));
+  const [rejectNote, setRejectNote] = useState('');
+  const [showReject, setShowReject] = useState(false);
+
+  const isPending = item.status === 'pending';
+  const canApprove = role === 'super_admin';
+  const canEdit = role === 'super_admin';
+  const canDelete = role === 'super_admin';
+
+  async function handleApprove() {
+    const ok = await confirm(
+      'سيتم إرسال التبليغ لكل المشتركين المُفعّلين. هل أنت متأكد؟',
+      { variant: 'primary', confirmLabel: 'إرسال الآن' }
+    );
+    if (!ok) return;
+
+    setBusy(true);
+    try {
+      const res = await postJson<{ sent: number; failed: number }>(
+        '/api/admin/announcements',
+        { password, action: 'approve', id: item.id }
+      );
+      toast.show(
+        `تم الإرسال لـ ${res.sent} مشترك${res.failed > 0 ? ` (فشل: ${res.failed})` : ''}`,
+        'success'
+      );
+      onChanged();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الإرسال', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleReject() {
+    setBusy(true);
+    try {
+      await postJson('/api/admin/announcements', {
+        password, action: 'reject', id: item.id,
+        note: rejectNote.trim() || null,
+      });
+      toast.show('تم الرفض', 'success');
+      onChanged();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الرفض', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleSaveEdit() {
+    if (!form.title.trim() || !form.body.trim()) {
+      toast.show('العنوان والنص مطلوبان', 'error');
+      return;
+    }
+    setBusy(true);
+    try {
+      await postJson('/api/admin/announcements', {
+        password, action: 'edit', id: item.id,
+        title: form.title.trim(),
+        body: form.body.trim(),
+        stage: form.stage || null,
+        link_url: form.link_url.trim() || null,
+        link_label: form.link_label.trim() || null,
+      });
+      toast.show('تم التعديل', 'success');
+      setEditing(false);
+      onChanged();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل التعديل', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDelete() {
+    const ok = await confirm('حذف التبليغ نهائياً. هل أنت متأكد؟', {
+      variant: 'danger', confirmLabel: 'حذف',
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await postJson('/api/admin/announcements', {
+        password, action: 'delete', id: item.id,
+      });
+      toast.show('تم الحذف', 'success');
+      onChanged();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الحذف', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleResend() {
+    const ok = await confirm('إعادة إرسال التبليغ لكل المشتركين؟', {
+      variant: 'primary', confirmLabel: 'إعادة الإرسال',
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      const res = await postJson<{ sent: number; failed: number }>(
+        '/api/admin/announcements',
+        { password, action: 'resend', id: item.id }
+      );
+      toast.show(`أُعيد الإرسال لـ ${res.sent} مشترك`, 'success');
+      onChanged();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الإعادة', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm dark:bg-paper/80">
+      {/* Header */}
+      <div className="flex flex-wrap items-center gap-2">
+        <StatusBadge status={item.status} />
+        {item.stage ? (
+          <span className="rounded-full bg-teal/8 px-2 py-0.5 text-[11px] font-bold text-teal/80 dark:bg-teal/15">
+            {item.stage}
+          </span>
+        ) : (
+          <span className="rounded-full bg-ink/5 px-2 py-0.5 text-[11px] font-bold text-ink/60 dark:bg-white/10">
+            كل المراحل
+          </span>
+        )}
+        <span className="text-[11px] text-ink/40">
+          بواسطة {item.created_by} — {formatDate(item.created_at)}
+        </span>
+      </div>
+
+      {editing ? (
+        <div className="mt-3 space-y-2">
+          <Input
+            type="text"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            maxLength={200}
+            placeholder="العنوان"
+          />
+          <Select
+            value={form.stage}
+            onChange={(e) => setForm({ ...form, stage: e.target.value as Stage | '' })}
+            aria-label="المرحلة"
+          >
+            <option value="">كل المراحل</option>
+            {STAGES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </Select>
+          <Textarea
+            value={form.body}
+            onChange={(e) => setForm({ ...form, body: e.target.value })}
+            rows={4}
+            maxLength={2000}
+            placeholder="نص التبليغ"
+          />
+          <div className="flex flex-wrap gap-2">
+            <Input
+              type="url"
+              value={form.link_url}
+              onChange={(e) => setForm({ ...form, link_url: e.target.value })}
+              placeholder="رابط (اختياري)"
+              maxLength={1000}
+              className="min-w-0 flex-1 basis-full sm:basis-auto"
+            />
+            <Input
+              type="text"
+              value={form.link_label}
+              onChange={(e) => setForm({ ...form, link_label: e.target.value })}
+              placeholder="نص الزر"
+              maxLength={60}
+              className="w-full sm:w-40"
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={handleSaveEdit} loading={busy}>
+              حفظ التعديل
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setEditing(false);
+                setForm(formFromAnnouncement(item));
+              }}
+              disabled={busy}
+            >
+              إلغاء
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <h3 className="mt-2 break-anywhere font-bold text-ink">{item.title}</h3>
+          <p className="mt-1 whitespace-pre-line break-anywhere text-sm leading-relaxed text-ink/70">
+            {item.body}
+          </p>
+
+          {item.link_url && (
+            <a
+              href={item.link_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex items-center gap-1 break-anywhere text-xs font-bold text-teal hover:underline"
+            >
+              🔗 {item.link_label || item.link_url}
+            </a>
+          )}
+
+          {item.reviewed_note && (
+            <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-300">
+              <span className="font-bold">سبب الرفض: </span>
+              {item.reviewed_note}
+            </p>
+          )}
+
+          {item.status === 'sent' && (
+            <p className="mt-2 text-xs font-bold text-teal">
+              ✅ أُرسل لـ {item.sent_count} مشترك
+              {item.sent_error && ` (${item.sent_error})`}
+            </p>
+          )}
+
+          {item.status === 'failed' && item.sent_error && (
+            <p className="mt-2 text-xs font-bold text-red-600 dark:text-red-400">
+              ❌ {item.sent_error}
+            </p>
+          )}
+        </>
+      )}
+
+      {/* Actions */}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {isPending && !editing && (
+          <>
+            {canApprove && (
+              <Button size="sm" onClick={handleApprove} loading={busy} icon={<IconSend />}>
+                موافقة وإرسال
+              </Button>
+            )}
+            {canEdit && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setEditing(true)}
+                disabled={busy}
+                icon={<IconEdit />}
+              >
+                تعديل
+              </Button>
+            )}
+            {canApprove && (
+              <Button
+                size="sm"
+                variant="danger"
+                onClick={() => setShowReject(true)}
+                disabled={busy}
+                icon={<IconClose />}
+              >
+                رفض
+              </Button>
+            )}
+            {canDelete && (
+              <Button size="sm" variant="ghost" onClick={handleDelete} disabled={busy} icon={<IconTrash />}>
+                حذف
+              </Button>
+            )}
+            {!canApprove && (
+              <p className="self-center text-[11px] text-ink/50">
+                ⏳ بانتظار موافقة المشرف الأعلى
+              </p>
+            )}
+          </>
+        )}
+
+        {item.status === 'failed' && !editing && canApprove && (
+          <>
+            <Button size="sm" onClick={handleResend} loading={busy} icon={<IconSend />}>
+              إعادة الإرسال
+            </Button>
+            <Button size="sm" variant="ghost" onClick={handleDelete} disabled={busy} icon={<IconTrash />}>
+              حذف
+            </Button>
+          </>
+        )}
+
+        {(item.status === 'sent' || item.status === 'rejected') && !editing && canDelete && (
+          <Button size="sm" variant="ghost" onClick={handleDelete} disabled={busy} icon={<IconTrash />}>
+            حذف من السجل
+          </Button>
+        )}
+      </div>
+
+      {/* Reject inline form */}
+      {showReject && (
+        <div className="mt-3 space-y-2 rounded-xl border border-red-200 bg-red-50 p-3 dark:border-red-900/50 dark:bg-red-950/30">
+          <Input
+            type="text"
+            value={rejectNote}
+            onChange={(e) => setRejectNote(e.target.value)}
+            placeholder="سبب الرفض (اختياري، يظهر للناشر)"
+            maxLength={500}
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="danger" onClick={handleReject} loading={busy}>
+              تأكيد الرفض
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setShowReject(false);
+                setRejectNote('');
+              }}
+              disabled={busy}
+            >
+              إلغاء
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==================== Main Section ====================
+export function AnnouncementsSection({ password }: Props) {
+  const toast = useToast();
+  const [tab, setTab] = useState<Tab>('pending');
+  const [role, setRole] = useState<Role | null>(null);
+  const [pending, setPending] = useState<Announcement[]>([]);
+  const [history, setHistory] = useState<Announcement[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const whoamiRes = await postJson<{ role: Role }>('/api/admin/announcements', {
+        password, action: 'whoami',
+      });
+      setRole(whoamiRes.role);
+
+      const [pRes, hRes] = await Promise.all([
+        postJson<{ items: Announcement[] }>('/api/admin/announcements', {
+          password, action: 'list_pending',
+        }),
+        postJson<{ items: Announcement[] }>('/api/admin/announcements', {
+          password, action: 'list_history',
+        }),
+      ]);
+      setPending(pRes.items ?? []);
+      setHistory(hRes.items ?? []);
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل التحميل', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [password, toast]);
+
+  useEffect(() => { load(); }, [load]);
+
+  return (
+    <section>
+      <div className="mb-5 flex items-start gap-3 rounded-2xl border border-teal/20 bg-teal/[0.04] p-4 text-sm dark:border-teal/30 dark:bg-teal/10">
+        <span className="text-teal"><IconMegaphone /></span>
+        <div className="min-w-0">
+          <p className="font-bold text-ink">تبليغات البوت</p>
+          <p className="mt-0.5 text-ink/70">
+            راجع التبليغات الواردة. الموافقة والإرسال تحتاج صلاحية المشرف الأعلى
+            (<code className="break-anywhere rounded bg-ink/5 px-1 font-mono text-[11px]">SUPER_ADMIN_PASSWORD</code>).
+          </p>
+        </div>
+      </div>
+
+      {role && (
+        <div className="mb-4">
+          <RoleBadge role={role} />
+        </div>
+      )}
+
+      <div className="scrollbar-none mb-4 -mx-4 flex gap-1 overflow-x-auto rounded-xl border border-line bg-white/60 p-1 sm:mx-0 dark:bg-white/[0.04]">
+        <button
+          type="button"
+          onClick={() => setTab('pending')}
+          className={`flex flex-shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition-colors ${
+            tab === 'pending' ? 'bg-teal text-white' : 'text-ink/60 hover:bg-ink/5'
+          }`}
+        >
+          <span className="whitespace-nowrap">قيد المراجعة</span>
+          {pending.length > 0 && (
+            <span className="rounded-full bg-white/20 px-1.5 py-0.5 font-mono text-[10px]">
+              {pending.length}
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('history')}
+          className={`flex flex-shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition-colors ${
+            tab === 'history' ? 'bg-teal text-white' : 'text-ink/60 hover:bg-ink/5'
+          }`}
+        >
+          <span className="whitespace-nowrap">السجل</span>
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="space-y-2">
+          {[0, 1, 2].map((i) => <div key={i} className="h-32 skeleton-shimmer rounded-2xl" />)}
+        </div>
+      ) : tab === 'pending' ? (
+        pending.length === 0 ? (
+          <div className="rounded-3xl border border-line bg-white/80 p-12 text-center dark:bg-paper/80">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-teal/8 text-teal">
+              <IconCheck />
+            </div>
+            <p className="mt-4 font-bold text-ink/70">لا توجد تبليغات بانتظار المراجعة</p>
+            <p className="mt-1 text-sm text-ink/50">كل شيء تحت السيطرة ✨</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {pending.map((a) => (
+              <AnnouncementCard key={a.id} item={a} password={password} role={role} onChanged={load} />
+            ))}
+          </div>
+        )
+      ) : history.length === 0 ? (
+        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center dark:bg-paper/80">
+          <p className="font-bold text-ink/70">لا يوجد سجل بعد</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {history.map((a) => (
+            <AnnouncementCard key={a.id} item={a} password={password} role={role} onChanged={load} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+```
+
+## app\admin\_components\ChannelsSection.tsx
+
+```tsx
+// app/admin/_components/ChannelsSection.tsx
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { Input, Select } from '@/components/ui/Field';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { postJson } from '@/lib/api-client';
+import { STAGES } from '@/lib/constants';
+import type { Channel, Stage } from '@/lib/types';
+
+interface Props { password: string }
+
+interface ChannelForm {
+  name: string;
+  stage: Stage | '';
+  description: string;
+  telegram_link: string;
+  channel_password: string;
+}
+
+function emptyForm(): ChannelForm {
+  return { name: '', stage: '', description: '', telegram_link: '', channel_password: '' };
+}
+function formFromChannel(c: Channel): ChannelForm {
+  return {
+    name: c.name,
+    stage: c.stage,
+    description: c.description ?? '',
+    telegram_link: c.telegram_link,
+    channel_password: c.channel_password ?? '',
+  };
+}
+function isFormValid(f: ChannelForm): boolean {
+  return f.name.trim() !== '' && f.stage !== '' && f.telegram_link.trim() !== '';
+}
+function generateChannelPassword(): string {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let result = '';
+  for (let i = 0; i < 8; i++) result += chars[Math.floor(Math.random() * chars.length)];
+  return result;
+}
+
+function IconChat() {
+  return (
+    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+    </svg>
+  );
+}
+function IconCopy() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+    </svg>
+  );
+}
+function IconSparkles() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+    </svg>
+  );
+}
+function IconEdit() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+  );
+}
+function IconTrash() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  );
+}
+
+function CopyButton({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+  const toast = useToast();
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.show('فشل النسخ — يرجى النسخ يدوياً', 'error');
+    }
+  }
+  return (
+    <Button type="button" variant="secondary" size="xs" onClick={handleCopy} icon={<IconCopy />}>
+      {copied ? 'تم' : 'نسخ'}
+    </Button>
+  );
+}
+
+function PasswordField({
+  value, onChange, placeholder,
+}: { value: string; onChange: (v: string) => void; placeholder: string }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        maxLength={200}
+        className="min-w-0 flex-1 basis-full font-mono sm:basis-auto"
+      />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => onChange(generateChannelPassword())}
+        icon={<IconSparkles />}
+      >
+        توليد
+      </Button>
+      {value && <CopyButton value={value} />}
+    </div>
+  );
+}
+
+export function ChannelsSection({ password }: Props) {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newForm, setNewForm] = useState<ChannelForm>(emptyForm());
+  const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<ChannelForm>(emptyForm());
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await postJson<{ channels: Channel[] }>('/api/admin/channels', { password, action: 'list' });
+      setChannels(data.channels ?? []);
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل تحميل القنوات', 'error');
+      setChannels([]);
+    } finally { setLoading(false); }
+  }, [password, toast]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isFormValid(newForm)) return;
+    setAdding(true);
+    try {
+      await postJson('/api/admin/channels', {
+        password, action: 'add',
+        name: newForm.name.trim(),
+        stage: newForm.stage,
+        description: newForm.description.trim() || null,
+        telegram_link: newForm.telegram_link.trim(),
+        channel_password: newForm.channel_password.trim() || null,
+      });
+      setNewForm(emptyForm());
+      toast.show('تمت إضافة القناة', 'success');
+      load();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الإضافة', 'error');
+    } finally { setAdding(false); }
+  }
+
+  function startEdit(c: Channel) { setEditingId(c.id); setEditForm(formFromChannel(c)); }
+  function cancelEdit() { setEditingId(null); setEditForm(emptyForm()); }
+
+  async function saveEdit(id: string) {
+    if (!isFormValid(editForm)) return;
+    setSaving(true);
+    try {
+      await postJson('/api/admin/channels', {
+        password, action: 'edit', id,
+        name: editForm.name.trim(),
+        stage: editForm.stage,
+        description: editForm.description.trim() || null,
+        telegram_link: editForm.telegram_link.trim(),
+        channel_password: editForm.channel_password.trim() || null,
+      });
+      cancelEdit();
+      toast.show('تم الحفظ', 'success');
+      load();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الحفظ', 'error');
+    } finally { setSaving(false); }
+  }
+
+  async function handleDelete(c: Channel) {
+    const ok = await confirm(`حذف القناة «${c.name}» نهائياً. هل أنت متأكد؟`, { variant: 'danger', confirmLabel: 'حذف' });
+    if (!ok) return;
+    try {
+      await postJson('/api/admin/channels', { password, action: 'delete', id: c.id });
+      toast.show('تم الحذف', 'success');
+      load();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'فشل الحذف', 'error');
+    }
+  }
+
+  return (
+    <section>
+      <form
+        onSubmit={handleAdd}
+        className="mb-5 space-y-3 rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.04)] backdrop-blur-sm dark:bg-paper/80"
+      >
+        <div className="flex flex-wrap gap-2">
+          <Input
+            type="text"
+            value={newForm.name}
+            onChange={(e) => setNewForm({ ...newForm, name: e.target.value })}
+            placeholder="اسم القناة"
+            required
+            maxLength={200}
+            className="min-w-0 flex-1 basis-full sm:basis-auto"
+          />
+          <Select
+            value={newForm.stage}
+            onChange={(e) => setNewForm({ ...newForm, stage: e.target.value as Stage | '' })}
+            required
+            className="w-full sm:w-44"
+            aria-label="المرحلة"
+          >
+            <option value="">اختر المرحلة</option>
+            {STAGES.map((st) => <option key={st} value={st}>{st}</option>)}
+          </Select>
+        </div>
+        <Input
+          type="text"
+          value={newForm.description}
+          onChange={(e) => setNewForm({ ...newForm, description: e.target.value })}
+          placeholder="وصف قصير (اختياري)"
+          maxLength={1000}
+        />
+        <Input
+          type="url"
+          value={newForm.telegram_link}
+          onChange={(e) => setNewForm({ ...newForm, telegram_link: e.target.value })}
+          placeholder="رابط تلغرام (https://t.me/channelname)"
+          required
+          maxLength={500}
+        />
+        <PasswordField
+          value={newForm.channel_password}
+          onChange={(v) => setNewForm({ ...newForm, channel_password: v })}
+          placeholder="كلمة مرور القناة"
+        />
+        <Button
+          type="submit"
+          loading={adding}
+          disabled={!isFormValid(newForm)}
+          className="w-full sm:w-auto"
+        >
+          إضافة قناة
+        </Button>
+      </form>
+
+      {loading ? (
+        <div className="space-y-2">
+          {[0, 1, 2].map((i) => <div key={i} className="h-28 skeleton-shimmer rounded-2xl" />)}
+        </div>
+      ) : channels.length === 0 ? (
+        <div className="rounded-3xl border border-line bg-white/80 p-12 text-center backdrop-blur-sm dark:bg-paper/80">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-teal/8 text-teal">
+            <IconChat />
+          </div>
+          <p className="mt-4 font-bold text-ink/70">لا توجد قنوات مضافة حالياً.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {channels.map((c) => {
+            const isEditing = editingId === c.id;
+            return (
+              <div
+                key={c.id}
+                className="rounded-2xl border border-line bg-white/80 p-4 shadow-[0_1px_3px_rgba(26,33,31,0.03)] backdrop-blur-sm transition-all duration-200 hover:border-teal/20 dark:bg-paper/80 dark:hover:shadow-[0_4px_16px_rgba(0,0,0,0.30)]"
+              >
+                {isEditing ? (
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
+                      <Input
+                        type="text"
+                        value={editForm.name}
+                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                        maxLength={200}
+                        className="min-w-0 flex-1 basis-full sm:basis-auto"
+                        autoFocus
+                      />
+                      <Select
+                        value={editForm.stage}
+                        onChange={(e) => setEditForm({ ...editForm, stage: e.target.value as Stage | '' })}
+                        className="w-full sm:w-44"
+                        aria-label="المرحلة"
+                      >
+                        {STAGES.map((st) => <option key={st} value={st}>{st}</option>)}
+                      </Select>
+                    </div>
+                    <Input
+                      type="text"
+                      value={editForm.description}
+                      onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                      placeholder="الوصف"
+                      maxLength={1000}
+                    />
+                    <Input
+                      type="url"
+                      value={editForm.telegram_link}
+                      onChange={(e) => setEditForm({ ...editForm, telegram_link: e.target.value })}
+                      placeholder="رابط تلغرام"
+                      maxLength={500}
+                    />
+                    <PasswordField
+                      value={editForm.channel_password}
+                      onChange={(v) => setEditForm({ ...editForm, channel_password: v })}
+                      placeholder="كلمة مرور القناة"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" onClick={() => saveEdit(c.id)} loading={saving} disabled={!isFormValid(editForm)}>حفظ</Button>
+                      <Button size="sm" variant="secondary" onClick={cancelEdit} disabled={saving}>إلغاء</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-baseline gap-2">
+                        <span className="font-bold text-ink">{c.name}</span>
+                        <span className="rounded-full bg-teal/8 px-2 py-0.5 font-mono text-xs text-teal/70 dark:bg-teal/15 dark:text-teal">
+                          {c.stage}
+                        </span>
+                      </div>
+                      {c.description && (
+                        <p className="mt-1 text-sm text-ink/55">{c.description}</p>
+                      )}
+                      <a
+                        href={c.telegram_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1 inline-block break-anywhere text-sm font-medium text-teal underline decoration-teal/40 underline-offset-4 hover:text-teal/80"
+                      >
+                        {c.telegram_link}
+                      </a>
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                        <span className="font-bold text-ink/50">كلمة المرور:</span>
+                        <code className="break-anywhere rounded-md bg-ink/5 px-2 py-0.5 font-mono text-ink/80 dark:bg-white/10 dark:text-ink/90">
+                          {c.channel_password || 'غير محددة'}
+                        </code>
+                        {c.channel_password && <CopyButton value={c.channel_password} />}
+                      </div>
+                    </div>
+                    <div className="flex flex-shrink-0 flex-wrap gap-1.5">
+                      <Button size="sm" variant="secondary" onClick={() => startEdit(c)} icon={<IconEdit />}>
+                        تعديل
+                      </Button>
+                      <Button size="sm" variant="danger" onClick={() => handleDelete(c)} icon={<IconTrash />}>
+                        حذف
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+```
+
+## app\admin\_components\GradesSection.tsx
+
+```tsx
+// app/admin/_components/GradesSection.tsx
+'use client';
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { Input, Select, Textarea } from '@/components/ui/Field';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { postJson } from '@/lib/api-client';
+import {
+  GRADE_TYPE_COLORS,
+  GRADE_TYPE_EMOJIS,
+  GRADE_TYPE_LABELS,
+  GRADE_TYPES,

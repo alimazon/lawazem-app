@@ -1,0 +1,2818 @@
+﻿type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'gold';
+type Size = 'xs' | 'sm' | 'md' | 'lg';
+
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: Variant;
+  size?: Size;
+  loading?: boolean;
+  icon?: ReactNode;
+  iconAfter?: ReactNode;
+  fullWidth?: boolean;
+}
+
+// ==================== Variants ====================
+const VARIANTS: Record<Variant, string> = {
+  primary:
+    'bg-teal text-on-teal ' +
+    'hover:bg-teal-hover active:bg-teal-active ' +
+    'shadow-xs hover:shadow-sm',
+
+  secondary:
+    'bg-paper-soft text-ink border border-line-strong ' +
+    'hover:border-teal/40 hover:bg-paper-deep ' +
+    'active:bg-paper-deep',
+
+  outline:
+    'bg-transparent text-teal border-2 border-teal/25 ' +
+    'hover:border-teal/60 hover:bg-teal-tint ' +
+    'active:bg-teal-soft',
+
+  ghost:
+    'bg-transparent text-ink-soft ' +
+    'hover:bg-ink/5 hover:text-ink ' +
+    'active:bg-ink/10',
+
+  danger:
+    'bg-transparent text-coral-ink border border-coral/25 ' +
+    'hover:bg-coral-soft hover:border-coral/40 ' +
+    'active:bg-coral-soft',
+
+  // text-on-gold: نص داكن في الوضعين (text-ink يصير فاتحاً في الداكن)
+  gold:
+    'bg-gold text-on-gold ' +
+    'hover:bg-gold-light active:brightness-95 ' +
+    'shadow-xs hover:shadow-sm',
+};
+
+// ==================== Sizes ====================
+// md = 44px (حد اللمس الأدنى). xs/sm للواجهات الكثيفة فقط.
+const SIZES: Record<Size, string> = {
+  xs: 'h-7 px-2.5 text-xs gap-1 rounded-field',
+  sm: 'h-9 px-3.5 text-sm gap-1.5 rounded-field',
+  md: 'h-11 px-5 text-sm gap-2 rounded-field',
+  lg: 'h-13 px-7 text-base gap-2.5 rounded-field',
+};
+
+// حالة التعطيل بتوكنات النظام (لا opacity). لا تُطبَّق أثناء loading
+// حتى يبقى الزر بلونه مع المؤشر الدوّار.
+const DISABLED =
+  'disabled:pointer-events-none disabled:border-transparent disabled:bg-disabled ' +
+  'disabled:text-disabled-ink disabled:shadow-none disabled:active:scale-100';
+
+// ==================== Spinner ====================
+function Spinner() {
+  return (
+    <svg
+      className="h-4 w-4 flex-shrink-0 animate-spin"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+      <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// ==================== Component ====================
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  {
+    variant = 'primary',
+    size = 'md',
+    loading,
+    icon,
+    iconAfter,
+    fullWidth,
+    disabled,
+    children,
+    className = '',
+    ...rest
+  },
+  ref
+) {
+  return (
+    <button
+      ref={ref}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
+      className={[
+        // base — بدون tracking: letter-spacing السالب يقطع اتصال الحروف العربية
+        'inline-flex select-none items-center justify-center font-semibold',
+        'transition-[background-color,border-color,color,box-shadow,transform] duration-200 ease-[var(--ease-editorial)]',
+        'active:scale-[0.98]',
+        VARIANTS[variant],
+        SIZES[size],
+        loading ? 'pointer-events-none cursor-progress' : DISABLED,
+        fullWidth ? 'w-full' : '',
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      {...rest}
+    >
+      {loading ? (
+        <Spinner />
+      ) : icon ? (
+        <span className="flex-shrink-0">{icon}</span>
+      ) : null}
+
+      {children && <span className="truncate">{children}</span>}
+
+      {iconAfter && !loading && <span className="flex-shrink-0">{iconAfter}</span>}
+    </button>
+  );
+});
+```
+
+## components\ui\Card.tsx
+
+```tsx
+// components/ui/Card.tsx
+import {
+  type ElementType,
+  type ReactNode,
+  type HTMLAttributes,
+  type KeyboardEvent,
+} from 'react';
+
+type Variant = 'default' | 'featured' | 'flat';
+type Padding = 'sm' | 'md' | 'lg';
+
+interface CardProps extends HTMLAttributes<HTMLElement> {
+  as?: 'div' | 'article' | 'section' | 'li';
+  variant?: Variant;
+  padding?: Padding;
+  hoverable?: boolean;
+  children: ReactNode;
+}
+
+const PADDING: Record<Padding, string> = {
+  sm: 'p-4',
+  md: 'p-5 sm:p-6',
+  lg: 'p-6 sm:p-8',
+};
+
+const VARIANT: Record<Variant, string> = {
+  // العادية — سطح فاتح، حد خفيف
+  default: 'bg-paper-soft border border-line shadow-xs',
+
+  // المميزة — مسطّحة: حد ذهبي عند بداية السطر (يمين في RTL) بدل التدرّج
+  featured:
+    'bg-paper-soft border border-teal/20 border-s-[3px] border-s-gold shadow-sm',
+
+  // بدون خلفية — للقوائم داخل بطاقة موجودة
+  flat: 'bg-transparent border border-transparent',
+};
+
+export function Card({
+  as: Tag = 'div',
+  variant = 'default',
+  padding = 'md',
+  hoverable = false,
+  children,
+  className = '',
+  onKeyDown,
+  ...rest
+}: CardProps) {
+  const Component: ElementType = Tag;
+
+  // بطاقة قابلة للنقر: تصير قابلة للوصول بالكيبورد (Tab + Enter/Space)
+  const clickable = typeof rest.onClick === 'function';
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLElement>) => {
+    onKeyDown?.(e);
+    if (
+      clickable &&
+      e.target === e.currentTarget &&
+      (e.key === 'Enter' || e.key === ' ')
+    ) {
+      e.preventDefault();
+      (e.currentTarget as HTMLElement).click();
+    }
+  };
+
+  const finalClassName = [
+    'rounded-card',
+    VARIANT[variant],
+    PADDING[padding],
+    hoverable ? 'card-editorial-hover' : 'transition-colors duration-300',
+    clickable ? 'cursor-pointer' : '',
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  return (
+    <Component
+      tabIndex={clickable ? 0 : undefined}
+      role={clickable ? 'button' : undefined}
+      onKeyDown={handleKeyDown}
+      className={finalClassName}
+      {...rest}
+    >
+      {children}
+    </Component>
+  );
+}
+
+// ==================== Card.Header ====================
+export function CardHeader({
+  children,
+  className = '',
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`mb-3 flex items-start justify-between gap-3 ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+// ==================== Card.Title ====================
+export function CardTitle({
+  children,
+  className = '',
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <h3 className={`text-base font-bold leading-snug text-ink sm:text-lg ${className}`}>
+      {children}
+    </h3>
+  );
+}
+
+// ==================== Card.Description ====================
+export function CardDescription({
+  children,
+  className = '',
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <p className={`text-sm leading-relaxed text-ink-soft ${className}`}>
+      {children}
+    </p>
+  );
+}
+```
+
+## components\ui\ConfirmDialog.tsx
+
+```tsx
+// components/ui/ConfirmDialog.tsx
+'use client';
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react';
+import { Button } from './Button';
+
+interface ConfirmOptions {
+  title?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  variant?: 'primary' | 'danger';
+}
+
+interface State extends ConfirmOptions {
+  message: string;
+  resolve: (v: boolean) => void;
+}
+
+interface ConfirmContextValue {
+  confirm: (message: string, options?: ConfirmOptions) => Promise<boolean>;
+}
+
+const ConfirmContext = createContext<ConfirmContextValue | null>(null);
+
+export function ConfirmProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<State | null>(null);
+
+  const confirm = useCallback(
+    (message: string, options?: ConfirmOptions) =>
+      new Promise<boolean>((resolve) => setState({ message, ...options, resolve })),
+    []
+  );
+
+  const close = useCallback((result: boolean) => {
+    setState((current) => {
+      if (!current) return null;
+      current.resolve(result);
+      return null;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!state) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') close(false);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [state, close]);
+
+  return (
+    <ConfirmContext.Provider value={{ confirm }}>
+      {children}
+      {state && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm animate-fade-in"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => close(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-3xl border border-line bg-paper p-6 shadow-[0_24px_60px_rgba(26,33,31,0.30)] animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            {state.title && <h3 className="mt-4 text-lg font-extrabold text-ink">{state.title}</h3>}
+            <p className="mt-2 text-sm leading-relaxed text-ink/70">{state.message}</p>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button variant="secondary" size="sm" onClick={() => close(false)}>
+                {state.cancelLabel ?? 'إلغاء'}
+              </Button>
+              <Button variant={state.variant ?? 'danger'} size="sm" onClick={() => close(true)}>
+                {state.confirmLabel ?? 'تأكيد'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </ConfirmContext.Provider>
+  );
+}
+
+export function useConfirm() {
+  const ctx = useContext(ConfirmContext);
+  if (!ctx) throw new Error('useConfirm must be used inside <ConfirmProvider>');
+  return ctx.confirm;
+}
+```
+
+## components\ui\DropZone.tsx
+
+```tsx
+// components/ui/DropZone.tsx
+'use client';
+
+import { useCallback, useState } from 'react';
+import { useDropzone, type FileRejection } from 'react-dropzone';
+
+interface DropZoneProps {
+  onFileSelected: (file: File) => void | Promise<void>;
+  accept?: Record<string, string[]>;
+  maxSizeMB?: number;
+  uploading?: boolean;
+  disabled?: boolean;
+}
+
+const DEFAULT_ACCEPT = {
+  'application/pdf': ['.pdf'],
+  'application/msword': ['.doc'],
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+  'application/vnd.ms-powerpoint': ['.ppt'],
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+  'image/*': ['.png', '.jpg', '.jpeg', '.webp', '.gif'],
+};
+
+export function DropZone({
+  onFileSelected,
+  accept = DEFAULT_ACCEPT,
+  maxSizeMB = 50,
+  uploading = false,
+  disabled = false,
+}: DropZoneProps) {
+  const [error, setError] = useState('');
+
+  const onDrop = useCallback(
+    async (acceptedFiles: File[], rejectedFiles: FileRejection[]) => {
+      setError('');
+
+      if (rejectedFiles.length > 0) {
+        const reason = rejectedFiles[0].errors[0]?.code;
+        if (reason === 'file-too-large') {
+          setError(`حجم الملف كبير جداً (بحد أقصى ${maxSizeMB} ميجا)`);
+        } else if (reason === 'file-invalid-type') {
+          setError('نوع الملف غير مدعوم');
+        } else if (reason === 'too-many-files') {
+          setError('اختر ملفاً واحداً فقط');
+        } else {
+          setError('فشل اختيار الملف');
+        }
+        return;
+      }
+
+      if (acceptedFiles[0]) {
+        try {
+          await onFileSelected(acceptedFiles[0]);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'فشل رفع الملف');
+        }
+      }
+    },
+    [onFileSelected, maxSizeMB]
+  );
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept,
+    maxSize: maxSizeMB * 1024 * 1024,
+    multiple: false,
+    disabled: uploading || disabled,
+  });
+
+  return (
+    <div className="space-y-2">
+      <div
+        {...getRootProps()}
+        className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-6 text-center transition-all duration-200 ${
+          isDragActive
+            ? 'border-teal bg-teal/5 dark:bg-teal/10'
+            : 'border-line bg-paper/50 hover:border-teal/40 hover:bg-teal/[0.03] dark:bg-paper-deep/40 dark:hover:bg-teal/5'
+        } ${uploading ? 'cursor-wait opacity-60' : ''} ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+      >
+        <input {...getInputProps()} />
+
+        <span
+          className={`flex h-12 w-12 items-center justify-center rounded-2xl transition-all duration-200 ${
+            isDragActive ? 'bg-teal/15 text-teal' : 'bg-teal/8 text-teal'
+          }`}
+        >
+          {uploading ? (
+            <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+              <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+            </svg>
+          ) : isDragActive ? (
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+          ) : (
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+          )}
+        </span>
+
+        <div>
+          <p className="text-sm font-bold text-ink/80">
+            {uploading
+              ? 'جاري الرفع...'
+              : isDragActive
+              ? 'أفلت الملف هنا'
+              : 'اسحب الملف هنا أو اضغط للاختيار'}
+          </p>
+          <p className="mt-1 text-xs text-ink/50">
+            PDF, Word, PowerPoint, صور — بحد أقصى {maxSizeMB} ميجا
+          </p>
+        </div>
+      </div>
+
+      {error && (
+        <p
+          className="rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-600 dark:bg-red-950/40 dark:text-red-300"
+          role="alert"
+        >
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+```
+
+## components\ui\Field.tsx
+
+```tsx
+// components/ui/Field.tsx
+'use client';
+
+import {
+  forwardRef,
+  type InputHTMLAttributes,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+  type ReactNode,
+} from 'react';
+import { IconChevronDown } from '@/components/ui/Icons';
+
+// ==================== Shared Base ====================
+const BASE = 'field-editorial';
+
+// أنماط مشتركة لبطاقة Checkbox / Radio
+const CHOICE_LABEL = [
+  'flex cursor-pointer items-center gap-3',
+  'rounded-field border border-field-border bg-paper-soft px-4 py-3',
+  'text-sm font-medium text-ink-soft',
+  'transition-colors duration-200',
+  'hover:border-teal/40 hover:bg-paper',
+  'has-[:checked]:border-teal/60 has-[:checked]:bg-teal/5 has-[:checked]:text-ink',
+  'has-[:disabled]:cursor-not-allowed has-[:disabled]:bg-disabled has-[:disabled]:text-disabled-ink has-[:disabled]:hover:border-field-border',
+].join(' ');
+
+const CHOICE_INPUT =
+  'peer h-5 w-5 cursor-pointer appearance-none border-2 border-field-border bg-paper-soft ' +
+  'transition-all duration-200 focus-visible:outline-offset-2 disabled:cursor-not-allowed';
+
+// ==================== Input ====================
+export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
+  function Input({ className = '', ...rest }, ref) {
+    return <input ref={ref} className={`${BASE} ${className}`} {...rest} />;
+  }
+);
+
+// ==================== Select ====================
+export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(
+  function Select({ className = '', children, ...rest }, ref) {
+    return (
+      <div className="relative">
+        <select
+          ref={ref}
+          className={`${BASE} cursor-pointer appearance-none ps-4 pe-10 ${className}`}
+          {...rest}
+        >
+          {children}
+        </select>
+        <IconChevronDown className="pointer-events-none absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
+      </div>
+    );
+  }
+);
+
+// ==================== Textarea ====================
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(
+  function Textarea({ className = '', ...rest }, ref) {
+    return (
+      <textarea
+        ref={ref}
+        className={`${BASE} resize-none leading-[1.8] ${className}`}
+        {...rest}
+      />
+    );
+  }
+);
+
+// ==================== FieldGroup ====================
+export function FieldGroup({
+  children,
+  className = '',
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`space-y-3 rounded-card border border-line bg-paper-soft p-5 ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+// ==================== Label ====================
+export function Label({
+  htmlFor,
+  children,
+  hint,
+  required,
+  className = '',
+}: {
+  htmlFor?: string;
+  children: ReactNode;
+  hint?: string;
+  required?: boolean;
+  className?: string;
+}) {
+  return (
+    <label
+      htmlFor={htmlFor}
+      className={`mb-2 flex items-baseline gap-1.5 text-sm font-bold text-ink ${className}`}
+    >
+      <span>{children}</span>
+      {required && (
+        <span className="text-coral-strong" aria-hidden="true">
+          *
+        </span>
+      )}
+      {hint && (
+        <span className="text-xs font-normal text-ink-muted">— {hint}</span>
+      )}
+    </label>
+  );
+}
+
+// ==================== Checkbox ====================
+type ChoiceProps = Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  'onChange' | 'checked' | 'type'
+>;
+
+export const Checkbox = forwardRef<
+  HTMLInputElement,
+  ChoiceProps & {
+    checked: boolean;
+    onChange: (v: boolean) => void;
+    children: ReactNode;
+  }
+>(function Checkbox({ checked, onChange, children, className = '', ...rest }, ref) {
+  return (
+    <label className={`${CHOICE_LABEL} ${className}`}>
+      <span className="relative flex h-5 w-5 flex-shrink-0 items-center justify-center">
+        <input
+          ref={ref}
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+          className={`${CHOICE_INPUT} rounded-[6px] checked:border-teal checked:bg-teal`}
+          {...rest}
+        />
+        <svg
+          className="pointer-events-none absolute h-3 w-3 scale-0 text-on-teal opacity-0 transition-all duration-150 peer-checked:scale-100 peer-checked:opacity-100"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={3.5}
+          aria-hidden="true"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      </span>
+
+      <span className="flex-1 leading-relaxed">{children}</span>
+    </label>
+  );
+});
+
+// ==================== Radio ====================
+export function Radio<T extends string>({
+  name,
+  value,
+  checked,
+  onChange,
+  children,
+  className = '',
+  ...rest
+}: Omit<ChoiceProps, 'name' | 'value'> & {
+  name: string;
+  value: T;
+  checked: boolean;
+  onChange: (v: T) => void;
+  children: ReactNode;
+}) {
+  return (
+    <label className={`${CHOICE_LABEL} ${className}`}>
+      <span className="relative flex h-5 w-5 flex-shrink-0 items-center justify-center">
+        <input
+          type="radio"
+          name={name}
+          value={value}
+          checked={checked}
+          onChange={() => onChange(value)}
+          className={`${CHOICE_INPUT} rounded-full checked:border-[6px] checked:border-teal`}
+          {...rest}
+        />
+      </span>
+
+      <span className="flex-1 leading-relaxed">{children}</span>
+    </label>
+  );
+}
+```
+
+## components\ui\Icons.tsx
+
+```tsx
+// components/ui/Icons.tsx
+import type { SVGProps, ReactNode } from 'react';
+
+// ==================== Base ====================
+interface IconProps extends SVGProps<SVGSVGElement> {
+  size?: number;
+}
+
+function Base({
+  size = 20,
+  children,
+  ...rest
+}: IconProps & { children: ReactNode }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={size}
+      height={size}
+      aria-hidden="true"
+      {...rest}
+    >
+      {children}
+    </svg>
+  );
+}
+
+// ==================== Navigation Icons ====================
+
+/** الملازم — كتاب مفتوح */
+export function IconBook(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M12 6.5V19m0-12.5C10.832 5.5 9.246 5 7.5 5S4.168 5.5 3 6.5V19c1.168-1 2.754-1.5 4.5-1.5S10.832 18 12 19m0-12.5C13.168 5.5 14.754 5 16.5 5S19.832 5.5 21 6.5V19c-1.168-1-2.754-1.5-4.5-1.5S13.168 18 12 19" />
+    </Base>
+  );
+}
+
+/** القنوات — بث/إرسال */
+export function IconChannels(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M3 11l18-8-8 18-2-8-8-2z" />
+    </Base>
+  );
+}
+
+/** الجدول — تقويم */
+export function IconCalendar(props: IconProps) {
+  return (
+    <Base {...props}>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M8 3v4M16 3v4M3 11h18" />
+    </Base>
+  );
+}
+
+/** القاموس — كتاب مع علامة */
+export function IconDictionary(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+      <path d="M10 7h6M10 11h6" />
+    </Base>
+  );
+}
+
+
+/** المعدل — مخطط بياني */
+export function IconChart(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M3 21h18M6 21V12M12 21V5M18 21v-6" />
+    </Base>
+  );
+}
+
+/** المعدل — alias لـ IconChart */
+export const IconGpa = IconChart;
+
+/** جات الدراسة — sparkles */
+export function IconSparkles(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+    </Base>
+  );
+}
+
+/** تبديل الكروبات — سهمان */
+export function IconSwap(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+    </Base>
+  );
+}
+
+/** صحتك الدراسية — نبض */
+export function IconHealth(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M3 12h4l3-9 4 18 3-9h4" />
+    </Base>
+  );
+}
+
+/** البوت — مكبر صوت */
+export function IconMegaphone(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M3 11l18-8v18l-18-8v-2z" />
+      <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
+    </Base>
+  );
+}
+
+/** الرائج — اتجاه صاعد */
+export function IconTrending(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+    </Base>
+  );
+}
+
+// ==================== UI Icons ====================
+
+/** السهم الأيسر — رجوع */
+export function IconArrowLeft(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+    </Base>
+  );
+}
+
+/** السهم الأيمن — للأزرار */
+export function IconArrowRight(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M13 7l5 5m0 0l-5 5m5-5H6" />
+    </Base>
+  );
+}
+
+/** سهم خارجي */
+export function IconExternal(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M10 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4M14 4h6m0 0v6m0-6L10 14" />
+    </Base>
+  );
+}
+
+/** قفل */
+export function IconLock(props: IconProps) {
+  return (
+    <Base {...props}>
+      <rect x="4" y="10" width="16" height="10" rx="2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+    </Base>
+  );
+}
+
+/** بحث */
+export function IconSearch(props: IconProps) {
+  return (
+    <Base {...props}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M21 21l-4.3-4.3" />
+    </Base>
+  );
+}
+
+/** إغلاق */
+export function IconClose(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M6 18L18 6M6 6l12 12" />
+    </Base>
+  );
+}
+
+/** صح */
+export function IconCheck(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M5 13l4 4L19 7" />
+    </Base>
+  );
+}
+
+/** سهم قائمة (chevron) */
+export function IconChevronDown(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M6 9l6 6 6-6" />
+    </Base>
+  );
+}
+
+/** تشغيل / فتح */
+export function IconPlay(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M5 3l14 9-14 9V3z" />
+    </Base>
+  );
+}
+
+/** علامة كتاب (bookmark) */
+export function IconBookmark({
+  filled,
+  ...props
+}: IconProps & { filled?: boolean }) {
+  return (
+    <Base {...props} fill={filled ? 'currentColor' : 'none'}>
+      <path d="M5 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16l-7-3.5L5 21V5z" />
+    </Base>
+  );
+}
+
+/** علم — بلاغ */
+export function IconFlag(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M3 21v-4m0 0V5a2 2 0 0 1 2-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 0 0-2 2zm9-13.5V9" />
+    </Base>
+  );
+}
+
+/** ساعة */
+export function IconClock(props: IconProps) {
+  return (
+    <Base {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 8v4l3 3" />
+    </Base>
+  );
+}
+
+/** طبيب/شخص */
+export function IconDoctor(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM12 14a7 7 0 0 0-7 7h14a7 7 0 0 0-7-7z" />
+    </Base>
+  );
+}
+
+/** جرس — إشعارات */
+export function IconBell(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0v1a3 3 0 0 1-6 0v-1m6 0H9" />
+    </Base>
+  );
+}
+
+/** مستند — ملزمة */
+export function IconDoc(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <path d="M14 2v6h6M9 13h6M9 17h4" />
+    </Base>
+  );
+}
+
+/** شعلة — رائج */
+export function IconFire(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M12 2c1 4 4 5 4 9a4 4 0 1 1-8 0c0-1 .5-2 1-2.5C8 10 7 12 7 14a5 5 0 1 0 10 0c0-5-5-6-5-12z" />
+    </Base>
+  );
+}
+
+/** تحذير — مثلث */
+export function IconWarning(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z" />
+    </Base>
+  );
+}
+
+/** تيليكرام */
+export function IconTelegram(props: IconProps) {
+  const { size = 20, ...rest } = props;
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      width={size}
+      height={size}
+      aria-hidden="true"
+      {...rest}
+    >
+      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+    </svg>
+  );
+}
+
+/** قائمة/المزيد */
+export function IconMore(props: IconProps) {
+  const { size = 20, ...rest } = props;
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      width={size}
+      height={size}
+      aria-hidden="true"
+      {...rest}
+    >
+      <circle cx="5" cy="12" r="1.6" />
+      <circle cx="12" cy="12" r="1.6" />
+      <circle cx="19" cy="12" r="1.6" />
+    </svg>
+  );
+}
+
+/** رئيسية */
+export function IconHome(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M3 12l9-8 9 8M5 10v10a1 1 0 0 0 1 1h3m10-11v10a1 1 0 0 1-1 1h-3m-6 0a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1m-6 0h6" />
+    </Base>
+  );
+}
+/** شمس — الوضع الفاتح */
+export function IconSun(props: IconProps) {
+  return (
+    <Base {...props}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707" />
+    </Base>
+  );
+}
+
+/** قمر — الوضع الليلي */
+export function IconMoon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M20.354 15.354A9 9 0 0 1 8.646 3.646 9.003 9.003 0 0 0 12 21a9.003 9.003 0 0 0 8.354-5.646z" />
+    </Base>
+  );
+}
+/** مجلد مغلق */
+export function IconFolder(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />
+    </Base>
+  );
+}
+
+/** مجلد مفتوح */
+export function IconFolderOpen(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M5 19a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5z" />
+      <path d="M3 9h18" />
+    </Base>
+  );
+}
+
+/** صندوق فارغ — empty state */
+export function IconInbox(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+      <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+    </Base>
+  );
+}
+/** هدف — دائرة مع نقاط مركزية */
+export function IconTarget(props: IconProps) {
+  return (
+    <Base {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+    </Base>
+  );
+}
+/** نسخ — مستندان فوق بعضهما */
+export function IconCopy(props: IconProps) {
+  return (
+    <Base {...props}>
+      <rect x="9" y="9" width="13" height="13" rx="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </Base>
+  );
+}
+/** تكبير/عرض بحجم كامل — سهمان يخرجان للزوايا */
+export function IconExpand(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M15 3h6v6" />
+      <path d="M9 21H3v-6" />
+      <path d="M21 3l-7 7" />
+      <path d="M3 21l7-7" />
+    </Base>
+  );
+}
+/** درجات — ملف أكاديمي مع أسطر */
+export function IconGrades(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M9 12h6m-6 4h6M9 4h6M5 20h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" />
+    </Base>
+  );
+}
+```
+
+## components\ui\TagInput.tsx
+
+```tsx
+// components/ui/TagInput.tsx
+'use client';
+
+import { useState, type KeyboardEvent } from 'react';
+
+interface TagInputProps {
+  tags: string[];
+  onChange: (tags: string[]) => void;
+  placeholder?: string;
+  maxTags?: number;
+  suggestions?: string[];
+}
+
+export function TagInput({
+  tags,
+  onChange,
+  placeholder = 'أضف وسماً...',
+  maxTags = 10,
+  suggestions = [],
+}: TagInputProps) {
+  const [input, setInput] = useState('');
+
+  function addTag(value: string) {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    if (tags.includes(trimmed)) {
+      setInput('');
+      return;
+    }
+    if (tags.length >= maxTags) return;
+    onChange([...tags, trimmed]);
+    setInput('');
+  }
+
+  function removeTag(index: number) {
+    onChange(tags.filter((_, i) => i !== index));
+  }
+
+  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addTag(input);
+    } else if (e.key === 'Backspace' && input === '' && tags.length > 0) {
+      removeTag(tags.length - 1);
+    }
+  }
+
+  const filteredSuggestions = suggestions
+    .filter((s) => !tags.includes(s) && s.includes(input.trim()))
+    .slice(0, 6);
+
+  const reachedMax = tags.length >= maxTags;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex min-h-[44px] flex-wrap items-center gap-1.5 rounded-xl border-2 border-line bg-white px-3 py-2 transition-all duration-200 focus-within:border-teal focus-within:shadow-[0_0_0_4px_rgba(14,74,74,0.10)] dark:bg-white/[0.06] dark:focus-within:bg-white/[0.08] dark:focus-within:shadow-[0_0_0_4px_rgba(77,184,184,0.15)]">
+        {tags.map((tag, i) => (
+          <span
+            key={`${tag}-${i}`}
+            className="inline-flex items-center gap-1 rounded-full bg-teal/10 px-2.5 py-1 text-xs font-bold text-teal dark:bg-teal/20"
+          >
+            <span>#{tag}</span>
+            <button
+              type="button"
+              onClick={() => removeTag(i)}
+              className="ml-0.5 rounded-full p-0.5 transition-colors hover:bg-teal/20 dark:hover:bg-teal/30"
+              aria-label={`حذف ${tag}`}
+            >
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </span>
+        ))}
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={() => addTag(input)}
+          placeholder={tags.length === 0 ? placeholder : ''}
+          disabled={reachedMax}
+          className="min-w-[100px] flex-1 bg-transparent text-sm text-ink placeholder:text-ink/35 focus:outline-none disabled:cursor-not-allowed dark:placeholder:text-ink/40"
+        />
+      </div>
+
+      {input && filteredSuggestions.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {filteredSuggestions.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => addTag(s)}
+              className="rounded-full border border-line bg-white px-2.5 py-1 text-xs font-bold text-ink/70 transition-all duration-150 hover:border-teal hover:bg-teal/5 hover:text-teal active:scale-95 dark:bg-white/[0.06] dark:hover:bg-teal/10"
+            >
+              + {s}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <p className="text-xs text-ink/40">
+        {reachedMax
+          ? `وصلت إلى الحد الأقصى (${maxTags} وسوم)`
+          : `اضغط Enter أو فاصلة لإضافة وسم — ${tags.length}/${maxTags}`}
+      </p>
+    </div>
+  );
+}
+```
+
+## components\ui\Toast.tsx
+
+```tsx
+// components/ui/Toast.tsx
+'use client';
+
+import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+
+type ToastType = 'success' | 'error' | 'info';
+interface ToastItem { id: number; message: string; type: ToastType }
+interface ToastContextValue { show: (msg: string, type?: ToastType) => void }
+
+const ToastContext = createContext<ToastContextValue | null>(null);
+
+const STYLES: Record<ToastType, { bg: string; icon: ReactNode }> = {
+  success: {
+    bg: 'bg-teal text-white',
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+      </svg>
+    ),
+  },
+  error: {
+    bg: 'bg-red-600 text-white',
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    ),
+  },
+  info: {
+    bg: 'bg-ink text-white',
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+  },
+};
+
+export function ToastProvider({ children }: { children: ReactNode }) {
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const show = useCallback((message: string, type: ToastType = 'info') => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 3500);
+  }, []);
+
+  return (
+    <ToastContext.Provider value={{ show }}>
+      {children}
+      <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[60] flex flex-col items-center gap-2 px-4">
+        {toasts.map((t) => {
+          const s = STYLES[t.type];
+          return (
+            <div
+              key={t.id}
+              role="status"
+              className={`pointer-events-auto flex max-w-md items-center gap-3 rounded-2xl px-5 py-3 text-sm font-bold shadow-[0_10px_30px_rgba(26,33,31,0.20)] ${s.bg} animate-slide-up`}
+            >
+              <span className="flex-shrink-0">{s.icon}</span>
+              <span>{t.message}</span>
+            </div>
+          );
+        })}
+      </div>
+    </ToastContext.Provider>
+  );
+}
+
+export function useToast(): ToastContextValue {
+  const ctx = useContext(ToastContext);
+  if (!ctx) throw new Error('useToast must be used inside <ToastProvider>');
+  return ctx;
+}
+```
+
+## hooks\useBookmarks.ts
+
+```ts
+// hooks/useBookmarks.ts
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+
+const STORAGE_KEY = 'lawazem_bookmarked_notes';
+
+function readStored(): string[] {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return [];
+    const parsed = JSON.parse(saved);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((id): id is string => typeof id === 'string');
+    }
+  } catch {
+    /* تجاهل الأخطاء */
+  }
+  return [];
+}
+
+export function useBookmarks() {
+  const [bookmarks, setBookmarks] = useState<string[]>([]);
+  const [mounted, setMounted] = useState(false);
+
+  // ===== تحميل المحفوظ =====
+  useEffect(() => {
+    setBookmarks(readStored());
+    setMounted(true);
+  }, []);
+
+  // ===== تبديل حالة الحفظ =====
+  // نقرأ من localStorage وقت الكتابة لأن كل نسخة من الـ hook تحمل state خاصة بها
+  const toggle = useCallback((noteId: string) => {
+    const prev = readStored();
+    const next = prev.includes(noteId)
+      ? prev.filter((id) => id !== noteId)
+      : [...prev, noteId];
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      /* قد تكون المساحة ممتلئة */
+    }
+    setBookmarks(next);
+  }, []);
+
+  // ===== التحقق =====
+  const isBookmarked = useCallback(
+    (noteId: string) => bookmarks.includes(noteId),
+    [bookmarks]
+  );
+
+  // ===== مسح الكل =====
+  const clearAll = useCallback(() => {
+    setBookmarks([]);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      /* تجاهل */
+    }
+  }, []);
+
+  return {
+    bookmarks,
+    toggle,
+    isBookmarked,
+    clearAll,
+    mounted,
+    count: bookmarks.length,
+  };
+}
+```
+
+## hooks\useDismissable.ts
+
+```ts
+// hooks/useDismissable.ts
+'use client';
+
+import { useEffect, type RefObject } from 'react';
+
+/**
+ * يُغلق أي عنصر عائم (قائمة، ورقة، dropdown) عند:
+ *  - الضغط خارج حدوده
+ *  - انتقال التركيز (focus) خارجه
+ *  - الضغط على Escape
+ *
+ * الاستخدام:
+ *   useDismissable(open, ref, (viaKeyboard) => {
+ *     setOpen(false);
+ *     if (viaKeyboard) buttonRef.current?.focus();
+ *   });
+ */
+export function useDismissable(
+  active: boolean,
+  containerRef: RefObject<HTMLElement | null>,
+  onDismiss: (viaKeyboard: boolean) => void
+): void {
+  useEffect(() => {
+    if (!active) return;
+
+    const handleOutside = (event: Event) => {
+      const container = containerRef.current;
+      if (
+        container &&
+        event.target instanceof Node &&
+        !container.contains(event.target)
+      ) {
+        onDismiss(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onDismiss(true);
+    };
+
+    document.addEventListener('pointerdown', handleOutside);
+    document.addEventListener('focusin', handleOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', handleOutside);
+      document.removeEventListener('focusin', handleOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [active, containerRef, onDismiss]);
+}
+```
+
+## hooks\useRecentViews.ts
+
+```ts
+// hooks/useRecentViews.ts
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+
+const STORAGE_KEY = 'lawazem_recent_views';
+const STATS_KEY = 'lawazem_study_stats';
+const MAX_ITEMS = 6;
+
+export interface RecentView {
+  id: string;
+  title: string;
+  subject_name: string;
+  file_path: string;
+  viewed_at: number;
+}
+
+// ==================== Study Stats ====================
+export interface SubjectStat {
+  views: number;
+  lastViewed: number;
+}
+
+export interface StudyStats {
+  totalViews: number;
+  firstVisit: number;
+  subjects: Record<string, SubjectStat>;
+  hourly: number[]; // 24 خانات
+  daily: Record<string, number>; // "YYYY-MM-DD": عدد الزيارات
+  // ✨ جديد: جلسات التركيز
+  focusSessions: number;
+  focusMinutes: number;
+}
+
+export function emptyStats(): StudyStats {
+  return {
+    totalViews: 0,
+    firstVisit: Date.now(),
+    subjects: {},
+    hourly: Array(24).fill(0),
+    daily: {},
+    focusSessions: 0,
+    focusMinutes: 0,
+  };
+}
+
+export function getTodayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate()
+  ).padStart(2, '0')}`;
+}
+
+export function loadStats(): StudyStats {
+  try {
+    const saved = localStorage.getItem(STATS_KEY);
+    if (!saved) return emptyStats();
+    const parsed = JSON.parse(saved);
+    if (parsed && typeof parsed === 'object') {
+      return {
+        totalViews: Number(parsed.totalViews) || 0,
+        firstVisit: Number(parsed.firstVisit) || Date.now(),
+        subjects:
+          parsed.subjects && typeof parsed.subjects === 'object'
+            ? parsed.subjects
+            : {},
+        hourly:
+          Array.isArray(parsed.hourly) && parsed.hourly.length === 24
+            ? parsed.hourly.map((n: unknown) => Number(n) || 0)
+            : Array(24).fill(0),
+        daily:
+          parsed.daily && typeof parsed.daily === 'object' ? parsed.daily : {},
+        focusSessions: Number(parsed.focusSessions) || 0,
+        focusMinutes: Number(parsed.focusMinutes) || 0,
+      };
+    }
+  } catch {
+    /* تجاهل */
+  }
+  return emptyStats();
+}
+
+function saveStats(stats: StudyStats) {
+  try {
+    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+  } catch {
+    /* تجاهل */
+  }
+}
+
+function recordStat(view: Omit<RecentView, 'viewed_at'>) {
+  const stats = loadStats();
+  const now = Date.now();
+  const hour = new Date().getHours();
+  const today = getTodayStr();
+
+  stats.totalViews += 1;
+  if (!stats.firstVisit) stats.firstVisit = now;
+
+  // المادة
+  const subj = stats.subjects[view.subject_name] ?? { views: 0, lastViewed: 0 };
+  subj.views += 1;
+  subj.lastViewed = now;
+  stats.subjects[view.subject_name] = subj;
+
+  // الساعة
+  stats.hourly[hour] = (stats.hourly[hour] ?? 0) + 1;
+
+  // اليوم
+  stats.daily[today] = (stats.daily[today] ?? 0) + 1;
+
+  saveStats(stats);
+}
+
+// ==================== ✨ Focus Session Recording ====================
+/**
+ * تُستدعى من صفحة /study-session عند إكمال جلسة تركيز.
+ * تضيف جلسة + الدقائق إلى الإحصائيات.
+ */
+export function recordFocusSession(minutes: number): void {
+  if (minutes <= 0) return;
+  try {
+    const stats = loadStats();
+    stats.focusSessions = (stats.focusSessions ?? 0) + 1;
+    stats.focusMinutes = (stats.focusMinutes ?? 0) + minutes;
+    saveStats(stats);
+  } catch {
+    /* تجاهل */
+  }
+}
+
+// ==================== Hook ====================
+export function useRecentViews() {
+  const [recent, setRecent] = useState<RecentView[]>([]);
+  const [mounted, setMounted] = useState(false);
+
+  // تحميل المحفوظ
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setRecent(parsed);
+        }
+      }
+    } catch {
+      /* تجاهل */
+    }
+    setMounted(true);
+  }, []);
+
+  // إضافة زيارة جديدة
+  const addView = useCallback((view: Omit<RecentView, 'viewed_at'>) => {
+    // نقرأ من localStorage وقت الكتابة (كل نسخة hook لها state خاصة)
+    let prev: RecentView[] = [];
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) prev = parsed;
+      }
+    } catch {
+      /* تجاهل */
+    }
+
+    const next: RecentView[] = [
+      { ...view, viewed_at: Date.now() },
+      ...prev.filter((v) => v.id !== view.id),
+    ].slice(0, MAX_ITEMS);
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      /* تجاهل */
+    }
+    setRecent(next);
+
+    // سجّل الإحصائيات (fire and forget)
+    try {
+      recordStat(view);
+    } catch {
+      /* تجاهل */
+    }
+  }, []);
+
+  // مسح الكل
+  const clearAll = useCallback(() => {
+    setRecent([]);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      /* تجاهل */
+    }
+  }, []);
+
+  return { recent, addView, clearAll, mounted };
+}
+
+// ==================== تنسيق الوقت النسبي ====================
+export function formatRelativeTime(timestamp: number): string {
+  const diff = Date.now() - timestamp;
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (seconds < 60) return 'الآن';
+  if (minutes < 60) return `قبل ${minutes} دقيقة`;
+  if (hours < 24) return `قبل ${hours} ساعة`;
+  if (days === 1) return 'أمس';
+  if (days < 7) return `قبل ${days} أيام`;
+  if (days < 30) return `قبل ${Math.floor(days / 7)} أسابيع`;
+  return 'منذ فترة';
+}
+```
+
+## hooks\useStudentStage.ts
+
+```ts
+// hooks/useStudentStage.ts
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { STORAGE_KEYS } from '@/lib/constants';
+import type { Stage } from '@/lib/types';
+
+interface Result {
+  stage: Stage | null;
+  ready: boolean;
+}
+
+/**
+ * يقرأ المرحلة المختارة من localStorage ويحوّل الطالب للرئيسية إذا ما اختار.
+ */
+export function useStudentStage(): Result {
+  const router = useRouter();
+  const [stage, setStage] = useState<Stage | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.studentStage) as Stage | null;
+    if (!saved) {
+      router.replace('/');
+      return;
+    }
+    setStage(saved);
+    setReady(true);
+  }, [router]);
+
+  return { stage, ready };
+}
+```
+
+## hooks\useStudyStats.ts
+
+```ts
+// hooks/useStudyStats.ts
+'use client';
+
+import { useEffect, useState } from 'react';
+import { loadStats, type StudyStats, emptyStats } from './useRecentViews';
+
+export interface SubjectRank {
+  name: string;
+  views: number;
+  lastViewed: number;
+  daysSince: number;
+}
+
+export interface StudyAnalysis {
+  stats: StudyStats;
+  // ملخص
+  totalViews: number;
+  daysActive: number;
+  currentStreak: number;
+  // مواد
+  topSubjects: SubjectRank[];
+  weakSubjects: SubjectRank[];
+  // أنماط
+  bestHour: number | null; // 0-23
+  weeklyActivity: { day: string; count: number }[]; // 7 أيام (الأحدث أخيراً)
+  // ✨ جلسات التركيز
+  focusSessions: number;
+  focusMinutes: number;
+  // شارات
+  badges: { emoji: string; label: string }[];
+}
+
+const WEEK_DAYS_AR = [
+  'الأحد',
+  'الاثنين',
+  'الثلاثاء',
+  'الأربعاء',
+  'الخميس',
+  'الجمعة',
+  'السبت',
+];
+
+function daysBetween(a: number, b: number): number {
+  return Math.floor((b - a) / (1000 * 60 * 60 * 24));
+}
+
+function toDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate()
+  ).padStart(2, '0')}`;
+}
+
+function computeStreak(daily: Record<string, number>): number {
+  let streak = 0;
+  const d = new Date();
+  // إذا ما فيه نشاط اليوم، لا تكسر الستريك — ابدأ من أمس
+  if (!daily[toDateStr(d)]) {
+    d.setDate(d.getDate() - 1);
+  }
+  for (let i = 0; i < 365; i++) {
+    const key = toDateStr(d);
+    if (daily[key] && daily[key] > 0) {
+      streak += 1;
+      d.setDate(d.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+function analyze(stats: StudyStats): StudyAnalysis {
+  const now = Date.now();
+
+  // ===== المواد =====
+  const subjects: SubjectRank[] = Object.entries(stats.subjects).map(
+    ([name, s]) => ({
+      name,
+      views: s.views,
+      lastViewed: s.lastViewed,
+      daysSince: daysBetween(s.lastViewed, now),
+    })
+  );
+
+  const topSubjects = [...subjects]
+    .sort((a, b) => b.views - a.views)
+    .slice(0, 3);
+
+  const weakSubjects = subjects
+    .filter((s) => s.daysSince >= 7)
+    .sort((a, b) => b.daysSince - a.daysSince)
+    .slice(0, 3);
+
+  // ===== الساعات =====
+  let bestHour: number | null = null;
+  let maxHour = 0;
+  stats.hourly.forEach((v, i) => {
+    if (v > maxHour) {
+      maxHour = v;
+      bestHour = i;
+    }
+  });
+  if (maxHour === 0) bestHour = null;
+
+  // ===== آخر 7 أيام =====
+  const weeklyActivity: { day: string; count: number }[] = [];
+  const d = new Date();
+  d.setDate(d.getDate() - 6); // قبل 6 أيام = الأقدم
+  for (let i = 0; i < 7; i++) {
+    const key = toDateStr(d);
+    weeklyActivity.push({
+      day: WEEK_DAYS_AR[d.getDay()],
+      count: stats.daily[key] ?? 0,
+    });
+    d.setDate(d.getDate() + 1);
+  }
+
+  // ===== ملخص عام =====
+  const daysActive = Object.keys(stats.daily).filter(
+    (k) => (stats.daily[k] ?? 0) > 0
+  ).length;
+
+  const currentStreak = computeStreak(stats.daily);
+
+  // ===== ✨ جلسات التركيز =====
+  const focusSessions = stats.focusSessions ?? 0;
+  const focusMinutes = stats.focusMinutes ?? 0;
+
+  // ===== الشارات =====
+  const badges: { emoji: string; label: string }[] = [];
+
+  // شارات الفتحات
+  if (stats.totalViews >= 1) badges.push({ emoji: '🌱', label: 'بداية الرحلة' });
+  if (stats.totalViews >= 10) badges.push({ emoji: '📚', label: '10 فتحات' });
+  if (stats.totalViews >= 50) badges.push({ emoji: '💪', label: '50 فتحة' });
+  if (stats.totalViews >= 100) badges.push({ emoji: '🏆', label: '100 فتحة' });
+
+  // شارات الستريك
+  if (currentStreak >= 3)
+    badges.push({ emoji: '🔥', label: `${currentStreak} أيام متتالية` });
+  if (currentStreak >= 7) badges.push({ emoji: '⚡', label: 'أسبوع كامل' });
+
+  // شارات المواد
+  if (topSubjects.length >= 3)
+    badges.push({ emoji: '🎯', label: '3 مواد نشطة' });
+  if (daysActive >= 7) badges.push({ emoji: '📅', label: 'أسبوع نشط' });
+
+  // ✨ شارات جلسات التركيز
+  if (focusSessions >= 1)
+    badges.push({ emoji: '⏱️', label: 'أول جلسة تركيز' });
+  if (focusSessions >= 5) badges.push({ emoji: '🌱', label: '5 جلسات' });
+  if (focusSessions >= 25) badges.push({ emoji: '🎯', label: '25 جلسة' });
+  if (focusSessions >= 100) badges.push({ emoji: '🏆', label: '100 جلسة' });
+  if (focusMinutes >= 500)
+    badges.push({ emoji: '🧠', label: '500 دقيقة تركيز' });
+  if (focusMinutes >= 1500)
+    badges.push({ emoji: '⚡', label: '25 ساعة تركيز' });
+  if (focusMinutes >= 3000)
+    badges.push({ emoji: '👑', label: '50 ساعة تركيز' });
+
+  return {
+    stats,
+    totalViews: stats.totalViews,
+    daysActive,
+    currentStreak,
+    topSubjects,
+    weakSubjects,
+    bestHour,
+    weeklyActivity,
+    focusSessions,
+    focusMinutes,
+    badges,
+  };
+}
+
+export function useStudyStats(): {
+  analysis: StudyAnalysis;
+  mounted: boolean;
+  reset: () => void;
+} {
+  const [analysis, setAnalysis] = useState<StudyAnalysis>(() =>
+    analyze(emptyStats())
+  );
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setAnalysis(analyze(loadStats()));
+    setMounted(true);
+  }, []);
+
+  function reset() {
+    try {
+      localStorage.removeItem('lawazem_study_stats');
+    } catch {
+      /* تجاهل */
+    }
+    setAnalysis(analyze(emptyStats()));
+  }
+
+  return { analysis, mounted, reset };
+}
+
+// ==================== Helpers للعرض ====================
+export function formatHour(h: number): string {
+  const period =
+    h >= 5 && h < 12
+      ? 'صباحاً'
+      : h >= 12 && h < 17
+        ? 'ظهراً'
+        : h >= 17 && h < 22
+          ? 'مساءً'
+          : 'ليلاً';
+  const hour12 = h % 12 || 12;
+  return `${hour12} ${period}`;
+}
+```
+
+## lib\anatomy-ar.ts
+
+```ts
+// lib/anatomy-ar.ts
+import type { Pose } from './anatomy-pose';
+
+export const ACTION_AR: Readonly<Record<string, string>> = {
+  platysma: 'تشدّ جلد الرقبة وتسحب الشفة السفلى والفك للأسفل (تظهر كشرائط عند الجهد أو التكشير).',
+  masseter: 'ترفع الفك السفلي (إغلاق الفم) — عضلة مضغ رئيسية.',
+  temporalis: 'ترفع الفك السفلي، وأليافها الخلفية تسحبه للخلف — عضلة مضغ.',
+  frontalis: 'ترفع الحاجبين وتُجعّد الجبين أفقياً (الدهشة).',
+  buccinator: 'تضغط الخد على الأسنان فتُبقي الطعام بينها أثناء المضغ، وتُستعمل في النفخ والمصّ.',
+  orbOris: 'تُغلق الشفتين وتضمّهما (التقبيل، الصفير، الكلام).',
+  orbOculi: 'تُغلق الجفون: الجزء الجفني للرمش الخفيف، والجزء الحجاجي للإغماض القوي.',
+  nasalis: 'الجزء المستعرض يضغط فتحتي الأنف، والجزء الجناحي يوسّعهما.',
+  llsan: 'ترفع الشفة العليا وتوسّع فتحة الأنف (تعبير الاشمئزاز).',
+  lls: 'ترفع الشفة العليا وتعمّق الثلم الأنفي الشفوي (nasolabial fold).',
+  zmin: 'ترفع الشفة العليا وتساهم في الثلم الأنفي الشفوي.',
+  zmaj: 'تسحب زاوية الفم للأعلى والخارج (الابتسام).',
+  lao: 'ترفع زاوية الفم (تساعد على الابتسام).',
+  risorius: 'تسحب زاوية الفم للخارج (التكشير / الابتسامة العريضة).',
+  dao: 'تخفض زاوية الفم (العبوس، الحزن).',
+  dli: 'تخفض الشفة السفلى وتسحبها قليلاً للجانب.',
+  mentalis: 'ترفع الشفة السفلى وتبرزها وتُجعّد جلد الذقن (التذمّر، الشك).',
+  corrugator: 'تسحب الحاجبين للداخل والأسفل فتُحدث خطوط العبوس العمودية.',
+  procerus: 'تسحب الطرف الإنسي للحاجبين للأسفل فتُحدث تجاعيد مستعرضة فوق جسر الأنف.',
+  depSepti: 'تسحب حاجز الأنف وطرفه للأسفل وتوسّع فتحتي الأنف.',
+};
+
+export const PEARLS_AR: Readonly<Record<string, string>> = {
+  buccinator:
+    'فخ امتحاني: عضلة تعبير (الوجهي – الفرع الشدقي) وليست عضلة مضغ رغم دورها في المضغ. الـ long buccal nerve (فرع V3) يخترقها حسّياً فقط ولا يغذّيها حركياً.',
+  platysma:
+    'عضلة في الرقبة لكنها تُغذّى بالوجهي (الفرع العنقي)، لأنها من القوس البلعومي الثاني.',
+  frontalis:
+    'الجبين محفوظ في شلل الـ UMN لأن القشرة تغذّي الوجه العلوي من الجهتين، ويُشلّ في شلل الـ LMN (مثل Bell’s palsy).',
+  orbOculi:
+    'في Bell’s palsy تعجز العين عن الإغلاق (lagophthalmos) فيجفّ القرنية وقد تتقرّح؛ تحتاج حماية بالقطرة والغطاء.',
+  masseter:
+    'عضلة مضغ تغذّيها V3 وليس الوجهي؛ تشنّجها يسبب trismus.',
+  mentalis:
+    'تغذّيها marginal mandibular branch — أكثر فروع الوجهي عرضة للأذى في جراحات الفك السفلي والغدة تحت الفك.',
+};
+
+export interface Expression {
+  id: string;
+  ar: string;
+  en: string;
+  muscles: readonly { id: string; w?: number }[];
+  extra?: Pose;
+  /** ملاحظة عربية (تظهر بخط أصغر بعد الإنجليزية) */
+  note: string;
+  /** ملاحظة إنجليزية (تظهر أولاً — الإنجليزية أوضح) */
+  noteEn?: string;
+}
+
+export const EXPRESSIONS: readonly Expression[] = [
+  {
+    id: 'smile',
+    ar: 'ابتسامة',
+    en: 'Smile',
+    muscles: [{ id: 'zmaj' }, { id: 'lao', w: 0.6 }, { id: 'zmin', w: 0.6 }, { id: 'orbOculi', w: 0.35 }],
+    note: 'في الابتسامة الحقيقية (Duchenne) تشارك الـ orbicularis oculi أيضاً فتتجعّد زوايا العينين.',
+    noteEn:
+      'In a genuine (Duchenne) smile, the orbicularis oculi also contracts, creasing the corners of the eyes.',
+  },
+  {
+    id: 'frown',
+    ar: 'عبوس / تركيز',
+    en: 'Frown',
+    muscles: [{ id: 'corrugator' }, { id: 'procerus' }, { id: 'dao', w: 0.6 }],
+    note: 'الـ corrugator والـ procerus يُنزلان الحاجبين ويقرّبانهم، والـ depressor anguli oris يخفض زاويتي الفم.',
+    noteEn:
+      'The corrugator and procerus pull the brows down and inward, while depressor anguli oris depresses the corners of the mouth.',
+  },
+  {
+    id: 'surprise',
+    ar: 'دهشة',
+    en: 'Surprise',
+    muscles: [{ id: 'frontalis' }],
+    extra: { eye: -0.35, jaw: 0.55 },
+    note: 'الـ frontalis يرفع الحاجبين. ويشارك في فتح العين على اتساعها الـ levator palpebrae superioris (CN III) وهي ليست عضلة وجه، وانخفاض الفك ليس من عضلات هذا الأطلس.',
+    noteEn:
+      'Frontalis raises the eyebrows. Widening the eye also involves the levator palpebrae superioris (CN III), which is not a facial muscle; jaw opening is also not shown here.',
+  },
+  {
+    id: 'sadness',
+    ar: 'حزن',
+    en: 'Sadness',
+    muscles: [{ id: 'dao' }, { id: 'mentalis', w: 0.8 }, { id: 'corrugator', w: 0.5 }],
+    note: 'الـ depressor anguli oris والـ mentalis يخفضان زاويتي الفم ويرفعان الشفة السفلى، مع شدّ الحاجبين للداخل. الرسم تقريبي.',
+    noteEn:
+      'Depressor anguli oris and mentalis depress the mouth corners and raise the lower lip, while the brows pull inward. The drawing is approximate.',
+  },
+  {
+    id: 'disgust',
+    ar: 'اشمئزاز',
+    en: 'Disgust',
+    muscles: [{ id: 'llsan' }, { id: 'lls' }, { id: 'procerus', w: 0.7 }],
+    note: 'الـ levator labii superioris alaeque nasi والـ levator labii superioris يرفعان الشفة العليا والأنف، والـ procerus يُجعّد جسر الأنف.',
+    noteEn:
+      'Levator labii superioris alaeque nasi and levator labii superioris raise the upper lip and dilate the nose, while procerus creases the bridge of the nose.',
+  },
+];
+```
+
+## lib\anatomy-data.ts
+
+```ts
+// lib/anatomy-data.ts
+/**
+ * بيانات أطلس عضلات الوجه.
+ * المصطلحات الطبية بالإنجليزية (كما تُدرَّس في كلية الطب).
+ * الواجهة (العناوين، التبويبات، الأزرار) بالعربية.
+ */
+
+// ==================== Types ====================
+export type ZoomId = 'whole' | 'eyes' | 'nose' | 'mouth' | 'side' | 'neck';
+
+export interface FanGeometry {
+  type: 'fan';
+  n: number;
+  bulge: number;
+  A: readonly number[];
+  B: readonly number[];
+}
+
+export interface RingGeometry {
+  type: 'ring';
+  n: number;
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+  irx: number;
+  iry: number;
+}
+
+export type Geometry = FanGeometry | RingGeometry;
+
+export interface Muscle {
+  id: string;
+  paired: boolean;
+  zoom: ZoomId;
+  geometry: Geometry;
+  en: string;
+  short?: string;
+  label: { s: 'L' | 'R'; x: number; y: number };
+  nerve: string;
+  origin: string;
+  insertion: string;
+  actEn: string;
+  clin: string;
+  arrows: readonly (readonly [number, number, number, number])[];
+  pose: Record<string, number>;
+  region?: string;
+}
+
+// ==================== Muscles ====================
+export const MUSCLES: readonly Muscle[] = [
+  {
+    id: 'platysma',
+    paired: true,
+    zoom: 'neck',
+    geometry: { type: 'fan', n: 13, bulge: 3,
+      A: [206, 530, 206, 490, 204, 462, 204, 436],
+      B: [262, 530, 262, 490, 264, 440, 262, 398] },
+    en: 'Platysma',
+    label: { s: 'R', x: 240, y: 470 },
+    nerve: 'Facial nerve (CN VII), cervical branch',
+    origin: 'Fascia over the upper pectoralis major and deltoid',
+    insertion: 'Inferior border of the mandible, skin of the lower face and angle of the mouth',
+    actEn: 'Depresses the mandible and lower lip, and tenses the skin of the neck.',
+    clin: 'Stands out as vertical bands in the neck during effort or grimacing.',
+    arrows: [[236, 438, 246, 500]],
+    pose: { ld: 0.6, jaw: 0.35, nk: 1, smile: -0.3 },
+  },
+  {
+    id: 'masseter',
+    paired: true,
+    zoom: 'side',
+    geometry: { type: 'fan', n: 12, bulge: 4,
+      A: [280, 296, 280, 320, 276, 350, 270, 372],
+      B: [304, 290, 308, 312, 306, 340, 292, 364] },
+    en: 'Masseter',
+    label: { s: 'R', x: 296, y: 332 },
+    nerve: 'Mandibular nerve (CN V3), masseteric nerve',
+    origin: 'Zygomatic arch',
+    insertion: 'Lateral surface of the ramus and angle of the mandible',
+    actEn: 'Elevates the mandible (closes the jaw). It is a main muscle of mastication.',
+    clin: 'A muscle of mastication, so it is supplied by the trigeminal nerve, not the facial nerve. Spasm causes trismus.',
+    arrows: [[292, 376, 292, 316]],
+    pose: { cl: 1 },
+  },
+  {
+    id: 'temporalis',
+    paired: true,
+    zoom: 'side',
+    geometry: { type: 'fan', n: 13, bulge: 4,
+      A: [296, 258, 290, 226, 288, 186, 294, 132],
+      B: [300, 260, 314, 228, 322, 196, 312, 140] },
+    en: 'Temporalis',
+    label: { s: 'R', x: 306, y: 196 },
+    nerve: 'Mandibular nerve (CN V3), deep temporal nerves',
+    origin: 'Temporal fossa and temporal fascia',
+    insertion: 'Coronoid process and anterior border of the ramus of the mandible',
+    actEn: 'Elevates the mandible; its posterior fibres retract it (chewing).',
+    clin: 'A muscle of mastication; it bulges at the temple when you clench your teeth.',
+    arrows: [[304, 252, 306, 192]],
+    pose: { tb: 1, cl: 0.5 },
+  },
+  {
+    id: 'frontalis',
+    paired: true,
+    zoom: 'eyes',
+    geometry: { type: 'fan', n: 16, bulge: 6,
+      A: [204, 152, 203, 120, 204, 96, 208, 66],
+      B: [292, 156, 298, 128, 296, 100, 282, 84] },
+    en: 'Frontalis',
+    label: { s: 'L', x: 250, y: 104 },
+    nerve: 'Facial nerve (CN VII), temporal branch',
+    origin: 'Epicranial aponeurosis (galea aponeurotica)',
+    insertion: 'Skin of the eyebrows and forehead',
+    actEn: 'Raises the eyebrows and wrinkles the forehead horizontally (surprise).',
+    clin: 'In an upper motor neuron facial palsy the forehead is spared (bilateral cortical input); in a lower motor neuron palsy such as Bell’s palsy it is paralysed.',
+    arrows: [[236, 146, 236, 108], [270, 150, 270, 116]],
+    pose: { br: 1, fh: 1 },
+  },
+  {
+    id: 'buccinator',
+    paired: true,
+    zoom: 'mouth',
+    geometry: { type: 'fan', n: 10, bulge: 3,
+      A: [254, 358, 268, 352, 282, 348, 294, 347],
+      B: [256, 362, 262, 372, 268, 380, 274, 383] },
+    en: 'Buccinator',
+    label: { s: 'R', x: 272, y: 368 },
+    nerve: 'Facial nerve (CN VII), buccal branch',
+    origin: 'Maxilla and mandible (alveolar processes opposite the molars), pterygomandibular raphe',
+    insertion: 'Orbicularis oris at the angle of the mouth (modiolus)',
+    actEn: 'Compresses the cheek against the teeth: keeps food between the teeth while chewing, and is used in blowing and sucking.',
+    clin: 'In facial palsy food collects between the cheek and the gums.',
+    arrows: [[262, 370, 292, 362]],
+    pose: { ck: 1, out: 0.3 },
+  },
+  {
+    id: 'orbOris',
+    paired: false,
+    zoom: 'mouth',
+    geometry: { type: 'ring', n: 13, cx: 200, cy: 347, rx: 54, ry: 25, irx: 34, iry: 7 },
+    en: 'Orbicularis oris',
+    label: { s: 'R', x: 216, y: 327 },
+    nerve: 'Facial nerve (CN VII), buccal and marginal mandibular branches',
+    origin: 'Modiolus, maxilla and mandible near the midline; fibres of the other perioral muscles',
+    insertion: 'Skin and mucous membrane of the lips (fibres encircle the mouth)',
+    actEn: 'Closes and purses the lips (kissing, whistling, speech).',
+    clin: 'Weakness causes drooling and difficulty whistling or blowing.',
+    arrows: [[146, 346, 166, 346], [254, 346, 234, 346], [200, 318, 200, 336], [200, 376, 200, 358]],
+    pose: { purse: 1 },
+  },
+  {
+    id: 'orbOculi',
+    paired: true,
+    zoom: 'eyes',
+    geometry: { type: 'ring', n: 15, cx: 248, cy: 202, rx: 46, ry: 35, irx: 21, iry: 8 },
+    en: 'Orbicularis oculi',
+    label: { s: 'R', x: 284, y: 226 },
+    nerve: 'Facial nerve (CN VII), temporal and zygomatic branches',
+    origin: 'Medial orbital margin, medial palpebral ligament, lacrimal bone',
+    insertion: 'Skin around the orbit, eyelids (tarsal plates), lateral palpebral raphe',
+    actEn: 'Closes the eyelids: the palpebral part blinks gently, the orbital part squeezes the eye shut forcefully.',
+    clin: 'In Bell’s palsy the eye cannot close (lagophthalmos), risking dry eye and corneal ulceration.',
+    arrows: [[300, 202, 278, 202], [248, 160, 248, 182], [248, 244, 248, 222]],
+    pose: { eye: 1, sq: 1, bd: 0.4 },
+  },
+  {
+    id: 'nasalis',
+    paired: true,
+    zoom: 'nose',
+    geometry: { type: 'fan', n: 8, bulge: 2,
+      A: [226, 300, 222, 282, 216, 262, 208, 244],
+      B: [214, 304, 212, 286, 208, 266, 204, 248] },
+    en: 'Nasalis',
+    label: { s: 'L', x: 214, y: 270 },
+    nerve: 'Facial nerve (CN VII), buccal branch',
+    origin: 'Maxilla (above the lateral incisor)',
+    insertion: 'Transverse part: aponeurosis over the bridge of the nose. Alar part: alar cartilage',
+    actEn: 'Transverse part compresses the nostrils; alar part flares them.',
+    clin: 'The nostrils flare in respiratory distress.',
+    arrows: [[228, 302, 246, 306]],
+    pose: { flare: 1 },
+  },
+  {
+    id: 'llsan',
+    paired: true,
+    zoom: 'nose',
+    geometry: { type: 'fan', n: 8, bulge: 2,
+      A: [224, 236, 222, 256, 222, 282, 224, 310],
+      B: [234, 238, 236, 258, 238, 284, 234, 314] },
+    en: 'Levator labii superioris alaeque nasi',
+    short: 'Lev. labii sup. alaeque nasi',
+    label: { s: 'R', x: 233, y: 280 },
+    nerve: 'Facial nerve (CN VII), zygomatic and buccal branches',
+    origin: 'Frontal process of the maxilla',
+    insertion: 'Alar cartilage and skin of the upper lip',
+    actEn: 'Elevates the upper lip and dilates the nostril.',
+    clin: 'Takes part in the expression of disgust (sneer).',
+    arrows: [[236, 318, 234, 262]],
+    pose: { lu: 1, flare: 1, nlf: 1 },
+  },
+  {
+    id: 'lls',
+    paired: true,
+    zoom: 'nose',
+    geometry: { type: 'fan', n: 10, bulge: 3,
+      A: [244, 240, 242, 262, 238, 290, 232, 318],
+      B: [262, 244, 260, 266, 252, 296, 246, 324] },
+    en: 'Levator labii superioris',
+    label: { s: 'L', x: 252, y: 272 },
+    nerve: 'Facial nerve (CN VII), zygomatic and buccal branches',
+    origin: 'Infraorbital margin of the maxilla (above the infraorbital foramen)',
+    insertion: 'Skin and muscle of the upper lip',
+    actEn: 'Elevates the upper lip and deepens the nasolabial fold.',
+    clin: 'Lies over the infraorbital foramen, the site of an infraorbital nerve block.',
+    arrows: [[250, 318, 254, 264]],
+    pose: { lu: 1, nlf: 1 },
+  },
+  {
+    id: 'zmin',
+    paired: true,
+    zoom: 'nose',
+    geometry: { type: 'fan', n: 7, bulge: 2,
+      A: [270, 252, 268, 272, 260, 300, 252, 322],
+      B: [282, 258, 280, 280, 270, 306, 260, 326] },
+    en: 'Zygomaticus minor',
+    label: { s: 'L', x: 276, y: 288 },
+    nerve: 'Facial nerve (CN VII), zygomatic and buccal branches',
+    origin: 'Lateral surface of the zygomatic bone',
+    insertion: 'Upper lip (blends with orbicularis oris)',
+    actEn: 'Elevates the upper lip and contributes to the nasolabial fold.',
+    clin: 'Lies medial to zygomaticus major.',
+    arrows: [[262, 322, 278, 264]],
+    pose: { lu: 0.6, nlf: 0.8, smile: 0.2 },
+  },
+  {
+    id: 'zmaj',
+    paired: true,
+    zoom: 'mouth',
+    geometry: { type: 'fan', n: 9, bulge: 2,
+      A: [292, 262, 284, 286, 270, 312, 252, 346],
+      B: [304, 272, 296, 300, 278, 326, 256, 356] },
+    en: 'Zygomaticus major',
+    label: { s: 'R', x: 278, y: 304 },
+    nerve: 'Facial nerve (CN VII), zygomatic and buccal branches',
+    origin: 'Zygomatic bone (anterior to the zygomaticotemporal suture)',
+    insertion: 'Angle of the mouth (modiolus)',
+    actEn: 'Draws the angle of the mouth upward and laterally (smiling).',
+    clin: 'The main smiling muscle. In Bell’s palsy the corner of the mouth droops on the affected side.',
+    arrows: [[254, 354, 294, 284]],
+    pose: { smile: 1, out: 0.6, nlf: 0.8 },
+  },
+  {
+    id: 'lao',
+    paired: true,
+    zoom: 'mouth',
+    geometry: { type: 'fan', n: 6, bulge: 2,
+      A: [243, 322, 242, 332, 243, 342, 245, 352],
+      B: [256, 322, 257, 332, 256, 342, 252, 352] },
+    en: 'Levator anguli oris',
+    label: { s: 'L', x: 250, y: 338 },
+    nerve: 'Facial nerve (CN VII), buccal branch',
+    origin: 'Canine fossa of the maxilla (below the infraorbital foramen)',
+    insertion: 'Angle of the mouth (modiolus)',
+    actEn: 'Elevates the angle of the mouth (assists in smiling).',
+    clin: 'A deep muscle lying beneath levator labii superioris.',
+    arrows: [[248, 346, 248, 304]],
+    pose: { smile: 0.6, lu: 0.2, nlf: 0.8 },
+  },
+  {
+    id: 'risorius',
+    paired: true,
+    zoom: 'mouth',
+    geometry: { type: 'fan', n: 6, bulge: 1,
+      A: [300, 330, 286, 336, 270, 342, 254, 347],
+      B: [302, 340, 288, 348, 272, 355, 255, 355] },
+    en: 'Risorius',
+    label: { s: 'L', x: 284, y: 344 },
+    nerve: 'Facial nerve (CN VII), buccal branch',
+    origin: 'Parotid fascia and fascia over the masseter',
+    insertion: 'Skin at the angle of the mouth (modiolus)',
+    actEn: 'Retracts the angle of the mouth laterally (grin / grimace).',
+    clin: 'A weak muscle that is absent in some people.',
+    arrows: [[258, 350, 298, 334]],
+    pose: { out: 1, smile: 0.15 },
+  },
+  {
+    id: 'dao',
+    paired: true,
+    zoom: 'mouth',
+    geometry: { type: 'fan', n: 9, bulge: 3,
+      A: [251, 358, 252, 372, 254, 386, 256, 398],
+      B: [250, 360, 246, 374, 242, 386, 238, 396] },
+    en: 'Depressor anguli oris',
+    label: { s: 'R', x: 250, y: 384 },
+    nerve: 'Facial nerve (CN VII), marginal mandibular branch',
+    origin: 'Oblique line of the mandible',
+    insertion: 'Angle of the mouth (modiolus)',
+    actEn: 'Depresses the angle of the mouth (frowning, sadness).',
+    clin: 'Gives the downturned mouth of sadness; weakness of the marginal mandibular branch makes the smile asymmetric.',
+    arrows: [[254, 362, 256, 400]],
+    pose: { smile: -1, mar: 1 },
+  },
+  {
+    id: 'dli',
+    paired: true,
+    zoom: 'mouth',
+    geometry: { type: 'fan', n: 8, bulge: 3,
+      A: [238, 400, 236, 392, 232, 382, 230, 372],
+      B: [222, 404, 221, 394, 218, 384, 216, 374] },
+    en: 'Depressor labii inferioris',
+    label: { s: 'L', x: 228, y: 388 },
+    nerve: 'Facial nerve (CN VII), marginal mandibular branch',
+    origin: 'Oblique line of the mandible (between the symphysis and the mental foramen)',
+    insertion: 'Skin of the lower lip and orbicularis oris',
+    actEn: 'Depresses the lower lip and draws it slightly laterally.',
+    clin: 'Exposes the lower teeth in speaking and smiling.',
+    arrows: [[228, 376, 232, 408]],
+    pose: { ld: 1, out: 0.2 },
+  },
+  {
+    id: 'mentalis',
+    paired: true,
+    zoom: 'mouth',
+    geometry: { type: 'fan', n: 7, bulge: 5,
+      A: [202, 386, 201, 398, 200, 410, 202, 424],
+      B: [204, 386, 214, 396, 216, 412, 204, 426] },
+    en: 'Mentalis',
+    label: { s: 'L', x: 207, y: 410 },
+    nerve: 'Facial nerve (CN VII), marginal mandibular branch',
+    origin: 'Incisive fossa of the mandible',
+    insertion: 'Skin of the chin',
+    actEn: 'Elevates and protrudes the lower lip and wrinkles the skin of the chin (pouting, doubt).',
+    clin: 'Overactivity gives a dimpled, "pebbled" chin.',
+    arrows: [[206, 424, 206, 390]],
+    pose: { lup: 1, ped: 1, purse: 0.25 },
+  },
+  {
+    id: 'corrugator',
+    paired: true,
+    zoom: 'eyes',
+    geometry: { type: 'fan', n: 7, bulge: 2,
+      A: [212, 170, 226, 160, 244, 152, 266, 150],
+      B: [214, 178, 228, 172, 246, 160, 268, 158] },
+    en: 'Corrugator supercilii',
+    label: { s: 'R', x: 246, y: 158 },
+    nerve: 'Facial nerve (CN VII), temporal and zygomatic branches',
+    origin: 'Medial end of the superciliary arch',
+    insertion: 'Skin of the medial half of the eyebrow',
+    actEn: 'Draws the eyebrows medially and downward, producing vertical frown lines.',
+    clin: 'Responsible for the vertical frown lines between the eyebrows.',
+    arrows: [[264, 156, 222, 174]],
+    pose: { bi: 1, bd: 0.35, gl: 1 },
+  },
+  {
+    id: 'procerus',
+    paired: false,
+    zoom: 'eyes',
+    geometry: { type: 'fan', n: 8, bulge: 3,
+      A: [197, 232, 196, 210, 193, 192, 190, 172],
+      B: [203, 232, 204, 210, 207, 192, 210, 172] },
+    en: 'Procerus',
+    label: { s: 'R', x: 204, y: 198 },
+    nerve: 'Facial nerve (CN VII), temporal and zygomatic branches',
+    origin: 'Nasal bone and upper lateral nasal cartilage',
+    insertion: 'Skin of the glabella (between the eyebrows)',
+    actEn: 'Pulls the medial end of the eyebrows downward, creating transverse wrinkles over the bridge of the nose.',
+    clin: 'Works with corrugator to give an angry or concentrating look.',
+    arrows: [[200, 176, 200, 224]],
+    pose: { bd: 0.8, bi: 0.3, nr: 1 },
+  },
+  {
+    id: 'depSepti',
+    paired: false,
+    zoom: 'nose',
+    geometry: { type: 'fan', n: 5, bulge: 2,
+      A: [197, 326, 197, 316, 197, 308, 198, 300],
+      B: [203, 326, 203, 316, 203, 308, 202, 300] },
+    en: 'Depressor septi nasi',
+    label: { s: 'L', x: 200, y: 314 },
+    nerve: 'Facial nerve (CN VII), buccal branch',
+    origin: 'Maxilla (above the central incisor)',
+    insertion: 'Nasal septum and alar part of nasalis',
+    actEn: 'Pulls the nasal septum and the tip of the nose downward and widens the nostrils.',
+    clin: 'Pulls the nose tip down when smiling in some people.',
+    arrows: [[200, 304, 200, 330]],
+    pose: { td: 1, flare: 0.5 },
+  },
+];
+
+// ==================== Groups (with Arabic translations) ====================
+export const MUSCLE_GROUPS: readonly {
+  label: string;
+  labelEn: string;
+  ids: readonly string[];
+}[] = [
+  { label: 'الجبين والحاجب', labelEn: 'Forehead & brow', ids: ['frontalis', 'corrugator', 'procerus'] },
+  { label: 'حول العين',      labelEn: 'Around the eye',    ids: ['orbOculi'] },
+  { label: 'الأنف',           labelEn: 'Nose',             ids: ['nasalis', 'depSepti', 'llsan'] },
+  { label: 'الشفة العليا والوجنة', labelEn: 'Upper lip & cheek', ids: ['lls', 'zmin', 'zmaj', 'lao', 'risorius', 'buccinator'] },
+  { label: 'الفم والذقن',    labelEn: 'Mouth & chin',     ids: ['orbOris', 'dao', 'dli', 'mentalis'] },
+  { label: 'الرقبة',          labelEn: 'Neck',             ids: ['platysma'] },
+  { label: 'المضغ (عصب مثلث التوائم V3)', labelEn: 'Mastication (V3)', ids: ['masseter', 'temporalis'] },
+];
+
+// ==================== Zoom Presets ====================
+export interface ZoomPreset {
+  center: readonly [number, number];
+  size: number;
+  labelAr: string;
+  labelEn: string;
+}
+
+export const ZOOMS: Record<ZoomId, ZoomPreset> = {
+  whole: { center: [200, 270], size: 400, labelAr: 'الوجه كامل',      labelEn: 'Whole face' },
+  eyes:  { center: [200, 165], size: 230, labelAr: 'الجبين والعينان', labelEn: 'Forehead & eyes' },
+  nose:  { center: [210, 285], size: 170, labelAr: 'الأنف',            labelEn: 'Nose' },
+  mouth: { center: [215, 365], size: 210, labelAr: 'الفم والذقن',      labelEn: 'Mouth & chin' },
+  side:  { center: [255, 230], size: 200, labelAr: 'الوجنة والصدغ',    labelEn: 'Cheek & temple' },
+  neck:  { center: [200, 390], size: 280, labelAr: 'الرقبة',           labelEn: 'Neck' },
+};
+
+// ==================== Lookup Helpers ====================
+export const MUSCLE_BY_ID: Record<string, Muscle> = (() => {
+  const map: Record<string, Muscle> = {};
+  for (const m of MUSCLES) map[m.id] = m;
+  return map;
+})();
+
+// Attach region names for display
+for (const g of MUSCLE_GROUPS) {
+  for (const id of g.ids) {
+    if (MUSCLE_BY_ID[id]) MUSCLE_BY_ID[id].region = g.label;
+  }
+}
+```
+
+## lib\anatomy-extras.ts
+
+```ts
+// lib/anatomy-extras.ts
+import { MUSCLES, MUSCLE_GROUPS, type Muscle } from './anatomy-data';
+
+export type FacialBranch = 'temporal' | 'zygomatic' | 'buccal' | 'marginal' | 'cervical';
+
+export const FACIAL_BRANCHES: readonly {
+  id: FacialBranch;
+  en: string;
+  ar: string;
+  match: string;
+}[] = [
+  { id: 'temporal',  en: 'Temporal',            ar: 'الصدغي',        match: 'temporal' },
+  { id: 'zygomatic', en: 'Zygomatic',           ar: 'الوجني',        match: 'zygomatic' },
+  { id: 'buccal',    en: 'Buccal',              ar: 'الشدقي',        match: 'buccal' },
+  { id: 'marginal',  en: 'Marginal mandibular', ar: 'الفكي الهامشي', match: 'marginal mandibular' },
+  { id: 'cervical',  en: 'Cervical',            ar: 'العنقي',        match: 'cervical' },
+];
+
+export const BRANCH_MNEMONIC = 'To Zanzibar By Motor Car';
+
+export type Innervation = 'VII' | 'V3';
+
+export function innervationOf(m: Muscle): Innervation | null {
+  if (m.nerve.includes('CN VII')) return 'VII';
+  if (m.nerve.includes('CN V3')) return 'V3';
+  return null;
+}
+
+export function branchesOf(m: Muscle): FacialBranch[] {
+  if (innervationOf(m) !== 'VII') return [];
+  const n = m.nerve.toLowerCase();
+  return FACIAL_BRANCHES.filter((b) => n.includes(b.match)).map((b) => b.id);
+}
+
+export function pharyngealArchOf(m: Muscle): 1 | 2 | null {
+  const inn = innervationOf(m);
+  return inn === 'VII' ? 2 : inn === 'V3' ? 1 : null;
+}
+
+export const MUSCLES_BY_BRANCH: Record<FacialBranch, string[]> = (() => {
+  const out: Record<FacialBranch, string[]> = {
+    temporal: [], zygomatic: [], buccal: [], marginal: [], cervical: [],
+  };
+  for (const m of MUSCLES) for (const b of branchesOf(m)) out[b].push(m.id);
+  return out;
+})();
+
+export interface ExtraMuscle {
+  id: string;
+  en: string;
+  nerve: string;
+  origin: string;
+  insertion: string;
+  actEn: string;
+  clin: string;
+}
+
+export const EXTRA_MUSCLES: readonly ExtraMuscle[] = [
+  {
+    id: 'lateralPterygoid',
+    en: 'Lateral pterygoid',
+    nerve: 'Mandibular nerve (CN V3), nerve to lateral pterygoid',
+    origin: 'Upper head: infratemporal surface and crest of the greater wing of the sphenoid. Lower head: lateral surface of the lateral pterygoid plate',
+    insertion: 'Pterygoid fovea on the neck of the mandible, articular disc and capsule of the TMJ',
+    actEn: 'Protrudes the mandible and opens the jaw; acting alone on one side it moves the jaw to the opposite side.',
+    clin: 'The only muscle of mastication that opens the jaw. With unilateral weakness the jaw deviates toward the weak side on opening.',
+  },
+  {
+    id: 'medialPterygoid',
+    en: 'Medial pterygoid',
+    nerve: 'Mandibular nerve (CN V3), nerve to medial pterygoid',
+    origin: 'Deep head: medial surface of the lateral pterygoid plate and pyramidal process of the palatine bone. Superficial head: tuberosity of the maxilla',
+    insertion: 'Medial surface of the ramus and angle of the mandible',
+    actEn: 'Elevates the mandible and assists protrusion and side-to-side movement.',
+    clin: 'Forms a muscular sling with the masseter around the angle of the mandible.',
+  },
+  {
+    id: 'occipitalis',
+    en: 'Occipitalis (occipital belly of occipitofrontalis)',
+    nerve: 'Facial nerve (CN VII), posterior auricular branch',
+    origin: 'Lateral part of the highest nuchal line of the occipital bone and the mastoid process',
+    insertion: 'Epicranial aponeurosis (galea aponeurotica)',
+    actEn: 'Retracts the scalp and fixes the galea so that frontalis can raise the eyebrows.',
+    clin: 'The posterior auricular nerve leaves just below the stylomastoid foramen, so it is lost in a nerve lesion at or above that point.',
+  },
+  {
+    id: 'auricular',
+    en: 'Auricular muscles (anterior, superior, posterior)',
+    nerve: 'Facial nerve (CN VII): temporal branch (anterior, superior), posterior auricular nerve (posterior)',
+    origin: 'Temporal fascia and galea (anterior, superior); mastoid process (posterior)',
+    insertion: 'Different parts of the auricle',
+    actEn: 'Draw the ear forward, up and back; rudimentary in most people.',
+    clin: 'Vestigial in humans, but still supplied by the facial nerve.',
+  },
+];
+
+export const EXAM_TIPS: Readonly<Record<string, { ar: string; en: string }>> = {
+  frontalis:   { ar: 'اطلب منه يرفع حاجبيه — هل تظهر تجاعيد الجبين؟',          en: 'Raise the eyebrows' },
+  corrugator:  { ar: 'اطلب منه يعبس',                                           en: 'Frown' },
+  orbOculi:    { ar: 'اطلب إغماض العينين بقوة وقارن دفن الرموش بين الجهتين',   en: 'Screw the eyes shut' },
+  zmaj:        { ar: 'اطلب ابتسامة مع إظهار الأسنان وقارن الجهتين',            en: 'Smile and show the teeth' },
+  buccinator:  { ar: 'اطلب نفخ الخدين، وراقب تسرّب الهواء',                    en: 'Puff out the cheeks' },
+  orbOris:     { ar: 'اطلب الصفير أو ضمّ الشفتين بقوة',                        en: 'Whistle / purse the lips' },
+  dli:         { ar: 'اطلب إظهار الأسنان السفلية',                             en: 'Show the lower teeth' },
+  mentalis:    { ar: 'اطلب منه يعبّس بالذقن (pout)',                            en: 'Pout' },
+  platysma:    { ar: 'اطلب فتح الفم مقابل مقاومة وراقب الشرائط العمودية',      en: 'Open the mouth against resistance' },
+  masseter:    { ar: 'اطلب صرّ الأسنان وتحسّس العضلة على زاوية الفك',          en: 'Clench the teeth and palpate' },
+  temporalis:  { ar: 'اطلب صرّ الأسنان وتحسّس العضلة فوق الصدغ',               en: 'Clench the teeth and palpate' },
+};
+
+export const FACIAL_PALSY_COMPARISON: readonly {
+  feature: string;
+  umn: string;
+  lmn: string;
+}[] = [
+  { feature: 'Lesion site',
+    umn: 'Above the facial nucleus (contralateral motor cortex / corticobulbar tract)',
+    lmn: 'Facial nucleus or the nerve itself (pons, internal acoustic meatus, facial canal, parotid)' },
+  { feature: 'Forehead',
+    umn: 'Spared (bilateral cortical input to the upper face)',
+    lmn: 'Paralysed' },
+  { feature: 'Lower face',
+    umn: 'Paralysed on the side opposite the lesion',
+    lmn: 'Paralysed on the same side as the lesion' },
+  { feature: 'Eye closure',
+    umn: 'Mostly preserved',
+    lmn: 'Lost (lagophthalmos); Bell’s phenomenon on attempted closure' },
+  { feature: 'Typical cause',
+    umn: 'Stroke',
+    lmn: 'Bell’s palsy, parotid tumour or surgery, trauma, Ramsay Hunt syndrome' },
+  { feature: 'Other signs (depend on lesion level)',
+    umn: 'Usually accompanied by limb weakness',
+    lmn: 'Loss of taste in the anterior two-thirds of the tongue (chorda tympani), hyperacusis (nerve to stapedius), reduced lacrimation' },
+];
+
+export function validateAtlas(): string[] {
+  const problems: string[] = [];
+  const ids = new Set<string>();
+
+  for (const m of MUSCLES) {
+    if (ids.has(m.id)) problems.push(`duplicate id: ${m.id}`);
+    ids.add(m.id);
+
+    if (!m.nerve.trim()) problems.push(`${m.id}: missing nerve`);
+    if (innervationOf(m) === null) problems.push(`${m.id}: nerve is neither CN VII nor CN V3`);
+
+    if (m.geometry.type === 'fan') {
+      if (m.geometry.A.length !== 8 || m.geometry.B.length !== 8) {
+        problems.push(`${m.id}: fan geometry needs 8 numbers in A and B`);
+      }
+    } else if (m.geometry.irx >= m.geometry.rx || m.geometry.iry >= m.geometry.ry) {
+      problems.push(`${m.id}: ring inner radius must be smaller than outer radius`);
+    }
+  }
+
+  const seen = new Map<string, number>();
+  for (const g of MUSCLE_GROUPS) {
+    for (const id of g.ids) {
+      if (!ids.has(id)) problems.push(`group "${g.labelEn}" references unknown muscle: ${id}`);
+      seen.set(id, (seen.get(id) ?? 0) + 1);
+    }
+  }
+  for (const id of ids) {
+    const c = seen.get(id) ?? 0;
+    if (c === 0) problems.push(`${id}: not in any group`);
+    if (c > 1) problems.push(`${id}: appears in ${c} groups`);
+  }
+
+  return problems;
+}
+
+if (process.env.NODE_ENV !== 'production') {
+  const issues = validateAtlas();
+  if (issues.length) console.warn('[anatomy] data issues:\n' + issues.join('\n'));
+}
+```
+
+## lib\anatomy-geometry.ts
+
+```ts
+// lib/anatomy-geometry.ts
+import { MUSCLES, type FanGeometry, type Muscle, type RingGeometry } from './anatomy-data';
+
+export interface BuiltGeometry {
+  d: string;
+  dark: string;
+  light: string;
+  evenodd: boolean;
+}
+
+const f1 = (n: number): number => Math.round(n * 10) / 10;
+const at = (a: readonly number[], i: number): number => a[i] ?? 0;
+
+function fan(g: FanGeometry): BuiltGeometry {
+  const { A, B, n, bulge } = g;
+  let dark = '';
+  let light = '';
+
+  for (let i = 1; i < n; i++) {
+    const u = i / n;
+    const p: number[] = [];
+    for (let k = 0; k < 8; k++) p.push(f1(at(A, k) + (at(B, k) - at(A, k)) * u));
+    const seg = `M${p[0]},${p[1]}C${p[2]},${p[3]} ${p[4]},${p[5]} ${p[6]},${p[7]}`;
+    if (i % 2) dark += seg;
+    else light += seg;
+  }
+
+  const cap = (
+    px: number, py: number, qx: number, qy: number,
+    pcx: number, pcy: number, qcx: number, qcy: number,
+  ): string => {
+    const mx = (px + qx) / 2;
+    const my = (py + qy) / 2;
+    const cx = (pcx + qcx) / 2;
+    const cy = (pcy + qcy) / 2;
+    const dx = mx - cx;
+    const dy = my - cy;
+    const len = Math.hypot(dx, dy) || 1;
+    const w = Math.hypot(px - qx, py - qy);
+    const off = w < 2 ? 0 : 2 * bulge;
+    return `${f1(mx + (dx / len) * off)},${f1(my + (dy / len) * off)}`;
+  };
+
+  const end = cap(at(A, 6), at(A, 7), at(B, 6), at(B, 7), at(A, 4), at(A, 5), at(B, 4), at(B, 5));
+  const start = cap(at(B, 0), at(B, 1), at(A, 0), at(A, 1), at(B, 2), at(B, 3), at(A, 2), at(A, 3));
+
+  const d =
+    `M${A[0]},${A[1]}C${A[2]},${A[3]} ${A[4]},${A[5]} ${A[6]},${A[7]}` +
+    `Q${end} ${B[6]},${B[7]}` +
+    `C${B[4]},${B[5]} ${B[2]},${B[3]} ${B[0]},${B[1]}` +
+    `Q${start} ${A[0]},${A[1]}Z`;
+
+  return { d, dark, light, evenodd: false };
+}
+
+function ell(cx: number, cy: number, rx: number, ry: number): string {
+  return (
+    `M${f1(cx - rx)},${f1(cy)}` +
+    `a${f1(rx)},${f1(ry)} 0 1,0 ${f1(2 * rx)},0` +
+    `a${f1(rx)},${f1(ry)} 0 1,0 ${f1(-2 * rx)},0Z`
+  );
+}
+
+function ring(g: RingGeometry): BuiltGeometry {
+  let dark = '';
+  let light = '';
+  for (let i = 1; i < g.n; i++) {
+    const u = i / g.n;
+    const p = ell(g.cx, g.cy, g.irx + (g.rx - g.irx) * u, g.iry + (g.ry - g.iry) * u);
+    if (i % 2) dark += p;
+    else light += p;
+  }
+  return {
+    d: ell(g.cx, g.cy, g.rx, g.ry) + ell(g.cx, g.cy, g.irx, g.iry),
+    dark,
+    light,
+    evenodd: true,
+  };
+}
+
+export function buildGeometry(m: Muscle): BuiltGeometry {
+  return m.geometry.type === 'ring' ? ring(m.geometry) : fan(m.geometry);
+}
+
+export const GEOMETRY: Readonly<Record<string, BuiltGeometry>> = (() => {
+  const out: Record<string, BuiltGeometry> = {};
+  for (const m of MUSCLES) out[m.id] = buildGeometry(m);
+  return out;
+})();
+```
+
+## lib\anatomy-pose.ts
+
+```ts
+// lib/anatomy-pose.ts
+export type Pose = Readonly<Record<string, number>>;
+
+const r2 = (x: number): number => Math.round(x * 100) / 100;
+const clamp01 = (x: number): number => Math.max(0, Math.min(1, x));
+
+export function scalePose(pose: Pose, k: number): Pose {
+  const out: Record<string, number> = {};
+  for (const key of Object.keys(pose)) out[key] = (pose[key] ?? 0) * k;
+  return out;
+}
+
+export function combinePoses(
+  parts: readonly { pose: Pose; w?: number }[],
+  extra: Pose = {},
+): Pose {
+  const out: Record<string, number> = {};
+  for (const { pose, w = 1 } of parts) {
+    for (const key of Object.keys(pose)) {
+      const v = (pose[key] ?? 0) * w;
+      if (Math.abs(v) > Math.abs(out[key] ?? 0)) out[key] = v;
+    }
+  }
+  for (const key of Object.keys(extra)) out[key] = extra[key] ?? 0;
+  return out;
+}
+
+export interface FaceShape {
+  head: string;
+  eyeL: string;
+  eyeR: string;
+  irisOpacity: number;
+  browL: string;
+  browR: string;
+  noseWingL: string;
+  noseWingR: string;
+  noseBase: string;
+  nostril: { lx: number; rx: number; y: number; rad: number };
+  mouth: string;
+  nlfL: string;
+  nlfR: string;
+  nlfOpacity: number;
+  marL: string;
+  marR: string;
+  marOpacity: number;
+  purse: readonly [string, string, string, string];
+  op: {
+    purse: number; forehead: number; glabella: number; nose: number; squint: number;
+    temple: number; clench: number; cheek: number; chin: number; neck: number;
+  };
+}
+
+export function computeFace(P: Pose): FaceShape {
+  const g = (k: string): number => P[k] ?? 0;
+
+  const hy = r2(222 + g('jaw') * 10);
+  const head =
+    `M110,14 C62,14 40,52 40,100 C40,142 50,176 68,198 C80,212 96,${hy} 110,${hy} ` +
+    `C124,${hy} 140,212 152,198 C170,176 180,142 180,100 C180,52 158,14 110,14 Z`;
+
+  const e = g('eye');
+  const eyePath = (cx: number): string =>
+    `M${cx - 14},98 Q${cx},${r2(82 + 22 * e)} ${cx + 14},98 Q${cx},${r2(112 - 8 * e)} ${cx - 14},98 Z`;
+
+  const br = g('br');
+  const bi = g('bi');
+  const bd = g('bd');
+  const A: [number, number] = [124 - 7 * bi, 80 + 6 * bi + 8 * bd - 5 * br];
