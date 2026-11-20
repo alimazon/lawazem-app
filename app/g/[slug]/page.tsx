@@ -17,6 +17,22 @@ interface Notification {
   created_at: string;
 }
 
+interface QueueStudent {
+  student_id: string;
+  joined_at: string;
+  student: { id: string; full_name: string; telegram_username: string; gender: string };
+}
+
+interface Invite {
+  id: string;
+  created_at: string;
+  group: {
+    id: string; code: string; serial: number; name: string | null;
+    male_count: number; female_count: number; target_size: number; practical_group: string | null;
+    leader: { full_name: string } | null;
+  };
+}
+
 export default function GroupsHomePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const router = useRouter();
@@ -30,8 +46,13 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
   const [searchQuery, setSearchQuery] = useState('');
   const [filterPractical, setFilterPractical] = useState<string>('all');
 
+  // حالات القائد
   const [leaderRequests, setLeaderRequests] = useState<RequestWithStudent[]>([]);
+  const [waitingQueue, setWaitingQueue] = useState<QueueStudent[]>([]);
+
+  // حالات الطالب
   const [myRequests, setMyRequests] = useState<RequestWithGroup[]>([]);
+  const [myInvites, setMyInvites] = useState<Invite[]>([]); 
   const [inQueue, setInQueue] = useState(false);
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -48,7 +69,7 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
   const [groupMembers, setGroupMembers] = useState<PublicMember[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
 
-  // 👈 حالة رابط التليكرام
+  // حالة رابط التليكرام
   const [tgLink, setTgLink] = useState('');
   const [isEditingTgLink, setIsEditingTgLink] = useState(false);
 
@@ -92,15 +113,16 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
     try {
       if (typeof Notification === 'undefined') return;
       if (Notification.permission !== 'granted') return;
-      new Notification('طلب انضمام جديد 🎉', {
-        body: `لديك ${count} طلب في الانتظار`,
-        tag: 'join-request',
+      new Notification('تحديث جديد 🔔', {
+        body: `لديك ${count} تحديث`,
+        tag: 'update',
       });
     } catch {}
   }
 
   useEffect(() => {
     if (!getToken()) {
+      // 👈 تم التعديل: التوجيه لصفحة التسجيل بدلاً من صفحة الدخول
       router.replace(`/g/${slug}/register`);
       return;
     }
@@ -137,23 +159,29 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
           const initialRequests = reqData?.requests || [];
           setLeaderRequests(initialRequests);
           lastReqCountRef.current = initialRequests.length;
+
+          const queueData = await groupsFetch<{ queue: QueueStudent[] }>('/api/groups/queue');
+          setWaitingQueue(queueData?.queue || []);
         }
       } else {
-        const [listData, myReqData, matchData] = await Promise.all([
+        const [listData, myReqData, matchData, invitesData] = await Promise.all([
           groupsFetch<{ groups: PublicGroup[], hasMore: boolean }>('/api/groups/list', { page: 1, limit: 10 }),
           groupsFetch<{ requests: RequestWithGroup[] }>('/api/groups/my-requests'),
-          groupsFetch<{ inQueue: boolean }>('/api/groups/match', { action: 'status' })
+          groupsFetch<{ inQueue: boolean }>('/api/groups/match', { action: 'status' }),
+          groupsFetch<{ invites: Invite[] }>('/api/groups/my-invites', {})
         ]);
         setGroups(listData?.groups || []);
         setHasMoreGroups(listData?.hasMore || false);
         setPage(1);
         setMyRequests(myReqData?.requests || []);
         setInQueue(matchData?.inQueue || false);
+        setMyInvites(invitesData?.invites || []);
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'فشل التحميل';
       if (errorMsg.includes('تسجيل الدخول')) {
         clearToken();
+        // 👈 تم التعديل: التوجيه لصفحة التسجيل بدلاً من صفحة الدخول
         router.replace(`/g/${slug}/register`);
       } else {
         showMsg('error', errorMsg);
@@ -164,13 +192,13 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
   }
 
   async function refreshInBackground() {
-    if (!getToken()) return;
+    if (!getToken() || !me) return;
     try {
       const notifData = await groupsFetch<{ list: Notification[], unread: number }>('/api/groups/notifications');
       setNotifications(notifData?.list || []);
       setUnreadCount(notifData?.unread || 0);
 
-      if (me?.isLeader) {
+      if (me.isLeader) {
         const reqData = await groupsFetch<{ requests: RequestWithStudent[] }>('/api/groups/requests/list');
         const newRequests = reqData?.requests || [];
         const prev = lastReqCountRef.current;
@@ -183,9 +211,15 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
 
         lastReqCountRef.current = newRequests.length;
         setLeaderRequests(newRequests);
+
+        const queueData = await groupsFetch<{ queue: QueueStudent[] }>('/api/groups/queue');
+        setWaitingQueue(queueData?.queue || []);
+      } else {
+        const invitesData = await groupsFetch<{ invites: Invite[] }>('/api/groups/my-invites', {});
+        setMyInvites(invitesData?.invites || []);
       }
 
-      if (!me?.group) {
+      if (!me.group) {
         const listData = await groupsFetch<{ groups: PublicGroup[], hasMore: boolean }>('/api/groups/list', { page: 1, limit: 10 });
         setGroups(listData?.groups || []);
         setHasMoreGroups(listData?.hasMore || false);
@@ -299,6 +333,7 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
   if (!me) return null;
 
   const needsPracticalGroup = me.isLeader && !me.group?.practical_group;
+  const isGroupFull = me.group ? (me.group.male_count + me.group.female_count >= me.group.target_size) : false;
 
   return (
     <div className="space-y-6 pb-20">
@@ -337,6 +372,7 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
               </div>
             )}
           </div>
+          {/* 👈 تم التعديل: التوجيه لصفحة التسجيل عند الخروج */}
           <button onClick={() => { clearToken(); router.replace(`/g/${slug}/register`); }} className="text-xs font-semibold text-ink-muted hover:text-red-500 bg-ink/5 sm:bg-transparent px-3 py-1.5 rounded-lg sm:p-0">خروج</button>
         </div>
       </div>
@@ -438,7 +474,6 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
                   )}
                 </div>
 
-                {/* 👈 إدارة رابط التليكرام */}
                 <div className="mt-3">
                   {isEditingTgLink ? (
                     <div className="flex items-center gap-2 mt-2">
@@ -528,6 +563,35 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
             </div>
           )}
 
+          {/* قسم قائمة الانتظار (للقائد فقط) - يختفي إذا كان الكروب مكتملاً */}
+          {me.isLeader && !isGroupFull && waitingQueue.length > 0 && (
+            <div className="space-y-3 bg-amber/5 border border-amber/20 p-4 rounded-2xl">
+              <h3 className="font-bold text-amber-800 flex justify-between items-center">
+                <span>طلاب في قائمة الانتظار ({waitingQueue.length})</span>
+                <span className="text-[10px] text-amber-700 bg-amber-100 px-2 py-1 rounded-md">يمكنك دعوتهم للانضمام</span>
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {waitingQueue.map(q => (
+                  <div key={q.student_id} className="flex justify-between items-center bg-white border border-amber-100 p-3 rounded-xl text-sm shadow-sm">
+                    <div>
+                      <div className="font-bold flex items-center gap-1.5 text-ink">
+                        {q.student.gender === 'male' ? '👨' : '👩'} {q.student.full_name}
+                      </div>
+                      <div className="text-[10px] text-ink-muted font-mono mt-1" dir="ltr">@{q.student.telegram_username}</div>
+                    </div>
+                    <button 
+                      onClick={() => handleAction('/api/groups/invite', { target_student_id: q.student_id }, 'تم إرسال الدعوة بنجاح', q.student_id)}
+                      disabled={actionLoading === q.student_id}
+                      className="bg-amber-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-amber-600 transition-colors disabled:opacity-50"
+                    >
+                      {actionLoading === q.student_id ? '...' : 'إرسال دعوة'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div>
             <h3 className="font-bold text-ink mb-3">الأعضاء ({me.members?.length || 0})</h3>
             <ul className="space-y-2">
@@ -554,6 +618,31 @@ export default function GroupsHomePage({ params }: { params: Promise<{ slug: str
         </div>
       ) : (
         <div className="space-y-8">
+          
+          {/* قسم الدعوات الواردة (للطالب) */}
+          {myInvites.length > 0 && (
+            <div className="rounded-2xl border-2 border-teal bg-teal/5 p-4 sm:p-5 shadow-sm animate-pulse">
+              <h2 className="text-lg font-bold text-teal mb-3 flex items-center gap-2">📩 لديك دعوات للانضمام!</h2>
+              <div className="space-y-3">
+                {myInvites.map(inv => (
+                  <div key={inv.id} className="bg-white rounded-xl p-3 border border-teal/20 flex flex-col sm:flex-row justify-between items-center gap-3 shadow-sm">
+                    <div>
+                      <h3 className="font-bold text-ink">
+                        {inv.group.name || `كروب #${inv.group.serial}`}
+                        {inv.group.practical_group && <span className="ml-2 text-[10px] bg-teal/10 text-teal px-1.5 py-0.5 rounded">{inv.group.practical_group}</span>}
+                      </h3>
+                      <p className="text-xs text-ink-muted mt-1">القائد: {inv.group.leader?.full_name} • الأعضاء: {inv.group.male_count + inv.group.female_count}/{inv.group.target_size}</p>
+                    </div>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <button onClick={() => handleAction('/api/groups/my-invites', { request_id: inv.id, action: 'accept' }, 'تم الانضمام للكروب!', inv.id)} className="flex-1 bg-teal text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-teal/90">قبول</button>
+                      <button onClick={() => handleAction('/api/groups/my-invites', { request_id: inv.id, action: 'reject' }, 'تم رفض الدعوة', inv.id)} className="flex-1 bg-ink/5 text-ink-soft px-4 py-2 rounded-lg text-xs font-bold hover:bg-ink/10">رفض</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="rounded-2xl border border-dashed border-line bg-white p-6 sm:p-8 text-center shadow-sm">
             <h2 className="text-lg font-bold text-ink">أنت لست في أي كروب حتى الآن</h2>
             <p className="mt-2 text-xs sm:text-sm text-ink-soft leading-relaxed max-w-md mx-auto">يمكنك إنشاء كروب جديد، أو الانضمام لكروب موجود، أو ترك النظام يكوّن لك كروباً تلقائياً.</p>

@@ -8,6 +8,10 @@ import {
 import { getAdmin, type AdminRole } from '@/lib/telegram-admins';
 import { getSession, clearSession } from '@/lib/telegram/sessions';
 
+// ═══ استيراد أدوات قاعدة البيانات والجلسات ═══
+import { supabaseAdmin } from '@/lib/groups/supabase-admin';
+import { createSession } from '@/lib/groups/session';
+
 // ═══ Student handlers ═══
 import {
   handleStart,
@@ -40,7 +44,6 @@ import {
 } from '@/lib/telegram/handlers/announce';
 
 // ═══ Admin handlers ═══
-// ملاحظة: لا نستورد sendAdminHelp مباشرة — نستخدم handleAdminMenuButton
 import {
   handlePendingList,
   handleApprove,
@@ -93,7 +96,6 @@ function isAdminRole(v: string): v is AdminRole {
 
 // ==================== POST ====================
 export async function POST(request: Request) {
-  // 1. التحقق من السكرت
   const secret = getWebhookSecret();
   if (secret) {
     const incoming = request.headers.get('x-telegram-bot-api-secret-token');
@@ -102,7 +104,6 @@ export async function POST(request: Request) {
     }
   }
 
-  // 2. تحليل الـupdate
   let update: TelegramUpdate;
   try {
     update = (await request.json()) as TelegramUpdate;
@@ -110,12 +111,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  // 3. تحديد baseUrl
   const baseUrl =
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ??
     'https://lawazem.vercel.app';
 
-  // 4. التوجيه
   try {
     if (update.message) {
       await handleMessage(update.message, baseUrl);
@@ -190,32 +189,66 @@ async function handleMessage(
   }
 
   // ═══════════════════════════════════════════════════
-  // 4. أوامر المشرف
+  // 4. 🆕 أمر الأدمن السري لتوليد رابط الدخول
   // ═══════════════════════════════════════════════════
-  if (admin) {
-    // دليل المشرف — نستخدم handleAdminMenuButton بدل sendAdminHelp مباشرة
-    if (
-      lower === '/admin_help' ||
-      lower === '/guide' ||
-      lower === '/help_admin'
-    ) {
-      await handleAdminMenuButton(chatId, ADMIN_MENU_TEXTS.help, admin);
+  if (admin && lower.startsWith('/recover ')) {
+    const cleanUsername = text.slice(9).replace(/^@+/, '').trim();
+    
+    if (!/^[A-Za-z0-9_]{5,32}$/.test(cleanUsername)) {
+      await sendMessage(chatId, '❌ صيغة المعرف غير صحيحة. استخدم: <code>/recover @username</code>');
       return;
     }
 
-    // تبليغ جديد
+    const { data: student } = await supabaseAdmin
+      .from('sg_students')
+      .select('id, full_name, telegram_username')
+      .ilike('telegram_username', cleanUsername)
+      .maybeSingle();
+
+    if (!student) {
+      await sendMessage(chatId, `❌ لم يتم العثور على طالب بالمعرف: <code>@${cleanUsername}</code>`);
+      return;
+    }
+
+    const { data: tokenData } = await supabaseAdmin
+      .from('sg_access_tokens')
+      .select('slug')
+      .eq('is_active', true)
+      .order('expires_at', { ascending: false, nullsFirst: true })
+      .limit(1)
+      .maybeSingle();
+
+    const activeSlug = tokenData?.slug || 'students-register';
+    const sessionToken = await createSession(student.id);
+    const magicLink = `${baseUrl}/auth/magic?token=${sessionToken}&slug=${activeSlug}`;
+
+    await sendMessage(
+      chatId,
+      `✅ تم توليد رابط الدخول للطالب: <b>${student.full_name}</b> (<code>@${student.telegram_username}</code>).\n\n` +
+      `قم بنسخ هذا الرابط وإرساله له:\n\n` +
+      `<code>${magicLink}</code>`,
+      { disable_web_page_preview: true }
+    );
+    return;
+  }
+
+  // ═══════════════════════════════════════════════════
+  // 5. أوامر المشرف الأخرى
+  // ═══════════════════════════════════════════════════
+  if (admin) {
+    if (lower === '/admin_help' || lower === '/guide' || lower === '/help_admin') {
+      await handleAdminMenuButton(chatId, ADMIN_MENU_TEXTS.help, admin);
+      return;
+    }
     if (lower === '/announce') {
       await handleAnnounceStart(chatId);
       return;
     }
-
-    // المراجعة
     if (lower === '/pending') {
       await handlePendingList(chatId);
       return;
     }
 
-    // أوامر السوبر أدمن
     if (admin.role === 'super_admin') {
       if (lower === '/history') {
         await handleHistory(chatId);
@@ -233,52 +266,37 @@ async function handleMessage(
         await handleListAdmins(chatId);
         return;
       }
-
-      // /add_admin (سريع)
       if (lower.startsWith('/add_admin ')) {
         const parts = text.split(/\s+/).slice(1);
         if (parts.length < 2) {
-          await sendMessage(
-            chatId,
-            '❌ الصيغة: <code>/add_admin CHAT_ID ROLE</code>\n\n' +
-              'أو اكتب <code>/add_admin</code> فقط للطريقة التفاعلية.',
-          );
+          await sendMessage(chatId, '❌ الصيغة: <code>/add_admin CHAT_ID ROLE</code>\n\nأو اكتب <code>/add_admin</code> فقط للطريقة التفاعلية.');
           return;
         }
         const targetId = Number(parts[0]);
         const roleStr = parts[1];
         if (!Number.isFinite(targetId) || !isAdminRole(roleStr)) {
-          await sendMessage(
-            chatId,
-            '❌ الصيغة غير صحيحة. الأدوار المتاحة: super_admin | admin | publisher',
-          );
+          await sendMessage(chatId, '❌ الصيغة غير صحيحة. الأدوار المتاحة: super_admin | admin | publisher');
           return;
         }
         await quickAddAdmin(chatId, targetId, roleStr);
         return;
       }
-
-      // /add_admin (تفاعلي)
       if (lower === '/add_admin') {
         await handleAddAdminStart(chatId);
         return;
       }
-
-      // /remove_admin
       if (lower.startsWith('/remove_admin')) {
         await handleRemoveAdmin(chatId, text);
         return;
       }
     }
 
-    // إلغاء
     if (lower === '/cancel') {
       await clearSession(chatId);
       await sendMessage(chatId, '✅ تم الإلغاء.');
       return;
     }
 
-    // أزرار قائمة المشرف
     if (Object.values(ADMIN_MENU_TEXTS).includes(text as never)) {
       const handled = await handleAdminMenuButton(chatId, text, admin);
       if (handled) return;
@@ -286,21 +304,18 @@ async function handleMessage(
   }
 
   // ═══════════════════════════════════════════════════
-  // 5. زر "📮 استفسار"
+  // 6. زر "📮 استفسار" وباقي أزرار الطالب
   // ═══════════════════════════════════════════════════
   if (text === STUDENT_MENU_TEXTS.inquiry) {
     await handleInquiryStart(chatId);
     return;
   }
 
-  // ═══════════════════════════════════════════════════
-  // 6. باقي أزرار قائمة الطالب
-  // ═══════════════════════════════════════════════════
   const studentHandled = await handleStudentMenuButton(chatId, text, baseUrl);
   if (studentHandled) return;
 
   // ═══════════════════════════════════════════════════
-  // 7. Fallback
+  // 7. Fallback (لا نعطي أي تلميح عن الاستعادة للطلاب)
   // ═══════════════════════════════════════════════════
   await sendMessage(
     chatId,
@@ -316,27 +331,18 @@ async function routeSessionText(
   flowStep: string | null,
   admin: Awaited<ReturnType<typeof getAdmin>>,
 ): Promise<boolean> {
-  // ─── announce wizard ───
   if (flowType === 'announce') {
-    if (
-      flowStep === 'edit_title' ||
-      flowStep === 'edit_body' ||
-      flowStep === 'edit_link_url'
-    ) {
+    if (flowStep === 'edit_title' || flowStep === 'edit_body' || flowStep === 'edit_link_url') {
       await handleAnnounceTextInput(chatId, text, flowStep);
       return true;
     }
     return false;
   }
-
-  // ─── reject wizard ───
   if (flowType === 'reject') {
     if (!admin) return false;
     await handleRejectText(chatId, text, admin);
     return true;
   }
-
-  // ─── add admin wizard ───
   if (flowType === 'add_admin') {
     if (!admin || admin.role !== 'super_admin') return false;
     if (flowStep === 'awaiting_chat_id') {
@@ -345,8 +351,6 @@ async function routeSessionText(
     }
     return false;
   }
-
-  // ─── inquiry wizard ───
   if (flowType === 'inquiry') {
     if (flowStep === 'awaiting_question') {
       await handleInquiryText(chatId, text);
@@ -359,7 +363,6 @@ async function routeSessionText(
     }
     return false;
   }
-
   return false;
 }
 
@@ -374,14 +377,7 @@ async function handleCallback(
   const data = cb.data;
   const admin = await getAdmin(chatId);
 
-  // ═══════════════════════════════════════════════════
-  // Cancel
-  // ═══════════════════════════════════════════════════
-  if (
-    data === 'ann_cancel' ||
-    data === 'admin_cancel' ||
-    data === 'inq_cancel'
-  ) {
+  if (data === 'ann_cancel' || data === 'admin_cancel' || data === 'inq_cancel') {
     await clearSession(chatId);
     if (data === 'inq_cancel') {
       await handleInquiryCancel(chatId);
@@ -392,9 +388,6 @@ async function handleCallback(
     return;
   }
 
-  // ═══════════════════════════════════════════════════
-  // Student onboarding
-  // ═══════════════════════════════════════════════════
   if (data.startsWith('stage:')) {
     await handleStageSelection(cb, data.slice(6));
     return;
@@ -411,18 +404,10 @@ async function handleCallback(
     await handleSubjectsDone(cb, baseUrl);
     return;
   }
-
-  // ═══════════════════════════════════════════════════
-  // Notification toggles
-  // ═══════════════════════════════════════════════════
   if (data.startsWith('tog:')) {
     await handleToggleNotification(cb, data.slice(4));
     return;
   }
-
-  // ═══════════════════════════════════════════════════
-  // Settings navigation
-  // ═══════════════════════════════════════════════════
   if (data.startsWith('settings:')) {
     await handleSettingsNavigation(cb, data.slice(9));
     return;
@@ -431,10 +416,6 @@ async function handleCallback(
     await handleSettingsNavigation(cb, 'restart');
     return;
   }
-
-  // ═══════════════════════════════════════════════════
-  // Announce wizard
-  // ═══════════════════════════════════════════════════
   if (data.startsWith('tpl_pick:')) {
     await handleTemplatePick(cb, data.slice(9));
     return;
@@ -471,10 +452,6 @@ async function handleCallback(
     await handleAnnounceSubmit(cb, admin);
     return;
   }
-
-  // ═══════════════════════════════════════════════════
-  // Approve / Reject / Delete
-  // ═══════════════════════════════════════════════════
   if (data.startsWith('ann_approve:')) {
     if (!admin) {
       await answerCallbackQuery(cb.id, '❌ غير مصرح');
@@ -499,10 +476,6 @@ async function handleCallback(
     await handleDeleteAnnouncement(cb, data.slice(11), admin);
     return;
   }
-
-  // ═══════════════════════════════════════════════════
-  // Add admin: role picker
-  // ═══════════════════════════════════════════════════
   if (data.startsWith('addadmin_role:')) {
     if (!admin || admin.role !== 'super_admin') {
       await answerCallbackQuery(cb.id, '❌ غير مصرح');
@@ -516,10 +489,6 @@ async function handleCallback(
     await handleAddAdminRole(cb, roleStr);
     return;
   }
-
-  // ═══════════════════════════════════════════════════
-  // Inquiries
-  // ═══════════════════════════════════════════════════
   if (data.startsWith('inq_reply:')) {
     if (!admin) {
       await answerCallbackQuery(cb.id, '❌ غير مصرح');
@@ -537,8 +506,5 @@ async function handleCallback(
     return;
   }
 
-  // ═══════════════════════════════════════════════════
-  // Fallback
-  // ═══════════════════════════════════════════════════
   await answerCallbackQuery(cb.id);
 }
